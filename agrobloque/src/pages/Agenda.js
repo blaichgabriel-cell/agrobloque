@@ -140,7 +140,7 @@ export default function Agenda() {
               )}
               <div style={s.tareaFooter}>
                 {getBadge(t)}
-                <div style={{ display:'flex', gap:6', marginLeft:'auto' }}>
+                <div style={{ display:'flex', gap:6, marginLeft:'auto' }}>
                   {!t.completada && <button style={s.completarBtn} onClick={() => completarTarea(t.id)}>✓ Completar</button>}
                   <button style={{ ...s.completarBtn, color:'#cc4444', borderColor:'#ffcccc' }} onClick={() => eliminarTarea(t.id)}>Eliminar</button>
                 </div>
