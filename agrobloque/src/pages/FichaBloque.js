@@ -22,7 +22,7 @@ export default function FichaBloque() {
   const fetchData = async () => {
     const { data: b } = await supabase.from('bloques').select('*, sectores(nombre), campos(nombre)').eq('id', id).single()
     setBloque(b)
-    const { data: plantas } = await supabase.from('plantaciones').select('*, cultivos(nombre)').eq('bloque_id', id).order('created_at', { ascending: false })
+    const { data: plantas } = await supabase.from('plantaciones').select('*, cultivos(nombre), plantacion_abonos(*, abonos(nombre))').eq('bloque_id', id).order('created_at', { ascending: false })
     if (plantas) {
       setPlantacionActiva(plantas.find(p => p.activa) || null)
       setHistorial(plantas.filter(p => !p.activa))
@@ -187,33 +187,35 @@ export default function FichaBloque() {
           <div>
             {historial.length === 0
               ? <div style={{ textAlign:'center', padding:16, color:'#9a9a9a', fontSize:12 }}>Sin plantaciones anteriores</div>
-              : historial.map(p => (
-                <div key={p.id} style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:8 }}>
-                  <div style={{ fontSize:15, fontWeight:700, color:'#0a0a0a', marginBottom:10 }}>
-                    {p.cultivos?.nombre}{getVariedad(p) ? ' · ' + getVariedad(p) : ''}
-                  </div>
-                  <div style={{ display:'flex', gap:16, marginBottom:8 }}>
-                    <div>
-                      <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Siembra</div>
-                      <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.fecha_siembra || '—'}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Densidad</div>
-                      <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.densidad_plantas_m2 ? p.densidad_plantas_m2 + ' pl/m²' : '—'}</div>
-                    </div>
-                  </div>
-                  {p.notas && !p.notas.startsWith('Variedad:') && (
-                    <div style={{ fontSize:11, color:'#9a9a9a', padding:'8px 10px', background:'#f2f1ef', borderRadius:8 }}>
-                      {p.notas}
-                    </div>
-                  )}
-                </div>
-              ))
-            }
-          </div>
-        )}
-
+              : : historial.map(p => (
+  <div key={p.id} style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:8 }}>
+    <div style={{ fontSize:15, fontWeight:700, color:'#0a0a0a', marginBottom:10 }}>
+      {p.cultivos?.nombre || 'Sin cultivo'}{getVariedad(p) ? ' · ' + getVariedad(p) : ''}
+    </div>
+    <div style={{ display:'flex', flexWrap:'wrap', gap:16, marginBottom:8 }}>
+      <div>
+        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Siembra</div>
+        <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.fecha_siembra || '—'}</div>
+      </div>
+      <div>
+        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Densidad</div>
+        <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.densidad_plantas_m2 ? p.densidad_plantas_m2 + ' pl/m²' : '—'}</div>
       </div>
     </div>
-  )
-}
+    {p.plantacion_abonos?.length > 0 && (
+      <div style={{ marginBottom:8 }}>
+        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:4 }}>Abonos de base</div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+          {p.plantacion_abonos.map(a => (
+            <span key={a.id} style={{ background:'#f2f1ef', borderRadius:8, padding:'2px 8px', fontSize:10, color:'#555' }}>{a.abonos?.nombre}</span>
+          ))}
+        </div>
+      </div>
+    )}
+    {p.notas && !p.notas.startsWith('Variedad:') && (
+      <div style={{ fontSize:11, color:'#9a9a9a', padding:'8px 10px', background:'#f2f1ef', borderRadius:8 }}>
+        📝 {p.notas}
+      </div>
+    )}
+  </div>
+))
