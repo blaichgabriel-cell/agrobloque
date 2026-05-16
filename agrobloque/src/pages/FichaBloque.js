@@ -161,15 +161,28 @@ export default function FichaBloque() {
             {historial.length === 0
               ? <div style={{ textAlign:'center', padding:16, color:'#9a9a9a', fontSize:12 }}>Sin plantaciones anteriores</div>
               : historial.map(p => (
-                <div key={p.id} style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:6 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a' }}>{p.cultivos?.nombre}{getVariedad(p) ? ' · ' + getVariedad(p) : ''}</div>
-                  <div style={{ fontSize:10, color:'#9a9a9a', marginTop:3 }}>Siembra: {p.fecha_siembra || '—'}</div>
-                </div>
-              ))
-            }
-          </div>
-        )}
+  <div key={p.id} style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:8 }}>
+    <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a', marginBottom:8 }}>
+      {p.cultivos?.nombre}{getVariedad(p) ? ' · ' + getVariedad(p) : ''}
+    </div>
+    <div style={{ display:'flex', gap:16, marginBottom: p.notas && !p.notas.startsWith('Variedad:') ? 8 : 0 }}>
+      <div>
+        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Siembra</div>
+        <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.fecha_siembra || '—'}</div>
+      </div>
+      <div>
+        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Densidad</div>
+        <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.densidad_plantas_m2 ? p.densidad_plantas_m2 + ' pl/m²' : '—'}</div>
+      </div>
+      <div>
+        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Cosecha estimada</div>
+        <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.fecha_cosecha_estimada || '—'}</div>
       </div>
     </div>
-  )
-}
+    {p.notas && !p.notas.startsWith('Variedad:') && (
+      <div style={{ fontSize:11, color:'#9a9a9a', marginTop:6, padding:'8px 10px', background:'#f2f1ef', borderRadius:8 }}>
+        📝 {p.notas}
+      </div>
+    )}
+  </div>
+))
