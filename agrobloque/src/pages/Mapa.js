@@ -13,27 +13,12 @@ const CULTIVO_COLORES = {
   'Repollo verde': '#27ae60',
   'Lechuga': '#2ecc71',
   'Lechuga repollo': '#1abc9c',
-  'default': '#d0cdc8'
-}
-
-const s = {
-  topbar: { background:'#1a1a1a', padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' },
-  topTitle: { color:'#f9f8f6', fontSize:15, fontWeight:500 },
-  body: { padding:10 },
-  grid: { display:'grid', gap:6 },
-  bloque: { borderRadius:8, padding:'10px 12px', cursor:'pointer', border:'1.5px solid rgba(0,0,0,0.1)', display:'flex', flexDirection:'column', gap:2 },
-  bloqueCode: { fontSize:13, fontWeight:600, color:'#1a1a1a' },
-  bloqueCultivo: { fontSize:10, color:'#555' },
-  vacio: { background:'#f0ede8', border:'1.5px solid #d0cdc8' },
-  legend: { display:'flex', flexWrap:'wrap', gap:8, padding:'8px 10px', borderTop:'0.5px solid #d0cdc8', marginTop:8 },
-  legItem: { display:'flex', alignItems:'center', gap:4, fontSize:10, color:'#666' },
-  legDot: { width:10, height:10, borderRadius:2 },
-  empty: { textAlign:'center', padding:40, color:'#888', fontSize:14 }
 }
 
 export default function Mapa({ campoActivo }) {
   const [bloques, setBloques] = useState([])
   const [loading, setLoading] = useState(true)
+  const [filtro, setFiltro] = useState('todos')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -42,7 +27,7 @@ export default function Mapa({ campoActivo }) {
       setLoading(true)
       const { data } = await supabase
         .from('bloques')
-        .select(`*, plantaciones(*, cultivos(nombre), variedades(nombre))`)
+        .select('*, plantaciones(*, cultivos(nombre))')
         .eq('campo_id', campoActivo.id)
         .order('codigo')
       if (data) setBloques(data)
@@ -51,57 +36,74 @@ export default function Mapa({ campoActivo }) {
     fetchBloques()
   }, [campoActivo])
 
-  const getCultivoActual = (b) => {
+  const getCultivo = (b) => b.plantaciones?.find(p => p.activa)?.cultivos?.nombre || null
+  const getVariedad = (b) => {
     const p = b.plantaciones?.find(p => p.activa)
-    return p ? { cultivo: p.cultivos?.nombre, variedad: p.variedades?.nombre } : null
+    if (!p || !p.notas) return null
+    if (p.notas.startsWith('Variedad: ')) return p.notas.replace('Variedad: ', '')
+    return null
   }
-
   const getColor = (b) => {
-    const c = getCultivoActual(b)
-    if (!c) return '#f0ede8'
-    return CULTIVO_COLORES[c.cultivo] || CULTIVO_COLORES.default
+    const c = getCultivo(b)
+    return c ? CULTIVO_COLORES[c] || '#888' : null
   }
 
-  if (!campoActivo) return <div style={s.empty}>Seleccioná un campo desde el inicio</div>
+  const cultivos = [...new Set(bloques.map(b => getCultivo(b)).filter(Boolean))]
+  const bloquesFiltrados = filtro === 'todos' ? bloques : bloques.filter(b => getCultivo(b) === filtro)
+
+  if (!campoActivo) return (
+    <div style={{ background:'#f2f1ef', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ fontSize:13, color:'#9a9a9a' }}>Seleccioná un campo desde el inicio</div>
+    </div>
+  )
 
   return (
-    <div>
-      <div style={s.topbar}>
-        <div style={{ color:'#f9f8f6', fontSize:15, fontWeight:500 }}>Mapa · {campoActivo?.nombre}</div>
+    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+      <div style={{ background:'#f2f1ef', padding:'24px 20px 0' }}>
+        <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Campo activo</div>
+        <div style={{ fontSize:22, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:20 }}>{campoActivo?.nombre}</div>
+
+        <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:4, marginBottom:16 }}>
+          <button onClick={() => setFiltro('todos')} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro==='todos' ? '#0a0a0a' : '#e8e6e2', color: filtro==='todos' ? '#fff' : '#9a9a9a' }}>
+            Todos
+          </button>
+          {cultivos.map(c => (
+            <button key={c} onClick={() => setFiltro(c)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===c ? '#0a0a0a' : '#e8e6e2', color: filtro===c ? '#fff' : '#9a9a9a' }}>
+              {c}
+            </button>
+          ))}
+          <button onClick={() => setFiltro('vacio')} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro==='vacio' ? '#0a0a0a' : '#e8e6e2', color: filtro==='vacio' ? '#fff' : '#9a9a9a' }}>
+            Sin cultivo
+          </button>
+        </div>
       </div>
-      <div style={s.body}>
-        {loading ? <div style={s.empty}>Cargando...</div> : (
-          <>
-            <div style={{ ...s.grid, gridTemplateColumns: 'repeat(3, 1fr)' }}>
-              {bloques.map(b => {
-                const cult = getCultivoActual(b)
-                const color = getColor(b)
-                const textColor = cult ? '#fff' : '#888'
-                return (
-                  <div key={b.id}
-                    style={{ ...s.bloque, background: color, borderColor: cult ? 'rgba(0,0,0,0.15)' : '#d0cdc8' }}
-                    onClick={() => navigate(`/bloque/${b.id}`)}>
-                    <div style={{ ...s.bloqueCode, color: textColor }}>{b.codigo}</div>
-                    <div style={{ ...s.bloqueCultivo, color: cult ? 'rgba(255,255,255,0.85)' : '#aaa' }}>
-                      {cult ? `${cult.cultivo}${cult.variedad ? ' · ' + cult.variedad : ''}` : 'Sin cultivo'}
+
+      <div style={{ padding:'0 14px 100px' }}>
+        {loading ? (
+          <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Cargando bloques...</div>
+        ) : (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            {(filtro === 'vacio' ? bloques.filter(b => !getCultivo(b)) : bloquesFiltrados).map(b => {
+              const cultivo = getCultivo(b)
+              const variedad = getVariedad(b)
+              const color = getColor(b)
+              return (
+                <div key={b.id}
+                  onClick={() => navigate(`/bloque/${b.id}`)}
+                  style={{ background: cultivo ? color : '#fff', borderRadius:20, padding:'16px 14px', cursor:'pointer', minHeight:100, display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+                  <div style={{ fontSize:10, fontWeight:600, color: cultivo ? 'rgba(255,255,255,0.6)' : '#c0c0c0', letterSpacing:.05, textTransform:'uppercase' }}>
+                    {b.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}
+                  </div>
+                  <div>
+                    <div style={{ fontSize:22, fontWeight:800, color: cultivo ? '#fff' : '#0a0a0a', letterSpacing:-.5 }}>{b.codigo}</div>
+                    <div style={{ fontSize:10, color: cultivo ? 'rgba(255,255,255,0.75)' : '#c0c0c0', marginTop:3 }}>
+                      {cultivo ? `${cultivo}${variedad ? ' · ' + variedad : ''}` : 'Sin cultivo'}
                     </div>
                   </div>
-                )
-              })}
-            </div>
-            <div style={s.legend}>
-              {Object.entries(CULTIVO_COLORES).filter(([k]) => k !== 'default').map(([k, v]) => (
-                <div key={k} style={s.legItem}>
-                  <div style={{ ...s.legDot, background: v }}></div>
-                  {k}
                 </div>
-              ))}
-              <div style={s.legItem}>
-                <div style={{ ...s.legDot, background:'#f0ede8', border:'1px solid #d0cdc8' }}></div>
-                Sin cultivo
-              </div>
-            </div>
-          </>
+              )
+            })}
+          </div>
         )}
       </div>
     </div>
