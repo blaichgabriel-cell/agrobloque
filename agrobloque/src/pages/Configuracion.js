@@ -1,37 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-const s = {
-  topbar: { background:'#1a1a1a', padding:'12px 16px' },
-  topTitle: { color:'#f9f8f6', fontSize:15, fontWeight:500 },
-  body: { padding:'8px 0' },
-  item: { display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderBottom:'0.5px solid #f0ede8', cursor:'pointer' },
-  icon: { width:34, height:34, borderRadius:8, background:'#f0ede8', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 },
-  title: { fontSize:13, fontWeight:500, color:'#1a1a1a' },
-  sub: { fontSize:11, color:'#aaa' },
-  arrow: { marginLeft:'auto', color:'#bbb', fontSize:18 },
-  overlay: { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' },
-  sheet: { background:'#f9f8f6', borderRadius:'16px 16px 0 0', width:'100%', maxWidth:480, padding:'20px 16px 40px', maxHeight:'85vh', overflowY:'auto' },
-  sheetTitle: { fontSize:16, fontWeight:600, color:'#1a1a1a', marginBottom:16 },
-  label: { fontSize:11, color:'#888', marginBottom:4, display:'block' },
-  input: { width:'100%', padding:'10px 12px', borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f0ede8', fontSize:13, color:'#1a1a1a', marginBottom:10 },
-  select: { width:'100%', padding:'10px 12px', borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f0ede8', fontSize:13, color:'#1a1a1a', marginBottom:10 },
-  saveBtn: { width:'100%', padding:11, borderRadius:8, background:'#1a1a1a', color:'#f9f8f6', border:'none', fontSize:13, fontWeight:500, cursor:'pointer', marginTop:6 },
-  cancelBtn: { width:'100%', padding:11, borderRadius:8, background:'transparent', color:'#888', border:'0.5px solid #d0cdc8', fontSize:13, cursor:'pointer', marginTop:8 },
-  avatarWrap: { display:'flex', flexDirection:'column', alignItems:'center', marginBottom:20 },
-  avatar: { width:80, height:80, borderRadius:'50%', background:'#1a1a1a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, color:'#f9f8f6', marginBottom:8, overflow:'hidden' },
-  avatarImg: { width:'100%', height:'100%', objectFit:'cover' },
-  avatarBtn: { fontSize:12, color:'#888', cursor:'pointer', border:'0.5px solid #d0cdc8', padding:'6px 14px', borderRadius:20, background:'transparent', display:'inline-block', textAlign:'center' },
-  listItem: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:'0.5px solid #f0ede8' },
-  listName: { fontSize:13, color:'#1a1a1a' },
-  listBtns: { display:'flex', gap:6 },
-  editBtn: { fontSize:11, padding:'3px 10px', borderRadius:6, border:'0.5px solid #d0cdc8', background:'transparent', color:'#888', cursor:'pointer' },
-  delBtn: { fontSize:11, padding:'3px 10px', borderRadius:6, border:'0.5px solid #ffcccc', background:'transparent', color:'#cc4444', cursor:'pointer' },
-  addBtn: { width:'100%', padding:10, borderRadius:8, border:'0.5px dashed #d0cdc8', background:'transparent', fontSize:12, color:'#888', cursor:'pointer', marginTop:10 },
-  secLabel: { fontSize:11, fontWeight:500, color:'#888', padding:'10px 0 4px' },
-  infoBox: { background:'#f0ede8', borderRadius:8, padding:'10px 12px', fontSize:11, color:'#888', marginBottom:10 },
-}
-
 export default function Configuracion() {
   const [modal, setModal] = useState(null)
   const [perfil, setPerfil] = useState({ nombre:'', email:'', foto:'' })
@@ -118,140 +87,159 @@ export default function Configuracion() {
     await supabase.from('abonos').delete().eq('id', id); await fetchAll()
   }
 
-  const iniciales = (n) => n ? n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0,2) : 'U'
+  const iniciales = (n) => n ? n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0,2) : 'HS'
+
+  const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }
+  const saveBtn = { width:'100%', padding:14, borderRadius:14, background:'#0a0a0a', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }
+  const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
+  const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f2f1ef' }
+  const listName = { fontSize:13, fontWeight:500, color:'#0a0a0a' }
+  const editBtn = { padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, fontWeight:500, color:'#555', cursor:'pointer' }
+  const delBtn = { padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, fontWeight:500, color:'#c84040', cursor:'pointer' }
+  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #e8e6e2', background:'transparent', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
+  const lbl = { fontSize:10, color:'#9a9a9a', marginBottom:6, display:'block' }
 
   const menuItems = [
-    { icon:'👤', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre }) },
-    { icon:'🏗️', title:'Campos y bloques', sub: campos.length + ' campos configurados', action: () => abrir('campos') },
-    { icon:'🌱', title:'Cultivos', sub: cultivos.length + ' cultivos', action: () => abrir('cultivos') },
-    { icon:'👥', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
-    { icon:'🌿', title:'Abonos de base', sub: abonos.length + ' abonos', action: () => abrir('abonos') },
-    { icon:'🧪', title:'Productos e insumos', sub: 'Próximamente', action: () => {} },
-    { icon:'🔔', title:'Notificaciones', sub: 'Próximamente', action: () => {} },
+    { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, bg:'#f2f1ef', action: () => abrir('cuenta', { nombre: perfil.nombre }) },
+    { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', bg:'#f2f1ef', action: () => abrir('campos') },
+    { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', bg:'#edf7ed', color:'#2d6a2d', action: () => abrir('cultivos') },
+    { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', bg:'#f2f1ef', action: () => abrir('operarios') },
+    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', bg:'#edf7ed', color:'#2d6a2d', action: () => abrir('abonos') },
+    { icon:'ti-flask', title:'Productos e insumos', sub:'Próximamente', bg:'#f2f1ef', action: () => {} },
+    { icon:'ti-bell', title:'Notificaciones', sub:'Próximamente', bg:'#fff3e8', color:'#e07b00', action: () => {} },
   ]
 
   return (
-    <div>
-      <div style={s.topbar}><div style={s.topTitle}>Configuración</div></div>
-      <div style={s.body}>
+    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+        <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Sistema</div>
+        <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:20 }}>Configuración</div>
+      </div>
+
+      <div style={{ padding:'0 14px 100px' }}>
         {menuItems.map((it, i) => (
-          <div key={i} style={s.item} onClick={it.action}>
-            <div style={s.icon}>{it.icon}</div>
-            <div style={{ flex:1 }}>
-              <div style={s.title}>{it.title}</div>
-              <div style={s.sub}>{it.sub}</div>
+          <div key={i} onClick={it.action} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
+            <div style={{ width:40, height:40, borderRadius:12, background:it.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <i className={`ti ${it.icon}`} style={{ fontSize:18, color: it.color || '#0a0a0a' }} aria-hidden="true"></i>
             </div>
-            <div style={s.arrow}>›</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:14, fontWeight:600, color:'#0a0a0a' }}>{it.title}</div>
+              <div style={{ fontSize:11, color:'#b0b0b0', marginTop:2 }}>{it.sub}</div>
+            </div>
+            <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
           </div>
         ))}
+
+        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginTop:8, cursor:'pointer' }} onClick={() => supabase.auth.signOut()}>
+          <div style={{ fontSize:14, fontWeight:600, color:'#c84040', textAlign:'center' }}>Cerrar sesión</div>
+        </div>
       </div>
 
       {modal && (
-        <div style={s.overlay} onClick={e => e.target === e.currentTarget && cerrar()}>
-          <div style={s.sheet}>
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && cerrar()}>
+          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto' }}>
 
             {modal === 'cuenta' && <>
-              <div style={s.sheetTitle}>Mi cuenta</div>
-              <div style={s.avatarWrap}>
-                <div style={s.avatar}>
-                  {perfil.foto ? <img src={perfil.foto} alt="perfil" style={s.avatarImg}/> : iniciales(perfil.nombre || perfil.email)}
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Mi cuenta</div>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:20 }}>
+                <div style={{ width:80, height:80, borderRadius:'50%', background:'#0a0a0a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, color:'#fff', marginBottom:10, overflow:'hidden' }}>
+                  {perfil.foto ? <img src={perfil.foto} alt="perfil" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : iniciales(perfil.nombre || perfil.email)}
                 </div>
-                <label style={s.avatarBtn}>
-                  Cambiar foto de perfil
+                <label style={{ fontSize:12, color:'#9a9a9a', border:'1px solid #e8e6e2', padding:'6px 16px', borderRadius:20, cursor:'pointer', background:'#fff' }}>
+                  Cambiar foto
                   <input type="file" accept="image/*" style={{ display:'none' }} onChange={subirFoto}/>
                 </label>
               </div>
-              <label style={s.label}>Nombre</label>
-              <input style={s.input} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/>
-              <label style={s.label}>Email</label>
-              <input style={{...s.input,color:'#aaa'}} value={perfil.email} disabled/>
-              <button style={s.saveBtn} onClick={guardarPerfil} disabled={loading}>{loading?'Guardando...':'Guardar cambios'}</button>
-              <button style={s.cancelBtn} onClick={cerrar}>Cancelar</button>
+              <span style={lbl}>Nombre</span>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/>
+              <span style={lbl}>Email</span>
+              <input style={{...inp,color:'#aaa'}} value={perfil.email} disabled/>
+              <button style={saveBtn} onClick={guardarPerfil} disabled={loading}>{loading?'Guardando...':'Guardar cambios'}</button>
+              <button style={cancelBtn} onClick={cerrar}>Cancelar</button>
             </>}
 
             {modal === 'campos' && <>
-              <div style={s.sheetTitle}>Campos</div>
-              <div style={s.infoBox}>Los campos se configuran desde Supabase. Próximamente podrás editarlos desde acá.</div>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Campos</div>
               {campos.map(c => (
-                <div key={c.id} style={s.listItem}>
-                  <div style={s.listName}>{c.nombre}</div>
+                <div key={c.id} style={listItem}>
+                  <div style={listName}>{c.nombre}</div>
                 </div>
               ))}
-              <button style={s.cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'cultivos' && <>
-              <div style={s.sheetTitle}>Cultivos</div>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Cultivos</div>
               {cultivos.map(c => (
-                <div key={c.id} style={s.listItem}>
-                  <div style={s.listName}>{c.nombre}</div>
-                  <div style={s.listBtns}>
-                    <button style={s.editBtn} onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
-                    <button style={s.delBtn} onClick={() => eliminarCultivo(c.id)}>Eliminar</button>
+                <div key={c.id} style={listItem}>
+                  <div style={listName}>{c.nombre}</div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button style={editBtn} onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
+                    <button style={delBtn} onClick={() => eliminarCultivo(c.id)}>Eliminar</button>
                   </div>
                 </div>
               ))}
-              <button style={s.addBtn} onClick={() => abrir('editarCultivo',{})}>+ Agregar cultivo</button>
-              <button style={s.cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button style={addBtn} onClick={() => abrir('editarCultivo',{})}>+ Agregar cultivo</button>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'editarCultivo' && <>
-              <div style={s.sheetTitle}>{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
-              <label style={s.label}>Nombre</label>
-              <input style={s.input} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morrón"/>
-              <button style={s.saveBtn} onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={s.cancelBtn} onClick={()=>abrir('cultivos')}>Volver</button>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
+              <span style={lbl}>Nombre</span>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morrón"/>
+              <button style={saveBtn} onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('cultivos')}>Volver</button>
             </>}
 
             {modal === 'operarios' && <>
-              <div style={s.sheetTitle}>Operarios</div>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Operarios</div>
               {campos.map(campo => (
                 <div key={campo.id}>
-                  <div style={s.secLabel}>{campo.nombre}</div>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', padding:'10px 0 6px' }}>{campo.nombre}</div>
                   {operarios.filter(o => o.campo_id === campo.id).map(o => (
-                    <div key={o.id} style={s.listItem}>
-                      <div style={s.listName}>{o.nombre}</div>
-                      <div style={s.listBtns}>
-                        <button style={s.editBtn} onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
-                        <button style={s.delBtn} onClick={() => eliminarOperario(o.id)}>Eliminar</button>
+                    <div key={o.id} style={listItem}>
+                      <div style={listName}>{o.nombre}</div>
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button style={editBtn} onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
+                        <button style={delBtn} onClick={() => eliminarOperario(o.id)}>Eliminar</button>
                       </div>
                     </div>
                   ))}
-                  <button style={s.addBtn} onClick={() => abrir('editarOperario',{campo_id:campo.id})}>+ Agregar a {campo.nombre}</button>
+                  <button style={addBtn} onClick={() => abrir('editarOperario',{campo_id:campo.id})}>+ Agregar a {campo.nombre}</button>
                 </div>
               ))}
-              <button style={s.cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'editarOperario' && <>
-              <div style={s.sheetTitle}>{form.id?'Editar operario':'Nuevo operario'}</div>
-              <label style={s.label}>Nombre</label>
-              <input style={s.input} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
-              <button style={s.saveBtn} onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={s.cancelBtn} onClick={()=>abrir('operarios')}>Volver</button>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar operario':'Nuevo operario'}</div>
+              <span style={lbl}>Nombre</span>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
+              <button style={saveBtn} onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('operarios')}>Volver</button>
             </>}
 
             {modal === 'abonos' && <>
-              <div style={s.sheetTitle}>Abonos de base</div>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Abonos de base</div>
               {abonos.map(a => (
-                <div key={a.id} style={s.listItem}>
-                  <div style={s.listName}>{a.nombre}</div>
-                  <div style={s.listBtns}>
-                    <button style={s.editBtn} onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
-                    <button style={s.delBtn} onClick={() => eliminarAbono(a.id)}>Eliminar</button>
+                <div key={a.id} style={listItem}>
+                  <div style={listName}>{a.nombre}</div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button style={editBtn} onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
+                    <button style={delBtn} onClick={() => eliminarAbono(a.id)}>Eliminar</button>
                   </div>
                 </div>
               ))}
-              <button style={s.addBtn} onClick={() => abrir('editarAbono',{})}>+ Agregar abono</button>
-              <button style={s.cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button style={addBtn} onClick={() => abrir('editarAbono',{})}>+ Agregar abono</button>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'editarAbono' && <>
-              <div style={s.sheetTitle}>{form.id?'Editar abono':'Nuevo abono'}</div>
-              <label style={s.label}>Nombre</label>
-              <input style={s.input} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
-              <button style={s.saveBtn} onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={s.cancelBtn} onClick={()=>abrir('abonos')}>Volver</button>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar abono':'Nuevo abono'}</div>
+              <span style={lbl}>Nombre</span>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
+              <button style={saveBtn} onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('abonos')}>Volver</button>
             </>}
 
           </div>
