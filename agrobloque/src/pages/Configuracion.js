@@ -15,12 +15,13 @@ const s = {
   sheetTitle: { fontSize:16, fontWeight:600, color:'#1a1a1a', marginBottom:16 },
   label: { fontSize:11, color:'#888', marginBottom:4, display:'block' },
   input: { width:'100%', padding:'10px 12px', borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f0ede8', fontSize:13, color:'#1a1a1a', marginBottom:10 },
+  select: { width:'100%', padding:'10px 12px', borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f0ede8', fontSize:13, color:'#1a1a1a', marginBottom:10 },
   saveBtn: { width:'100%', padding:11, borderRadius:8, background:'#1a1a1a', color:'#f9f8f6', border:'none', fontSize:13, fontWeight:500, cursor:'pointer', marginTop:6 },
   cancelBtn: { width:'100%', padding:11, borderRadius:8, background:'transparent', color:'#888', border:'0.5px solid #d0cdc8', fontSize:13, cursor:'pointer', marginTop:8 },
   avatarWrap: { display:'flex', flexDirection:'column', alignItems:'center', marginBottom:20 },
   avatar: { width:80, height:80, borderRadius:'50%', background:'#1a1a1a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, color:'#f9f8f6', marginBottom:8, overflow:'hidden' },
   avatarImg: { width:'100%', height:'100%', objectFit:'cover' },
-  avatarBtn: { fontSize:12, color:'#888', cursor:'pointer', border:'0.5px solid #d0cdc8', padding:'6px 14px', borderRadius:20, background:'transparent' },
+  avatarBtn: { fontSize:12, color:'#888', cursor:'pointer', border:'0.5px solid #d0cdc8', padding:'6px 14px', borderRadius:20, background:'transparent', display:'inline-block', textAlign:'center' },
   listItem: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:'0.5px solid #f0ede8' },
   listName: { fontSize:13, color:'#1a1a1a' },
   listBtns: { display:'flex', gap:6 },
@@ -28,6 +29,7 @@ const s = {
   delBtn: { fontSize:11, padding:'3px 10px', borderRadius:6, border:'0.5px solid #ffcccc', background:'transparent', color:'#cc4444', cursor:'pointer' },
   addBtn: { width:'100%', padding:10, borderRadius:8, border:'0.5px dashed #d0cdc8', background:'transparent', fontSize:12, color:'#888', cursor:'pointer', marginTop:10 },
   secLabel: { fontSize:11, fontWeight:500, color:'#888', padding:'10px 0 4px' },
+  infoBox: { background:'#f0ede8', borderRadius:8, padding:'10px 12px', fontSize:11, color:'#888', marginBottom:10 },
 }
 
 export default function Configuracion() {
@@ -63,9 +65,8 @@ export default function Configuracion() {
     if (!file) return
     const reader = new FileReader()
     reader.onload = async (ev) => {
-      const fotoBase64 = ev.target.result
-      await supabase.auth.updateUser({ data: { foto: fotoBase64 } })
-      setPerfil(p => ({ ...p, foto: fotoBase64 }))
+      await supabase.auth.updateUser({ data: { foto: ev.target.result } })
+      setPerfil(p => ({ ...p, foto: ev.target.result }))
       alert('Foto actualizada')
     }
     reader.readAsDataURL(file)
@@ -75,8 +76,7 @@ export default function Configuracion() {
     setLoading(true)
     await supabase.auth.updateUser({ data: { nombre: form.nombre } })
     setPerfil(p => ({ ...p, nombre: form.nombre }))
-    setLoading(false)
-    cerrar()
+    setLoading(false); cerrar()
   }
 
   const guardarCultivo = async () => {
@@ -122,9 +122,12 @@ export default function Configuracion() {
 
   const menuItems = [
     { icon:'👤', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre }) },
+    { icon:'🏗️', title:'Campos y bloques', sub: campos.length + ' campos configurados', action: () => abrir('campos') },
     { icon:'🌱', title:'Cultivos', sub: cultivos.length + ' cultivos', action: () => abrir('cultivos') },
     { icon:'👥', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
     { icon:'🌿', title:'Abonos de base', sub: abonos.length + ' abonos', action: () => abrir('abonos') },
+    { icon:'🧪', title:'Productos e insumos', sub: 'Próximamente', action: () => {} },
+    { icon:'🔔', title:'Notificaciones', sub: 'Próximamente', action: () => {} },
   ]
 
   return (
@@ -151,9 +154,7 @@ export default function Configuracion() {
               <div style={s.sheetTitle}>Mi cuenta</div>
               <div style={s.avatarWrap}>
                 <div style={s.avatar}>
-                  {perfil.foto
-                    ? <img src={perfil.foto} alt="perfil" style={s.avatarImg}/>
-                    : iniciales(perfil.nombre || perfil.email)}
+                  {perfil.foto ? <img src={perfil.foto} alt="perfil" style={s.avatarImg}/> : iniciales(perfil.nombre || perfil.email)}
                 </div>
                 <label style={s.avatarBtn}>
                   Cambiar foto de perfil
@@ -166,6 +167,17 @@ export default function Configuracion() {
               <input style={{...s.input,color:'#aaa'}} value={perfil.email} disabled/>
               <button style={s.saveBtn} onClick={guardarPerfil} disabled={loading}>{loading?'Guardando...':'Guardar cambios'}</button>
               <button style={s.cancelBtn} onClick={cerrar}>Cancelar</button>
+            </>}
+
+            {modal === 'campos' && <>
+              <div style={s.sheetTitle}>Campos</div>
+              <div style={s.infoBox}>Los campos se configuran desde Supabase. Próximamente podrás editarlos desde acá.</div>
+              {campos.map(c => (
+                <div key={c.id} style={s.listItem}>
+                  <div style={s.listName}>{c.nombre}</div>
+                </div>
+              ))}
+              <button style={s.cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'cultivos' && <>
