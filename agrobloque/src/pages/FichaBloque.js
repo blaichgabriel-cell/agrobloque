@@ -187,7 +187,7 @@ export default function FichaBloque() {
           <div>
             {historial.length === 0
               ? <div style={{ textAlign:'center', padding:16, color:'#9a9a9a', fontSize:12 }}>Sin plantaciones anteriores</div>
-              : : historial.map(p => (
+              : historial.map(p => (
   <div key={p.id} style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:8 }}>
     <div style={{ fontSize:15, fontWeight:700, color:'#0a0a0a', marginBottom:10 }}>
       {p.cultivos?.nombre || 'Sin cultivo'}{getVariedad(p) ? ' · ' + getVariedad(p) : ''}
