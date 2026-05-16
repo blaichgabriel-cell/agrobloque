@@ -153,8 +153,16 @@ export default function FichaBloque() {
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:4 }}>Fecha de siembra *</div>
             <input style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:13, color:'#0a0a0a', marginBottom:10 }} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({ ...f, fecha_siembra:e.target.value }))}/>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:4 }}>Densidad (plantas/m²)</div>
-            <input style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:13, color:'#0a0a0a', marginBottom:14 }} type="number" value={form.densidad_plantas_m2} onChange={e => setForm(f => ({ ...f, densidad_plantas_m2:e.target.value }))} placeholder="Ej: 2.5" step="0.1"/>
-            <button style={{ width:'100%', padding:12, borderRadius:12, background:'#0a0a0a', border:'none', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }} onClick={guardarPlantacion} disabled={saving}>
+            <input style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:13, color:'#0a0a0a', marginBottom:10 }} type="number" value={form.densidad_plantas_m2} onChange={e => setForm(f => ({ ...f, densidad_plantas_m2:e.target.value }))} placeholder="Ej: 2.5" step="0.1"/>
+<div style={{ fontSize:10, color:'#9a9a9a', marginBottom:4 }}>Abonos de base</div>
+<div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
+  {abonosDisponibles.map(a => (
+    <div key={a.id} onClick={() => toggleAbono(a.id)} style={{ padding:'5px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.abonos_ids?.includes(a.id) ? '#0a0a0a' : '#f2f1ef', color: form.abonos_ids?.includes(a.id) ? '#fff' : '#555', border:'1px solid #e8e6e2' }}>
+      {a.nombre}
+    </div>
+  ))}
+</div>
+<button style={{ width:'100%', padding:12, borderRadius:12, background:'#0a0a0a', border:'none', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }} onClick={guardarPlantacion} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar plantación'}
             </button>
           </div>
