@@ -8,6 +8,9 @@ import FichaBloque from './pages/FichaBloque'
 import Configuracion from './pages/Configuracion'
 import Agenda from './pages/Agenda'
 import Asistencia from './pages/Asistencia'
+import Cosecha from './pages/Cosecha'
+import Inventario from './pages/Inventario'
+import Fumigaciones from './pages/Fumigaciones'
 import NavBar from './components/NavBar'
 
 export default function App() {
@@ -45,6 +48,9 @@ export default function App() {
           <Route path="/bloque/:id" element={<FichaBloque/>}/>
           <Route path="/agenda" element={<Agenda/>}/>
           <Route path="/asistencia" element={<Asistencia/>}/>
+          <Route path="/cosecha" element={<Cosecha/>}/>
+          <Route path="/inventario" element={<Inventario/>}/>
+          <Route path="/fumigaciones" element={<Fumigaciones/>}/>
           <Route path="/configuracion" element={<Configuracion/>}/>
           <Route path="*" element={<Navigate to="/"/>}/>
         </Routes>
