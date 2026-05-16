@@ -8,9 +8,9 @@ import FichaBloque from './pages/FichaBloque'
 import Configuracion from './pages/Configuracion'
 import Agenda from './pages/Agenda'
 import Asistencia from './pages/Asistencia'
-import Cosecha from './pages/Cosecha'
-import Inventario from './pages/Inventario'
-import Fumigaciones from './pages/Fumigaciones'
+import Cosecha from './pages/pages/Cosecha'
+import Inventario from './pages/pages/Inventario'
+import Fumigaciones from './pages/pages/Fumigaciones'
 import NavBar from './components/NavBar'
 
 export default function App() {
