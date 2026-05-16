@@ -2,35 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-const s = {
-  topbar: { background:'#1a1a1a', padding:'12px 16px', display:'flex', alignItems:'center', gap:10 },
-  topTitle: { color:'#f9f8f6', fontSize:15, fontWeight:500 },
-  back: { color:'#f9f8f6', fontSize:22, cursor:'pointer', lineHeight:1 },
-  body: { padding:12 },
-  head: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 },
-  codigo: { fontSize:22, fontWeight:600, color:'#1a1a1a' },
-  sector: { fontSize:11, color:'#888', marginTop:2 },
-  badge: { fontSize:10, padding:'3px 10px', borderRadius:20, background:'#1a1a1a', color:'#f9f8f6', fontWeight:500 },
-  row: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'8px 0', borderBottom:'0.5px solid #e8e4de' },
-  rkey: { fontSize:12, color:'#888' },
-  rval: { fontSize:12, color:'#1a1a1a', fontWeight:500, textAlign:'right', maxWidth:'60%' },
-  abonoWrap: { display:'flex', flexWrap:'wrap', gap:4, justifyContent:'flex-end' },
-  abonoTag: { fontSize:10, padding:'2px 8px', borderRadius:6, background:'#f0ede8', border:'0.5px solid #d0cdc8', color:'#444' },
-  histBtn: { width:'100%', padding:10, borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f0ede8', fontSize:12, color:'#1a1a1a', display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:10, cursor:'pointer' },
-  terminarBtn: { width:'100%', padding:10, borderRadius:8, border:'0.5px solid #ffcccc', background:'transparent', fontSize:12, color:'#cc4444', display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:10, cursor:'pointer' },
-  plantForm: { background:'#f0ede8', borderRadius:10, padding:14, marginTop:12, border:'0.5px solid #d0cdc8' },
-  formTitle: { fontSize:13, fontWeight:500, color:'#1a1a1a', marginBottom:10 },
-  input: { width:'100%', padding:'9px 12px', borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f9f8f6', fontSize:12, color:'#1a1a1a', marginBottom:8 },
-  select: { width:'100%', padding:'9px 12px', borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f9f8f6', fontSize:12, color:'#1a1a1a', marginBottom:8 },
-  saveBtn: { width:'100%', padding:10, borderRadius:8, background:'#1a1a1a', color:'#f9f8f6', border:'none', fontSize:12, fontWeight:500, cursor:'pointer', marginTop:4 },
-  histItem: { background:'#f0ede8', borderRadius:8, padding:'10px 12px', marginBottom:6, border:'0.5px solid #d0cdc8' },
-  histTitle: { fontSize:12, fontWeight:500, color:'#1a1a1a' },
-  histSub: { fontSize:11, color:'#888', marginTop:2 },
-  obsWrap: { marginTop:12 },
-  obsInput: { width:'100%', padding:'9px 12px', borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f9f8f6', fontSize:12, color:'#1a1a1a', marginBottom:6, minHeight:70, resize:'vertical' },
-  label: { fontSize:11, color:'#888', marginBottom:4, display:'block' },
-}
-
 export default function FichaBloque() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -50,20 +21,15 @@ export default function FichaBloque() {
   const fetchData = async () => {
     const { data: b } = await supabase.from('bloques').select('*, sectores(nombre), campos(nombre)').eq('id', id).single()
     setBloque(b)
-    const { data: plantas } = await supabase.from('plantaciones')
-      .select('*, cultivos(nombre)')
-      .eq('bloque_id', id).order('created_at', { ascending: false })
+    const { data: plantas } = await supabase.from('plantaciones').select('*, cultivos(nombre)').eq('bloque_id', id).order('created_at', { ascending: false })
     if (plantas) {
       setPlantacionActiva(plantas.find(p => p.activa) || null)
       setHistorial(plantas.filter(p => !p.activa))
     }
     if (plantas?.find(p => p.activa)) {
-      const { data: ab } = await supabase.from('plantacion_abonos')
-        .select('*, abonos(nombre)').eq('plantacion_id', plantas.find(p => p.activa).id)
+      const { data: ab } = await supabase.from('plantacion_abonos').select('*, abonos(nombre)').eq('plantacion_id', plantas.find(p => p.activa).id)
       setAbonosPlantacion(ab || [])
-    } else {
-      setAbonosPlantacion([])
-    }
+    } else { setAbonosPlantacion([]) }
   }
 
   const fetchCultivos = async () => {
@@ -72,7 +38,7 @@ export default function FichaBloque() {
   }
 
   const terminarPlantacion = async () => {
-    if (!window.confirm('¿Terminar esta plantación? Va a quedar en el historial del bloque.')) return
+    if (!window.confirm('¿Terminar esta plantación? Va a quedar en el historial.')) return
     await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
     fetchData()
   }
@@ -80,119 +46,124 @@ export default function FichaBloque() {
   const guardarPlantacion = async () => {
     if (!form.cultivo_id || !form.fecha_siembra) return
     setSaving(true)
-    if (plantacionActiva) {
-      await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
-    }
+    if (plantacionActiva) await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
     await supabase.from('plantaciones').insert({
-      bloque_id: id,
-      cultivo_id: form.cultivo_id,
+      bloque_id: id, cultivo_id: form.cultivo_id,
       notas: form.variedad_texto ? 'Variedad: ' + form.variedad_texto : null,
       fecha_siembra: form.fecha_siembra,
-      densidad_plantas_m2: form.densidad_plantas_m2 || null,
-      activa: true
+      densidad_plantas_m2: form.densidad_plantas_m2 || null, activa: true
     })
     setShowNuevaPlantacion(false)
     setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', densidad_plantas_m2:'' })
-    setSaving(false)
-    fetchData()
+    setSaving(false); fetchData()
   }
 
   const guardarObservacion = async () => {
     if (!observacion.trim()) return
-    await supabase.from('observaciones').insert({
-      bloque_id: id,
-      plantacion_id: plantacionActiva?.id || null,
-      texto: observacion
-    })
-    setObservacion('')
-    alert('Observación guardada')
+    await supabase.from('observaciones').insert({ bloque_id: id, plantacion_id: plantacionActiva?.id || null, texto: observacion })
+    setObservacion(''); alert('Observación guardada')
   }
 
   const getVariedad = (p) => {
-    if (!p || !p.notas) return '—'
+    if (!p || !p.notas) return null
     if (p.notas.startsWith('Variedad: ')) return p.notas.replace('Variedad: ', '')
-    return '—'
+    return null
   }
 
-  if (!bloque) return <div style={{ padding:40, textAlign:'center', color:'#888' }}>Cargando...</div>
+  if (!bloque) return <div style={{ background:'#f2f1ef', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'#9a9a9a', fontSize:13 }}>Cargando...</div>
 
   return (
-    <div>
-      <div style={s.topbar}>
-        <span style={s.back} onClick={() => navigate(-1)}>←</span>
-        <div style={s.topTitle}>Bloque {bloque.codigo}</div>
+    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+        <button onClick={() => navigate(-1)} style={{ background:'#0a0a0a', border:'none', borderRadius:12, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', marginBottom:16 }}>
+          <i className="ti ti-arrow-left" style={{ color:'#fff', fontSize:18 }} aria-hidden="true"></i>
+        </button>
+        <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>{bloque.campos?.nombre} · {bloque.sectores?.nombre}</div>
+        <div style={{ fontSize:28, fontWeight:800, color:'#0a0a0a', letterSpacing:-1 }}>Bloque {bloque.codigo}</div>
       </div>
-      <div style={s.body}>
-        <div style={s.head}>
-          <div>
-            <div style={s.codigo}>Bloque {bloque.codigo}</div>
-            <div style={s.sector}>{bloque.campos?.nombre} · {bloque.sectores?.nombre}</div>
-          </div>
-          <div style={s.badge}>{bloque.activo ? 'Activo' : 'Inactivo'}</div>
-        </div>
 
-        <div style={s.row}><div style={s.rkey}>Cultivo</div><div style={s.rval}>{plantacionActiva?.cultivos?.nombre || '—'}</div></div>
-        <div style={s.row}><div style={s.rkey}>Variedad</div><div style={s.rval}>{getVariedad(plantacionActiva)}</div></div>
-        <div style={s.row}><div style={s.rkey}>Fecha de siembra</div><div style={s.rval}>{plantacionActiva?.fecha_siembra || '—'}</div></div>
-        <div style={s.row}><div style={s.rkey}>Densidad</div><div style={s.rval}>{plantacionActiva?.densidad_plantas_m2 ? plantacionActiva.densidad_plantas_m2 + ' pl/m²' : '—'}</div></div>
-        <div style={s.row}>
-          <div style={s.rkey}>Abonos de base</div>
-          <div style={s.abonoWrap}>
-            {abonosPlantacion.map(a => <span key={a.id} style={s.abonoTag}>{a.abonos?.nombre}</span>)}
-            {abonosPlantacion.length === 0 && <span style={{ fontSize:11, color:'#aaa' }}>Sin abonos</span>}
+      <div style={{ padding:'0 14px 100px' }}>
+        <div style={{ background:'#0a0a0a', borderRadius:24, padding:20, marginBottom:10 }}>
+          <div style={{ fontSize:10, color:'#5a5a5a', letterSpacing:.05, textTransform:'uppercase', marginBottom:6 }}>Plantación actual</div>
+          <div style={{ fontSize:24, fontWeight:700, color: plantacionActiva ? '#fff' : '#3a3a3a', marginBottom:4 }}>
+            {plantacionActiva?.cultivos?.nombre || 'Sin cultivo'}
           </div>
+          {getVariedad(plantacionActiva) && <div style={{ fontSize:12, color:'#6a6a6a', marginBottom:12 }}>{getVariedad(plantacionActiva)}</div>}
+          <div style={{ display:'flex', gap:16, marginTop:12 }}>
+            <div>
+              <div style={{ fontSize:9, color:'#4a4a4a', marginBottom:2 }}>Siembra</div>
+              <div style={{ fontSize:12, fontWeight:600, color:'#c8c8c8' }}>{plantacionActiva?.fecha_siembra || '—'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize:9, color:'#4a4a4a', marginBottom:2 }}>Densidad</div>
+              <div style={{ fontSize:12, fontWeight:600, color:'#c8c8c8' }}>{plantacionActiva?.densidad_plantas_m2 ? plantacionActiva.densidad_plantas_m2 + ' pl/m²' : '—'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize:9, color:'#4a4a4a', marginBottom:2 }}>Tipo</div>
+              <div style={{ fontSize:12, fontWeight:600, color:'#c8c8c8' }}>{bloque.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}</div>
+            </div>
+          </div>
+          {abonosPlantacion.length > 0 && (
+            <div style={{ marginTop:14, paddingTop:14, borderTop:'1px solid #1e1e1e' }}>
+              <div style={{ fontSize:9, color:'#4a4a4a', marginBottom:6 }}>Abonos de base</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+                {abonosPlantacion.map(a => (
+                  <span key={a.id} style={{ background:'#1e1e1e', borderRadius:8, padding:'3px 10px', fontSize:10, color:'#aaa' }}>{a.abonos?.nombre}</span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <div style={s.row}><div style={s.rkey}>Tipo</div><div style={s.rval}>{bloque.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}</div></div>
 
         {plantacionActiva && (
-          <button style={s.terminarBtn} onClick={terminarPlantacion}>
+          <button onClick={terminarPlantacion} style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #ffcccc', fontSize:12, fontWeight:500, color:'#c84040', cursor:'pointer', marginBottom:8 }}>
             ✕ Terminar plantación actual
           </button>
         )}
 
-        <button style={s.histBtn} onClick={() => setShowNuevaPlantacion(!showNuevaPlantacion)}>
+        <button onClick={() => setShowNuevaPlantacion(!showNuevaPlantacion)} style={{ width:'100%', padding:12, borderRadius:14, background:'#fff', border:'none', fontSize:13, fontWeight:600, color:'#0a0a0a', cursor:'pointer', marginBottom:10 }}>
           {showNuevaPlantacion ? '✕ Cancelar' : '+ Nueva plantación'}
         </button>
 
         {showNuevaPlantacion && (
-          <div style={s.plantForm}>
-            <div style={s.formTitle}>Nueva plantación</div>
-            <label style={s.label}>Cultivo *</label>
-            <select style={s.select} value={form.cultivo_id} onChange={e => setForm(f => ({ ...f, cultivo_id: e.target.value }))}>
+          <div style={{ background:'#fff', borderRadius:20, padding:18, marginBottom:10 }}>
+            <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a', marginBottom:14 }}>Nueva plantación</div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:4 }}>Cultivo *</div>
+            <select style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:13, color:'#0a0a0a', marginBottom:10 }} value={form.cultivo_id} onChange={e => setForm(f => ({ ...f, cultivo_id:e.target.value }))}>
               <option value="">Seleccioná cultivo...</option>
               {cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
-            <label style={s.label}>Variedad (escribí libremente)</label>
-            <input style={s.input} type="text" value={form.variedad_texto} onChange={e => setForm(f => ({ ...f, variedad_texto: e.target.value }))} placeholder="Ej: Rojo, Lamuyo, Holandés..."/>
-            <label style={s.label}>Fecha de siembra *</label>
-            <input style={s.input} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({ ...f, fecha_siembra: e.target.value }))}/>
-            <label style={s.label}>Densidad (plantas/m²)</label>
-            <input style={s.input} type="number" value={form.densidad_plantas_m2} onChange={e => setForm(f => ({ ...f, densidad_plantas_m2: e.target.value }))} placeholder="Ej: 2.5" step="0.1"/>
-            <button style={{ ...s.saveBtn, background: saving ? '#888' : '#1a1a1a' }} onClick={guardarPlantacion} disabled={saving}>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:4 }}>Variedad (escribí libremente)</div>
+            <input style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:13, color:'#0a0a0a', marginBottom:10 }} type="text" value={form.variedad_texto} onChange={e => setForm(f => ({ ...f, variedad_texto:e.target.value }))} placeholder="Ej: Rojo, Lamuyo..."/>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:4 }}>Fecha de siembra *</div>
+            <input style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:13, color:'#0a0a0a', marginBottom:10 }} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({ ...f, fecha_siembra:e.target.value }))}/>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:4 }}>Densidad (plantas/m²)</div>
+            <input style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:13, color:'#0a0a0a', marginBottom:14 }} type="number" value={form.densidad_plantas_m2} onChange={e => setForm(f => ({ ...f, densidad_plantas_m2:e.target.value }))} placeholder="Ej: 2.5" step="0.1"/>
+            <button style={{ width:'100%', padding:12, borderRadius:12, background:'#0a0a0a', border:'none', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }} onClick={guardarPlantacion} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar plantación'}
             </button>
           </div>
         )}
 
-        <div style={s.obsWrap}>
-          <label style={s.label}>Agregar observación</label>
-          <textarea style={s.obsInput} value={observacion} onChange={e => setObservacion(e.target.value)} placeholder="Escribí una observación sobre este bloque..."/>
-          <button style={{ ...s.saveBtn, background: observacion.trim() ? '#1a1a1a' : '#d0cdc8' }} onClick={guardarObservacion}>
+        <div style={{ background:'#fff', borderRadius:20, padding:18, marginBottom:10 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a', marginBottom:12 }}>Agregar observación</div>
+          <textarea style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:12, color:'#0a0a0a', marginBottom:10, minHeight:80, resize:'vertical' }} value={observacion} onChange={e => setObservacion(e.target.value)} placeholder="Escribí una observación..."/>
+          <button style={{ width:'100%', padding:11, borderRadius:12, background: observacion.trim() ? '#0a0a0a' : '#e8e6e2', border:'none', fontSize:13, fontWeight:600, color: observacion.trim() ? '#fff' : '#b0b0b0', cursor:'pointer' }} onClick={guardarObservacion}>
             Guardar observación
           </button>
         </div>
 
-        <button style={s.histBtn} onClick={() => setShowHistorial(!showHistorial)}>
+        <button onClick={() => setShowHistorial(!showHistorial)} style={{ width:'100%', padding:12, borderRadius:14, background:'#fff', border:'none', fontSize:13, fontWeight:600, color:'#0a0a0a', cursor:'pointer', marginBottom:8 }}>
           {showHistorial ? 'Ocultar historial' : 'Ver historial de plantaciones'}
         </button>
         {showHistorial && (
-          <div style={{ marginTop:8 }}>
+          <div>
             {historial.length === 0
-              ? <div style={{ color:'#888', fontSize:12, padding:8 }}>Sin plantaciones anteriores</div>
+              ? <div style={{ textAlign:'center', padding:16, color:'#9a9a9a', fontSize:12 }}>Sin plantaciones anteriores</div>
               : historial.map(p => (
-                <div key={p.id} style={s.histItem}>
-                  <div style={s.histTitle}>{p.cultivos?.nombre}{getVariedad(p) !== '—' ? ' · ' + getVariedad(p) : ''}</div>
-                  <div style={s.histSub}>Siembra: {p.fecha_siembra || '—'}</div>
+                <div key={p.id} style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:6 }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a' }}>{p.cultivos?.nombre}{getVariedad(p) ? ' · ' + getVariedad(p) : ''}</div>
+                  <div style={{ fontSize:10, color:'#9a9a9a', marginTop:3 }}>Siembra: {p.fecha_siembra || '—'}</div>
                 </div>
               ))
             }
