@@ -16,7 +16,8 @@ const s = {
   rval: { fontSize:12, color:'#1a1a1a', fontWeight:500, textAlign:'right', maxWidth:'60%' },
   abonoWrap: { display:'flex', flexWrap:'wrap', gap:4, justifyContent:'flex-end' },
   abonoTag: { fontSize:10, padding:'2px 8px', borderRadius:6, background:'#f0ede8', border:'0.5px solid #d0cdc8', color:'#444' },
-  histBtn: { width:'100%', padding:10, borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f0ede8', fontSize:12, color:'#1a1a1a', display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:12, cursor:'pointer' },
+  histBtn: { width:'100%', padding:10, borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f0ede8', fontSize:12, color:'#1a1a1a', display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:10, cursor:'pointer' },
+  terminarBtn: { width:'100%', padding:10, borderRadius:8, border:'0.5px solid #ffcccc', background:'transparent', fontSize:12, color:'#cc4444', display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:10, cursor:'pointer' },
   plantForm: { background:'#f0ede8', borderRadius:10, padding:14, marginTop:12, border:'0.5px solid #d0cdc8' },
   formTitle: { fontSize:13, fontWeight:500, color:'#1a1a1a', marginBottom:10 },
   input: { width:'100%', padding:'9px 12px', borderRadius:8, border:'0.5px solid #d0cdc8', background:'#f9f8f6', fontSize:12, color:'#1a1a1a', marginBottom:8 },
@@ -60,12 +61,20 @@ export default function FichaBloque() {
       const { data: ab } = await supabase.from('plantacion_abonos')
         .select('*, abonos(nombre)').eq('plantacion_id', plantas.find(p => p.activa).id)
       setAbonosPlantacion(ab || [])
+    } else {
+      setAbonosPlantacion([])
     }
   }
 
   const fetchCultivos = async () => {
     const { data } = await supabase.from('cultivos').select('*').eq('activo', true).order('nombre')
     setCultivos(data || [])
+  }
+
+  const terminarPlantacion = async () => {
+    if (!window.confirm('¿Terminar esta plantación? Va a quedar en el historial del bloque.')) return
+    await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
+    fetchData()
   }
 
   const guardarPlantacion = async () => {
@@ -135,7 +144,13 @@ export default function FichaBloque() {
         </div>
         <div style={s.row}><div style={s.rkey}>Tipo</div><div style={s.rval}>{bloque.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}</div></div>
 
-        <button style={{ ...s.histBtn, marginTop:16 }} onClick={() => setShowNuevaPlantacion(!showNuevaPlantacion)}>
+        {plantacionActiva && (
+          <button style={s.terminarBtn} onClick={terminarPlantacion}>
+            ✕ Terminar plantación actual
+          </button>
+        )}
+
+        <button style={s.histBtn} onClick={() => setShowNuevaPlantacion(!showNuevaPlantacion)}>
           {showNuevaPlantacion ? '✕ Cancelar' : '+ Nueva plantación'}
         </button>
 
@@ -148,11 +163,11 @@ export default function FichaBloque() {
               {cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
             <label style={s.label}>Variedad (escribí libremente)</label>
-            <input style={s.input} type="text" value={form.variedad_texto} onChange={e => setForm(f => ({ ...f, variedad_texto: e.target.value }))} placeholder="Ej: Rojo, Lamuyo, Holandés..." />
+            <input style={s.input} type="text" value={form.variedad_texto} onChange={e => setForm(f => ({ ...f, variedad_texto: e.target.value }))} placeholder="Ej: Rojo, Lamuyo, Holandés..."/>
             <label style={s.label}>Fecha de siembra *</label>
-            <input style={s.input} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({ ...f, fecha_siembra: e.target.value }))} />
+            <input style={s.input} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({ ...f, fecha_siembra: e.target.value }))}/>
             <label style={s.label}>Densidad (plantas/m²)</label>
-            <input style={s.input} type="number" value={form.densidad_plantas_m2} onChange={e => setForm(f => ({ ...f, densidad_plantas_m2: e.target.value }))} placeholder="Ej: 2.5" step="0.1" />
+            <input style={s.input} type="number" value={form.densidad_plantas_m2} onChange={e => setForm(f => ({ ...f, densidad_plantas_m2: e.target.value }))} placeholder="Ej: 2.5" step="0.1"/>
             <button style={{ ...s.saveBtn, background: saving ? '#888' : '#1a1a1a' }} onClick={guardarPlantacion} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar plantación'}
             </button>
@@ -161,13 +176,13 @@ export default function FichaBloque() {
 
         <div style={s.obsWrap}>
           <label style={s.label}>Agregar observación</label>
-          <textarea style={s.obsInput} value={observacion} onChange={e => setObservacion(e.target.value)} placeholder="Escribí una observación sobre este bloque..." />
+          <textarea style={s.obsInput} value={observacion} onChange={e => setObservacion(e.target.value)} placeholder="Escribí una observación sobre este bloque..."/>
           <button style={{ ...s.saveBtn, background: observacion.trim() ? '#1a1a1a' : '#d0cdc8' }} onClick={guardarObservacion}>
             Guardar observación
           </button>
         </div>
 
-        <button style={{ ...s.histBtn, marginTop:16 }} onClick={() => setShowHistorial(!showHistorial)}>
+        <button style={s.histBtn} onClick={() => setShowHistorial(!showHistorial)}>
           {showHistorial ? 'Ocultar historial' : 'Ver historial de plantaciones'}
         </button>
         {showHistorial && (
