@@ -13,6 +13,7 @@ export default function FichaBloque() {
   const [showHistorial, setShowHistorial] = useState(false)
   const [showNuevaPlantacion, setShowNuevaPlantacion] = useState(false)
   const [observacion, setObservacion] = useState('')
+  const [observaciones, setObservaciones] = useState([])
   const [form, setForm] = useState({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', densidad_plantas_m2:'' })
   const [saving, setSaving] = useState(false)
 
@@ -29,7 +30,11 @@ export default function FichaBloque() {
     if (plantas?.find(p => p.activa)) {
       const { data: ab } = await supabase.from('plantacion_abonos').select('*, abonos(nombre)').eq('plantacion_id', plantas.find(p => p.activa).id)
       setAbonosPlantacion(ab || [])
-    } else { setAbonosPlantacion([]) }
+    } else {
+      setAbonosPlantacion([])
+    }
+    const { data: obs } = await supabase.from('observaciones').select('*').eq('bloque_id', id).order('created_at', { ascending: false })
+    setObservaciones(obs || [])
   }
 
   const fetchCultivos = async () => {
@@ -48,20 +53,24 @@ export default function FichaBloque() {
     setSaving(true)
     if (plantacionActiva) await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
     await supabase.from('plantaciones').insert({
-      bloque_id: id, cultivo_id: form.cultivo_id,
+      bloque_id: id,
+      cultivo_id: form.cultivo_id,
       notas: form.variedad_texto ? 'Variedad: ' + form.variedad_texto : null,
       fecha_siembra: form.fecha_siembra,
-      densidad_plantas_m2: form.densidad_plantas_m2 || null, activa: true
+      densidad_plantas_m2: form.densidad_plantas_m2 || null,
+      activa: true
     })
     setShowNuevaPlantacion(false)
     setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', densidad_plantas_m2:'' })
-    setSaving(false); fetchData()
+    setSaving(false)
+    fetchData()
   }
 
   const guardarObservacion = async () => {
     if (!observacion.trim()) return
     await supabase.from('observaciones').insert({ bloque_id: id, plantacion_id: plantacionActiva?.id || null, texto: observacion })
-    setObservacion(''); alert('Observación guardada')
+    setObservacion('')
+    fetchData()
   }
 
   const getVariedad = (p) => {
@@ -70,7 +79,11 @@ export default function FichaBloque() {
     return null
   }
 
-  if (!bloque) return <div style={{ background:'#f2f1ef', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'#9a9a9a', fontSize:13 }}>Cargando...</div>
+  if (!bloque) return (
+    <div style={{ background:'#f2f1ef', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'#9a9a9a', fontSize:13 }}>
+      Cargando...
+    </div>
+  )
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
@@ -83,12 +96,15 @@ export default function FichaBloque() {
       </div>
 
       <div style={{ padding:'0 14px 100px' }}>
+
         <div style={{ background:'#0a0a0a', borderRadius:24, padding:20, marginBottom:10 }}>
           <div style={{ fontSize:10, color:'#5a5a5a', letterSpacing:.05, textTransform:'uppercase', marginBottom:6 }}>Plantación actual</div>
           <div style={{ fontSize:24, fontWeight:700, color: plantacionActiva ? '#fff' : '#3a3a3a', marginBottom:4 }}>
             {plantacionActiva?.cultivos?.nombre || 'Sin cultivo'}
           </div>
-          {getVariedad(plantacionActiva) && <div style={{ fontSize:12, color:'#6a6a6a', marginBottom:12 }}>{getVariedad(plantacionActiva)}</div>}
+          {getVariedad(plantacionActiva) && (
+            <div style={{ fontSize:12, color:'#6a6a6a', marginBottom:12 }}>{getVariedad(plantacionActiva)}</div>
+          )}
           <div style={{ display:'flex', gap:16, marginTop:12 }}>
             <div>
               <div style={{ fontSize:9, color:'#4a4a4a', marginBottom:2 }}>Siembra</div>
@@ -151,38 +167,53 @@ export default function FichaBloque() {
           <button style={{ width:'100%', padding:11, borderRadius:12, background: observacion.trim() ? '#0a0a0a' : '#e8e6e2', border:'none', fontSize:13, fontWeight:600, color: observacion.trim() ? '#fff' : '#b0b0b0', cursor:'pointer' }} onClick={guardarObservacion}>
             Guardar observación
           </button>
+          {observaciones.length > 0 && (
+            <div style={{ marginTop:12 }}>
+              {observaciones.map(o => (
+                <div key={o.id} style={{ background:'#f2f1ef', borderRadius:10, padding:'8px 12px', marginTop:6 }}>
+                  <div style={{ fontSize:11, color:'#0a0a0a' }}>{o.texto}</div>
+                  <div style={{ fontSize:9, color:'#b0b0b0', marginTop:3 }}>{new Date(o.created_at).toLocaleDateString('es-PY')}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <button onClick={() => setShowHistorial(!showHistorial)} style={{ width:'100%', padding:12, borderRadius:14, background:'#fff', border:'none', fontSize:13, fontWeight:600, color:'#0a0a0a', cursor:'pointer', marginBottom:8 }}>
           {showHistorial ? 'Ocultar historial' : 'Ver historial de plantaciones'}
         </button>
+
         {showHistorial && (
           <div>
             {historial.length === 0
               ? <div style={{ textAlign:'center', padding:16, color:'#9a9a9a', fontSize:12 }}>Sin plantaciones anteriores</div>
               : historial.map(p => (
-  <div key={p.id} style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:8 }}>
-    <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a', marginBottom:8 }}>
-      {p.cultivos?.nombre}{getVariedad(p) ? ' · ' + getVariedad(p) : ''}
+                <div key={p.id} style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:8 }}>
+                  <div style={{ fontSize:15, fontWeight:700, color:'#0a0a0a', marginBottom:10 }}>
+                    {p.cultivos?.nombre}{getVariedad(p) ? ' · ' + getVariedad(p) : ''}
+                  </div>
+                  <div style={{ display:'flex', gap:16, marginBottom:8 }}>
+                    <div>
+                      <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Siembra</div>
+                      <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.fecha_siembra || '—'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Densidad</div>
+                      <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.densidad_plantas_m2 ? p.densidad_plantas_m2 + ' pl/m²' : '—'}</div>
+                    </div>
+                  </div>
+                  {p.notas && !p.notas.startsWith('Variedad:') && (
+                    <div style={{ fontSize:11, color:'#9a9a9a', padding:'8px 10px', background:'#f2f1ef', borderRadius:8 }}>
+                      {p.notas}
+                    </div>
+                  )}
+                </div>
+              ))
+            }
+          </div>
+        )}
+
+      </div>
     </div>
-    <div style={{ display:'flex', gap:16, marginBottom: p.notas && !p.notas.startsWith('Variedad:') ? 8 : 0 }}>
-      <div>
-        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Siembra</div>
-        <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.fecha_siembra || '—'}</div>
-      </div>
-      <div>
-        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Densidad</div>
-        <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.densidad_plantas_m2 ? p.densidad_plantas_m2 + ' pl/m²' : '—'}</div>
-      </div>
-      <div>
-        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Cosecha estimada</div>
-        <div style={{ fontSize:12, fontWeight:600, color:'#555' }}>{p.fecha_cosecha_estimada || '—'}</div>
-      </div>
-    </div>
-    {p.notas && !p.notas.startsWith('Variedad:') && (
-      <div style={{ fontSize:11, color:'#9a9a9a', marginTop:6, padding:'8px 10px', background:'#f2f1ef', borderRadius:8 }}>
-        📝 {p.notas}
-      </div>
-    )}
-  </div>
-))
+  )
+}
