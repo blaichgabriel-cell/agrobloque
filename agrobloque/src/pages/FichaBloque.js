@@ -9,15 +9,16 @@ export default function FichaBloque() {
   const [plantacionActiva, setPlantacionActiva] = useState(null)
   const [historial, setHistorial] = useState([])
   const [cultivos, setCultivos] = useState([])
+  const [abonosDisponibles, setAbonosDisponibles] = useState([])
   const [abonosPlantacion, setAbonosPlantacion] = useState([])
   const [showHistorial, setShowHistorial] = useState(false)
   const [showNuevaPlantacion, setShowNuevaPlantacion] = useState(false)
   const [observacion, setObservacion] = useState('')
   const [observaciones, setObservaciones] = useState([])
-  const [form, setForm] = useState({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', densidad_plantas_m2:'' })
+  const [form, setForm] = useState({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', densidad_plantas_m2:'', abonos_ids:[] })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { fetchData(); fetchCultivos() }, [id])
+  useEffect(() => { fetchData(); fetchCultivos(); fetchAbonos() }, [id])
 
   const fetchData = async () => {
     const { data: b } = await supabase.from('bloques').select('*, sectores(nombre), campos(nombre)').eq('id', id).single()
@@ -42,6 +43,20 @@ export default function FichaBloque() {
     setCultivos(data || [])
   }
 
+  const fetchAbonos = async () => {
+    const { data } = await supabase.from('abonos').select('*').eq('activo', true).order('nombre')
+    setAbonosDisponibles(data || [])
+  }
+
+  const toggleAbono = (abonoId) => {
+    setForm(f => ({
+      ...f,
+      abonos_ids: f.abonos_ids.includes(abonoId)
+        ? f.abonos_ids.filter(x => x !== abonoId)
+        : [...f.abonos_ids, abonoId]
+    }))
+  }
+
   const terminarPlantacion = async () => {
     if (!window.confirm('¿Terminar esta plantación? Va a quedar en el historial.')) return
     await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
@@ -60,8 +75,16 @@ export default function FichaBloque() {
       densidad_plantas_m2: form.densidad_plantas_m2 || null,
       activa: true
     })
+    if (form.abonos_ids.length > 0) {
+      const { data: nueva } = await supabase.from('plantaciones').select('id').eq('bloque_id', id).eq('activa', true).single()
+      if (nueva) {
+        await supabase.from('plantacion_abonos').insert(
+          form.abonos_ids.map(abono_id => ({ plantacion_id: nueva.id, abono_id }))
+        )
+      }
+    }
     setShowNuevaPlantacion(false)
-    setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', densidad_plantas_m2:'' })
+    setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', densidad_plantas_m2:'', abonos_ids:[] })
     setSaving(false)
     fetchData()
   }
@@ -154,15 +177,15 @@ export default function FichaBloque() {
             <input style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:13, color:'#0a0a0a', marginBottom:10 }} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({ ...f, fecha_siembra:e.target.value }))}/>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:4 }}>Densidad (plantas/m²)</div>
             <input style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:13, color:'#0a0a0a', marginBottom:10 }} type="number" value={form.densidad_plantas_m2} onChange={e => setForm(f => ({ ...f, densidad_plantas_m2:e.target.value }))} placeholder="Ej: 2.5" step="0.1"/>
-<div style={{ fontSize:10, color:'#9a9a9a', marginBottom:4 }}>Abonos de base</div>
-<div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
-  {abonosDisponibles.map(a => (
-    <div key={a.id} onClick={() => toggleAbono(a.id)} style={{ padding:'5px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.abonos_ids?.includes(a.id) ? '#0a0a0a' : '#f2f1ef', color: form.abonos_ids?.includes(a.id) ? '#fff' : '#555', border:'1px solid #e8e6e2' }}>
-      {a.nombre}
-    </div>
-  ))}
-</div>
-<button style={{ width:'100%', padding:12, borderRadius:12, background:'#0a0a0a', border:'none', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }} onClick={guardarPlantacion} disabled={saving}>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Abonos de base</div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
+              {abonosDisponibles.map(a => (
+                <div key={a.id} onClick={() => toggleAbono(a.id)} style={{ padding:'5px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.abonos_ids.includes(a.id) ? '#0a0a0a' : '#f2f1ef', color: form.abonos_ids.includes(a.id) ? '#fff' : '#555', border:'1px solid #e8e6e2' }}>
+                  {a.nombre}
+                </div>
+              ))}
+            </div>
+            <button style={{ width:'100%', padding:12, borderRadius:12, background:'#0a0a0a', border:'none', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }} onClick={guardarPlantacion} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar plantación'}
             </button>
           </div>
