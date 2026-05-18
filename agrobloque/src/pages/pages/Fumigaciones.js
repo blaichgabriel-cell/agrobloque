@@ -14,6 +14,7 @@ export default function Fumigaciones() {
   const [productos, setProductos] = useState([])
   const [operarios, setOperarios] = useState([])
   const [modal, setModal] = useState(false)
+  const [detalle, setDetalle] = useState(null)
   const [form, setForm] = useState({ tipo:'fumigacion', fecha:'', campo_id:'', bloques_ids:[], operario:'', productos_form:[{ producto_id:'', dosis:'' }], notas:'' })
   const [saving, setSaving] = useState(false)
   const [filtro, setFiltro] = useState('todos')
@@ -33,7 +34,7 @@ export default function Fumigaciones() {
   const fetchBloques = async (campo_id) => {
     const { data } = await supabase.from('bloques').select('*').eq('campo_id', campo_id).order('codigo')
     setBloques(data || [])
-    if (data) setOperarios([])
+    setOperarios([])
     const { data: ops } = await supabase.from('operarios').select('*').eq('campo_id', campo_id)
     setOperarios(ops || [])
   }
@@ -47,22 +48,58 @@ export default function Fumigaciones() {
     setForm(f => ({ ...f, bloques_ids: f.bloques_ids.includes(id) ? f.bloques_ids.filter(x => x!==id) : [...f.bloques_ids, id] }))
   }
 
+  const parsearDosis = (dosis) => {
+    if (!dosis) return 0
+    const num = parseFloat(String(dosis).replace(',', '.'))
+    return isNaN(num) ? 0 : num
+  }
+
   const guardar = async () => {
     if (!form.fecha || form.bloques_ids.length === 0) return
     setSaving(true)
-    const { data: fum } = await supabase.from('fumigaciones').insert({ campo_id:form.campo_id||null, tipo:form.tipo, fecha:form.fecha, operario:form.operario||null, notas:form.notas||null }).select().single()
+
+    const { data: fum } = await supabase.from('fumigaciones').insert({
+      campo_id: form.campo_id || null,
+      tipo: form.tipo,
+      fecha: form.fecha,
+      operario: form.operario || null,
+      notas: form.notas || null
+    }).select().single()
+
     if (fum) {
-      await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => ({ fumigacion_id:fum.id, bloque_id:b })))
+      await supabase.from('fumigacion_bloques').insert(
+        form.bloques_ids.map(b => ({ fumigacion_id: fum.id, bloque_id: b }))
+      )
+
       const prods = form.productos_form.filter(p => p.producto_id)
-      if (prods.length > 0) await supabase.from('fumigacion_productos').insert(prods.map(p => ({ fumigacion_id:fum.id, producto_id:p.producto_id, dosis:p.dosis||null })))
+      if (prods.length > 0) {
+        await supabase.from('fumigacion_productos').insert(
+          prods.map(p => ({ fumigacion_id: fum.id, producto_id: p.producto_id, dosis: p.dosis || null }))
+        )
+
+        for (const p of prods) {
+          if (!p.producto_id || !p.dosis) continue
+          const dosisParsed = parsearDosis(p.dosis)
+          if (dosisParsed <= 0) continue
+          const producto = productos.find(x => x.id === p.producto_id)
+          if (!producto) continue
+          const nuevoStock = Math.max(0, Number(producto.stock_actual) - dosisParsed)
+          await supabase.from('productos').update({ stock_actual: nuevoStock }).eq('id', p.producto_id)
+        }
+      }
     }
-    await fetchFumigaciones(); setSaving(false); setModal(false)
+
+    await fetchFumigaciones()
+    await fetchProductos()
+    setSaving(false)
+    setModal(false)
     setForm({ tipo:'fumigacion', fecha:'', campo_id:'', bloques_ids:[], operario:'', productos_form:[{ producto_id:'', dosis:'' }], notas:'' })
   }
 
   const eliminar = async (id) => {
     if (!window.confirm('¿Eliminar este registro?')) return
     await supabase.from('fumigaciones').delete().eq('id', id)
+    setDetalle(null)
     fetchFumigaciones()
   }
 
@@ -94,8 +131,8 @@ export default function Fumigaciones() {
           const tipo = TIPOS[f.tipo] || TIPOS.fumigacion
           const bloquesCodes = f.fumigacion_bloques?.map(fb => fb.bloques?.codigo).filter(Boolean).join(', ')
           return (
-            <div key={f.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
+            <div key={f.id} onClick={() => setDetalle(f)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, cursor:'pointer' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                 <div style={{ width:36, height:36, borderRadius:10, background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   <i className={`ti ${tipo.icon}`} style={{ fontSize:16, color:tipo.color }} aria-hidden="true"></i>
                 </div>
@@ -104,22 +141,78 @@ export default function Fumigaciones() {
                   <div style={{ fontSize:10, color:'#9a9a9a', marginTop:1 }}>{f.fecha}{f.operario ? ' · ' + f.operario : ''}</div>
                 </div>
                 <div style={{ fontSize:11, color:'#9a9a9a' }}>{f.campos?.nombre}</div>
+                <i className="ti ti-chevron-right" style={{ fontSize:14, color:'#d0d0d0' }} aria-hidden="true"></i>
               </div>
-              {bloquesCodes && <div style={{ fontSize:11, color:'#555', marginBottom:8 }}>Bloques: {bloquesCodes}</div>}
-              {f.fumigacion_productos?.length > 0 && (
-                <div style={{ marginBottom:8 }}>
-                  {f.fumigacion_productos.map(fp => (
-                    <div key={fp.id} style={{ fontSize:11, color:'#555' }}>{fp.productos?.nombre}{fp.dosis ? ' · ' + fp.dosis : ''}</div>
-                  ))}
-                </div>
-              )}
-              {f.notas && <div style={{ fontSize:11, color:'#9a9a9a', padding:'6px 10px', background:'#f2f1ef', borderRadius:8, marginBottom:8 }}>{f.notas}</div>}
-              <button onClick={() => eliminar(f.id)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+              {bloquesCodes && <div style={{ fontSize:11, color:'#555', marginTop:8 }}>Bloques: {bloquesCodes}</div>}
             </div>
           )
         })}
       </div>
 
+      {/* DETALLE de fumigación */}
+      {detalle && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setDetalle(null)}>
+          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto' }}>
+            {(() => {
+              const tipo = TIPOS[detalle.tipo] || TIPOS.fumigacion
+              const bloquesCodes = detalle.fumigacion_bloques?.map(fb => fb.bloques?.codigo).filter(Boolean).join(', ')
+              return <>
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
+                  <div style={{ width:40, height:40, borderRadius:12, background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <i className={`ti ${tipo.icon}`} style={{ fontSize:18, color:tipo.color }} aria-hidden="true"></i>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a' }}>{tipo.label}</div>
+                    <div style={{ fontSize:11, color:'#9a9a9a' }}>{detalle.campos?.nombre}</div>
+                  </div>
+                </div>
+
+                <div style={{ background:'#fff', borderRadius:16, padding:'12px 16px', marginBottom:10 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f2f1ef' }}>
+                    <div style={{ fontSize:12, color:'#9a9a9a' }}>Fecha</div>
+                    <div style={{ fontSize:12, fontWeight:500, color:'#0a0a0a' }}>{detalle.fecha}</div>
+                  </div>
+                  {detalle.operario && (
+                    <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f2f1ef' }}>
+                      <div style={{ fontSize:12, color:'#9a9a9a' }}>Operario</div>
+                      <div style={{ fontSize:12, fontWeight:500, color:'#0a0a0a' }}>{detalle.operario}</div>
+                    </div>
+                  )}
+                  {bloquesCodes && (
+                    <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f2f1ef' }}>
+                      <div style={{ fontSize:12, color:'#9a9a9a' }}>Bloques</div>
+                      <div style={{ fontSize:12, fontWeight:500, color:'#0a0a0a', textAlign:'right', maxWidth:'60%' }}>{bloquesCodes}</div>
+                    </div>
+                  )}
+                  {detalle.notas && (
+                    <div style={{ padding:'8px 0' }}>
+                      <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Notas</div>
+                      <div style={{ fontSize:12, color:'#0a0a0a' }}>{detalle.notas}</div>
+                    </div>
+                  )}
+                </div>
+
+                {detalle.fumigacion_productos?.length > 0 && (
+                  <div style={{ background:'#fff', borderRadius:16, padding:'12px 16px', marginBottom:10 }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:8 }}>PRODUCTOS USADOS</div>
+                    {detalle.fumigacion_productos.map(fp => (
+                      <div key={fp.id} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f2f1ef' }}>
+                        <div style={{ fontSize:13, color:'#0a0a0a' }}>{fp.productos?.nombre}</div>
+                        <div style={{ fontSize:13, fontWeight:500, color:'#0a0a0a' }}>{fp.dosis || '—'}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button onClick={() => eliminar(detalle.id)} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginBottom:8 }}>Eliminar registro</button>
+                <button onClick={() => setDetalle(null)} style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cerrar</button>
+              </>
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* FORMULARIO nuevo registro */}
       {modal && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(false)}>
           <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto' }}>
@@ -152,16 +245,26 @@ export default function Fumigaciones() {
                 {operarios.map(o => <option key={o.id} value={o.nombre}>{o.nombre}</option>)}
               </select>
             </>}
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos usados</div>
-            {form.productos_form.map((pf, i) => (
-              <div key={i} style={{ display:'flex', gap:6, marginBottom:8 }}>
-                <select style={{ flex:2, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.producto_id} onChange={e => { const np = [...form.productos_form]; np[i].producto_id=e.target.value; setForm(f => ({...f, productos_form:np})) }}>
-                  <option value="">Producto...</option>
-                  {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
-                <input style={{ flex:1, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.dosis} onChange={e => { const np = [...form.productos_form]; np[i].dosis=e.target.value; setForm(f => ({...f, productos_form:np})) }} placeholder="Dosis"/>
-              </div>
-            ))}
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos usados <span style={{ color:'#2d6a2d' }}>(la dosis descontará el stock automáticamente)</span></div>
+            {form.productos_form.map((pf, i) => {
+              const prod = productos.find(p => p.id === pf.producto_id)
+              return (
+                <div key={i} style={{ marginBottom:8 }}>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <select style={{ flex:2, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.producto_id} onChange={e => { const np = [...form.productos_form]; np[i].producto_id=e.target.value; setForm(f => ({...f, productos_form:np})) }}>
+                      <option value="">Producto...</option>
+                      {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                    </select>
+                    <input style={{ flex:1, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.dosis} onChange={e => { const np = [...form.productos_form]; np[i].dosis=e.target.value; setForm(f => ({...f, productos_form:np})) }} placeholder={prod ? `Dosis (${prod.unidad})` : 'Dosis'}/>
+                  </div>
+                  {prod && (
+                    <div style={{ fontSize:10, color: prod.stock_actual <= prod.stock_minimo ? '#e07b00' : '#2d6a2d', marginTop:3, paddingLeft:4 }}>
+                      Stock disponible: {Number(prod.stock_actual).toLocaleString()} {prod.unidad}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
             <button onClick={() => setForm(f => ({...f, productos_form:[...f.productos_form,{producto_id:'',dosis:''}]}))} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #e8e6e2', background:'transparent', fontSize:12, color:'#9a9a9a', cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas</div>
             <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
