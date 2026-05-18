@@ -43,7 +43,7 @@ export default function FichaBloque() {
   const [showHistorial, setShowHistorial] = useState(false)
   const [showNuevaPlantacion, setShowNuevaPlantacion] = useState(false)
   const [observacion, setObservacion] = useState('')
-  const [form, setForm] = useState({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', densidad_plantas_m2:'' })
+  const [form, setForm] = useState({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', cantidad_plantas:'' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { fetchData(); fetchCultivos(); fetchAbonos() }, [id])
@@ -86,11 +86,11 @@ export default function FichaBloque() {
       cultivo_id: form.cultivo_id,
       notas: form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null,
       fecha_siembra: form.fecha_siembra,
-      densidad_plantas_m2: form.densidad_plantas_m2 || null,
+      densidad_plantas_m2: form.cantidad_plantas || null,
       activa: true
     })
     setShowNuevaPlantacion(false)
-    setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', densidad_plantas_m2:'' })
+    setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', cantidad_plantas:'' })
     setSaving(false)
     fetchData()
   }
@@ -132,7 +132,7 @@ export default function FichaBloque() {
         <div style={s.row}><div style={s.rkey}>Cultivo</div><div style={s.rval}>{plantacionActiva?.cultivos?.nombre || '—'}</div></div>
         <div style={s.row}><div style={s.rkey}>Variedad</div><div style={s.rval}>{getVariedad(plantacionActiva)}</div></div>
         <div style={s.row}><div style={s.rkey}>Fecha de siembra</div><div style={s.rval}>{plantacionActiva?.fecha_siembra || '—'}</div></div>
-        <div style={s.row}><div style={s.rkey}>Densidad</div><div style={s.rval}>{plantacionActiva?.densidad_plantas_m2 ? `${plantacionActiva.densidad_plantas_m2} pl/m²` : '—'}</div></div>
+        <div style={s.row}><div style={s.rkey}>Cantidad de plantas</div><div style={s.rval}>{plantacionActiva?.densidad_plantas_m2 ? `${Number(plantacionActiva.densidad_plantas_m2).toLocaleString()} plantas` : '—'}</div></div>
         <div style={s.row}>
           <div style={s.rkey}>Abonos de base</div>
           <div style={s.abonoWrap}>
@@ -158,8 +158,8 @@ export default function FichaBloque() {
             <input style={s.input} type="text" value={form.variedad_texto} onChange={e => setForm(f => ({ ...f, variedad_texto: e.target.value }))} placeholder="Ej: Rojo, Lamuyo, Holandés..." />
             <label style={s.label}>Fecha de siembra *</label>
             <input style={s.input} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({ ...f, fecha_siembra: e.target.value }))} />
-            <label style={s.label}>Densidad (plantas/m²)</label>
-            <input style={s.input} type="number" value={form.densidad_plantas_m2} onChange={e => setForm(f => ({ ...f, densidad_plantas_m2: e.target.value }))} placeholder="Ej: 2.5" step="0.1" />
+            <label style={s.label}>Cantidad total de plantas</label>
+            <input style={s.input} type="number" value={form.cantidad_plantas} onChange={e => setForm(f => ({ ...f, cantidad_plantas: e.target.value }))} placeholder="Ej: 1000" step="1" min="0" />
             <button style={{ ...s.saveBtn, background: saving ? '#888' : '#1a1a1a' }} onClick={guardarPlantacion} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar plantación'}
             </button>
