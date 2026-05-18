@@ -144,4 +144,116 @@ export default function Configuracion() {
         </div>
       </div>
 
-      {modal &&
+      {modal && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && cerrar()}>
+          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto' }}>
+
+            {modal === 'cuenta' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Mi cuenta</div>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:20 }}>
+                <div style={{ width:80, height:80, borderRadius:'50%', background:'#0a0a0a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, color:'#fff', marginBottom:10, overflow:'hidden' }}>
+                  {perfil.foto ? <img src={perfil.foto} alt="perfil" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : iniciales(perfil.nombre || perfil.email)}
+                </div>
+                <label style={{ fontSize:12, color:'#9a9a9a', border:'1px solid #e8e6e2', padding:'6px 16px', borderRadius:20, cursor:'pointer', background:'#fff' }}>
+                  Cambiar foto
+                  <input type="file" accept="image/*" style={{ display:'none' }} onChange={subirFoto}/>
+                </label>
+              </div>
+              <span style={lbl}>Nombre</span>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/>
+              <span style={lbl}>Email</span>
+              <input style={{...inp,color:'#aaa'}} value={perfil.email} disabled/>
+              <button style={saveBtn} onClick={guardarPerfil} disabled={loading}>{loading?'Guardando...':'Guardar cambios'}</button>
+              <button style={cancelBtn} onClick={cerrar}>Cancelar</button>
+            </>}
+
+            {modal === 'campos' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Campos</div>
+              {campos.map(c => (
+                <div key={c.id} style={listItem}>
+                  <div style={listName}>{c.nombre}</div>
+                </div>
+              ))}
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'cultivos' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Cultivos</div>
+              {cultivos.map(c => (
+                <div key={c.id} style={listItem}>
+                  <div style={listName}>{c.nombre}</div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button style={editBtn} onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
+                    <button style={delBtn} onClick={() => eliminarCultivo(c.id)}>Eliminar</button>
+                  </div>
+                </div>
+              ))}
+              <button style={addBtn} onClick={() => abrir('editarCultivo',{})}>+ Agregar cultivo</button>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'editarCultivo' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
+              <span style={lbl}>Nombre</span>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morrón"/>
+              <button style={saveBtn} onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('cultivos')}>Volver</button>
+            </>}
+
+            {modal === 'operarios' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Operarios</div>
+              {campos.map(campo => (
+                <div key={campo.id}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', padding:'10px 0 6px' }}>{campo.nombre}</div>
+                  {operarios.filter(o => o.campo_id === campo.id).map(o => (
+                    <div key={o.id} style={listItem}>
+                      <div style={listName}>{o.nombre}</div>
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button style={editBtn} onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
+                        <button style={delBtn} onClick={() => eliminarOperario(o.id)}>Eliminar</button>
+                      </div>
+                    </div>
+                  ))}
+                  <button style={addBtn} onClick={() => abrir('editarOperario',{campo_id:campo.id})}>+ Agregar a {campo.nombre}</button>
+                </div>
+              ))}
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'editarOperario' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar operario':'Nuevo operario'}</div>
+              <span style={lbl}>Nombre</span>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
+              <button style={saveBtn} onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('operarios')}>Volver</button>
+            </>}
+
+            {modal === 'abonos' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Abonos de base</div>
+              {abonos.map(a => (
+                <div key={a.id} style={listItem}>
+                  <div style={listName}>{a.nombre}</div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button style={editBtn} onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
+                    <button style={delBtn} onClick={() => eliminarAbono(a.id)}>Eliminar</button>
+                  </div>
+                </div>
+              ))}
+              <button style={addBtn} onClick={() => abrir('editarAbono',{})}>+ Agregar abono</button>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'editarAbono' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar abono':'Nuevo abono'}</div>
+              <span style={lbl}>Nombre</span>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
+              <button style={saveBtn} onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('abonos')}>Volver</button>
+            </>}
+
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
