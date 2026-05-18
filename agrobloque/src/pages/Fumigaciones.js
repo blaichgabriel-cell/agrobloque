@@ -47,16 +47,52 @@ export default function Fumigaciones() {
     setForm(f => ({ ...f, bloques_ids: f.bloques_ids.includes(id) ? f.bloques_ids.filter(x => x!==id) : [...f.bloques_ids, id] }))
   }
 
+  const parsearDosis = (dosis) => {
+    if (!dosis) return 0
+    const num = parseFloat(String(dosis).replace(',', '.'))
+    return isNaN(num) ? 0 : num
+  }
+
   const guardar = async () => {
     if (!form.fecha || form.bloques_ids.length === 0) return
     setSaving(true)
-    const { data: fum } = await supabase.from('fumigaciones').insert({ campo_id:form.campo_id||null, tipo:form.tipo, fecha:form.fecha, operario:form.operario||null, notas:form.notas||null }).select().single()
+
+    const { data: fum } = await supabase.from('fumigaciones').insert({
+      campo_id: form.campo_id || null,
+      tipo: form.tipo,
+      fecha: form.fecha,
+      operario: form.operario || null,
+      notas: form.notas || null
+    }).select().single()
+
     if (fum) {
-      await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => ({ fumigacion_id:fum.id, bloque_id:b })))
+      await supabase.from('fumigacion_bloques').insert(
+        form.bloques_ids.map(b => ({ fumigacion_id: fum.id, bloque_id: b }))
+      )
+
       const prods = form.productos_form.filter(p => p.producto_id)
-      if (prods.length > 0) await supabase.from('fumigacion_productos').insert(prods.map(p => ({ fumigacion_id:fum.id, producto_id:p.producto_id, dosis:p.dosis||null })))
+
+      if (prods.length > 0) {
+        await supabase.from('fumigacion_productos').insert(
+          prods.map(p => ({ fumigacion_id: fum.id, producto_id: p.producto_id, dosis: p.dosis || null }))
+        )
+
+        for (const p of prods) {
+          if (!p.producto_id || !p.dosis) continue
+          const dosisParsed = parsearDosis(p.dosis)
+          if (dosisParsed <= 0) continue
+          const producto = productos.find(x => x.id === p.producto_id)
+          if (!producto) continue
+          const nuevoStock = Math.max(0, Number(producto.stock_actual) - dosisParsed)
+          await supabase.from('productos').update({ stock_actual: nuevoStock }).eq('id', p.producto_id)
+        }
+      }
     }
-    await fetchFumigaciones(); setSaving(false); setModal(false)
+
+    await fetchFumigaciones()
+    await fetchProductos()
+    setSaving(false)
+    setModal(false)
     setForm({ tipo:'fumigacion', fecha:'', campo_id:'', bloques_ids:[], operario:'', productos_form:[{ producto_id:'', dosis:'' }], notas:'' })
   }
 
@@ -152,16 +188,26 @@ export default function Fumigaciones() {
                 {operarios.map(o => <option key={o.id} value={o.nombre}>{o.nombre}</option>)}
               </select>
             </>}
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos usados</div>
-            {form.productos_form.map((pf, i) => (
-              <div key={i} style={{ display:'flex', gap:6, marginBottom:8 }}>
-                <select style={{ flex:2, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.producto_id} onChange={e => { const np = [...form.productos_form]; np[i].producto_id=e.target.value; setForm(f => ({...f, productos_form:np})) }}>
-                  <option value="">Producto...</option>
-                  {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
-                <input style={{ flex:1, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.dosis} onChange={e => { const np = [...form.productos_form]; np[i].dosis=e.target.value; setForm(f => ({...f, productos_form:np})) }} placeholder="Dosis"/>
-              </div>
-            ))}
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos usados <span style={{ color:'#2d6a2d' }}>(la dosis descontará el stock automáticamente)</span></div>
+            {form.productos_form.map((pf, i) => {
+              const prod = productos.find(p => p.id === pf.producto_id)
+              return (
+                <div key={i} style={{ marginBottom:8 }}>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <select style={{ flex:2, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.producto_id} onChange={e => { const np = [...form.productos_form]; np[i].producto_id=e.target.value; setForm(f => ({...f, productos_form:np})) }}>
+                      <option value="">Producto...</option>
+                      {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                    </select>
+                    <input style={{ flex:1, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.dosis} onChange={e => { const np = [...form.productos_form]; np[i].dosis=e.target.value; setForm(f => ({...f, productos_form:np})) }} placeholder={prod ? `Dosis (${prod.unidad})` : 'Dosis'}/>
+                  </div>
+                  {prod && (
+                    <div style={{ fontSize:10, color: prod.stock_actual <= prod.stock_minimo ? '#e07b00' : '#2d6a2d', marginTop:3, paddingLeft:4 }}>
+                      Stock disponible: {Number(prod.stock_actual).toLocaleString()} {prod.unidad}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
             <button onClick={() => setForm(f => ({...f, productos_form:[...f.productos_form,{producto_id:'',dosis:''}]}))} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #e8e6e2', background:'transparent', fontSize:12, color:'#9a9a9a', cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas</div>
             <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
