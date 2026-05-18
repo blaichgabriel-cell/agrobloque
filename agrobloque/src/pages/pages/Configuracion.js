@@ -8,6 +8,7 @@ export default function Configuracion() {
   const [cultivos, setCultivos] = useState([])
   const [operarios, setOperarios] = useState([])
   const [abonos, setAbonos] = useState([])
+  const [productos, setProductos] = useState([])
   const [form, setForm] = useState({})
   const [loading, setLoading] = useState(false)
 
@@ -24,6 +25,8 @@ export default function Configuracion() {
     setOperarios(op || [])
     const { data: ab } = await supabase.from('abonos').select('*').order('nombre')
     setAbonos(ab || [])
+    const { data: pr } = await supabase.from('productos').select('*').eq('activo', true).order('nombre')
+    setProductos(pr || [])
   }
 
   const abrir = (tipo, datos = {}) => { setForm(datos); setModal(tipo) }
@@ -98,6 +101,19 @@ export default function Configuracion() {
     await supabase.from('abonos').delete().eq('id', id); await fetchAll()
   }
 
+  const guardarProducto = async () => {
+    if (!form.nombre) return
+    setLoading(true)
+    if (form.id) await supabase.from('productos').update({ nombre: form.nombre, unidad: form.unidad || 'kg', stock_actual: Number(form.stock_actual) || 0, stock_minimo: Number(form.stock_minimo) || 0 }).eq('id', form.id)
+    else await supabase.from('productos').insert({ nombre: form.nombre, unidad: form.unidad || 'kg', stock_actual: Number(form.stock_actual) || 0, stock_minimo: Number(form.stock_minimo) || 0, activo: true })
+    await fetchAll(); setLoading(false); abrir('productos')
+  }
+
+  const eliminarProducto = async (id) => {
+    if (!window.confirm('¿Eliminar este producto?')) return
+    await supabase.from('productos').update({ activo: false }).eq('id', id); await fetchAll()
+  }
+
   const iniciales = (n) => n ? n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0,2) : 'HS'
 
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }
@@ -116,6 +132,7 @@ export default function Configuracion() {
     { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', bg:'#edf7ed', color:'#2d6a2d', action: () => abrir('cultivos') },
     { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', bg:'#f2f1ef', action: () => abrir('operarios') },
     { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', bg:'#edf7ed', color:'#2d6a2d', action: () => abrir('abonos') },
+    { icon:'ti-flask', title:'Productos e insumos', sub: productos.length + ' productos', bg:'#f2f1ef', action: () => abrir('productos') },
   ]
 
   return (
@@ -169,11 +186,7 @@ export default function Configuracion() {
 
             {modal === 'campos' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Campos</div>
-              {campos.map(c => (
-                <div key={c.id} style={listItem}>
-                  <div style={listName}>{c.nombre}</div>
-                </div>
-              ))}
+              {campos.map(c => (<div key={c.id} style={listItem}><div style={listName}>{c.nombre}</div></div>))}
               <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
@@ -249,6 +262,42 @@ export default function Configuracion() {
               <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
               <button style={saveBtn} onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
               <button style={cancelBtn} onClick={() => abrir('abonos')}>Volver</button>
+            </>}
+
+            {modal === 'productos' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Productos e insumos</div>
+              {productos.map(p => (
+                <div key={p.id} style={listItem}>
+                  <div>
+                    <div style={listName}>{p.nombre}</div>
+                    <div style={{ fontSize:10, color:'#9a9a9a' }}>{p.stock_actual} {p.unidad}</div>
+                  </div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button style={editBtn} onClick={() => abrir('editarProducto',{id:p.id,nombre:p.nombre,unidad:p.unidad,stock_actual:p.stock_actual,stock_minimo:p.stock_minimo})}>Editar</button>
+                    <button style={delBtn} onClick={() => eliminarProducto(p.id)}>Eliminar</button>
+                  </div>
+                </div>
+              ))}
+              <button style={addBtn} onClick={() => abrir('editarProducto',{unidad:'kg'})}>+ Agregar producto</button>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'editarProducto' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar producto':'Nuevo producto'}</div>
+              <span style={lbl}>Nombre</span>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Fungicida Captan"/>
+              <span style={lbl}>Stock actual</span>
+              <input style={inp} type="number" value={form.stock_actual||''} onChange={e=>setForm(f=>({...f,stock_actual:e.target.value}))} placeholder="0"/>
+              <span style={lbl}>Stock mínimo (alerta)</span>
+              <input style={inp} type="number" value={form.stock_minimo||''} onChange={e=>setForm(f=>({...f,stock_minimo:e.target.value}))} placeholder="0"/>
+              <span style={lbl}>Unidad</span>
+              <div style={{ display:'flex', gap:6, marginBottom:12 }}>
+                {['kg','litros','unidades'].map(u => (
+                  <button key={u} onClick={() => setForm(f=>({...f,unidad:u}))} style={{ flex:1, padding:9, borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.unidad===u ? '#0a0a0a' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>{u}</button>
+                ))}
+              </div>
+              <button style={saveBtn} onClick={guardarProducto} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('productos')}>Volver</button>
             </>}
 
           </div>
