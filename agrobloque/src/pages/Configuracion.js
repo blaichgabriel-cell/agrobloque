@@ -34,18 +34,29 @@ export default function Configuracion() {
     if (!file) return
     const reader = new FileReader()
     reader.onload = async (ev) => {
-      await supabase.auth.updateUser({ data: { foto: ev.target.result } })
-      setPerfil(p => ({ ...p, foto: ev.target.result }))
-      alert('Foto actualizada')
+      const { error } = await supabase.auth.updateUser({ data: { foto: ev.target.result } })
+      if (!error) {
+        setPerfil(p => ({ ...p, foto: ev.target.result }))
+        alert('Foto actualizada')
+      } else {
+        alert('Error al guardar la foto')
+      }
     }
     reader.readAsDataURL(file)
   }
 
   const guardarPerfil = async () => {
+    if (!form.nombre?.trim()) return
     setLoading(true)
-    await supabase.auth.updateUser({ data: { nombre: form.nombre } })
-    setPerfil(p => ({ ...p, nombre: form.nombre }))
-    setLoading(false); cerrar()
+    const { error } = await supabase.auth.updateUser({ data: { nombre: form.nombre.trim() } })
+    if (!error) {
+      setPerfil(p => ({ ...p, nombre: form.nombre.trim() }))
+      alert('Perfil guardado correctamente')
+    } else {
+      alert('Error al guardar el perfil')
+    }
+    setLoading(false)
+    cerrar()
   }
 
   const guardarCultivo = async () => {
@@ -105,8 +116,6 @@ export default function Configuracion() {
     { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', bg:'#edf7ed', color:'#2d6a2d', action: () => abrir('cultivos') },
     { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', bg:'#f2f1ef', action: () => abrir('operarios') },
     { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', bg:'#edf7ed', color:'#2d6a2d', action: () => abrir('abonos') },
-    { icon:'ti-flask', title:'Productos e insumos', sub:'Próximamente', bg:'#f2f1ef', action: () => {} },
-    { icon:'ti-bell', title:'Notificaciones', sub:'Próximamente', bg:'#fff3e8', color:'#e07b00', action: () => {} },
   ]
 
   return (
@@ -160,11 +169,7 @@ export default function Configuracion() {
 
             {modal === 'campos' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Campos</div>
-              {campos.map(c => (
-                <div key={c.id} style={listItem}>
-                  <div style={listName}>{c.nombre}</div>
-                </div>
-              ))}
+              {campos.map(c => (<div key={c.id} style={listItem}><div style={listName}>{c.nombre}</div></div>))}
               <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
