@@ -137,9 +137,9 @@ export default function Inventario() {
               {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Unidad</div>
-            <div style={{ display:'flex', gap:6, marginBottom:16 }}>
-              {['kg','litros','unidades'].map(u => (
-                <button key={u} onClick={() => setForm(f => ({...f, unidad:u}))} style={{ flex:1, padding:9, borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.unidad===u ? '#0a0a0a' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>{u}</button>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:16 }}>
+              {['kg','gramos','litros','cc','unidades'].map(u => (
+                <button key={u} onClick={() => setForm(f => ({...f, unidad:u}))} style={{ padding:'9px 14px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.unidad===u ? '#0a0a0a' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>{u}</button>
               ))}
             </div>
             <button style={{ width:'100%', padding:14, borderRadius:14, background:'#0a0a0a', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
