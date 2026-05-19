@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Mapa from './pages/Mapa'
-import FichaBloque from './pages/pages/BloqueDetalle'
+import FichaBloque from './pages/FichaBloque'
 import Configuracion from './pages/Configuracion'
 import Agenda from './pages/Agenda'
 import Asistencia from './pages/Asistencia'
@@ -17,7 +17,6 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [campoActivo, setCampoActivo] = useState(null)
-
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session); setLoading(false)
@@ -27,7 +26,6 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
-
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#f0ede8' }}>
       <div style={{ textAlign:'center' }}>
@@ -36,9 +34,7 @@ export default function App() {
       </div>
     </div>
   )
-
   if (!session) return <Login />
-
   return (
     <BrowserRouter>
       <div style={{ maxWidth:480, margin:'0 auto', minHeight:'100vh', background:'#f9f8f6', position:'relative', paddingBottom:64 }}>
