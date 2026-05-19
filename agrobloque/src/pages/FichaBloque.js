@@ -61,6 +61,8 @@ export default function FichaBloque() {
       const { data: ab } = await supabase.from('plantacion_abonos')
         .select('*, abonos(nombre)').eq('plantacion_id', plantas.find(p => p.activa).id)
       setAbonosPlantacion(ab || [])
+    } else {
+      setAbonosPlantacion([])
     }
   }
 
@@ -74,8 +76,13 @@ export default function FichaBloque() {
     setAbonos(data || [])
   }
 
-  const toggleAbono = (id) => {
-    setForm(f => ({ ...f, abonos_ids: f.abonos_ids.includes(id) ? f.abonos_ids.filter(x => x !== id) : [...f.abonos_ids, id] }))
+  const toggleAbono = (abonoId) => {
+    setForm(f => ({
+      ...f,
+      abonos_ids: f.abonos_ids.includes(abonoId)
+        ? f.abonos_ids.filter(x => x !== abonoId)
+        : [...f.abonos_ids, abonoId]
+    }))
   }
 
   const guardarPlantacion = async () => {
@@ -92,11 +99,13 @@ export default function FichaBloque() {
       densidad_plantas_m2: form.cantidad_plantas || null,
       activa: true
     }).select().single()
+
     if (nueva && form.abonos_ids.length > 0) {
       await supabase.from('plantacion_abonos').insert(
         form.abonos_ids.map(ab => ({ plantacion_id: nueva.id, abono_id: ab }))
       )
     }
+
     setShowNuevaPlantacion(false)
     setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', cantidad_plantas:'', abonos_ids:[] })
     setSaving(false)
@@ -144,8 +153,10 @@ export default function FichaBloque() {
         <div style={s.row}>
           <div style={s.rkey}>Abonos de base</div>
           <div style={s.abonoWrap}>
-            {abonosPlantacion.map(a => <span key={a.id} style={s.abonoTag}>{a.abonos?.nombre}</span>)}
-            {abonosPlantacion.length === 0 && <span style={{ fontSize:11, color:'#aaa' }}>Sin abonos</span>}
+            {abonosPlantacion.length > 0
+              ? abonosPlantacion.map(a => <span key={a.id} style={s.abonoTag}>{a.abonos?.nombre}</span>)
+              : <span style={{ fontSize:11, color:'#aaa' }}>Sin abonos</span>
+            }
           </div>
         </div>
         <div style={s.row}><div style={s.rkey}>Tipo</div><div style={s.rval}>{bloque.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}</div></div>
@@ -169,13 +180,15 @@ export default function FichaBloque() {
             <label style={s.label}>Cantidad total de plantas</label>
             <input style={s.input} type="number" value={form.cantidad_plantas} onChange={e => setForm(f => ({ ...f, cantidad_plantas: e.target.value }))} placeholder="Ej: 1000" step="1" min="0" />
             <label style={s.label}>Abonos de base</label>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
-              {abonos.map(a => (
-                <div key={a.id} onClick={() => toggleAbono(a.id)} style={{ padding:'5px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.abonos_ids.includes(a.id) ? '#1a1a1a' : '#f9f8f6', color: form.abonos_ids.includes(a.id) ? '#fff' : '#555', border:'0.5px solid #d0cdc8' }}>
-                  {a.nombre}
-                </div>
-              ))}
-              {abonos.length === 0 && <div style={{ fontSize:11, color:'#aaa' }}>No hay abonos cargados</div>}
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
+              {abonos.length > 0
+                ? abonos.map(a => (
+                    <div key={a.id} onClick={() => toggleAbono(a.id)} style={{ padding:'6px 14px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.abonos_ids.includes(a.id) ? '#1a1a1a' : '#f9f8f6', color: form.abonos_ids.includes(a.id) ? '#fff' : '#555', border:'0.5px solid #d0cdc8' }}>
+                      {a.nombre}
+                    </div>
+                  ))
+                : <div style={{ fontSize:11, color:'#aaa' }}>No hay abonos cargados. Agregá desde Configuración.</div>
+              }
             </div>
             <button style={{ ...s.saveBtn, background: saving ? '#888' : '#1a1a1a' }} onClick={guardarPlantacion} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar plantación'}
