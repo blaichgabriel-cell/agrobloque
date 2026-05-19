@@ -39,24 +39,27 @@ export default function Configuracion() {
         setPerfil(p => ({ ...p, foto: ev.target.result }))
         alert('Foto actualizada')
       } else {
-        alert('Error al guardar la foto')
+        alert('Error al guardar la foto: ' + error.message)
       }
     }
     reader.readAsDataURL(file)
   }
 
   const guardarPerfil = async () => {
-    if (!form.nombre?.trim()) return
+    if (!form.nombre?.trim()) {
+      alert('Ingresá un nombre')
+      return
+    }
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ data: { nombre: form.nombre.trim() } })
     if (!error) {
       setPerfil(p => ({ ...p, nombre: form.nombre.trim() }))
       alert('Perfil guardado correctamente')
+      cerrar()
     } else {
-      alert('Error al guardar el perfil')
+      alert('Error al guardar: ' + error.message)
     }
     setLoading(false)
-    cerrar()
   }
 
   const guardarCultivo = async () => {
