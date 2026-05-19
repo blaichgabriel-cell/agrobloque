@@ -76,6 +76,7 @@ export default function Fumigaciones() {
         await supabase.from('fumigacion_productos').insert(
           prods.map(p => ({ fumigacion_id: fum.id, producto_id: p.producto_id, dosis: p.dosis || null }))
         )
+
         for (const p of prods) {
           if (!p.producto_id || !p.dosis) continue
           const dosisParsed = parsearDosis(p.dosis)
@@ -164,7 +165,6 @@ export default function Fumigaciones() {
                     <div style={{ fontSize:11, color:'#9a9a9a' }}>{detalle.campos?.nombre}</div>
                   </div>
                 </div>
-
                 <div style={{ background:'#fff', borderRadius:16, padding:'12px 16px', marginBottom:10 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f2f1ef' }}>
                     <div style={{ fontSize:12, color:'#9a9a9a' }}>Fecha</div>
@@ -189,7 +189,6 @@ export default function Fumigaciones() {
                     </div>
                   )}
                 </div>
-
                 {detalle.fumigacion_productos?.length > 0 && (
                   <div style={{ background:'#fff', borderRadius:16, padding:'12px 16px', marginBottom:10 }}>
                     <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:8 }}>PRODUCTOS USADOS</div>
@@ -201,7 +200,6 @@ export default function Fumigaciones() {
                     ))}
                   </div>
                 )}
-
                 <button onClick={() => eliminar(detalle.id)} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginBottom:8 }}>Eliminar registro</button>
                 <button onClick={() => setDetalle(null)} style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cerrar</button>
               </>
@@ -242,7 +240,7 @@ export default function Fumigaciones() {
                 {operarios.map(o => <option key={o.id} value={o.nombre}>{o.nombre}</option>)}
               </select>
             </>}
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos usados <span style={{ color:'#2d6a2d' }}>(la dosis descontará el stock automáticamente)</span></div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos usados <span style={{ color:'#2d6a2d' }}>(la dosis descuenta el stock automáticamente)</span></div>
             {form.productos_form.map((pf, i) => {
               const prod = productos.find(p => p.id === pf.producto_id)
               return (
