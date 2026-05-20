@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 export default function Configuracion() {
+  const navigate = useNavigate()
   const [modal, setModal] = useState(null)
   const [perfil, setPerfil] = useState({ nombre:'', email:'', foto:'' })
   const [campos, setCampos] = useState([])
   const [cultivos, setCultivos] = useState([])
   const [operarios, setOperarios] = useState([])
   const [abonos, setAbonos] = useState([])
+  const [compradores, setCompradores] = useState([])
   const [form, setForm] = useState({})
   const [loading, setLoading] = useState(false)
 
@@ -16,109 +19,90 @@ export default function Configuracion() {
   const fetchAll = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) setPerfil({ nombre: user.user_metadata?.nombre || '', email: user.email, foto: user.user_metadata?.foto || '' })
-    const { data: c } = await supabase.from('campos').select('*').order('nombre')
-    setCampos(c || [])
-    const { data: cu } = await supabase.from('cultivos').select('*').order('nombre')
-    setCultivos(cu || [])
-    const { data: op } = await supabase.from('operarios').select('*').order('nombre')
-    setOperarios(op || [])
-    const { data: ab } = await supabase.from('abonos').select('*').order('nombre')
-    setAbonos(ab || [])
+    const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }] = await Promise.all([
+      supabase.from('campos').select('*').order('nombre'),
+      supabase.from('cultivos').select('*').order('nombre'),
+      supabase.from('operarios').select('*').order('nombre'),
+      supabase.from('abonos').select('*').order('nombre'),
+      supabase.from('compradores').select('*').order('nombre'),
+    ])
+    setCampos(c || []); setCultivos(cu || []); setOperarios(op || [])
+    setAbonos(ab || []); setCompradores(comp || [])
   }
 
   const abrir = (tipo, datos = {}) => { setForm(datos); setModal(tipo) }
   const cerrar = () => { setModal(null); setForm({}) }
 
   const subirFoto = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const file = e.target.files[0]; if (!file) return
     const reader = new FileReader()
     reader.onload = async (ev) => {
       const { error } = await supabase.auth.updateUser({ data: { foto: ev.target.result } })
-      if (!error) {
-        setPerfil(p => ({ ...p, foto: ev.target.result }))
-        alert('Foto actualizada')
-      } else {
-        alert('Error al guardar la foto: ' + error.message)
-      }
+      if (!error) setPerfil(p => ({ ...p, foto: ev.target.result }))
     }
     reader.readAsDataURL(file)
   }
 
   const guardarPerfil = async () => {
-    if (!form.nombre?.trim()) {
-      alert('Ingresá un nombre')
-      return
-    }
+    if (!form.nombre?.trim()) return
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ data: { nombre: form.nombre.trim() } })
-    if (!error) {
-      setPerfil(p => ({ ...p, nombre: form.nombre.trim() }))
-      alert('Perfil guardado correctamente')
-      cerrar()
-    } else {
-      alert('Error al guardar: ' + error.message)
-    }
+    if (!error) { setPerfil(p => ({ ...p, nombre: form.nombre.trim() })); cerrar() }
     setLoading(false)
   }
 
   const guardarCultivo = async () => {
-    if (!form.nombre) return
-    setLoading(true)
+    if (!form.nombre) return; setLoading(true)
     if (form.id) await supabase.from('cultivos').update({ nombre: form.nombre }).eq('id', form.id)
     else await supabase.from('cultivos').insert({ nombre: form.nombre })
     await fetchAll(); setLoading(false); abrir('cultivos')
   }
 
   const eliminarCultivo = async (id) => {
-    if (!window.confirm('¿Eliminar este cultivo?')) return
     await supabase.from('cultivos').delete().eq('id', id); await fetchAll()
   }
 
   const guardarOperario = async () => {
-    if (!form.nombre) return
-    setLoading(true)
+    if (!form.nombre) return; setLoading(true)
     if (form.id) await supabase.from('operarios').update({ nombre: form.nombre }).eq('id', form.id)
     else await supabase.from('operarios').insert({ nombre: form.nombre, campo_id: form.campo_id })
     await fetchAll(); setLoading(false); abrir('operarios')
   }
 
   const eliminarOperario = async (id) => {
-    if (!window.confirm('¿Eliminar este operario?')) return
     await supabase.from('operarios').delete().eq('id', id); await fetchAll()
   }
 
   const guardarAbono = async () => {
-    if (!form.nombre) return
-    setLoading(true)
+    if (!form.nombre) return; setLoading(true)
     if (form.id) await supabase.from('abonos').update({ nombre: form.nombre }).eq('id', form.id)
     else await supabase.from('abonos').insert({ nombre: form.nombre })
     await fetchAll(); setLoading(false); abrir('abonos')
   }
 
   const eliminarAbono = async (id) => {
-    if (!window.confirm('¿Eliminar?')) return
     await supabase.from('abonos').delete().eq('id', id); await fetchAll()
   }
 
   const iniciales = (n) => n ? n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0,2) : 'HS'
 
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }
-  const saveBtn = { width:'100%', padding:14, borderRadius:14, background:'#0a0a0a', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }
+  const saveBtn = { width:'100%', padding:14, borderRadius:14, background:'#1E5631', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }
   const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
   const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f2f1ef' }
   const listName = { fontSize:13, fontWeight:500, color:'#0a0a0a' }
   const editBtn = { padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, fontWeight:500, color:'#555', cursor:'pointer' }
   const delBtn = { padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, fontWeight:500, color:'#c84040', cursor:'pointer' }
-  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #e8e6e2', background:'transparent', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
+  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #c8ddc8', background:'#edf7ed', fontSize:13, color:'#1E5631', cursor:'pointer', marginTop:8, fontWeight:500 }
   const lbl = { fontSize:10, color:'#9a9a9a', marginBottom:6, display:'block' }
 
   const menuItems = [
-    { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, bg:'#f2f1ef', action: () => abrir('cuenta', { nombre: perfil.nombre }) },
-    { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', bg:'#f2f1ef', action: () => abrir('campos') },
-    { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', bg:'#edf7ed', color:'#2d6a2d', action: () => abrir('cultivos') },
-    { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', bg:'#f2f1ef', action: () => abrir('operarios') },
-    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', bg:'#edf7ed', color:'#2d6a2d', action: () => abrir('abonos') },
+    { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre }) },
+    { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', action: () => abrir('campos') },
+    { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#1E5631', bg:'#edf7ed', action: () => abrir('cultivos') },
+    { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
+    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#1E5631', bg:'#edf7ed', action: () => abrir('abonos') },
+    { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
   ]
 
   return (
@@ -131,7 +115,7 @@ export default function Configuracion() {
       <div style={{ padding:'0 14px 100px' }}>
         {menuItems.map((it, i) => (
           <div key={i} onClick={it.action} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
-            <div style={{ width:40, height:40, borderRadius:12, background:it.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <div style={{ width:40, height:40, borderRadius:12, background: it.bg || '#f2f1ef', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <i className={`ti ${it.icon}`} style={{ fontSize:18, color: it.color || '#0a0a0a' }} aria-hidden="true"></i>
             </div>
             <div style={{ flex:1 }}>
@@ -154,7 +138,7 @@ export default function Configuracion() {
             {modal === 'cuenta' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Mi cuenta</div>
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:20 }}>
-                <div style={{ width:80, height:80, borderRadius:'50%', background:'#0a0a0a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, color:'#fff', marginBottom:10, overflow:'hidden' }}>
+                <div style={{ width:80, height:80, borderRadius:'50%', background:'#1E5631', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, color:'#fff', marginBottom:10, overflow:'hidden' }}>
                   {perfil.foto ? <img src={perfil.foto} alt="perfil" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : iniciales(perfil.nombre || perfil.email)}
                 </div>
                 <label style={{ fontSize:12, color:'#9a9a9a', border:'1px solid #e8e6e2', padding:'6px 16px', borderRadius:20, cursor:'pointer', background:'#fff' }}>
