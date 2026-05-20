@@ -44,10 +44,11 @@ export default function Configuracion() {
   }
 
   const guardarPerfil = async () => {
-    if (!form.nombre?.trim()) return
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ data: { nombre: form.nombre.trim() } })
-    if (!error) { setPerfil(p => ({ ...p, nombre: form.nombre.trim() })); cerrar() }
+    const nombreFinal = form.nombre?.trim() || ''
+    const { error } = await supabase.auth.updateUser({ data: { nombre: nombreFinal } })
+    if (!error) { setPerfil(p => ({ ...p, nombre: nombreFinal })); cerrar() }
+    else { alert('Error al guardar: ' + error.message) }
     setLoading(false)
   }
 
