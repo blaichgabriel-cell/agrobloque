@@ -24,13 +24,19 @@ export default function Asistencia() {
   const [operarios, setOperarios] = useState([])
   const [asistencia, setAsistencia] = useState({})
   const [adelantos, setAdelantos] = useState({})
+  const [inputs, setInputs] = useState({})
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [modalAdelanto, setModalAdelanto] = useState(null)
   const [formAdelanto, setFormAdelanto] = useState({ monto:'', descripcion:'' })
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState({})
+  const [savedOk, setSavedOk] = useState({})
 
   const lunes = getLunes(semanaOffset)
-  const diasFechas = DIAS.map((_, i) => { const d = new Date(lunes); d.setDate(lunes.getDate() + i); return formatFecha(d) })
+  const diasFechas = DIAS.map((_, i) => {
+    const d = new Date(lunes)
+    d.setDate(lunes.getDate() + i)
+    return formatFecha(d)
+  })
 
   useEffect(() => { fetchCampos() }, [])
   useEffect(() => { if (campoActivo) { fetchOperarios(); fetchAsistencia() } }, [campoActivo, semanaOffset])
@@ -55,6 +61,13 @@ export default function Asistencia() {
       mapa[a.operario_id][a.fecha] = a
     })
     setAsistencia(mapa)
+    // Inicializar inputs con valores existentes
+    const newInputs = {}
+    ;(data || []).forEach(a => {
+      const key = `${a.operario_id}_${a.fecha}`
+      newInputs[key] = a.monto > 0 ? fmtGs(a.monto) : ''
+    })
+    setInputs(prev => ({ ...newInputs, ...prev }))
   }
 
   const fetchAdelantos = async (ops) => {
@@ -69,42 +82,51 @@ export default function Asistencia() {
     setAdelantos(mapa)
   }
 
-  const guardarMonto = async (operario_id, fecha, montoRaw, dia_semana) => {
-    const monto = parsearGs(montoRaw)
+  const getKey = (operario_id, fecha) => `${operario_id}_${fecha}`
+
+  const handleInput = (operario_id, fecha, value) => {
+    const raw = value.replace(/[^0-9]/g, '')
+    const fmt = raw ? parseInt(raw, 10).toLocaleString('es-PY') : ''
+    setInputs(prev => ({ ...prev, [getKey(operario_id, fecha)]: fmt }))
+  }
+
+  const guardarDia = async (operario_id, fecha, dia_idx) => {
+    const key = getKey(operario_id, fecha)
+    const monto = parsearGs(inputs[key] || '0')
+    setSaving(prev => ({ ...prev, [key]: true }))
     const existing = asistencia[operario_id]?.[fecha]
-    if (existing) await supabase.from('asistencia').update({ monto }).eq('id', existing.id)
-    else await supabase.from('asistencia').insert({ operario_id, fecha, dia_semana, monto, estado: monto > 0 ? 'presente' : 'ausente' })
+    if (existing) {
+      await supabase.from('asistencia').update({ monto }).eq('id', existing.id)
+    } else {
+      await supabase.from('asistencia').insert({
+        operario_id, fecha, dia_semana: DIAS[dia_idx],
+        monto, estado: monto > 0 ? 'presente' : 'ausente'
+      })
+    }
+    setSaving(prev => ({ ...prev, [key]: false }))
+    setSavedOk(prev => ({ ...prev, [key]: true }))
+    setTimeout(() => setSavedOk(prev => ({ ...prev, [key]: false })), 2000)
     fetchAsistencia()
   }
 
-  const handleMontoChange = (operario_id, fecha, value) => {
-    const raw = value.replace(/[^0-9]/g, '')
-    const fmt = raw ? parseInt(raw, 10).toLocaleString('es-PY') : ''
-    setAsistencia(prev => ({
-      ...prev,
-      [operario_id]: {
-        ...(prev[operario_id] || {}),
-        [fecha]: { ...(prev[operario_id]?.[fecha] || {}), _input: fmt, monto: parsearGs(fmt) }
-      }
-    }))
-  }
+  const getTotalSemana = (operario_id) => diasFechas.reduce((sum, f) => {
+    const key = getKey(operario_id, f)
+    return sum + parsearGs(inputs[key] || asistencia[operario_id]?.[f]?.monto || 0)
+  }, 0)
 
-  const getMontoDisplay = (operario_id, fecha) => {
-    const rec = asistencia[operario_id]?.[fecha]
-    if (!rec) return ''
-    if (rec._input !== undefined) return rec._input
-    return rec.monto ? fmtGs(rec.monto) : ''
-  }
-
-  const getTotalSemana = (operario_id) => diasFechas.reduce((sum, f) => sum + (Number(asistencia[operario_id]?.[f]?.monto) || 0), 0)
-  const getTotalGeneral = () => operarios.reduce((sum, o) => sum + getTotalSemana(o.id), 0)
+  const getTotalGeneral = () => operarios.reduce((sum, o) => sum + (asistencia[o.id] ? diasFechas.reduce((s, f) => s + (Number(asistencia[o.id]?.[f]?.monto) || 0), 0) : 0), 0)
 
   const guardarAdelanto = async () => {
     const monto = parsearGs(formAdelanto.monto)
     if (!monto) return
-    setSaving(true)
-    await supabase.from('adelantos').insert({ operario_id:modalAdelanto, fecha:new Date().toISOString().split('T')[0], monto, descripcion:formAdelanto.descripcion })
-    setModalAdelanto(null); setFormAdelanto({ monto:'', descripcion:'' }); setSaving(false)
+    await supabase.from('adelantos').insert({
+      operario_id: modalAdelanto,
+      fecha: new Date().toISOString().split('T')[0],
+      monto,
+      descripcion: formAdelanto.descripcion
+    })
+    setModalAdelanto(null)
+    setFormAdelanto({ monto:'', descripcion:'' })
     fetchAdelantos(operarios)
   }
 
@@ -121,34 +143,45 @@ export default function Asistencia() {
           ))}
         </div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <button onClick={() => setSemanaOffset(o => o-1)} style={{ padding:'7px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a', cursor:'pointer' }}>← Anterior</button>
+          <button onClick={() => setSemanaOffset(o => o-1)} style={{ padding:'7px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a', cursor:'pointer' }}>← Ant.</button>
           <div style={{ fontSize:12, fontWeight:600, color:'#0a0a0a' }}>{formatLabel(lunes)} — {formatLabel(new Date(lunes.getTime() + 5*86400000))}</div>
-          <button onClick={() => setSemanaOffset(o => o+1)} style={{ padding:'7px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a', cursor:'pointer' }}>Siguiente →</button>
+          <button onClick={() => setSemanaOffset(o => o+1)} style={{ padding:'7px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a', cursor:'pointer' }}>Sig. →</button>
         </div>
       </div>
 
       <div style={{ padding:'12px 14px 100px' }}>
         {operarios.map(op => (
           <div key={op.id} style={{ background:'#fff', borderRadius:20, marginBottom:10, overflow:'hidden' }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderBottom:'1px solid #f2f1ef' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', borderBottom:'1px solid #f2f1ef' }}>
               <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{op.nombre}</div>
-              <div style={{ fontSize:14, fontWeight:700, color:'#A0785A' }}>Gs. {fmtGs(getTotalSemana(op.id))}</div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#A0785A' }}>Gs. {fmtGs(getTotalSemana(op.id))}</div>
             </div>
-            <div style={{ display:'flex', padding:'12px 14px', gap:4 }}>
-              {DIAS.map((dia, i) => (
-                <div key={dia} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                  <div style={{ fontSize:10, color:'#9a9a9a', fontWeight:500 }}>{DIAS_CORTO[i]}</div>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={getMontoDisplay(op.id, diasFechas[i])}
-                    onChange={e => handleMontoChange(op.id, diasFechas[i], e.target.value)}
-                    onBlur={e => guardarMonto(op.id, diasFechas[i], e.target.value, dia)}
-                    placeholder="0"
-                    style={{ width:'100%', padding:'6px 2px', borderRadius:8, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:11, color:'#0a0a0a', textAlign:'center' }}
-                  />
-                </div>
-              ))}
+            <div style={{ padding:'10px 12px' }}>
+              {diasFechas.map((fecha, i) => {
+                const key = getKey(op.id, fecha)
+                const ok = savedOk[key]
+                const isSaving = saving[key]
+                return (
+                  <div key={fecha} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                    <div style={{ width:20, fontSize:11, fontWeight:600, color:'#9a9a9a', textAlign:'center' }}>{DIAS_CORTO[i]}</div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={inputs[key] || ''}
+                      onChange={e => handleInput(op.id, fecha, e.target.value)}
+                      placeholder="0"
+                      style={{ flex:1, padding:'8px 10px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:12, color:'#0a0a0a', textAlign:'right' }}
+                    />
+                    <button
+                      onClick={() => guardarDia(op.id, fecha, i)}
+                      disabled={isSaving}
+                      style={{ padding:'8px 12px', borderRadius:10, border:'none', background: ok ? '#A0785A' : '#e8e6e2', fontSize:11, fontWeight:600, color: ok ? '#fff' : '#555', cursor:'pointer', minWidth:60 }}
+                    >
+                      {isSaving ? '...' : ok ? '✓ Ok' : 'Guardar'}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderTop:'1px solid #f2f1ef' }}>
               <div style={{ fontSize:11, color:'#9a9a9a' }}>Adelantos: <span style={{ color:'#c84040', fontWeight:600 }}>Gs. {fmtGs(adelantos[op.id]||0)}</span></div>
@@ -180,7 +213,7 @@ export default function Asistencia() {
               placeholder="Ej: 50.000"/>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Descripción (opcional)</div>
             <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, boxSizing:'border-box' }} type="text" value={formAdelanto.descripcion} onChange={e => setFormAdelanto(f => ({...f, descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarAdelanto} disabled={saving}>{saving ? 'Guardando...' : 'Guardar adelanto'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarAdelanto}>Guardar adelanto</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModalAdelanto(null)}>Cancelar</button>
           </div>
         </div>
