@@ -42,7 +42,7 @@ export default function Asistencia() {
   }
 
   const fetchOperarios = async () => {
-    const { data } = await supabase.from('operarios').select('*').eq('campo_id', campoActivo.id).order('nombre')
+    const { data } = await supabase.from('operarios').select('*').eq('campo_id', campoActivo.id).order('orden', { ascending: true })
     setOperarios(data || [])
     if (data) fetchAdelantos(data)
   }
