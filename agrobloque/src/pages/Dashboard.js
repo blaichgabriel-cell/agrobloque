@@ -17,44 +17,45 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
   const [campos, setCampos] = useState([])
   const [stats, setStats] = useState({ bloques:0, activos:0, cultivos:0, operarios:0 })
   const [alertas, setAlertas] = useState([])
-  const [showAlertas, setShowAlertas] = useState(false)
   const navigate = useNavigate()
   const hoy = new Date().toISOString().split('T')[0]
 
+  const cargarStats = async (campo) => {
+    const [{ data: bloques }, { data: plantas }, { data: ops }, { data: tareas }] = await Promise.all([
+      supabase.from('bloques').select('id, activo').eq('campo_id', campo.id),
+      supabase.from('plantaciones').select('id').eq('activa', true),
+      supabase.from('operarios').select('id').eq('campo_id', campo.id),
+      supabase.from('tareas').select('*, campos(nombre), bloques(codigo)').eq('completada', false).lte('fecha_programada', hoy).order('fecha_programada'),
+    ])
+    setStats({ bloques: bloques?.length||0, activos: bloques?.filter(b=>b.activo).length||0, cultivos: plantas?.length||0, operarios: ops?.length||0 })
+    setAlertas(tareas || [])
+  }
+
   useEffect(() => {
-    const fetchCampos = async () => {
+    const init = async () => {
       const { data } = await supabase.from('campos').select('*').order('nombre')
-      if (data && data.length > 0) { setCampos(data); if (!campoActivo) setCampoActivo(data[0]) }
+      if (!data || data.length === 0) return
+      setCampos(data)
+      const campo = campoActivo || data[0]
+      if (!campoActivo) setCampoActivo(data[0])
+      await cargarStats(campo)
     }
-    fetchCampos()
+    init()
   }, [])
 
   useEffect(() => {
-    if (!campoActivo) return
-    const fetchStats = async () => {
-      const { data: bloques } = await supabase.from('bloques').select('id, activo').eq('campo_id', campoActivo.id)
-      const { data: plantas } = await supabase.from('plantaciones').select('id').eq('activa', true)
-      const { data: ops } = await supabase.from('operarios').select('id').eq('campo_id', campoActivo.id)
-      setStats({ bloques: bloques?.length||0, activos: bloques?.filter(b=>b.activo).length||0, cultivos: plantas?.length||0, operarios: ops?.length||0 })
-    }
-    const fetchAlertas = async () => {
-      const { data } = await supabase.from('tareas')
-        .select('*, campos(nombre), bloques(codigo)')
-        .eq('completada', false).lte('fecha_programada', hoy).order('fecha_programada')
-      setAlertas(data || [])
-    }
-    fetchStats(); fetchAlertas()
+    if (campoActivo) cargarStats(campoActivo)
   }, [campoActivo])
 
   const accesos = [
-    { icon:'ti-map',       label:'Mapa',        sub:'Ver bloques',   path:'/mapa',       bg:'#f2f1ef', color:'#A0785A' },
-    { icon:'ti-calendar',  label:'Agenda',      sub:'Tareas',        path:'/agenda',     bg:'#f2ebe4', color:'#A0785A' },
-    { icon:'ti-users',     label:'Asistencia',  sub:'Planilla',      path:'/asistencia', bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-chart-bar', label:'Reportes',    sub:'Rentabilidad',  path:'/reportes',   bg:'#f2ebe4', color:'#A0785A' },
-    { icon:'ti-spray',     label:'Fumigaciones',sub:'Historial',     path:'/fumigaciones',bg:'#fff3e8',color:'#e07b00' },
-    { icon:'ti-package',   label:'Inventario',  sub:'Stock',         path:'/inventario', bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-cut',       label:'Cosecha',     sub:'Producción',    path:'/cosecha',    bg:'#f2ebe4', color:'#A0785A' },
-    { icon:'ti-coin',      label:'Costos',      sub:'Gastos',        path:'/costos',     bg:'#fff3e8', color:'#e07b00' },
+    { icon:'ti-map',       label:'Mapa',        sub:'Ver bloques',    path:'/mapa',        bg:'#f5ede3', color:'#A0785A' },
+    { icon:'ti-calendar',  label:'Agenda',      sub:'Tareas',         path:'/agenda',      bg:'#f5ede3', color:'#A0785A' },
+    { icon:'ti-users',     label:'Asistencia',  sub:'Planilla',       path:'/asistencia',  bg:'#f2f1ef', color:'#0a0a0a' },
+    { icon:'ti-chart-bar', label:'Reportes',    sub:'Rentabilidad',   path:'/reportes',    bg:'#f5ede3', color:'#A0785A' },
+    { icon:'ti-spray',     label:'Fumigaciones',sub:'Historial',      path:'/fumigaciones',bg:'#fff3e8', color:'#e07b00' },
+    { icon:'ti-package',   label:'Inventario',  sub:'Stock',          path:'/inventario',  bg:'#f2f1ef', color:'#0a0a0a' },
+    { icon:'ti-cut',       label:'Cosecha',     sub:'Producción',     path:'/cosecha',     bg:'#f5ede3', color:'#A0785A' },
+    { icon:'ti-coin',      label:'Costos',      sub:'Gastos',         path:'/costos',      bg:'#fff3e8', color:'#e07b00' },
   ]
 
   return (
@@ -68,7 +69,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
               <div style={{ fontSize:17, fontWeight:700, color:'#A0785A', letterSpacing:-.3, lineHeight:1.1 }}>El Sembrador</div>
             </div>
           </div>
-          <button onClick={() => setShowAlertas(!showAlertas)} style={{ width:42, height:42, borderRadius:'50%', background: alertas.length > 0 ? '#A0785A' : '#e8e6e2', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative' }}>
+          <button onClick={() => navigate('/agenda')} style={{ width:42, height:42, borderRadius:'50%', background: alertas.length > 0 ? '#A0785A' : '#e8e6e2', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative' }}>
             <i className="ti ti-bell" style={{ fontSize:20, color: alertas.length > 0 ? '#fff' : '#9a9a9a' }} aria-hidden="true"></i>
             {alertas.length > 0 && (
               <div style={{ position:'absolute', top:-3, right:-3, background:'#e07b00', borderRadius:10, padding:'1px 5px', fontSize:8, fontWeight:700, color:'#fff', border:'2px solid #f2f1ef' }}>{alertas.length}</div>
