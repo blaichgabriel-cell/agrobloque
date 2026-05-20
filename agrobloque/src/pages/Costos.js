@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const TIPOS_COSTO = [
-  { key:'semillas',      label:'Semillas',      icon:'ti-seedling',    color:'#1E5631', bg:'#edf7ed' },
+  { key:'semillas',      label:'Semillas',      icon:'ti-seedling',    color:'#A0785A', bg:'#f2ebe4' },
   { key:'combustible',   label:'Combustible',   icon:'ti-flame',       color:'#e07b00', bg:'#fff3e8' },
   { key:'mantenimiento', label:'Mantenimiento', icon:'ti-tool',        color:'#555',    bg:'#f2f1ef' },
   { key:'electricidad',  label:'Electricidad',  icon:'ti-bolt',        color:'#2980b9', bg:'#eaf4fb' },
@@ -87,14 +87,14 @@ export default function Costos({ campoActivo }) {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Gastos</div>
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Costos</div>
           </div>
-          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#1E5631', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#A0785A', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
         {campos.length > 1 && (
           <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:12 }}>
             {campos.map(c => (
-              <button key={c.id} onClick={() => setCampoSel(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoSel?.id===c.id ? '#1E5631' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
+              <button key={c.id} onClick={() => setCampoSel(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoSel?.id===c.id ? '#A0785A' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
             ))}
           </div>
         )}
@@ -106,7 +106,7 @@ export default function Costos({ campoActivo }) {
       </div>
 
       <div style={{ padding:'8px 14px 100px' }}>
-        <div style={{ background:'#1E5631', borderRadius:20, padding:'18px 20px', marginBottom:10 }}>
+        <div style={{ background:'#A0785A', borderRadius:20, padding:'18px 20px', marginBottom:10 }}>
           <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:.05, marginBottom:6 }}>Total costos · {periodo === 'mes' ? 'este mes' : 'histórico'}</div>
           <div style={{ fontSize:36, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>Gs. {fmtGs(totalGeneral)}</div>
           <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', marginTop:4 }}>{campoSel?.nombre}</div>
@@ -128,8 +128,8 @@ export default function Costos({ campoActivo }) {
           </div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ width:32, height:32, borderRadius:9, background:'#edf7ed', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <i className="ti ti-users" style={{ fontSize:15, color:'#1E5631' }} aria-hidden="true"></i>
+              <div style={{ width:32, height:32, borderRadius:9, background:'#f2ebe4', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <i className="ti ti-users" style={{ fontSize:15, color:'#A0785A' }} aria-hidden="true"></i>
               </div>
               <div>
                 <div style={{ fontSize:13, fontWeight:500, color:'#0a0a0a' }}>Jornales</div>
@@ -176,7 +176,7 @@ export default function Costos({ campoActivo }) {
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:8 }}>Tipo</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginBottom:14 }}>
               {TIPOS_COSTO.map(t => (
-                <button key={t.key} onClick={() => setForm(f => ({...f, tipo:t.key}))} style={{ padding:'10px 6px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:11, fontWeight:500, cursor:'pointer', background: form.tipo===t.key ? '#1E5631' : '#fff', color: form.tipo===t.key ? '#fff' : '#555', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <button key={t.key} onClick={() => setForm(f => ({...f, tipo:t.key}))} style={{ padding:'10px 6px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:11, fontWeight:500, cursor:'pointer', background: form.tipo===t.key ? '#A0785A' : '#fff', color: form.tipo===t.key ? '#fff' : '#555', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
                   <i className={`ti ${t.icon}`} style={{ fontSize:16 }} aria-hidden="true"></i>
                   {t.label}
                 </button>
@@ -199,7 +199,7 @@ export default function Costos({ campoActivo }) {
               <option value="">Sin bloque específico</option>
               {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
             </select>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#1E5631', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar costo'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar costo'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </div>

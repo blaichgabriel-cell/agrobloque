@@ -92,7 +92,7 @@ export default function Compradores() {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Ventas</div>
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Compradores</div>
           </div>
-          <button onClick={() => { setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' }); setModal(true) }} style={{ width:40, height:40, borderRadius:14, background:'#1E5631', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+          <button onClick={() => { setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' }); setModal(true) }} style={{ width:40, height:40, borderRadius:14, background:'#A0785A', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
@@ -110,8 +110,8 @@ export default function Compradores() {
           return (
             <div key={c.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8 }}>
               <div style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }} onClick={() => setExpandido(isOpen ? null : c.id)}>
-                <div style={{ width:40, height:40, borderRadius:12, background:'#edf7ed', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <i className="ti ti-building-store" style={{ fontSize:18, color:'#1E5631' }} aria-hidden="true"></i>
+                <div style={{ width:40, height:40, borderRadius:12, background:'#f2ebe4', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <i className="ti ti-building-store" style={{ fontSize:18, color:'#A0785A' }} aria-hidden="true"></i>
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{c.nombre}</div>
@@ -120,7 +120,7 @@ export default function Compradores() {
                 <div style={{ textAlign:'right' }}>
                   {stats.operaciones > 0 ? (
                     <>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#1E5631' }}>{stats.kg.toLocaleString()} kg</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'#A0785A' }}>{stats.kg.toLocaleString()} kg</div>
                       <div style={{ fontSize:10, color:'#9a9a9a' }}>{stats.operaciones} operaciones</div>
                     </>
                   ) : (
@@ -138,9 +138,9 @@ export default function Compradores() {
                         <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:3 }}>Total kg</div>
                         <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{stats.kg.toLocaleString()}</div>
                       </div>
-                      <div style={{ flex:1, background:'#edf7ed', borderRadius:12, padding:'10px 12px', textAlign:'center' }}>
+                      <div style={{ flex:1, background:'#f2ebe4', borderRadius:12, padding:'10px 12px', textAlign:'center' }}>
                         <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:3 }}>Precio prom</div>
-                        <div style={{ fontSize:14, fontWeight:700, color:'#1E5631' }}>Gs. {stats.precioProm.toLocaleString()}</div>
+                        <div style={{ fontSize:14, fontWeight:700, color:'#A0785A' }}>Gs. {stats.precioProm.toLocaleString()}</div>
                       </div>
                       <div style={{ flex:1, background:'#f2f1ef', borderRadius:12, padding:'10px 12px', textAlign:'center' }}>
                         <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:3 }}>Ingresos</div>
@@ -158,7 +158,7 @@ export default function Compradores() {
                           <div style={{ fontSize:11, color:'#0a0a0a' }}>{cultivo || 'Bloque ' + h.bloques?.codigo} · {h.kg_total} kg</div>
                           <div style={{ fontSize:10, color:'#9a9a9a' }}>{h.fecha}</div>
                         </div>
-                        {h.precio_kg > 0 && <div style={{ fontSize:11, fontWeight:600, color:'#1E5631' }}>Gs. {Number(h.precio_kg).toLocaleString()}/kg</div>}
+                        {h.precio_kg > 0 && <div style={{ fontSize:11, fontWeight:600, color:'#A0785A' }}>Gs. {Number(h.precio_kg).toLocaleString()}/kg</div>}
                       </div>
                     )
                   })}
@@ -183,14 +183,14 @@ export default function Compradores() {
             <label style={lblStyle}>Tipo</label>
             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
               {TIPOS.map(t => (
-                <button key={t} onClick={() => setForm(f => ({...f, tipo:t}))} style={{ padding:'8px 14px', borderRadius:20, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.tipo===t ? '#1E5631' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>{t}</button>
+                <button key={t} onClick={() => setForm(f => ({...f, tipo:t}))} style={{ padding:'8px 14px', borderRadius:20, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.tipo===t ? '#A0785A' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>{t}</button>
               ))}
             </div>
             <label style={lblStyle}>Teléfono (opcional)</label>
             <input style={inpStyle} value={form.telefono} onChange={e => setForm(f => ({...f, telefono:e.target.value}))} placeholder="Ej: 0981 000 000"/>
             <label style={lblStyle}>Notas (opcional)</label>
             <textarea style={{ ...inpStyle, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#1E5631', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </div>

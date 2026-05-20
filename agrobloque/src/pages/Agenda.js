@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
   fertiriego:  { label:'Fertiriego',  icon:'ti-droplet', color:'#2980b9', bg:'#eaf4fb' },
-  cosecha:     { label:'Cosecha',     icon:'ti-cut',     color:'#1E5631', bg:'#edf7ed' },
+  cosecha:     { label:'Cosecha',     icon:'ti-cut',     color:'#A0785A', bg:'#f2ebe4' },
   evaluacion:  { label:'Evaluación',  icon:'ti-clipboard-list', color:'#8e44ad', bg:'#f5eefb' },
   otro:        { label:'Otro',        icon:'ti-pin',     color:'#555',    bg:'#f2f1ef' },
 }
@@ -80,7 +80,7 @@ export default function Agenda() {
   })
 
   const getBadge = (t) => {
-    if (t.completada) return { label:'Completada', bg:'#edf7ed', color:'#1E5631' }
+    if (t.completada) return { label:'Completada', bg:'#f2ebe4', color:'#A0785A' }
     if (t.fecha_programada < hoy) return { label:'Vencida', bg:'#fff0f0', color:'#c84040' }
     if (t.fecha_programada === hoy) return { label:'Hoy', bg:'#fff3e8', color:'#c8700a' }
     return null
@@ -96,13 +96,13 @@ export default function Agenda() {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Planificación</div>
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Agenda</div>
           </div>
-          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#1E5631', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#A0785A', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:4 }}>
           {[['pendientes','Pendientes'],['hoy','Hoy'],['completadas','Completadas'],['todas','Todas']].map(([k,v]) => (
-            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#1E5631' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>{v}</button>
+            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#A0785A' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>{v}</button>
           ))}
         </div>
       </div>
@@ -129,7 +129,7 @@ export default function Agenda() {
                 <div style={{ fontSize:10, color:'#b0b0b0' }}>{t.fecha_programada}</div>
                 <div style={{ display:'flex', gap:6 }}>
                   {!t.completada && (
-                    <button onClick={() => completarTarea(t.id)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #c8ddc8', background:'transparent', fontSize:11, fontWeight:500, color:'#1E5631', cursor:'pointer' }}>
+                    <button onClick={() => completarTarea(t.id)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #d4b89a', background:'transparent', fontSize:11, fontWeight:500, color:'#A0785A', cursor:'pointer' }}>
                       ✓ Completar
                     </button>
                   )}
@@ -167,7 +167,7 @@ export default function Agenda() {
                 {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
               </select>
             </>}
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#1E5631', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarTarea} disabled={saving}>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarTarea} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar tarea'}
             </button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>

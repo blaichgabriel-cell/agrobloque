@@ -23,9 +23,9 @@ const getSemaforo = (cultivo, fechaSiembra) => {
   if (dias === null) return null
   const ciclo = CICLO_DIAS[cultivo] || 75
   const pct = dias / ciclo
-  if (pct < 0.7) return { color:'#2d8a4e', label:'En crecimiento' }
+  if (pct < 0.7) return { color:'#7A5A3E', label:'En crecimiento' }
   if (pct < 0.9) return { color:'#f0c060', label:'Próximo a cosechar' }
-  if (pct < 1.1) return { color:'#5abf7a', label:'Listo para cosechar' }
+  if (pct < 1.1) return { color:'#D4B08A', label:'Listo para cosechar' }
   return { color:'#f08080', label:'Cosecha atrasada' }
 }
 
@@ -100,13 +100,13 @@ export default function Mapa({ campoActivo }) {
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       <div style={{ background:'#f2f1ef', padding:'24px 20px 0' }}>
         <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Campo activo</div>
-        <div style={{ fontSize:22, fontWeight:700, color:'#1E5631', letterSpacing:-.5, marginBottom:14 }}>{campoActivo?.nombre}</div>
+        <div style={{ fontSize:22, fontWeight:700, color:'#A0785A', letterSpacing:-.5, marginBottom:14 }}>{campoActivo?.nombre}</div>
 
         <div style={{ display:'flex', gap:10, marginBottom:12, flexWrap:'wrap' }}>
           {[
-            { color:'#2d8a4e', label:'Creciendo' },
+            { color:'#7A5A3E', label:'Creciendo' },
             { color:'#f0c060', label:'Próximo' },
-            { color:'#5abf7a', label:'Listo' },
+            { color:'#D4B08A', label:'Listo' },
             { color:'#f08080', label:'Atrasado' },
           ].map(s => (
             <div key={s.label} style={{ display:'flex', alignItems:'center', gap:4 }}>
@@ -118,7 +118,7 @@ export default function Mapa({ campoActivo }) {
 
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:8 }}>
           {[['todos','Todos'], ...cultivos.map(c => [c,c]), ['vacio','Sin cultivo']].map(([k,v]) => (
-            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#1E5631' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>
+            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#A0785A' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>
               {v}
             </button>
           ))}

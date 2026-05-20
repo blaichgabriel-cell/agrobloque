@@ -115,7 +115,7 @@ export default function Asistencia() {
         <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:16 }}>Asistencia y pagos</div>
         <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:16 }}>
           {campos.map(c => (
-            <button key={c.id} onClick={() => setCampoActivo(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#1E5631' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }}>
+            <button key={c.id} onClick={() => setCampoActivo(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#A0785A' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }}>
               {c.nombre}
             </button>
           ))}
@@ -132,7 +132,7 @@ export default function Asistencia() {
           <div key={op.id} style={{ background:'#fff', borderRadius:20, marginBottom:10, overflow:'hidden' }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderBottom:'1px solid #f2f1ef' }}>
               <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{op.nombre}</div>
-              <div style={{ fontSize:14, fontWeight:700, color:'#1E5631' }}>Gs. {fmtGs(getTotalSemana(op.id))}</div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#A0785A' }}>Gs. {fmtGs(getTotalSemana(op.id))}</div>
             </div>
             <div style={{ display:'flex', padding:'12px 14px', gap:4 }}>
               {DIAS.map((dia, i) => (
@@ -157,7 +157,7 @@ export default function Asistencia() {
           </div>
         ))}
 
-        <div style={{ background:'#1E5631', borderRadius:20, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div style={{ background:'#A0785A', borderRadius:20, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>Total semanal del campo</div>
           <div style={{ fontSize:20, fontWeight:800, color:'#fff', letterSpacing:-.5 }}>Gs. {fmtGs(getTotalGeneral())}</div>
         </div>
@@ -180,7 +180,7 @@ export default function Asistencia() {
               placeholder="Ej: 50.000"/>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Descripción (opcional)</div>
             <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, boxSizing:'border-box' }} type="text" value={formAdelanto.descripcion} onChange={e => setFormAdelanto(f => ({...f, descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#1E5631', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarAdelanto} disabled={saving}>{saving ? 'Guardando...' : 'Guardar adelanto'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarAdelanto} disabled={saving}>{saving ? 'Guardando...' : 'Guardar adelanto'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModalAdelanto(null)}>Cancelar</button>
           </div>
         </div>

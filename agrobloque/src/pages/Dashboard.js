@@ -5,10 +5,10 @@ import { supabase } from '../lib/supabase'
 function LogoHS({ size = 36 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#1E5631" letterSpacing="-4">HS</text>
-      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#5abf7a"/>
-      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#3d9a5e"/>
-      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#3d9a5e"/>
+      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#A0785A" letterSpacing="-4">HS</text>
+      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#D4B08A"/>
+      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#A0785A"/>
+      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#A0785A"/>
     </svg>
   )
 }
@@ -47,13 +47,13 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
   }, [campoActivo])
 
   const accesos = [
-    { icon:'ti-map',       label:'Mapa',        sub:'Ver bloques',   path:'/mapa',       bg:'#f2f1ef', color:'#1E5631' },
-    { icon:'ti-calendar',  label:'Agenda',      sub:'Tareas',        path:'/agenda',     bg:'#edf7ed', color:'#1E5631' },
+    { icon:'ti-map',       label:'Mapa',        sub:'Ver bloques',   path:'/mapa',       bg:'#f2f1ef', color:'#A0785A' },
+    { icon:'ti-calendar',  label:'Agenda',      sub:'Tareas',        path:'/agenda',     bg:'#f2ebe4', color:'#A0785A' },
     { icon:'ti-users',     label:'Asistencia',  sub:'Planilla',      path:'/asistencia', bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-chart-bar', label:'Reportes',    sub:'Rentabilidad',  path:'/reportes',   bg:'#edf7ed', color:'#1E5631' },
+    { icon:'ti-chart-bar', label:'Reportes',    sub:'Rentabilidad',  path:'/reportes',   bg:'#f2ebe4', color:'#A0785A' },
     { icon:'ti-spray',     label:'Fumigaciones',sub:'Historial',     path:'/fumigaciones',bg:'#fff3e8',color:'#e07b00' },
     { icon:'ti-package',   label:'Inventario',  sub:'Stock',         path:'/inventario', bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-cut',       label:'Cosecha',     sub:'Producción',    path:'/cosecha',    bg:'#edf7ed', color:'#1E5631' },
+    { icon:'ti-cut',       label:'Cosecha',     sub:'Producción',    path:'/cosecha',    bg:'#f2ebe4', color:'#A0785A' },
     { icon:'ti-coin',      label:'Costos',      sub:'Gastos',        path:'/costos',     bg:'#fff3e8', color:'#e07b00' },
   ]
 
@@ -65,10 +65,10 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
             <LogoHS size={36} />
             <div>
               <div style={{ fontSize:11, color:'#9a9a9a', letterSpacing:.3 }}>HORTICULTURA</div>
-              <div style={{ fontSize:17, fontWeight:700, color:'#1E5631', letterSpacing:-.3, lineHeight:1.1 }}>El Sembrador</div>
+              <div style={{ fontSize:17, fontWeight:700, color:'#A0785A', letterSpacing:-.3, lineHeight:1.1 }}>El Sembrador</div>
             </div>
           </div>
-          <button onClick={() => setShowAlertas(!showAlertas)} style={{ width:42, height:42, borderRadius:'50%', background: alertas.length > 0 ? '#1E5631' : '#e8e6e2', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative' }}>
+          <button onClick={() => setShowAlertas(!showAlertas)} style={{ width:42, height:42, borderRadius:'50%', background: alertas.length > 0 ? '#A0785A' : '#e8e6e2', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative' }}>
             <i className="ti ti-bell" style={{ fontSize:20, color: alertas.length > 0 ? '#fff' : '#9a9a9a' }} aria-hidden="true"></i>
             {alertas.length > 0 && (
               <div style={{ position:'absolute', top:-3, right:-3, background:'#e07b00', borderRadius:10, padding:'1px 5px', fontSize:8, fontWeight:700, color:'#fff', border:'2px solid #f2f1ef' }}>{alertas.length}</div>
@@ -78,7 +78,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
 
         <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:4 }}>
           {campos.map(c => (
-            <button key={c.id} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#1E5631' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }} onClick={() => setCampoActivo(c)}>
+            <button key={c.id} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#A0785A' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }} onClick={() => setCampoActivo(c)}>
               {c.nombre}
             </button>
           ))}
@@ -86,7 +86,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
       </div>
 
       <div style={{ padding:'0 14px 100px' }}>
-        <div style={{ background:'#1E5631', borderRadius:24, padding:20, marginBottom:10 }}>
+        <div style={{ background:'#A0785A', borderRadius:24, padding:20, marginBottom:10 }}>
           <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', letterSpacing:.05, textTransform:'uppercase', marginBottom:6 }}>Bloques activos</div>
           <div style={{ fontSize:52, fontWeight:800, color:'#fff', lineHeight:1, letterSpacing:-2 }}>{stats.activos}</div>
           <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', marginTop:4, marginBottom:18 }}>de {stats.bloques} totales · {campoActivo?.nombre}</div>
@@ -122,7 +122,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
           <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px' }}>
             <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a', marginBottom:10, display:'flex', justifyContent:'space-between' }}>
               Alertas activas
-              <button onClick={() => navigate('/agenda')} style={{ fontSize:11, color:'#1E5631', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Ver todas →</button>
+              <button onClick={() => navigate('/agenda')} style={{ fontSize:11, color:'#A0785A', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Ver todas →</button>
             </div>
             {alertas.slice(0,3).map(a => (
               <div key={a.id} onClick={() => navigate('/agenda')} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid #f2f1ef', cursor:'pointer' }}>

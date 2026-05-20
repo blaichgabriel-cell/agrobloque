@@ -68,8 +68,8 @@ export default function Inventario() {
     }})
   }
 
-  const getStockColor = (p) => p.stock_actual <= 0 ? '#c84040' : p.stock_actual <= p.stock_minimo ? '#e07b00' : '#1E5631'
-  const getStockBg = (p) => p.stock_actual <= 0 ? '#fff0f0' : p.stock_actual <= p.stock_minimo ? '#fff3e8' : '#edf7ed'
+  const getStockColor = (p) => p.stock_actual <= 0 ? '#c84040' : p.stock_actual <= p.stock_minimo ? '#e07b00' : '#A0785A'
+  const getStockBg = (p) => p.stock_actual <= 0 ? '#fff0f0' : p.stock_actual <= p.stock_minimo ? '#fff3e8' : '#f2ebe4'
 
   const productosFiltrados = filtro === 'todos' ? productos
     : filtro === 'bajo' ? productos.filter(p => p.stock_actual <= p.stock_minimo)
@@ -88,7 +88,7 @@ export default function Inventario() {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Depósito</div>
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Inventario</div>
           </div>
-          <button onClick={() => { setForm({ nombre:'', categoria_id:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('nuevo') }} style={{ width:40, height:40, borderRadius:14, background:'#1E5631', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+          <button onClick={() => { setForm({ nombre:'', categoria_id:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('nuevo') }} style={{ width:40, height:40, borderRadius:14, background:'#A0785A', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
@@ -100,7 +100,7 @@ export default function Inventario() {
         )}
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:4 }}>
           {['todos','bajo',...CATEGORIAS].map(f => (
-            <button key={f} onClick={() => setFiltro(f)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===f ? '#1E5631' : '#e8e6e2', color: filtro===f ? '#fff' : '#9a9a9a' }}>
+            <button key={f} onClick={() => setFiltro(f)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===f ? '#A0785A' : '#e8e6e2', color: filtro===f ? '#fff' : '#9a9a9a' }}>
               {f === 'todos' ? 'Todos' : f === 'bajo' ? '⚠ Stock bajo' : f}
             </button>
           ))}
@@ -172,10 +172,10 @@ export default function Inventario() {
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Unidad</div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:16 }}>
               {['kg','gramos','litros','cc','unidades'].map(u => (
-                <button key={u} onClick={() => setForm(f => ({...f, unidad:u}))} style={{ padding:'9px 14px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.unidad===u ? '#1E5631' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>{u}</button>
+                <button key={u} onClick={() => setForm(f => ({...f, unidad:u}))} style={{ padding:'9px 14px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.unidad===u ? '#A0785A' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>{u}</button>
               ))}
             </div>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#1E5631', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(null)}>Cancelar</button>
           </div>
         </div>

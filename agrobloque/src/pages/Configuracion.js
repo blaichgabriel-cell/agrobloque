@@ -88,21 +88,21 @@ export default function Configuracion() {
   const iniciales = (n) => n ? n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0,2) : 'HS'
 
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }
-  const saveBtn = { width:'100%', padding:14, borderRadius:14, background:'#1E5631', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }
+  const saveBtn = { width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }
   const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
   const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f2f1ef' }
   const listName = { fontSize:13, fontWeight:500, color:'#0a0a0a' }
   const editBtn = { padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, fontWeight:500, color:'#555', cursor:'pointer' }
   const delBtn = { padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, fontWeight:500, color:'#c84040', cursor:'pointer' }
-  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #c8ddc8', background:'#edf7ed', fontSize:13, color:'#1E5631', cursor:'pointer', marginTop:8, fontWeight:500 }
+  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #d4b89a', background:'#f2ebe4', fontSize:13, color:'#A0785A', cursor:'pointer', marginTop:8, fontWeight:500 }
   const lbl = { fontSize:10, color:'#9a9a9a', marginBottom:6, display:'block' }
 
   const menuItems = [
     { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre }) },
     { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', action: () => abrir('campos') },
-    { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#1E5631', bg:'#edf7ed', action: () => abrir('cultivos') },
+    { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#A0785A', bg:'#f2ebe4', action: () => abrir('cultivos') },
     { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
-    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#1E5631', bg:'#edf7ed', action: () => abrir('abonos') },
+    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#A0785A', bg:'#f2ebe4', action: () => abrir('abonos') },
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
   ]
 
@@ -139,7 +139,7 @@ export default function Configuracion() {
             {modal === 'cuenta' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Mi cuenta</div>
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:20 }}>
-                <div style={{ width:80, height:80, borderRadius:'50%', background:'#1E5631', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, color:'#fff', marginBottom:10, overflow:'hidden' }}>
+                <div style={{ width:80, height:80, borderRadius:'50%', background:'#A0785A', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, color:'#fff', marginBottom:10, overflow:'hidden' }}>
                   {perfil.foto ? <img src={perfil.foto} alt="perfil" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : iniciales(perfil.nombre || perfil.email)}
                 </div>
                 <label style={{ fontSize:12, color:'#9a9a9a', border:'1px solid #e8e6e2', padding:'6px 16px', borderRadius:20, cursor:'pointer', background:'#fff' }}>

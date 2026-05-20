@@ -134,15 +134,15 @@ export default function FichaBloque() {
       {/* Header */}
       <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
         <button onClick={() => navigate(-1)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
-          <i className="ti ti-arrow-left" style={{ fontSize:18, color:'#1E5631' }} aria-hidden="true"></i>
-          <span style={{ fontSize:13, color:'#1E5631', fontWeight:500 }}>Volver</span>
+          <i className="ti ti-arrow-left" style={{ fontSize:18, color:'#A0785A' }} aria-hidden="true"></i>
+          <span style={{ fontSize:13, color:'#A0785A', fontWeight:500 }}>Volver</span>
         </button>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
           <div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:2 }}>{bloque.campos?.nombre} · {bloque.sectores?.nombre || 'Sin sector'}</div>
             <div style={{ fontSize:26, fontWeight:800, color:'#0a0a0a', letterSpacing:-.5 }}>Bloque {bloque.codigo}</div>
           </div>
-          <div style={{ padding:'4px 12px', borderRadius:20, background: bloque.activo ? '#edf7ed' : '#f2f1ef', fontSize:11, fontWeight:600, color: bloque.activo ? '#1E5631' : '#9a9a9a' }}>
+          <div style={{ padding:'4px 12px', borderRadius:20, background: bloque.activo ? '#f2ebe4' : '#f2f1ef', fontSize:11, fontWeight:600, color: bloque.activo ? '#A0785A' : '#9a9a9a' }}>
             {bloque.activo ? 'Activo' : 'Inactivo'}
           </div>
         </div>
@@ -187,16 +187,16 @@ export default function FichaBloque() {
               <div style={{ fontSize:12, color:'#9a9a9a' }}>{progreso.dias}d de {progreso.ciclo}d estimados</div>
             </div>
             <div style={{ background:'#f2f1ef', borderRadius:20, height:8, overflow:'hidden' }}>
-              <div style={{ height:'100%', borderRadius:20, background: progreso.pct >= 100 ? '#c84040' : progreso.pct >= 90 ? '#2d8a4e' : progreso.pct >= 70 ? '#f0c060' : '#1E5631', width:`${progreso.pct}%`, transition:'width .3s' }}></div>
+              <div style={{ height:'100%', borderRadius:20, background: progreso.pct >= 100 ? '#c84040' : progreso.pct >= 90 ? '#7A5A3E' : progreso.pct >= 70 ? '#f0c060' : '#A0785A', width:`${progreso.pct}%`, transition:'width .3s' }}></div>
             </div>
-            <div style={{ fontSize:10, color: progreso.pct >= 100 ? '#c84040' : progreso.pct >= 90 ? '#2d8a4e' : '#9a9a9a', marginTop:6, textAlign:'right', fontWeight:600 }}>
+            <div style={{ fontSize:10, color: progreso.pct >= 100 ? '#c84040' : progreso.pct >= 90 ? '#7A5A3E' : '#9a9a9a', marginTop:6, textAlign:'right', fontWeight:600 }}>
               {progreso.pct >= 100 ? 'Cosecha atrasada' : progreso.pct >= 90 ? 'Listo para cosechar' : progreso.pct >= 70 ? 'Próximo a cosechar' : `${progreso.pct}% del ciclo`}
             </div>
           </div>
         )}
 
         {/* Nueva plantación */}
-        <button onClick={() => setShowNuevaPlantacion(!showNuevaPlantacion)} style={{ width:'100%', padding:'13px 16px', borderRadius:16, border:'1px dashed #c8ddc8', background:'#edf7ed', fontSize:13, fontWeight:600, color:'#1E5631', cursor:'pointer', marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+        <button onClick={() => setShowNuevaPlantacion(!showNuevaPlantacion)} style={{ width:'100%', padding:'13px 16px', borderRadius:16, border:'1px dashed #d4b89a', background:'#f2ebe4', fontSize:13, fontWeight:600, color:'#A0785A', cursor:'pointer', marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
           <i className={`ti ${showNuevaPlantacion ? 'ti-x' : 'ti-plus'}`} style={{ fontSize:14 }} aria-hidden="true"></i>
           {showNuevaPlantacion ? 'Cancelar' : 'Nueva plantación'}
         </button>
@@ -218,12 +218,12 @@ export default function FichaBloque() {
             <label style={lblStyle}>Abonos de base</label>
             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
               {abonos.length > 0 ? abonos.map(a => (
-                <div key={a.id} onClick={() => toggleAbono(a.id)} style={{ padding:'6px 14px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.abonos_ids.includes(a.id) ? '#1E5631' : '#f2f1ef', color: form.abonos_ids.includes(a.id) ? '#fff' : '#555', border:'1px solid #e8e6e2' }}>
+                <div key={a.id} onClick={() => toggleAbono(a.id)} style={{ padding:'6px 14px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.abonos_ids.includes(a.id) ? '#A0785A' : '#f2f1ef', color: form.abonos_ids.includes(a.id) ? '#fff' : '#555', border:'1px solid #e8e6e2' }}>
                   {a.nombre}
                 </div>
               )) : <div style={{ fontSize:11, color:'#aaa' }}>Sin abonos cargados</div>}
             </div>
-            <button style={{ width:'100%', padding:13, borderRadius:12, background: saving ? '#8aaa94' : '#1E5631', border:'none', fontSize:14, fontWeight:600, color:'#fff', cursor:'pointer' }} onClick={guardarPlantacion} disabled={saving}>
+            <button style={{ width:'100%', padding:13, borderRadius:12, background: saving ? '#c4a882' : '#A0785A', border:'none', fontSize:14, fontWeight:600, color:'#fff', cursor:'pointer' }} onClick={guardarPlantacion} disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar plantación'}
             </button>
           </div>
@@ -233,7 +233,7 @@ export default function FichaBloque() {
         <div style={{ background:'#fff', borderRadius:20, padding:'16px', marginBottom:10 }}>
           <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a', marginBottom:10 }}>Agregar observación</div>
           <textarea style={{ ...inpStyle, minHeight:70, resize:'vertical', marginBottom:10 }} value={observacion} onChange={e => setObservacion(e.target.value)} placeholder="Escribí una observación sobre este bloque..." />
-          <button style={{ width:'100%', padding:12, borderRadius:12, background: observacion.trim() ? '#1E5631' : '#e8e6e2', border:'none', fontSize:13, fontWeight:600, color: observacion.trim() ? '#fff' : '#aaa', cursor:'pointer' }} onClick={guardarObservacion}>
+          <button style={{ width:'100%', padding:12, borderRadius:12, background: observacion.trim() ? '#A0785A' : '#e8e6e2', border:'none', fontSize:13, fontWeight:600, color: observacion.trim() ? '#fff' : '#aaa', cursor:'pointer' }} onClick={guardarObservacion}>
             Guardar observación
           </button>
         </div>

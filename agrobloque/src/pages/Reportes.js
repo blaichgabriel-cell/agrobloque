@@ -119,7 +119,7 @@ export default function Reportes({ campoActivo }) {
         {campos.length > 1 && (
           <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:10 }}>
             {campos.map(c => (
-              <button key={c.id} onClick={() => setCampoSel(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoSel?.id===c.id ? '#1E5631' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>
+              <button key={c.id} onClick={() => setCampoSel(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoSel?.id===c.id ? '#A0785A' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>
                 {c.nombre}
               </button>
             ))}
@@ -140,7 +140,7 @@ export default function Reportes({ campoActivo }) {
 
           {/* KPIs principales */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
-            <div style={{ background:'#1E5631', borderRadius:20, padding:'16px 14px', gridColumn:'1 / -1' }}>
+            <div style={{ background:'#A0785A', borderRadius:20, padding:'16px 14px', gridColumn:'1 / -1' }}>
               <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:.05, marginBottom:4 }}>Ganancia neta</div>
               <div style={{ fontSize:34, fontWeight:800, color: datos.ganancia >= 0 ? '#fff' : '#f08080', letterSpacing:-1, lineHeight:1 }}>
                 {datos.ganancia !== 0 ? fmtGs(datos.ganancia) : '—'}
@@ -151,7 +151,7 @@ export default function Reportes({ campoActivo }) {
             </div>
             <div style={{ background:'#fff', borderRadius:20, padding:'14px' }}>
               <div style={{ fontSize:9, color:'#9a9a9a', textTransform:'uppercase', marginBottom:4 }}>Ingresos</div>
-              <div style={{ fontSize:18, fontWeight:800, color:'#1E5631', letterSpacing:-.5 }}>{fmtGs(datos.ingresos)}</div>
+              <div style={{ fontSize:18, fontWeight:800, color:'#A0785A', letterSpacing:-.5 }}>{fmtGs(datos.ingresos)}</div>
               <div style={{ fontSize:10, color:'#b0b0b0', marginTop:2 }}>{datos.kg.toLocaleString()} kg</div>
             </div>
             <div style={{ background:'#fff', borderRadius:20, padding:'14px' }}>
@@ -169,7 +169,7 @@ export default function Reportes({ campoActivo }) {
                 <div key={c.nombre} style={{ padding:'10px 0', borderBottom: i < porCultivo.length-1 ? '1px solid #f2f1ef' : 'none' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                     <div style={{ fontSize:13, fontWeight:500, color:'#0a0a0a' }}>{c.nombre}</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:'#1E5631' }}>{fmtGs(c.ingresos)}</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#A0785A' }}>{fmtGs(c.ingresos)}</div>
                   </div>
                   <div style={{ display:'flex', justifyContent:'space-between' }}>
                     <div style={{ fontSize:10, color:'#9a9a9a' }}>{c.kg.toLocaleString()} kg · {c.registros} cosechas</div>
@@ -191,7 +191,7 @@ export default function Reportes({ campoActivo }) {
                     <div style={{ fontSize:12, color:'#9a9a9a' }}>{b.kg.toLocaleString()} kg</div>
                   </div>
                   <div style={{ background:'#f2f1ef', borderRadius:20, height:6, overflow:'hidden' }}>
-                    <div style={{ height:'100%', background:'#1E5631', borderRadius:20, width:`${(b.kg / maxKg) * 100}%` }}></div>
+                    <div style={{ height:'100%', background:'#A0785A', borderRadius:20, width:`${(b.kg / maxKg) * 100}%` }}></div>
                   </div>
                 </div>
               ))}
@@ -220,7 +220,7 @@ export default function Reportes({ campoActivo }) {
                       </div>
                       <div style={{ textAlign:'center' }}>
                         <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:2 }}>Máximo</div>
-                        <div style={{ fontSize:12, fontWeight:600, color:'#1E5631' }}>Gs. {max.toLocaleString()}</div>
+                        <div style={{ fontSize:12, fontWeight:600, color:'#A0785A' }}>Gs. {max.toLocaleString()}</div>
                       </div>
                     </div>
                   </div>
