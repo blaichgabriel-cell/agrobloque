@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-function LogoHS({ size = 32 }) {
+function LogoHS({ size = 36 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M14 90V30h11v24h26V30h11v60H51V60H25v30H14z" fill="#1E5631"/>
-      <path d="M70 30h32c5.5 0 10 4.5 10 10v8c0 4.5-2.5 8-7 9.5 4.5 1.5 7 5 7 9.5v10c0 5.5-4.5 10-10 10H70V30zm11 26h19c1.8 0 3-1.2 3-3v-7c0-1.8-1.2-3-3-3H81v13zm0 23h19c1.8 0 3-1.2 3-3v-8c0-1.8-1.2-3-3-3H81v14z" fill="#2d8a4e"/>
-      <path d="M60 26c0 0-5-14 0-20 5 6 0 20 0 20z" fill="#5abf7a"/>
-      <path d="M60 24c0 0-12-9-10-19 9 2 10 19 10 19z" fill="#4aaa6a"/>
-      <path d="M60 24c0 0 12-9 10-19-9 2-10 19-10 19z" fill="#4aaa6a"/>
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#1E5631" letterSpacing="-4">HS</text>
+      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#5abf7a"/>
+      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#3d9a5e"/>
+      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#3d9a5e"/>
     </svg>
   )
 }
@@ -36,33 +35,26 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
       const { data: bloques } = await supabase.from('bloques').select('id, activo').eq('campo_id', campoActivo.id)
       const { data: plantas } = await supabase.from('plantaciones').select('id').eq('activa', true)
       const { data: ops } = await supabase.from('operarios').select('id').eq('campo_id', campoActivo.id)
-      setStats({
-        bloques: bloques?.length || 0,
-        activos: bloques?.filter(b => b.activo).length || 0,
-        cultivos: plantas?.length || 0,
-        operarios: ops?.length || 0
-      })
+      setStats({ bloques: bloques?.length||0, activos: bloques?.filter(b=>b.activo).length||0, cultivos: plantas?.length||0, operarios: ops?.length||0 })
     }
     const fetchAlertas = async () => {
       const { data } = await supabase.from('tareas')
         .select('*, campos(nombre), bloques(codigo)')
-        .eq('completada', false)
-        .lte('fecha_programada', hoy)
-        .order('fecha_programada')
+        .eq('completada', false).lte('fecha_programada', hoy).order('fecha_programada')
       setAlertas(data || [])
     }
     fetchStats(); fetchAlertas()
   }, [campoActivo])
 
   const accesos = [
-    { icon:'ti-map', label:'Mapa', sub:'Ver bloques', path:'/mapa', bg:'#f2f1ef', color:'#1E5631' },
-    { icon:'ti-calendar', label:'Agenda', sub:'Tareas', path:'/agenda', bg:'#edf7ed', color:'#1E5631' },
-    { icon:'ti-users', label:'Asistencia', sub:'Planilla', path:'/asistencia', bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-chart-bar', label:'Reportes', sub:'Rentabilidad', path:'/reportes', bg:'#edf7ed', color:'#1E5631' },
-    { icon:'ti-spray', label:'Fumigaciones', sub:'Historial', path:'/fumigaciones', bg:'#fff3e8', color:'#e07b00' },
-    { icon:'ti-package', label:'Inventario', sub:'Stock', path:'/inventario', bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-cut', label:'Cosecha', sub:'Producción', path:'/cosecha', bg:'#edf7ed', color:'#1E5631' },
-    { icon:'ti-coin', label:'Costos', sub:'Gastos', path:'/costos', bg:'#fff3e8', color:'#e07b00' },
+    { icon:'ti-map',       label:'Mapa',        sub:'Ver bloques',   path:'/mapa',       bg:'#f2f1ef', color:'#1E5631' },
+    { icon:'ti-calendar',  label:'Agenda',      sub:'Tareas',        path:'/agenda',     bg:'#edf7ed', color:'#1E5631' },
+    { icon:'ti-users',     label:'Asistencia',  sub:'Planilla',      path:'/asistencia', bg:'#f2f1ef', color:'#0a0a0a' },
+    { icon:'ti-chart-bar', label:'Reportes',    sub:'Rentabilidad',  path:'/reportes',   bg:'#edf7ed', color:'#1E5631' },
+    { icon:'ti-spray',     label:'Fumigaciones',sub:'Historial',     path:'/fumigaciones',bg:'#fff3e8',color:'#e07b00' },
+    { icon:'ti-package',   label:'Inventario',  sub:'Stock',         path:'/inventario', bg:'#f2f1ef', color:'#0a0a0a' },
+    { icon:'ti-cut',       label:'Cosecha',     sub:'Producción',    path:'/cosecha',    bg:'#edf7ed', color:'#1E5631' },
+    { icon:'ti-coin',      label:'Costos',      sub:'Gastos',        path:'/costos',     bg:'#fff3e8', color:'#e07b00' },
   ]
 
   return (
@@ -92,27 +84,6 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
           ))}
         </div>
       </div>
-
-      {showAlertas && alertas.length > 0 && (
-        <div style={{ margin:'0 14px 10px', background:'#fff', borderRadius:20, padding:16 }}>
-          <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a', marginBottom:12, display:'flex', justifyContent:'space-between' }}>
-            Alertas activas
-            <button onClick={() => { setShowAlertas(false); navigate('/agenda') }} style={{ fontSize:11, color:'#1E5631', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Ver en agenda →</button>
-          </div>
-          {alertas.map(a => (
-            <div key={a.id} onClick={() => navigate('/agenda')} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid #f2f1ef', cursor:'pointer' }}>
-              <div style={{ width:8, height:8, borderRadius:'50%', background: a.fecha_programada < hoy ? '#c84040' : '#e07b00', flexShrink:0 }}></div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:12, fontWeight:500, color:'#0a0a0a' }}>{a.descripcion}</div>
-                <div style={{ fontSize:10, color:'#9a9a9a', marginTop:1 }}>{a.campos?.nombre}{a.bloques?.codigo ? ' · ' + a.bloques.codigo : ''}</div>
-              </div>
-              <div style={{ fontSize:9, fontWeight:600, padding:'2px 8px', borderRadius:8, background: a.fecha_programada < hoy ? '#fff0f0' : '#fff3e8', color: a.fecha_programada < hoy ? '#c84040' : '#c8700a' }}>
-                {a.fecha_programada < hoy ? 'Vencida' : 'Hoy'}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       <div style={{ padding:'0 14px 100px' }}>
         <div style={{ background:'#1E5631', borderRadius:24, padding:20, marginBottom:10 }}>
