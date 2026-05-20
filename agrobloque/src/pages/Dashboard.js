@@ -3,12 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 function LogoHS({ size = 36 }) {
+  const h = size
+  const w = size * 1.1
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#A0785A" letterSpacing="-4">HS</text>
-      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#D4B08A"/>
-      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#A0785A"/>
-      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#A0785A"/>
+    <svg width={w} height={h} viewBox="0 0 110 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* H */}
+      <path d="M8 82V18h12v24h28V18h12v64H48V50H20v32H8z" fill="#A0785A"/>
+      {/* S — dibujada como curvas para que se vea completa */}
+      <path d="M72 18h28c4 0 7 3 7 7v10c0 3-2 6-5 7 3 1 5 4 5 7v12c0 4-3 7-7 7H72V18z
+               M82 42h16c1.2 0 2-0.8 2-2v-8c0-1.2-0.8-2-2-2H82v12z
+               M82 64h16c1.2 0 2-0.8 2-2v-10c0-1.2-0.8-2-2-2H82v14z" fill="#7A5A3E"/>
+      {/* Hojas */}
+      <path d="M60 16c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#D4B08A"/>
+      <path d="M60 14c0 0-10-7-8-14 8 2 8 14 8 14z" fill="#C49878"/>
+      <path d="M60 14c0 0 10-7 8-14-8 2-8 14-8 14z" fill="#C49878"/>
     </svg>
   )
 }
@@ -48,14 +56,14 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
   }, [campoActivo])
 
   const accesos = [
-    { icon:'ti-map',       label:'Mapa',        sub:'Ver bloques',    path:'/mapa',        bg:'#f5ede3', color:'#A0785A' },
-    { icon:'ti-calendar',  label:'Agenda',      sub:'Tareas',         path:'/agenda',      bg:'#f5ede3', color:'#A0785A' },
-    { icon:'ti-users',     label:'Asistencia',  sub:'Planilla',       path:'/asistencia',  bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-chart-bar', label:'Reportes',    sub:'Rentabilidad',   path:'/reportes',    bg:'#f5ede3', color:'#A0785A' },
-    { icon:'ti-spray',     label:'Fumigaciones',sub:'Historial',      path:'/fumigaciones',bg:'#fff3e8', color:'#e07b00' },
-    { icon:'ti-package',   label:'Inventario',  sub:'Stock',          path:'/inventario',  bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-cut',       label:'Cosecha',     sub:'Producción',     path:'/cosecha',     bg:'#f5ede3', color:'#A0785A' },
-    { icon:'ti-coin',      label:'Costos',      sub:'Gastos',         path:'/costos',      bg:'#fff3e8', color:'#e07b00' },
+    { icon:'ti-map',        label:'Mapa',         sub:'Ver bloques',    path:'/mapa',         bg:'#f5ede3', color:'#A0785A' },
+    { icon:'ti-calendar',   label:'Agenda',       sub:'Tareas',         path:'/agenda',       bg:'#f5ede3', color:'#A0785A' },
+    { icon:'ti-users',      label:'Asistencia',   sub:'Planilla',       path:'/asistencia',   bg:'#f2f1ef', color:'#0a0a0a' },
+    { icon:'ti-chart-bar',  label:'Reportes',     sub:'Rentabilidad',   path:'/reportes',     bg:'#f5ede3', color:'#A0785A' },
+    { icon:'ti-spray',      label:'Fumigaciones', sub:'Historial',      path:'/fumigaciones', bg:'#fff3e8', color:'#e07b00' },
+    { icon:'ti-package',    label:'Inventario',   sub:'Stock',          path:'/inventario',   bg:'#f2f1ef', color:'#0a0a0a' },
+    { icon:'ti-cut',        label:'Cosecha',      sub:'Produccion',     path:'/cosecha',      bg:'#f5ede3', color:'#A0785A' },
+    { icon:'ti-coin',       label:'Costos',       sub:'Gastos',         path:'/costos',       bg:'#fff3e8', color:'#e07b00' },
   ]
 
   return (
@@ -63,7 +71,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
       <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <LogoHS size={36} />
+            <LogoHS size={38} />
             <div>
               <div style={{ fontSize:11, color:'#9a9a9a', letterSpacing:.3 }}>HORTICULTURA</div>
               <div style={{ fontSize:17, fontWeight:700, color:'#A0785A', letterSpacing:-.3, lineHeight:1.1 }}>El Sembrador</div>
@@ -71,9 +79,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
           </div>
           <button onClick={() => navigate('/agenda')} style={{ width:42, height:42, borderRadius:'50%', background: alertas.length > 0 ? '#A0785A' : '#e8e6e2', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative' }}>
             <i className="ti ti-bell" style={{ fontSize:20, color: alertas.length > 0 ? '#fff' : '#9a9a9a' }} aria-hidden="true"></i>
-            {alertas.length > 0 && (
-              <div style={{ position:'absolute', top:-3, right:-3, background:'#e07b00', borderRadius:10, padding:'1px 5px', fontSize:8, fontWeight:700, color:'#fff', border:'2px solid #f2f1ef' }}>{alertas.length}</div>
-            )}
+            {alertas.length > 0 && <div style={{ position:'absolute', top:-3, right:-3, background:'#e07b00', borderRadius:10, padding:'1px 5px', fontSize:8, fontWeight:700, color:'#fff', border:'2px solid #f2f1ef' }}>{alertas.length}</div>}
           </button>
         </div>
 
@@ -123,7 +129,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
           <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px' }}>
             <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a', marginBottom:10, display:'flex', justifyContent:'space-between' }}>
               Alertas activas
-              <button onClick={() => navigate('/agenda')} style={{ fontSize:11, color:'#A0785A', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Ver todas →</button>
+              <button onClick={() => navigate('/agenda')} style={{ fontSize:11, color:'#A0785A', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Ver todas</button>
             </div>
             {alertas.slice(0,3).map(a => (
               <div key={a.id} onClick={() => navigate('/agenda')} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid #f2f1ef', cursor:'pointer' }}>
