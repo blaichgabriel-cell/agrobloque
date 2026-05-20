@@ -3,6 +3,22 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 function LogoHS({ size = 36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* H */}
+      <path d="M4 82 L4 18 L14 18 L14 44 L38 44 L38 18 L48 18 L48 82 L38 82 L38 54 L14 54 L14 82 Z" fill="#A0785A"/>
+      {/* S */}
+      <path d="M108 20 C100 15 80 14 72 22 C64 30 70 40 80 44 C90 48 104 52 104 64 C104 76 90 84 72 82 L72 74 C86 76 96 70 96 64 C96 58 84 54 76 50 C66 46 58 38 62 28 C66 18 84 12 110 16 Z" fill="#A0785A"/>
+      {/* Hoja central */}
+      <path d="M58 16c0 0-3-10 0-16 3 6 0 16 0 16z" fill="#D4B08A"/>
+      {/* Hoja izquierda */}
+      <path d="M58 14c0 0-9-7-7-13 8 2 7 13 7 13z" fill="#C49878"/>
+      {/* Hoja derecha */}
+      <path d="M58 14c0 0 9-7 7-13-8 2-7 13-7 13z" fill="#C49878"/>
+    </svg>
+  )
+}
+function LogoHS_OLD({ size = 36 }) {
   const h = size
   const w = size * 1.1
   return (
