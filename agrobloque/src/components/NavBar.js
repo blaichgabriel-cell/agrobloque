@@ -30,7 +30,7 @@ export default function NavBar() {
         <div style={{ position:'fixed', bottom:64, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'#fff', borderTop:'0.5px solid #e8e6e2', padding:'12px 14px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, zIndex:40 }}>
           {moreTabs.map(t => (
             <button key={t.path} onClick={() => { navigate(t.path); setShowMore(false) }}
-              style={{ padding:'10px 6px', borderRadius:14, border:'1px solid #e8e6e2', background: location.pathname===t.path ? '#1E5631' : '#f2f1ef', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+              style={{ padding:'10px 6px', borderRadius:14, border:'1px solid #e8e6e2', background: location.pathname===t.path ? '#A0785A' : '#f2f1ef', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
               <i className={`ti ${t.icon}`} style={{ fontSize:20, color: location.pathname===t.path ? '#fff' : '#555' }} aria-hidden="true"></i>
               <span style={{ fontSize:9, fontWeight:600, color: location.pathname===t.path ? '#fff' : '#555' }}>{t.label}</span>
             </button>
@@ -44,18 +44,18 @@ export default function NavBar() {
           return (
             <div key={t.path} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'8px 0', cursor:'pointer' }}
               onClick={() => { navigate(t.path); setShowMore(false) }}>
-              <i className={`ti ${t.icon}`} style={{ fontSize:21, color: active ? '#1E5631' : '#ccc' }} aria-hidden="true"></i>
-              {active && <div style={{ width:4, height:4, borderRadius:'50%', background:'#1E5631' }}></div>}
-              <span style={{ fontSize:8, color: active ? '#1E5631' : '#ccc', fontWeight: active ? 600 : 400 }}>{t.label}</span>
+              <i className={`ti ${t.icon}`} style={{ fontSize:21, color: active ? '#A0785A' : '#ccc' }} aria-hidden="true"></i>
+              {active && <div style={{ width:4, height:4, borderRadius:'50%', background:'#A0785A' }}></div>}
+              <span style={{ fontSize:8, color: active ? '#A0785A' : '#ccc', fontWeight: active ? 600 : 400 }}>{t.label}</span>
             </div>
           )
         })}
 
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'8px 0', cursor:'pointer' }}
           onClick={() => setShowMore(!showMore)}>
-          <i className={`ti ${showMore ? 'ti-x' : 'ti-dots'}`} style={{ fontSize:21, color: isMoreActive || showMore ? '#1E5631' : '#ccc' }} aria-hidden="true"></i>
-          {isMoreActive && !showMore && <div style={{ width:4, height:4, borderRadius:'50%', background:'#1E5631' }}></div>}
-          <span style={{ fontSize:8, color: isMoreActive || showMore ? '#1E5631' : '#ccc', fontWeight: isMoreActive || showMore ? 600 : 400 }}>Más</span>
+          <i className={`ti ${showMore ? 'ti-x' : 'ti-dots'}`} style={{ fontSize:21, color: isMoreActive || showMore ? '#A0785A' : '#ccc' }} aria-hidden="true"></i>
+          {isMoreActive && !showMore && <div style={{ width:4, height:4, borderRadius:'50%', background:'#A0785A' }}></div>}
+          <span style={{ fontSize:8, color: isMoreActive || showMore ? '#A0785A' : '#ccc', fontWeight: isMoreActive || showMore ? 600 : 400 }}>Más</span>
         </div>
       </div>
     </>
