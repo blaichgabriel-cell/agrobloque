@@ -9,37 +9,6 @@ function LogoHS({ size = 36 }) {
       <span style={{ fontSize:fs, fontWeight:800, color:'#fff', letterSpacing:-2, lineHeight:1, fontFamily:"'Arial Black', 'Arial Bold', Arial, sans-serif" }}>HS</span>
     </div>
   )
-} height={size} viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* H */}
-      <path d="M4 82 L4 18 L14 18 L14 44 L38 44 L38 18 L48 18 L48 82 L38 82 L38 54 L14 54 L14 82 Z" fill="#212121"/>
-      {/* S */}
-      <path d="M108 20 C100 15 80 14 72 22 C64 30 70 40 80 44 C90 48 104 52 104 64 C104 76 90 84 72 82 L72 74 C86 76 96 70 96 64 C96 58 84 54 76 50 C66 46 58 38 62 28 C66 18 84 12 110 16 Z" fill="#212121"/>
-      {/* Hoja central */}
-      <path d="M58 16c0 0-3-10 0-16 3 6 0 16 0 16z" fill="#aaaaaa"/>
-      {/* Hoja izquierda */}
-      <path d="M58 14c0 0-9-7-7-13 8 2 7 13 7 13z" fill="#888888"/>
-      {/* Hoja derecha */}
-      <path d="M58 14c0 0 9-7 7-13-8 2-7 13-7 13z" fill="#888888"/>
-    </svg>
-  )
-}
-function LogoHS_OLD({ size = 36 }) {
-  const h = size
-  const w = size * 1.1
-  return (
-    <svg width={w} height={h} viewBox="0 0 110 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* H */}
-      <path d="M8 82V18h12v24h28V18h12v64H48V50H20v32H8z" fill="#212121"/>
-      {/* S — dibujada como curvas para que se vea completa */}
-      <path d="M72 18h28c4 0 7 3 7 7v10c0 3-2 6-5 7 3 1 5 4 5 7v12c0 4-3 7-7 7H72V18z
-               M82 42h16c1.2 0 2-0.8 2-2v-8c0-1.2-0.8-2-2-2H82v12z
-               M82 64h16c1.2 0 2-0.8 2-2v-10c0-1.2-0.8-2-2-2H82v14z" fill="#444444"/>
-      {/* Hojas */}
-      <path d="M60 16c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#aaaaaa"/>
-      <path d="M60 14c0 0-10-7-8-14 8 2 8 14 8 14z" fill="#888888"/>
-      <path d="M60 14c0 0 10-7 8-14-8 2-8 14-8 14z" fill="#888888"/>
-    </svg>
-  )
 }
 
 export default function Dashboard({ campoActivo, setCampoActivo }) {
