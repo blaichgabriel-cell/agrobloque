@@ -1,19 +1,12 @@
 import React, { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-function LogoHS({ size = 36 }) {
+function LogoHS({ size = 80 }) {
   const fs = Math.round(size * 0.72)
   return (
-    <div style={{ width:size, height:size, background:'#212121', borderRadius:Math.round(size*0.22), display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+    <div style={{ width:size, height:size, background:'#212121', borderRadius:Math.round(size*0.22), display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto' }}>
       <span style={{ fontSize:fs, fontWeight:800, color:'#fff', letterSpacing:-2, lineHeight:1, fontFamily:"'Arial Black', 'Arial Bold', Arial, sans-serif" }}>HS</span>
     </div>
-  )
-} height={s} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#212121" letterSpacing="-4">HS</text>
-      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#aaaaaa"/>
-      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#212121"/>
-      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#212121"/>
-    </svg>
   )
 }
 
