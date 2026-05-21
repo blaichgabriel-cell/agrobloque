@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
+const parsearKg = (v) => { const n = parseFloat(String(v || '').replace(',','.')); return isNaN(n) ? 0 : n }
+const fmtKg = (n) => { const num = Number(n)||0; return num % 1 === 0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY', {minimumFractionDigits:1, maximumFractionDigits:2}) }
 
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
@@ -29,6 +31,7 @@ export default function Cosecha() {
   const [form, setForm] = useState({ bloque_id:'', fecha:'', kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
   const [saving, setSaving] = useState(false)
   const [campoFiltro, setCampoFiltro] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => { fetchCampos(); fetchCosechas(); fetchCompradores() }, [])
   useEffect(() => { if (campoFiltro) fetchBloques(campoFiltro) }, [campoFiltro])
@@ -39,10 +42,11 @@ export default function Cosecha() {
     if (data?.length > 0) setCampoFiltro(data[0].id)
   }
   const fetchCosechas = async () => {
-    const { data } = await supabase.from('cosechas')
+    const { data, error } = await supabase.from('cosechas')
       .select('*, bloques(codigo, campos(nombre)), compradores(nombre)')
       .order('fecha', { ascending: false })
-    setCosechas(data || [])
+    if (error) setError('Error al cargar cosechas')
+    else setCosechas(data || [])
   }
   const fetchBloques = async (campo_id) => {
     const { data } = await supabase.from('bloques').select('*').eq('campo_id', campo_id).order('codigo')
@@ -55,17 +59,23 @@ export default function Cosecha() {
 
   const guardar = async () => {
     if (!form.bloque_id || !form.fecha || !form.kg_total) return
-    setSaving(true)
-    await supabase.from('cosechas').insert({
-      bloque_id: form.bloque_id, fecha: form.fecha,
-      kg_total: parsearGs(form.kg_total),
-      precio_kg: parsearGs(form.precio_kg),
-      calidad: form.calidad,
-      comprador_id: form.comprador_id || null,
-      notas: form.notas || null
-    })
-    await fetchCosechas(); setSaving(false); setModal(false)
-    setForm({ bloque_id:'', fecha:'', kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
+    setSaving(true); setError('')
+    try {
+      const { error } = await supabase.from('cosechas').insert({
+        bloque_id: form.bloque_id, fecha: form.fecha,
+        kg_total: parsearKg(form.kg_total),
+        precio_kg: parsearGs(form.precio_kg),
+        calidad: form.calidad,
+        comprador_id: form.comprador_id || null,
+        notas: form.notas || null
+      })
+      if (error) throw error
+      await fetchCosechas(); setModal(false)
+      setForm({ bloque_id:'', fecha:'', kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
+    } catch (e) {
+      setError('Error al guardar: ' + e.message)
+    }
+    setSaving(false)
   }
 
   const eliminar = (id) => {
@@ -75,22 +85,11 @@ export default function Cosecha() {
     }})
   }
 
-  const montoInput = (value, onChange) => (
-    <input
-      type="text" inputMode="numeric"
-      value={value}
-      onChange={e => {
-        const raw = e.target.value.replace(/[^0-9]/g, '')
-        const fmt = raw ? parseInt(raw, 10).toLocaleString('es-PY') : ''
-        onChange(fmt)
-      }}
-      style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
-    />
-  )
-
   const totalKg = cosechas.reduce((sum, c) => sum + (Number(c.kg_total) || 0), 0)
   const totalIngresos = cosechas.reduce((sum, c) => sum + ((Number(c.kg_total)||0) * (Number(c.precio_kg)||0)), 0)
-  const ingresoCosecha = (Number(parsearGs(form.kg_total)) * Number(parsearGs(form.precio_kg)))
+  const ingresoCosecha = parsearKg(form.kg_total) * parsearGs(form.precio_kg)
+
+  const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
@@ -106,10 +105,11 @@ export default function Cosecha() {
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
+        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
           <div style={{ background:'#A0785A', borderRadius:16, padding:'14px 16px' }}>
             <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:4 }}>Total cosechado</div>
-            <div style={{ fontSize:28, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>{totalKg.toLocaleString('es-PY')}</div>
+            <div style={{ fontSize:28, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>{fmtKg(totalKg)}</div>
             <div style={{ fontSize:10, color:'rgba(255,255,255,0.5)', marginTop:3 }}>kg · {cosechas.length} registros</div>
           </div>
           <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
@@ -135,12 +135,12 @@ export default function Cosecha() {
                   <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>{c.bloques?.campos?.nombre} · {c.fecha}</div>
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:20, fontWeight:800, color:'#0a0a0a' }}>{Number(c.kg_total).toLocaleString('es-PY')} kg</div>
+                  <div style={{ fontSize:20, fontWeight:800, color:'#0a0a0a' }}>{fmtKg(c.kg_total)} kg</div>
                   {c.precio_kg > 0 && <div style={{ fontSize:11, color:'#A0785A', fontWeight:600 }}>Gs. {fmtGs(ingreso)}</div>}
                 </div>
               </div>
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-                <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:600, background: c.calidad==='primera' ? '#f2ebe4' : '#fff3e8', color: c.calidad==='primera' ? '#A0785A' : '#c8700a' }}>
+                <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:600, background: c.calidad==='primera' ? '#f5ede3' : '#fff3e8', color: c.calidad==='primera' ? '#A0785A' : '#c8700a' }}>
                   {c.calidad === 'primera' ? '1ra calidad' : c.calidad === 'segunda' ? '2da calidad' : 'Mixta'}
                 </div>
                 {c.precio_kg > 0 && <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, background:'#f2f1ef', color:'#555' }}>Gs. {fmtGs(c.precio_kg)}/kg</div>}
@@ -157,26 +157,31 @@ export default function Cosecha() {
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(false)}>
           <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto' }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Registrar cosecha</div>
+            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Campo</div>
-            <select style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }} value={campoFiltro||''} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({...f, bloque_id:''})) }}>
+            <select style={inp} value={campoFiltro||''} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({...f, bloque_id:''})) }}>
               {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloque *</div>
-            <select style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }} value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
+            <select style={inp} value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
               <option value="">Seleccioná bloque...</option>
               {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
             </select>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha *</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }} type="date" value={form.fecha} onChange={e => setForm(f => ({...f, fecha:e.target.value}))}/>
+            <input style={inp} type="date" value={form.fecha} onChange={e => setForm(f => ({...f, fecha:e.target.value}))}/>
 
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Kg cosechados *</div>
-            {montoInput(form.kg_total, v => setForm(f => ({...f, kg_total:v})))}
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Kg cosechados * (admite decimales, ej: 1.5)</div>
+            <input style={inp} type="text" inputMode="decimal" value={form.kg_total}
+              onChange={e => setForm(f => ({...f, kg_total: e.target.value}))}
+              placeholder="Ej: 150 o 1.5"/>
 
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Precio por kg (Gs.) *</div>
-            {montoInput(form.precio_kg, v => setForm(f => ({...f, precio_kg:v})))}
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Precio por kg (Gs.)</div>
+            <input style={inp} type="text" inputMode="numeric" value={form.precio_kg}
+              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setForm(f=>({...f,precio_kg:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
+              placeholder="Ej: 5.000"/>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Calidad</div>
             <div style={{ display:'flex', gap:8, marginBottom:12 }}>
@@ -188,16 +193,16 @@ export default function Cosecha() {
             </div>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Comprador (opcional)</div>
-            <select style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }} value={form.comprador_id} onChange={e => setForm(f => ({...f, comprador_id:e.target.value}))}>
+            <select style={inp} value={form.comprador_id} onChange={e => setForm(f => ({...f, comprador_id:e.target.value}))}>
               <option value="">Sin comprador asignado</option>
               {compradores.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas (opcional)</div>
-            <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, minHeight:60, resize:'vertical', boxSizing:'border-box' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
+            <textarea style={{ ...inp, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
 
             {form.kg_total && form.precio_kg && ingresoCosecha > 0 && (
-              <div style={{ background:'#f2ebe4', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between' }}>
+              <div style={{ background:'#f5ede3', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between' }}>
                 <span style={{ fontSize:12, color:'#A0785A' }}>Ingreso estimado</span>
                 <span style={{ fontSize:14, fontWeight:700, color:'#A0785A' }}>Gs. {fmtGs(ingresoCosecha)}</span>
               </div>
