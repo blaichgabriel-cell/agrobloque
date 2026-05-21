@@ -114,15 +114,27 @@ export default function FichaBloque() {
     setAbonos(data || [])
   }
 
-  const abrirNuevaPlantacion = () => {
-    fetchCultivos(); fetchAbonos()
+  const abrirNuevaPlantacion = async () => {
+    const [{ data: cultivosData }, { data: abonosData }] = await Promise.all([
+      supabase.from('cultivos').select('*').order('nombre'),
+      supabase.from('abonos').select('*').order('nombre')
+    ])
+    setCultivos(cultivosData || [])
+    setAbonos(abonosData || [])
     setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', cantidad_plantas:'', abonos_ids:[], abonos_cantidades:{} })
     setShowNuevaPlantacion(true)
   }
 
-  const abrirEditarPlantacion = () => {
-    fetchCultivos(); fetchAbonos()
-    const cultivo = cultivos.find(c => c.nombre === plantacionActiva?.cultivos?.nombre)
+  const abrirEditarPlantacion = async () => {
+    // Cargar cultivos y abonos primero, luego abrir modal con IDs correctos
+    const [{ data: cultivosData }, { data: abonosData }] = await Promise.all([
+      supabase.from('cultivos').select('*').order('nombre'),
+      supabase.from('abonos').select('*').order('nombre')
+    ])
+    setCultivos(cultivosData || [])
+    setAbonos(abonosData || [])
+
+    const cultivo = (cultivosData || []).find(c => c.nombre === plantacionActiva?.cultivos?.nombre)
     const abIds = abonosPlantacion.map(a => a.abono_id)
     const abCants = {}
     abonosPlantacion.forEach(a => { abCants[a.abono_id] = a.cantidad || '' })
