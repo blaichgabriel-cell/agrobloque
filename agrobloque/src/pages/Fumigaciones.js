@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 const TIPOS = {
   fumigacion: { label:'Fumigacion', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
   fertiriego:  { label:'Fertiriego', icon:'ti-droplet', color:'#2980b9', bg:'#eaf4fb' },
-  foliar:      { label:'Foliar',     icon:'ti-leaf',    color:'#A0785A', bg:'#f5ede3' },
+  foliar:      { label:'Foliar',     icon:'ti-leaf',    color:'#212121', bg:'#eeeeee' },
 }
 
 function ModalConfirm({ onConfirm, onCancel }) {
@@ -137,13 +137,13 @@ export default function Fumigaciones() {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Control fitosanitario</div>
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Fumigaciones</div>
           </div>
-          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#A0785A', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:4 }}>
           {[['todos','Todos'],['fumigacion','Fumigacion'],['fertiriego','Fertiriego'],['foliar','Foliar']].map(([k,v]) => (
-            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#A0785A' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>{v}</button>
+            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#212121' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>{v}</button>
           ))}
         </div>
       </div>
@@ -156,7 +156,7 @@ export default function Fumigaciones() {
             {/* Separador de fecha */}
             <div style={{ display:'flex', alignItems:'center', gap:10, margin:'16px 0 8px' }}>
               <div style={{ height:1, flex:1, background:'#e0ddd8' }}></div>
-              <div style={{ fontSize:11, fontWeight:600, color:'#A0785A', textTransform:'capitalize', whiteSpace:'nowrap' }}>
+              <div style={{ fontSize:11, fontWeight:600, color:'#212121', textTransform:'capitalize', whiteSpace:'nowrap' }}>
                 {formatFechaLabel(fecha)}
               </div>
               <div style={{ height:1, flex:1, background:'#e0ddd8' }}></div>
@@ -255,7 +255,7 @@ export default function Fumigaciones() {
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Tipo</div>
             <div style={{ display:'flex', gap:6, marginBottom:12 }}>
               {Object.entries(TIPOS).map(([k,v]) => (
-                <button key={k} onClick={() => setForm(f=>({...f,tipo:k}))} style={{ flex:1, padding:9, borderRadius:12, border:'1px solid #e8e6e2', fontSize:11, fontWeight:600, cursor:'pointer', background: form.tipo===k ? '#A0785A' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
+                <button key={k} onClick={() => setForm(f=>({...f,tipo:k}))} style={{ flex:1, padding:9, borderRadius:12, border:'1px solid #e8e6e2', fontSize:11, fontWeight:600, cursor:'pointer', background: form.tipo===k ? '#212121' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
               ))}
             </div>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha *</div>
@@ -269,7 +269,7 @@ export default function Fumigaciones() {
               <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloques tratados *</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
                 {bloques.map(b=>(
-                  <div key={b.id} onClick={()=>toggleBloque(b.id)} style={{ padding:'5px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.bloques_ids.includes(b.id) ? '#A0785A' : '#fff', color: form.bloques_ids.includes(b.id) ? '#fff' : '#555', border:'1px solid #e8e6e2' }}>{b.codigo}</div>
+                  <div key={b.id} onClick={()=>toggleBloque(b.id)} style={{ padding:'5px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.bloques_ids.includes(b.id) ? '#212121' : '#fff', color: form.bloques_ids.includes(b.id) ? '#fff' : '#555', border:'1px solid #e8e6e2' }}>{b.codigo}</div>
                 ))}
               </div>
             </>}
@@ -280,7 +280,7 @@ export default function Fumigaciones() {
                 {operarios.map(o=><option key={o.id} value={o.nombre}>{o.nombre}</option>)}
               </select>
             </>}
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos <span style={{ color:'#A0785A' }}>(descuenta stock automaticamente)</span></div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos <span style={{ color:'#212121' }}>(descuenta stock automaticamente)</span></div>
             {form.productos_form.map((pf,i)=>{
               const prod = productos.find(p=>p.id===pf.producto_id)
               return (
@@ -292,14 +292,14 @@ export default function Fumigaciones() {
                     </select>
                     <input style={{ flex:1, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.dosis} onChange={e=>{const np=[...form.productos_form];np[i].dosis=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder={prod?`Dosis (${prod.unidad})`:'Dosis'}/>
                   </div>
-                  {prod && <div style={{ fontSize:10, color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#A0785A', marginTop:3, paddingLeft:4 }}>Stock: {Number(prod.stock_actual).toLocaleString('es-PY')} {prod.unidad}{prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}</div>}
+                  {prod && <div style={{ fontSize:10, color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#212121', marginTop:3, paddingLeft:4 }}>Stock: {Number(prod.stock_actual).toLocaleString('es-PY')} {prod.unidad}{prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}</div>}
                 </div>
               )
             })}
             <button onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{producto_id:'',dosis:''}]}))} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #e8e6e2', background:'transparent', fontSize:12, color:'#9a9a9a', cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas</div>
             <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, minHeight:60, resize:'vertical', boxSizing:'border-box' }} value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving?'Guardando...':'Guardar registro'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving?'Guardando...':'Guardar registro'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={()=>setModal(false)}>Cancelar</button>
           </div>
         </div>

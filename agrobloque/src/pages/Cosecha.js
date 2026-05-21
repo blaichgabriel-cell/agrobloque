@@ -101,20 +101,20 @@ export default function Cosecha() {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Producción</div>
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Cosecha</div>
           </div>
-          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#A0785A', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
         {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-          <div style={{ background:'#A0785A', borderRadius:16, padding:'14px 16px' }}>
+          <div style={{ background:'#212121', borderRadius:16, padding:'14px 16px' }}>
             <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:4 }}>Total cosechado</div>
             <div style={{ fontSize:28, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>{fmtKg(totalKg)}</div>
             <div style={{ fontSize:10, color:'rgba(255,255,255,0.5)', marginTop:3 }}>kg · {cosechas.length} registros</div>
           </div>
           <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
             <div style={{ fontSize:9, color:'#9a9a9a', textTransform:'uppercase', marginBottom:4 }}>Ingresos totales</div>
-            <div style={{ fontSize:18, fontWeight:800, color:'#A0785A', letterSpacing:-.5, lineHeight:1 }}>
+            <div style={{ fontSize:18, fontWeight:800, color:'#212121', letterSpacing:-.5, lineHeight:1 }}>
               {totalIngresos > 0 ? `Gs. ${fmtGs(totalIngresos)}` : '—'}
             </div>
             <div style={{ fontSize:10, color:'#9a9a9a', marginTop:3 }}>calculado automáticamente</div>
@@ -136,11 +136,11 @@ export default function Cosecha() {
                 </div>
                 <div style={{ textAlign:'right' }}>
                   <div style={{ fontSize:20, fontWeight:800, color:'#0a0a0a' }}>{fmtKg(c.kg_total)} kg</div>
-                  {c.precio_kg > 0 && <div style={{ fontSize:11, color:'#A0785A', fontWeight:600 }}>Gs. {fmtGs(ingreso)}</div>}
+                  {c.precio_kg > 0 && <div style={{ fontSize:11, color:'#212121', fontWeight:600 }}>Gs. {fmtGs(ingreso)}</div>}
                 </div>
               </div>
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-                <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:600, background: c.calidad==='primera' ? '#f5ede3' : '#fff3e8', color: c.calidad==='primera' ? '#A0785A' : '#c8700a' }}>
+                <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:600, background: c.calidad==='primera' ? '#eeeeee' : '#fff3e8', color: c.calidad==='primera' ? '#212121' : '#c8700a' }}>
                   {c.calidad === 'primera' ? '1ra calidad' : c.calidad === 'segunda' ? '2da calidad' : 'Mixta'}
                 </div>
                 {c.precio_kg > 0 && <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, background:'#f2f1ef', color:'#555' }}>Gs. {fmtGs(c.precio_kg)}/kg</div>}
@@ -186,7 +186,7 @@ export default function Cosecha() {
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Calidad</div>
             <div style={{ display:'flex', gap:8, marginBottom:12 }}>
               {['primera','segunda','mixta'].map(q => (
-                <button key={q} onClick={() => setForm(f => ({...f, calidad:q}))} style={{ flex:1, padding:'9px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.calidad===q ? '#A0785A' : '#fff', color: form.calidad===q ? '#fff' : '#555' }}>
+                <button key={q} onClick={() => setForm(f => ({...f, calidad:q}))} style={{ flex:1, padding:'9px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.calidad===q ? '#212121' : '#fff', color: form.calidad===q ? '#fff' : '#555' }}>
                   {q === 'primera' ? '1ra' : q === 'segunda' ? '2da' : 'Mixta'}
                 </button>
               ))}
@@ -202,13 +202,13 @@ export default function Cosecha() {
             <textarea style={{ ...inp, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
 
             {form.kg_total && form.precio_kg && ingresoCosecha > 0 && (
-              <div style={{ background:'#f5ede3', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:12, color:'#A0785A' }}>Ingreso estimado</span>
-                <span style={{ fontSize:14, fontWeight:700, color:'#A0785A' }}>Gs. {fmtGs(ingresoCosecha)}</span>
+              <div style={{ background:'#eeeeee', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:12, color:'#212121' }}>Ingreso estimado</span>
+                <span style={{ fontSize:14, fontWeight:700, color:'#212121' }}>Gs. {fmtGs(ingresoCosecha)}</span>
               </div>
             )}
 
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar cosecha'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar cosecha'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </div>

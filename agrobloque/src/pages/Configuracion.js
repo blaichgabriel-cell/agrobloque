@@ -91,18 +91,18 @@ export default function Configuracion() {
   }
 
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
-  const saveBtn = { width:'100%', padding:14, borderRadius:14, background:'#A0785A', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }
+  const saveBtn = { width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }
   const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
   const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f2f1ef' }
-  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #d4b89a', background:'#f5ede3', fontSize:13, color:'#A0785A', cursor:'pointer', marginTop:8, fontWeight:500 }
+  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #d4b89a', background:'#eeeeee', fontSize:13, color:'#212121', cursor:'pointer', marginTop:8, fontWeight:500 }
 
   const menuItems = [
     { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre }) },
     { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', action: () => abrir('campos') },
-    { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#A0785A', bg:'#f5ede3', action: () => abrir('cultivos') },
+    { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#212121', bg:'#eeeeee', action: () => abrir('cultivos') },
     { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
-    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#A0785A', bg:'#f5ede3', action: () => abrir('abonos') },
-    { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#A0785A', bg:'#f5ede3', action: () => abrir('bloques') },
+    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#212121', bg:'#eeeeee', action: () => abrir('abonos') },
+    { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#212121', bg:'#eeeeee', action: () => abrir('bloques') },
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
   ]
 
@@ -235,7 +235,7 @@ export default function Configuracion() {
                   <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
                     {bloques.filter(b => b.campo_id === campo.id).map(b => (
                       <div key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })}
-                        style={{ padding:'6px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', border:'1px solid #e8e6e2', background: b.tipo === 'invernadero' ? '#f5ede3' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#A0785A' : '#555' }}>
+                        style={{ padding:'6px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', border:'1px solid #e8e6e2', background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
                         {b.codigo} · {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
                       </div>
                     ))}
@@ -250,7 +250,7 @@ export default function Configuracion() {
               <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Seleccioná el tipo de este bloque</div>
               <div style={{ display:'flex', gap:8, marginBottom:20 }}>
                 {['invernadero','campo_abierto'].map(t => (
-                  <button key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ flex:1, padding:14, borderRadius:14, border:'1px solid #e8e6e2', fontSize:13, fontWeight:600, cursor:'pointer', background: form.tipo===t ? '#A0785A' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
+                  <button key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ flex:1, padding:14, borderRadius:14, border:'1px solid #e8e6e2', fontSize:13, fontWeight:600, cursor:'pointer', background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
                     {t === 'invernadero' ? 'Invernadero' : 'Campo abierto'}
                   </button>
                 ))}

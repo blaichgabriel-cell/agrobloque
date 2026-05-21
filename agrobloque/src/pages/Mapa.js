@@ -67,10 +67,10 @@ export default function Mapa({ campoActivo }) {
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       <div style={{ background:'#f2f1ef', padding:'24px 20px 0' }}>
         <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Campo activo</div>
-        <div style={{ fontSize:22, fontWeight:700, color:'#A0785A', letterSpacing:-.5, marginBottom:14 }}>{campoActivo?.nombre}</div>
+        <div style={{ fontSize:22, fontWeight:700, color:'#212121', letterSpacing:-.5, marginBottom:14 }}>{campoActivo?.nombre}</div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:8 }}>
           {[['todos','Todos'], ...cultivos.map(c => [c,c]), ['vacio','Sin cultivo']].map(([k,v]) => (
-            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#A0785A' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>
+            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#212121' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>
               {v}
             </button>
           ))}
