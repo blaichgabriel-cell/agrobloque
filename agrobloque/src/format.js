@@ -25,5 +25,5 @@ export const diasDesde = (fecha) => {
 export const CICLO_DIAS = {
   'Morrón': 90, 'Tomate': 75, 'Pepino': 50, 'Berenjena': 80,
   'Zapalito': 55, 'Zucchini': 50, 'Lechuga': 45, 'Lechuga repollo': 50,
-  'Tomate Cherry': 70,
+  'Tomate Lisa': 70,
 }
