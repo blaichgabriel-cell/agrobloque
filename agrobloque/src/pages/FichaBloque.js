@@ -392,7 +392,7 @@ export default function FichaBloque() {
                   )}
                 </div>
 
-                <div style={{ display:'flex', gap:8' }}>
+                <div style={{ display:'flex', gap:8 }}>
                   <button onClick={abrirNuevaPlantacion}
                     style={{ flex:1, padding:'12px', borderRadius:14, border:'1px dashed #888', background:'transparent', fontSize:12, fontWeight:600, color:'#555', cursor:'pointer' }}>
                     Nueva plantación
