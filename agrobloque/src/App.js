@@ -20,10 +20,10 @@ import NavBar from './components/NavBar'
 export function LogoHS({ size = 48 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#1E5631" letterSpacing="-4">HS</text>
-      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#5abf7a"/>
-      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#3d9a5e"/>
-      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#3d9a5e"/>
+      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#A0785A" letterSpacing="-4">HS</text>
+      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#D4B08A"/>
+      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#A0785A"/>
+      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#A0785A"/>
     </svg>
   )
 }
