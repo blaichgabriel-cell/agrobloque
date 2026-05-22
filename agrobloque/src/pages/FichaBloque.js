@@ -10,6 +10,7 @@ const fmtGs = (n) => Math.round(Number(n)||0).toLocaleString('es-PY')
 const fmtKg = (n) => { const num=Number(n)||0; return num%1===0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY',{minimumFractionDigits:1,maximumFractionDigits:2}) }
 
 const CAUSAS_MUERTE = ['Enfermedad','Dumping off','Esclerotinia','Insectos','Hormigas','Gusanos','Clima','Riego','Otra']
+const UNIDADES = ['kg','g','cc','ml','L','unidad']
 
 function ModalConfirm({ titulo, mensaje, onConfirm, onCancel }) {
   return (
@@ -42,7 +43,21 @@ export default function FichaBloque() {
   const [abonos, setAbonos] = useState([])
   const [abonosPlantacion, setAbonosPlantacion] = useState([])
 
-  const [seccion, setSeccion] = useState('plantacion') // plantacion | cosechas | incidencias | fotos | historial
+  // Fertilización
+  const [fertilizaciones, setFertilizaciones] = useState([])
+  const [showNuevaFertilizacion, setShowNuevaFertilizacion] = useState(false)
+  const [formFert, setFormFert] = useState({
+    fecha: new Date().toISOString().split('T')[0],
+    notas: '',
+    soluciones: [
+      { nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }
+    ]
+  })
+  const [savingFert, setSavingFert] = useState(false)
+  const [fertDetalle, setFertDetalle] = useState(null)
+  const [confirmarElimFert, setConfirmarElimFert] = useState(null)
+
+  const [seccion, setSeccion] = useState('plantacion')
   const [historialDetalle, setHistorialDetalle] = useState(null)
 
   const [showEditarPlantacion, setShowEditarPlantacion] = useState(false)
@@ -71,7 +86,6 @@ export default function FichaBloque() {
         const { data: ab } = await supabase.from('plantacion_abonos').select('*, abonos(nombre)').eq('plantacion_id', activa.id)
         setAbonosPlantacion(ab || [])
 
-        // Cosechas de este ciclo
         const { data: cos } = await supabase.from('cosechas')
           .select('*, compradores(nombre)')
           .eq('bloque_id', id)
@@ -79,7 +93,6 @@ export default function FichaBloque() {
           .order('fecha', { ascending: false })
         setCosechasCiclo(cos || [])
 
-        // Incidencias desde fumigaciones
         const { data: fumBloques } = await supabase.from('fumigacion_bloques')
           .select('fumigaciones(fecha, notas, tipo, fumigacion_productos(productos(nombre)))')
           .eq('bloque_id', id)
@@ -89,19 +102,24 @@ export default function FichaBloque() {
           .sort((a, b) => b.fecha.localeCompare(a.fecha))
         setIncidencias(inc)
 
-        // Fotos
         const { data: fts } = await supabase.from('fotos_bloque')
           .select('*').eq('bloque_id', id).eq('plantacion_id', activa.id)
           .order('created_at', { ascending: false })
         setFotos(fts || [])
 
-        // Muertes
         const { data: mts } = await supabase.from('muertes_plantas')
           .select('*').eq('bloque_id', id).eq('plantacion_id', activa.id)
           .order('fecha', { ascending: false })
         setMuertes(mts || [])
       }
     }
+
+    // Fertilizaciones del bloque (todas, independiente de plantación)
+    const { data: ferts } = await supabase.from('fertilizaciones')
+      .select('*')
+      .eq('bloque_id', id)
+      .order('fecha', { ascending: false })
+    setFertilizaciones(ferts || [])
   }
 
   const fetchCultivos = async () => {
@@ -126,7 +144,6 @@ export default function FichaBloque() {
   }
 
   const abrirEditarPlantacion = async () => {
-    // Cargar cultivos y abonos primero, luego abrir modal con IDs correctos
     const [{ data: cultivosData }, { data: abonosData }] = await Promise.all([
       supabase.from('cultivos').select('*').order('nombre'),
       supabase.from('abonos').select('*').order('nombre')
@@ -242,6 +259,82 @@ export default function FichaBloque() {
     fetchData()
   }
 
+  // ─── FERTILIZACIÓN ────────────────────────────────────────────────
+
+  const abrirNuevaFertilizacion = () => {
+    setFormFert({
+      fecha: new Date().toISOString().split('T')[0],
+      notas: '',
+      soluciones: [
+        { nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }
+      ]
+    })
+    setShowNuevaFertilizacion(true)
+  }
+
+  const agregarSolucion = () => {
+    const letras = ['A','B','C','D','E','F']
+    const usadas = formFert.soluciones.map(s => s.nombre)
+    const siguiente = letras.find(l => !usadas.includes(l)) || `S${formFert.soluciones.length + 1}`
+    setFormFert(f => ({
+      ...f,
+      soluciones: [...f.soluciones, { nombre: siguiente, productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }]
+    }))
+  }
+
+  const eliminarSolucion = (si) => {
+    setFormFert(f => ({ ...f, soluciones: f.soluciones.filter((_,i) => i !== si) }))
+  }
+
+  const agregarProducto = (si) => {
+    setFormFert(f => {
+      const sols = [...f.soluciones]
+      sols[si] = { ...sols[si], productos: [...sols[si].productos, { nombre: '', cantidad: '', unidad: 'kg' }] }
+      return { ...f, soluciones: sols }
+    })
+  }
+
+  const eliminarProducto = (si, pi) => {
+    setFormFert(f => {
+      const sols = [...f.soluciones]
+      sols[si] = { ...sols[si], productos: sols[si].productos.filter((_,i) => i !== pi) }
+      return { ...f, soluciones: sols }
+    })
+  }
+
+  const actualizarProducto = (si, pi, campo, valor) => {
+    setFormFert(f => {
+      const sols = [...f.soluciones]
+      const prods = [...sols[si].productos]
+      prods[pi] = { ...prods[pi], [campo]: valor }
+      sols[si] = { ...sols[si], productos: prods }
+      return { ...f, soluciones: sols }
+    })
+  }
+
+  const guardarFertilizacion = async () => {
+    if (!formFert.fecha) return
+    setSavingFert(true)
+    await supabase.from('fertilizaciones').insert({
+      bloque_id: id,
+      fecha: formFert.fecha,
+      notas: formFert.notas || null,
+      soluciones: formFert.soluciones
+    })
+    setSavingFert(false)
+    setShowNuevaFertilizacion(false)
+    fetchData()
+  }
+
+  const eliminarFertilizacion = async (fertId) => {
+    await supabase.from('fertilizaciones').delete().eq('id', fertId)
+    setFertDetalle(null)
+    setConfirmarElimFert(null)
+    fetchData()
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+
   const getVariedad = (p) => {
     if (!p?.notas) return null
     return p.notas.startsWith('Variedad: ') ? p.notas.replace('Variedad: ', '') : null
@@ -262,9 +355,63 @@ export default function FichaBloque() {
     </div>
   )
 
+  // Vista detalle de fertilización
+  if (fertDetalle) {
+    const esMasReciente = fertilizaciones.length > 0 && fertilizaciones[0].id === fertDetalle.id
+    const esAnterior = fertilizaciones.length > 1 && fertilizaciones[1].id === fertDetalle.id
+    return (
+      <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+        {confirmarElimFert && (
+          <ModalConfirm
+            titulo="¿Eliminar fertilización?"
+            mensaje="Se eliminará este registro. No se puede deshacer."
+            onConfirm={() => eliminarFertilizacion(confirmarElimFert)}
+            onCancel={() => setConfirmarElimFert(null)}
+          />
+        )}
+        <div style={{ padding:'24px 20px 16px' }}>
+          <button onClick={() => setFertDetalle(null)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
+            <i className="ti ti-arrow-left" style={{ fontSize:18, color:'#212121' }} aria-hidden="true"></i>
+            <span style={{ fontSize:13, color:'#212121', fontWeight:500 }}>Fertilización</span>
+          </button>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+            <div style={{ fontSize:22, fontWeight:700, color:'#0a0a0a' }}>{fertDetalle.fecha}</div>
+            {esMasReciente && <span style={{ fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:20, background:'#1a5c2e', color:'#fff' }}>ACTUAL</span>}
+            {esAnterior && <span style={{ fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:20, background:'#e8e6e2', color:'#555' }}>ANTERIOR</span>}
+          </div>
+          <div style={{ fontSize:12, color:'#9a9a9a' }}>Bloque {bloque.codigo}</div>
+        </div>
+        <div style={{ padding:'0 14px 100px' }}>
+          {(fertDetalle.soluciones || []).map((sol, si) => (
+            <div key={si} style={{ background:'#fff', borderRadius:20, padding:'16px', marginBottom:10 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'#1a5c2e', marginBottom:10, textTransform:'uppercase', letterSpacing:1 }}>
+                Solución {sol.nombre}
+              </div>
+              {(sol.productos || []).map((prod, pi) => (
+                <div key={pi} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f2f1ef' }}>
+                  <div style={{ fontSize:13, color:'#0a0a0a' }}>{prod.nombre || '—'}</div>
+                  <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a' }}>{prod.cantidad} {prod.unidad}</div>
+                </div>
+              ))}
+            </div>
+          ))}
+          {fertDetalle.notas && (
+            <div style={{ background:'#fff', borderRadius:16, padding:'14px', marginBottom:10 }}>
+              <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:4 }}>NOTAS</div>
+              <div style={{ fontSize:13, color:'#0a0a0a' }}>{fertDetalle.notas}</div>
+            </div>
+          )}
+          <button onClick={() => setConfirmarElimFert(fertDetalle.id)}
+            style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginTop:8 }}>
+            Eliminar este registro
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // Vista detalle de ciclo histórico
   if (historialDetalle) {
-    const kgTotal = 0 // podría cargarse si se quiere
     return (
       <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
         {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
@@ -334,13 +481,16 @@ export default function FichaBloque() {
         <div style={{ display:'flex', gap:5, overflowX:'auto', paddingBottom:4 }}>
           {[
             ['plantacion','Plantación'],
+            ['fertilizacion',`Fertilización (${fertilizaciones.length})`],
             ['cosechas',`Cosechas (${cosechasCiclo.length})`],
             ['incidencias',`Incidencias (${incidencias.length})`],
             ['fotos',`Fotos (${fotos.length})`],
             ['historial',`Historial (${historial.length})`],
           ].map(([k,v]) => (
             <button key={k} onClick={() => setSeccion(k)}
-              style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: seccion===k ? '#212121' : '#e8e6e2', color: seccion===k ? '#fff' : '#9a9a9a' }}>
+              style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap',
+                background: seccion===k ? (k==='fertilizacion' ? '#1a5c2e' : '#212121') : '#e8e6e2',
+                color: seccion===k ? '#fff' : '#9a9a9a' }}>
               {v}
             </button>
           ))}
@@ -384,7 +534,6 @@ export default function FichaBloque() {
                   )}
                 </div>
 
-                {/* Stats del ciclo */}
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
                   <div style={{ background:'#212121', borderRadius:16, padding:'14px' }}>
                     <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', marginBottom:4 }}>KG COSECHADOS</div>
@@ -422,6 +571,90 @@ export default function FichaBloque() {
                   + Nueva plantación
                 </button>
               </div>
+            )}
+          </>
+        )}
+
+        {/* FERTILIZACIÓN */}
+        {seccion === 'fertilizacion' && (
+          <>
+            <button onClick={abrirNuevaFertilizacion}
+              style={{ width:'100%', padding:13, borderRadius:14, border:'none', background:'#1a5c2e', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', marginBottom:16 }}>
+              + Nueva fertilización
+            </button>
+
+            {fertilizaciones.length === 0 ? (
+              <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13, background:'#fff', borderRadius:20 }}>
+                Sin fertilizaciones registradas en este bloque
+              </div>
+            ) : (
+              <>
+                {/* Fertilización actual */}
+                {fertilizaciones[0] && (
+                  <>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#1a5c2e', marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>Fertilización actual</div>
+                    <div onClick={() => setFertDetalle(fertilizaciones[0])}
+                      style={{ background:'#1a5c2e', borderRadius:20, padding:'16px', marginBottom:16, cursor:'pointer' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+                        <div style={{ fontSize:16, fontWeight:700, color:'#fff' }}>{fertilizaciones[0].fecha}</div>
+                        <i className="ti ti-chevron-right" style={{ fontSize:16, color:'rgba(255,255,255,0.4)' }} aria-hidden="true"></i>
+                      </div>
+                      {(fertilizaciones[0].soluciones || []).map((sol, si) => (
+                        <div key={si} style={{ marginBottom:6 }}>
+                          <div style={{ fontSize:10, color:'rgba(255,255,255,0.6)', fontWeight:700, marginBottom:3 }}>SOL. {sol.nombre}</div>
+                          <div style={{ fontSize:12, color:'rgba(255,255,255,0.85)' }}>
+                            {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join(' · ')}
+                          </div>
+                        </div>
+                      ))}
+                      {fertilizaciones[0].notas && (
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:8, fontStyle:'italic' }}>{fertilizaciones[0].notas}</div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Fertilización anterior */}
+                {fertilizaciones[1] && (
+                  <>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#9a9a9a', marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>Fertilización anterior</div>
+                    <div onClick={() => setFertDetalle(fertilizaciones[1])}
+                      style={{ background:'#fff', borderRadius:20, padding:'16px', marginBottom:16, cursor:'pointer' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+                        <div style={{ fontSize:15, fontWeight:700, color:'#0a0a0a' }}>{fertilizaciones[1].fecha}</div>
+                        <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
+                      </div>
+                      {(fertilizaciones[1].soluciones || []).map((sol, si) => (
+                        <div key={si} style={{ marginBottom:6 }}>
+                          <div style={{ fontSize:10, color:'#1a5c2e', fontWeight:700, marginBottom:3 }}>SOL. {sol.nombre}</div>
+                          <div style={{ fontSize:12, color:'#555' }}>
+                            {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join(' · ')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Historial de fertilizaciones */}
+                {fertilizaciones.length > 2 && (
+                  <>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#9a9a9a', marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>Historial</div>
+                    {fertilizaciones.slice(2).map(fert => (
+                      <div key={fert.id} onClick={() => setFertDetalle(fert)}
+                        style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:8, display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a' }}>{fert.fecha}</div>
+                          <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>
+                            {(fert.soluciones || []).length} solución{(fert.soluciones || []).length !== 1 ? 'es' : ''} · {(fert.soluciones || []).reduce((s,sol) => s + (sol.productos||[]).length, 0)} productos
+                          </div>
+                        </div>
+                        <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
             )}
           </>
         )}
@@ -481,7 +714,6 @@ export default function FichaBloque() {
                 )}
               </div>
             ))}
-
             {muertes.length > 0 && (
               <>
                 <div style={{ fontSize:12, fontWeight:600, color:'#9a9a9a', margin:'16px 0 8px', textTransform:'uppercase' }}>Muerte de plantas</div>
@@ -634,6 +866,106 @@ export default function FichaBloque() {
 
             <button style={{ width:'100%', padding:14, borderRadius:14, background:'#c84040', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarMuerte} disabled={saving}>{saving ? 'Guardando...' : 'Registrar'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setShowMuerte(false)}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal nueva fertilización */}
+      {showNuevaFertilizacion && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+          onClick={e => e.target===e.currentTarget && setShowNuevaFertilizacion(false)}>
+          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'92vh', overflowY:'auto' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Nueva fertilización</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Bloque {bloque.codigo}</div>
+
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha *</div>
+            <input style={inpStyle} type="date" value={formFert.fecha} onChange={e => setFormFert(f => ({...f, fecha:e.target.value}))}/>
+
+            {/* Soluciones */}
+            {formFert.soluciones.map((sol, si) => (
+              <div key={si} style={{ background:'#fff', borderRadius:16, padding:'14px', marginBottom:10 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <div style={{ width:28, height:28, borderRadius:8, background:'#1a5c2e', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <span style={{ fontSize:13, fontWeight:800, color:'#fff' }}>{sol.nombre}</span>
+                    </div>
+                    <input
+                      style={{ fontSize:13, fontWeight:600, color:'#0a0a0a', border:'none', background:'transparent', padding:0, width:80 }}
+                      value={sol.nombre}
+                      onChange={e => {
+                        const sols = [...formFert.soluciones]
+                        sols[si] = { ...sols[si], nombre: e.target.value }
+                        setFormFert(f => ({ ...f, soluciones: sols }))
+                      }}
+                      placeholder="Nombre sol."
+                    />
+                  </div>
+                  {formFert.soluciones.length > 1 && (
+                    <button onClick={() => eliminarSolucion(si)}
+                      style={{ background:'none', border:'none', cursor:'pointer', padding:4, color:'#c84040', fontSize:12 }}>
+                      <i className="ti ti-trash" style={{ fontSize:14 }} aria-hidden="true"></i>
+                    </button>
+                  )}
+                </div>
+
+                {sol.productos.map((prod, pi) => (
+                  <div key={pi} style={{ display:'flex', gap:6, marginBottom:8, alignItems:'center' }}>
+                    <input
+                      style={{ flex:3, padding:'9px 10px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f8f8f8', fontSize:12, color:'#0a0a0a' }}
+                      type="text" placeholder="Producto (ej: KCL)"
+                      value={prod.nombre}
+                      onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)}
+                    />
+                    <input
+                      style={{ flex:1.5, padding:'9px 8px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f8f8f8', fontSize:12, color:'#0a0a0a' }}
+                      type="text" placeholder="Cant."
+                      value={prod.cantidad}
+                      onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)}
+                    />
+                    <select
+                      style={{ flex:1.2, padding:'9px 4px', borderRadius:10, border:'1px solid #e8e6e2', background:'#f8f8f8', fontSize:11, color:'#0a0a0a' }}
+                      value={prod.unidad}
+                      onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)}>
+                      {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                    {sol.productos.length > 1 && (
+                      <button onClick={() => eliminarProducto(si, pi)}
+                        style={{ background:'none', border:'none', cursor:'pointer', padding:4, color:'#c84040' }}>
+                        <i className="ti ti-x" style={{ fontSize:13 }} aria-hidden="true"></i>
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                <button onClick={() => agregarProducto(si)}
+                  style={{ padding:'6px 12px', borderRadius:10, border:'1px dashed #ccc', background:'transparent', fontSize:11, color:'#888', cursor:'pointer' }}>
+                  + Agregar producto
+                </button>
+              </div>
+            ))}
+
+            <button onClick={agregarSolucion}
+              style={{ width:'100%', padding:11, borderRadius:12, border:'1px dashed #1a5c2e', background:'transparent', fontSize:12, fontWeight:600, color:'#1a5c2e', cursor:'pointer', marginBottom:12 }}>
+              + Agregar solución
+            </button>
+
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas (opcional)</div>
+            <textarea
+              style={{ ...inpStyle, minHeight:60, resize:'vertical' }}
+              value={formFert.notas}
+              onChange={e => setFormFert(f => ({...f, notas:e.target.value}))}
+              placeholder="Observaciones, ajustes del ingeniero..."/>
+
+            <button
+              style={{ width:'100%', padding:14, borderRadius:14, background: savingFert ? '#888' : '#1a5c2e', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer', marginTop:4 }}
+              onClick={guardarFertilizacion} disabled={savingFert}>
+              {savingFert ? 'Guardando...' : 'Guardar fertilización'}
+            </button>
+            <button
+              style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }}
+              onClick={() => setShowNuevaFertilizacion(false)}>
+              Cancelar
+            </button>
           </div>
         </div>
       )}
