@@ -9,14 +9,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storageKey: 'agrobloque-session',
     storage: window.localStorage,
     autoRefreshToken: true,
-    detectSessionInUrl: false
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 0
-    }
-  },
-  global: {
-    fetch: (...args) => fetch(...args)
-  }
-})
