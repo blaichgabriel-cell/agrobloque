@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
 const TIPOS_COSTO = [
   { key:'insumos',              label:'Insumos',              icon:'ti-seedling',    color:'#212121', bg:'#eeeeee' },
@@ -168,6 +169,7 @@ export default function Costos({ campoActivo }) {
             )
           })}
         </div>
+        <NotasPanel modulo="costos" titulo="Blog de notas de costos" />
       </div>
 
       {modal && (

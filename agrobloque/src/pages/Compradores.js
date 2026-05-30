@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
 const TIPOS = ['Mayorista','Mercado','Particular','Exportador','Otro']
 
@@ -172,6 +173,7 @@ export default function Compradores() {
             </div>
           )
         })}
+        <NotasPanel modulo="compradores" titulo="Blog de notas de compradores" />
       </div>
 
       {modal && (

@@ -14,6 +14,7 @@ import Fumigaciones from './pages/Fumigaciones'
 import Costos from './pages/Costos'
 import Reportes from './pages/Reportes'
 import Compradores from './pages/Compradores'
+import Vivero from './pages/Vivero'
 import NavBar from './components/NavBar'
 
 export function LogoHS({ size = 48 }) {
@@ -32,6 +33,7 @@ const allTabs = [
   { path:'/', icon:'ti-home', label:'Inicio' },
   { path:'/mapa', icon:'ti-map', label:'Mapa' },
   { path:'/agenda', icon:'ti-calendar', label:'Agenda' },
+  { path:'/vivero', icon:'ti-seedling', label:'Vivero' },
   { path:'/asistencia', icon:'ti-users', label:'Asistencia' },
   { path:'/cosecha', icon:'ti-cut', label:'Cosecha' },
   { path:'/inventario', icon:'ti-box', label:'Inventario' },
@@ -189,6 +191,7 @@ function AppLayout({ campoActivo, setCampoActivo }) {
             <Route path="/mapa" element={<Mapa campoActivo={campoActivo}/>}/>
             <Route path="/bloque/:id" element={<FichaBloque/>}/>
             <Route path="/agenda" element={<Agenda/>}/>
+            <Route path="/vivero" element={<Vivero/>}/>
             <Route path="/asistencia" element={<Asistencia/>}/>
             <Route path="/cosecha" element={<Cosecha/>}/>
             <Route path="/inventario" element={<Inventario/>}/>

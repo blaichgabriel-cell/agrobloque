@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
 const TIPOS = {
   fumigacion: { label:'Fumigacion', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
@@ -195,6 +196,7 @@ export default function Fumigaciones() {
             })}
           </div>
         ))}
+        <NotasPanel modulo="fumigaciones" titulo="Blog de notas de fumigaciones" />
       </div>
 
       {/* Detalle */}
