@@ -10,7 +10,7 @@ const fmtNumber = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 const quickLinks = [
   { path: '/mapa', icon: 'ti-map', title: 'Mapa', sub: 'Ver bloques' },
   { path: '/agenda', icon: 'ti-calendar', title: 'Agenda', sub: 'Tareas' },
-  { path: '/vivero', icon: 'ti-leaf', title: 'Vivero', sub: 'Plantines' },
+  { path: '/vivero', icon: 'vivero-icon', title: 'Vivero', sub: 'Plantines' },
   { path: '/asistencia', icon: 'ti-users', title: 'Asistencia', sub: 'Planilla' },
   { path: '/reportes', icon: 'ti-chart-bar', title: 'Reportes', sub: 'Analisis' },
   { path: '/fumigaciones', icon: 'ti-spray', title: 'Fumigaciones', sub: 'Historial' },
@@ -33,7 +33,9 @@ function ViveroIcon({ size = 22, color = 'currentColor' }) {
 }
 
 function DashboardIcon({ icon, size = 22, color = 'currentColor' }) {
-  if (icon === 'agro-vivero') return <ViveroIcon size={size} color={color} />
+  if (['vivero-icon', 'agro-vivero', 'ti-leaf', 'ti-seeding', 'ti-plant-2'].includes(icon)) {
+    return <ViveroIcon size={size} color={color} />
+  }
   return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
 }
 

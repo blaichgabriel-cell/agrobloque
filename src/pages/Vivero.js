@@ -34,6 +34,17 @@ const tratamientoInicial = {
   notas: '',
 }
 
+function ViveroIcon({ size = 24, color = '#2f741f' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 21V10" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 12C8.2 12 5.4 9.7 4.5 6.2C8.2 6 11.1 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 12C15.8 12 18.6 9.7 19.5 6.2C15.8 6 12.9 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 21H17" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export default function Vivero() {
   const [campos, setCampos] = useState([])
   const [lotes, setLotes] = useState([])
@@ -189,7 +200,7 @@ export default function Vivero() {
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <div style={{ width:44, height:44, borderRadius:15, background:'#eef6ea', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <i className="ti ti-leaf" style={{ fontSize:24, color:'#2f741f' }} aria-hidden="true"></i>
+              <ViveroIcon size={25} />
             </div>
             <div>
               <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Plantinero</div>

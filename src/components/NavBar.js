@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 
 const moreTabs = [
   { path: '/mapa', icon: 'ti-map', label: 'Mapa' },
-  { path: '/vivero', icon: 'ti-leaf', label: 'Vivero' },
+  { path: '/vivero', icon: 'vivero-icon', label: 'Vivero' },
   { path: '/asistencia', icon: 'ti-users', label: 'Asistencia' },
   { path: '/cosecha', icon: 'ti-cut', label: 'Cosecha' },
   { path: '/inventario', icon: 'ti-box', label: 'Inventario' },
@@ -40,7 +40,9 @@ function ViveroIcon({ size = 21, color = 'currentColor' }) {
 }
 
 function RenderIcon({ icon, size = 21, color = 'currentColor' }) {
-  if (icon === 'agro-vivero') return <ViveroIcon size={size} color={color} />
+  if (['vivero-icon', 'agro-vivero', 'ti-leaf', 'ti-seeding', 'ti-plant-2'].includes(icon)) {
+    return <ViveroIcon size={size} color={color} />
+  }
   return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
 }
 

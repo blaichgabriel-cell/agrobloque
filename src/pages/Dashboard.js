@@ -95,14 +95,16 @@ function ViveroIcon({ size = 24, color = 'currentColor' }) {
 }
 
 function DashboardIcon({ icon, size, color }) {
-  if (icon === 'agro-vivero') return <ViveroIcon size={size} color={color} />
+  if (['vivero-icon', 'agro-vivero', 'ti-leaf', 'ti-seeding', 'ti-plant-2'].includes(icon)) {
+    return <ViveroIcon size={size} color={color} />
+  }
   return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
 }
 
 const accesos = [
   { icon: 'ti-map', label: 'Mapa', sub: 'Ver bloques', path: '/mapa', green: true },
   { icon: 'ti-calendar', label: 'Agenda', sub: 'Tareas', path: '/agenda', green: true },
-  { icon: 'ti-leaf', label: 'Vivero', sub: 'Plantines', path: '/vivero', green: true },
+  { icon: 'vivero-icon', label: 'Vivero', sub: 'Plantines', path: '/vivero', green: true },
   { icon: 'ti-users', label: 'Asistencia', sub: 'Planilla', path: '/asistencia' },
   { icon: 'ti-chart-bar', label: 'Reportes', sub: 'Rentabilidad', path: '/reportes' },
   { icon: 'ti-spray', label: 'Fumigaciones', sub: 'Historial', path: '/fumigaciones', green: true },
