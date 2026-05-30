@@ -86,7 +86,7 @@ function useViewportWidth() {
 const accesos = [
   { icon: 'ti-map', label: 'Mapa', sub: 'Ver bloques', path: '/mapa', green: true },
   { icon: 'ti-calendar', label: 'Agenda', sub: 'Tareas', path: '/agenda', green: true },
-  { icon: 'ti-seeding', label: 'Vivero', sub: 'Plantines', path: '/vivero', green: true },
+  { icon: 'ti-plant-2', label: 'Vivero', sub: 'Plantines', path: '/vivero', green: true },
   { icon: 'ti-users', label: 'Asistencia', sub: 'Planilla', path: '/asistencia' },
   { icon: 'ti-chart-bar', label: 'Reportes', sub: 'Rentabilidad', path: '/reportes' },
   { icon: 'ti-spray', label: 'Fumigaciones', sub: 'Historial', path: '/fumigaciones', green: true },

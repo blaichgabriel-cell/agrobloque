@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 
 const TIPOS_COSTO = [
-  { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:'#212121', bg:'#eeeeee' },
+  { key:'insumos',              label:'Insumos',              icon:'ti-plant-2',     color:'#212121', bg:'#eeeeee' },
   { key:'combustible',          label:'Combustible',          icon:'ti-flame',       color:'#e07b00', bg:'#fff3e8' },
   { key:'herramientas',         label:'Herramientas',         icon:'ti-tool',        color:'#555',    bg:'#f2f1ef' },
   { key:'electricidad',         label:'Electricidad',         icon:'ti-bolt',        color:'#2980b9', bg:'#eaf4fb' },
