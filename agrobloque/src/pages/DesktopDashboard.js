@@ -22,6 +22,25 @@ const quickLinks = [
 
 const cropIcons = ['🍅', '🫑', '🥒', '🥬', '🍆', '🌱']
 
+const cropIconRules = [
+  { terms: ['tomate'], icon: '\uD83C\uDF45' },
+  { terms: ['pepino'], icon: '\uD83E\uDD52' },
+  { terms: ['zucchini', 'zapallito', 'calabacin', 'calabaza'], icon: '\uD83E\uDD52' },
+  { terms: ['morron', 'pimiento', 'locote'], icon: '\uD83E\uDED1' },
+  { terms: ['lechuga'], icon: '\uD83E\uDD6C' },
+  { terms: ['berenjena'], icon: '\uD83C\uDF46' },
+]
+
+const getCropIcon = (nombre = '') => {
+  const normalizado = nombre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  const fallbackIcon = cropIcons.length ? '\uD83C\uDF31' : '\uD83C\uDF31'
+  return cropIconRules.find(rule => rule.terms.some(term => normalizado.includes(term)))?.icon || fallbackIcon
+}
+
 const elegirCampoConDatos = (campos, bloques = [], guardado) => {
   if (!campos || campos.length === 0) return null
   const conteo = bloques.reduce((acc, b) => {
@@ -232,14 +251,14 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(180px, 1fr))', gap: 18, marginBottom: 22 }}>
-        <Kpi icon="ti-plant-2" title="Bloques activos" value={loading ? '-' : stats.activos} sub={`de ${stats.bloques} totales`} dark badge={stats.bloques > 0 ? `${Math.round((stats.activos / stats.bloques) * 100)}%` : null} />
+        <Kpi icon="ti-plant-2" title="Bloques activos" value={loading ? '-' : stats.activos} sub={`de ${stats.bloques} totales`} dark />
         <Kpi icon="ti-plant" title="Cultivos activos" value={stats.cultivos} sub="plantaciones activas" />
         <Kpi icon="ti-users" title="Operarios activos" value={stats.operarios} sub="en el campo" />
         <Kpi icon="ti-alert-triangle" title="Alertas" value={stats.alertas} sub={stats.alertas === 0 ? 'sin alertas' : 'pendientes'} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 18, marginBottom: 18 }}>
-        <Panel title="Resumen financiero del mes" action="Este mes" wide>
+        <Panel title="Resumen financiero del mes" action="Ver costos" onAction={() => navigate('/costos')} wide>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18, marginBottom: 22 }}>
             <Money title="Ingresos del mes" value={finanzas.ingresos} />
             <Money title="Gastos del mes" value={finanzas.costos} />
@@ -251,16 +270,16 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
           </div>
         </Panel>
 
-        <Panel title="Produccion por cultivo" action="Ver mapa">
+        <Panel title="Produccion por cultivo" action="Ver mapa" onAction={() => navigate('/mapa')}>
           {produccion.length === 0 ? (
             <EmptyState text="Sin plantaciones activas para mostrar." />
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 150px', gap: 22, alignItems: 'stretch' }}>
               <div style={{ display: 'grid', gap: 16 }}>
-                {produccion.slice(0, 3).map((c, i) => <CropRow key={c.nombre} crop={c} icon={cropIcons[i]} />)}
+                {produccion.slice(0, 3).map(c => <CropRow key={c.nombre} crop={c} icon={getCropIcon(c.nombre)} />)}
               </div>
               <div style={{ display: 'grid', gap: 16 }}>
-                {produccion.slice(3, 6).map((c, i) => <CropRow key={c.nombre} crop={c} icon={cropIcons[i + 3]} />)}
+                {produccion.slice(3, 6).map(c => <CropRow key={c.nombre} crop={c} icon={getCropIcon(c.nombre)} />)}
               </div>
               <div style={{ borderLeft: '1px solid #eef0ee', display: 'grid', alignContent: 'center', gap: 28, paddingLeft: 20 }}>
                 <SideTotal icon="ti-plant" value={stats.plantacionesTotal} label="Plantaciones registradas" />
@@ -272,7 +291,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 18, marginBottom: 18 }}>
-        <Panel title="Actividad reciente" action="Ver agenda">
+        <Panel title="Actividad reciente" action="Ver agenda" onAction={() => navigate('/agenda')}>
           {actividades.length === 0 ? (
             <EmptyState text="Sin tareas pendientes para hoy." />
           ) : (
@@ -389,12 +408,16 @@ const linkRow = {
   cursor: 'pointer',
 }
 
-function Panel({ title, action, children }) {
+function Panel({ title, action, onAction, children }) {
   return (
     <section style={{ ...panelStyle, padding: 22 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
         <h2 style={{ margin: 0, fontSize: 18, letterSpacing: -0.4 }}>{title}</h2>
-        {action && <button style={{ border: '1px solid #e7ece7', background: '#fff', borderRadius: 9, padding: '8px 13px', fontSize: 12, cursor: 'pointer' }}>{action}</button>}
+        {action && (
+          <button type="button" onClick={onAction} style={{ border: '1px solid #e7ece7', background: '#fff', borderRadius: 9, padding: '8px 13px', fontSize: 12, cursor: 'pointer' }}>
+            {action}
+          </button>
+        )}
       </div>
       {children}
     </section>
