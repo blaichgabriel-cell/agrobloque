@@ -27,6 +27,7 @@ export function LogoHS({ size = 48 }) {
   )
 }
 
+// Sidebar para desktop
 const allTabs = [
   { path:'/', icon:'ti-home', label:'Inicio' },
   { path:'/mapa', icon:'ti-map', label:'Mapa' },
@@ -38,7 +39,7 @@ const allTabs = [
   { path:'/costos', icon:'ti-coin', label:'Costos' },
   { path:'/reportes', icon:'ti-chart-bar', label:'Reportes' },
   { path:'/compradores', icon:'ti-building-store', label:'Compradores' },
-  { path:'/configuracion', icon:'ti-settings', label:'Configuracion' },
+  { path:'/configuracion', icon:'ti-settings', label:'Configuración' },
 ]
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
@@ -74,15 +75,12 @@ const esErrorSesion = (error) => {
   return error?.status === 401 ||
     error?.status === 403 ||
     texto.includes('jwt') ||
-    texto.includes('permission') ||
-    texto.includes('failed to fetch') ||
-    texto.includes('fetch failed')
+    texto.includes('permission')
 }
 
 function DesktopSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
-
   return (
     <div style={{
       width: SIDEBAR_WIDTH,
@@ -98,6 +96,7 @@ function DesktopSidebar() {
       bottom: 0,
       zIndex: 100,
     }}>
+      {/* Logo */}
       <div style={{ padding: '0 24px 30px', marginBottom: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
           <div style={{ width: 48, height: 48, borderRadius: 14, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', color: '#fff', fontWeight: 900, fontSize: 24, letterSpacing: -2, fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif" }}>
@@ -111,18 +110,15 @@ function DesktopSidebar() {
         </div>
       </div>
 
+      {/* Nav items */}
       <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto' }}>
         {allTabs.map(t => {
           const active = location.pathname === t.path
           return (
             <div key={t.path} onClick={() => navigate(t.path)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '12px 14px',
-                borderRadius: 12,
-                marginBottom: 5,
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '12px 14px', borderRadius: 12, marginBottom: 5,
                 cursor: 'pointer',
                 background: active ? 'linear-gradient(90deg, rgba(123,192,67,0.22), rgba(255,255,255,0.07))' : 'transparent',
                 transition: 'background 0.15s',
@@ -137,6 +133,7 @@ function DesktopSidebar() {
         })}
       </div>
 
+      {/* Cerrar sesión */}
       <div style={{ padding: '16px 16px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px 16px', color: '#fff' }}>
           <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#4f9e2f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>G</div>
@@ -151,7 +148,7 @@ function DesktopSidebar() {
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
           <i className="ti ti-logout" style={{ fontSize: 17, color: '#ff8f8f' }} aria-hidden="true"></i>
-          <span style={{ fontSize: 13, color: '#ff8f8f' }}>Cerrar sesion</span>
+          <span style={{ fontSize: 13, color: '#c84040' }}>Cerrar sesión</span>
         </div>
       </div>
     </div>
@@ -280,26 +277,29 @@ export default function App() {
     const cargarCampoActivo = async () => {
       const { data, error } = await supabase.from('campos').select('*').order('nombre')
       if (error) {
-        if (esErrorSesion(error)) {
+        console.error('Error cargando campos', error)
+        if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch failed')) {
+          setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
+        } else if (esErrorSesion(error)) {
           await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${error.message}`)
         } else {
           setDataError(`Supabase no permitio leer los campos: ${error.message}`)
         }
         return
       }
-
       if (cancelled || !data || data.length === 0) return
-
       const { data: bloques, error: bloquesError } = await supabase.from('bloques').select('campo_id')
       if (bloquesError) {
-        if (esErrorSesion(bloquesError)) {
+        console.error('Error cargando bloques', bloquesError)
+        if (bloquesError.message?.includes('Failed to fetch') || bloquesError.message?.includes('fetch failed')) {
+          setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
+        } else if (esErrorSesion(bloquesError)) {
           await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${bloquesError.message}`)
         } else {
           setDataError(`Supabase no permitio leer los bloques: ${bloquesError.message}`)
         }
         return
       }
-
       const bloquesPorCampo = contarBloquesPorCampo(bloques || [])
 
       setCampoActivo(actual => {
