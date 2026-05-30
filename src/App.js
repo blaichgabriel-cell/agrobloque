@@ -49,7 +49,7 @@ const allTabs = [
   { path:'/', icon:'ti-home', label:'Inicio' },
   { path:'/mapa', icon:'ti-map', label:'Mapa' },
   { path:'/agenda', icon:'ti-calendar', label:'Agenda' },
-  { path:'/vivero', icon:'ti-seeding', label:'Vivero' },
+  { path:'/vivero', icon:'ti-leaf', label:'Vivero' },
   { path:'/asistencia', icon:'ti-users', label:'Asistencia' },
   { path:'/cosecha', icon:'ti-cut', label:'Cosecha' },
   { path:'/inventario', icon:'ti-box', label:'Inventario' },

@@ -10,7 +10,7 @@ const fmtNumber = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 const quickLinks = [
   { path: '/mapa', icon: 'ti-map', title: 'Mapa', sub: 'Ver bloques' },
   { path: '/agenda', icon: 'ti-calendar', title: 'Agenda', sub: 'Tareas' },
-  { path: '/vivero', icon: 'ti-seeding', title: 'Vivero', sub: 'Plantines' },
+  { path: '/vivero', icon: 'ti-leaf', title: 'Vivero', sub: 'Plantines' },
   { path: '/asistencia', icon: 'ti-users', title: 'Asistencia', sub: 'Planilla' },
   { path: '/reportes', icon: 'ti-chart-bar', title: 'Reportes', sub: 'Analisis' },
   { path: '/fumigaciones', icon: 'ti-spray', title: 'Fumigaciones', sub: 'Historial' },
