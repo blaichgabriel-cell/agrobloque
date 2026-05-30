@@ -83,10 +83,26 @@ function useViewportWidth() {
   return width
 }
 
+function ViveroIcon({ size = 24, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 21V10" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 12C8.2 12 5.4 9.7 4.5 6.2C8.2 6 11.1 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 12C15.8 12 18.6 9.7 19.5 6.2C15.8 6 12.9 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 21H17" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function DashboardIcon({ icon, size, color }) {
+  if (icon === 'agro-vivero') return <ViveroIcon size={size} color={color} />
+  return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
+}
+
 const accesos = [
   { icon: 'ti-map', label: 'Mapa', sub: 'Ver bloques', path: '/mapa', green: true },
   { icon: 'ti-calendar', label: 'Agenda', sub: 'Tareas', path: '/agenda', green: true },
-  { icon: 'ti-plant-2', label: 'Vivero', sub: 'Plantines', path: '/vivero', green: true },
+  { icon: 'agro-vivero', label: 'Vivero', sub: 'Plantines', path: '/vivero', green: true },
   { icon: 'ti-users', label: 'Asistencia', sub: 'Planilla', path: '/asistencia' },
   { icon: 'ti-chart-bar', label: 'Reportes', sub: 'Rentabilidad', path: '/reportes' },
   { icon: 'ti-spray', label: 'Fumigaciones', sub: 'Historial', path: '/fumigaciones', green: true },
@@ -347,7 +363,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, position: 'relative' }}>
             <span style={{ position: 'absolute', left: '33.333%', top: '8%', bottom: '8%', width: 1, background: 'rgba(255,255,255,0.20)' }} />
             <span style={{ position: 'absolute', left: '66.666%', top: '8%', bottom: '8%', width: 1, background: 'rgba(255,255,255,0.20)' }} />
-            <MiniStat icon="ti-plant-2" label="Cultivos" value={stats.cultivos} compact={compacto} />
+            <MiniStat icon="ti-plant" label="Cultivos" value={stats.cultivos} compact={compacto} />
             <MiniStat icon="ti-users" label="Operarios" value={stats.operarios} compact={compacto} />
             <MiniStat icon="ti-alert-triangle" label="Alertas" value={alertas.length} compact={compacto} />
           </div>
@@ -378,7 +394,11 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-                <i className={`ti ${item.icon}`} style={{ fontSize: compacto ? 20 : 29, color: item.green ? '#2f741f' : '#080908' }} aria-hidden="true"></i>
+                <DashboardIcon
+                  icon={item.icon}
+                  size={compacto ? 20 : 29}
+                  color={item.green ? '#2f741f' : '#080908'}
+                />
               </span>
               <span style={{ minWidth: 0 }}>
                 <span style={{
