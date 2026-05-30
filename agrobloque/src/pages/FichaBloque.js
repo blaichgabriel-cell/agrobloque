@@ -217,6 +217,37 @@ export default function FichaBloque() {
     fetchData()
   }
 
+  const finalizarPlantacionActiva = () => {
+    if (!plantacionActiva) return
+    setConfirmar({
+      titulo: 'Finalizar plantacion?',
+      mensaje: 'La plantacion actual pasara al historial del bloque. No se borra ningun dato.',
+      fn: async () => {
+        await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
+        setConfirmar(null)
+        setSeccion('historial')
+        fetchData()
+      }
+    })
+  }
+
+  const eliminarPlantacionActiva = () => {
+    if (!plantacionActiva) return
+    setConfirmar({
+      titulo: 'Eliminar plantacion?',
+      mensaje: 'Se borrara definitivamente la plantacion activa y sus abonos, fotos y muertes registradas. No se puede deshacer.',
+      fn: async () => {
+        await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionActiva.id)
+        await supabase.from('fotos_bloque').delete().eq('plantacion_id', plantacionActiva.id)
+        await supabase.from('muertes_plantas').delete().eq('plantacion_id', plantacionActiva.id)
+        await supabase.from('plantaciones').delete().eq('id', plantacionActiva.id)
+        setConfirmar(null)
+        setSeccion('plantacion')
+        fetchData()
+      }
+    })
+  }
+
   const eliminarHistorial = (plantacionId) => {
     setConfirmar({ titulo:'¿Eliminar ciclo?', mensaje:'Se eliminará este ciclo del historial. No se puede deshacer.', fn: async () => {
       await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionId)
@@ -561,6 +592,16 @@ export default function FichaBloque() {
                   <button onClick={() => setShowMuerte(true)}
                     style={{ flex:1, padding:'12px', borderRadius:14, border:'1px solid #ffcccc', background:'transparent', fontSize:12, fontWeight:600, color:'#c84040', cursor:'pointer' }}>
                     + Muerte de plantas
+                  </button>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:8 }}>
+                  <button onClick={finalizarPlantacionActiva}
+                    style={{ padding:'11px', borderRadius:14, border:'1px solid #d8c18a', background:'#fff8e8', fontSize:12, fontWeight:700, color:'#7a5a13', cursor:'pointer' }}>
+                    Finalizar plantacion
+                  </button>
+                  <button onClick={eliminarPlantacionActiva}
+                    style={{ padding:'11px', borderRadius:14, border:'1px solid #ffcccc', background:'#fff0f0', fontSize:12, fontWeight:700, color:'#c84040', cursor:'pointer' }}>
+                    Eliminar plantacion
                   </button>
                 </div>
               </>
