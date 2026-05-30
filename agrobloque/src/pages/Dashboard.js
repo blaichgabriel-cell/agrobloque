@@ -42,6 +42,35 @@ function LogoHS({ size = 56 }) {
   )
 }
 
+function WatermarkHS({ compact }) {
+  const width = compact ? 180 : 230
+  const height = compact ? 150 : 190
+
+  return (
+    <svg
+      viewBox="0 0 260 220"
+      width={width}
+      height={height}
+      style={{
+        position: 'absolute',
+        right: compact ? 8 : 22,
+        top: compact ? 54 : 58,
+        opacity: 0.16,
+        pointerEvents: 'none',
+      }}
+      aria-hidden="true"
+    >
+      <text x="10" y="170" fontFamily="Georgia, 'Times New Roman', serif" fontSize="132" fontWeight="800" fill="#fff" letterSpacing="-9">HS</text>
+      <path d="M145 69c10-22 19-35 27-51 16 25 16 48-1 72-10 14-21 23-32 30 0-18 0-34 6-51z" fill="#fff"/>
+      <path d="M119 86c-23-4-39-12-52-29 31-1 53 10 66 33 7 12 10 24 10 36-11-13-17-27-24-40z" fill="#fff"/>
+      <path d="M187 91c18-19 39-27 66-25-8 28-26 45-53 52-15 4-29 4-42 1 9-8 18-16 29-28z" fill="#fff"/>
+      <path d="M165 114c17-30 39-46 70-51-4 34-22 59-53 73-19 8-37 11-55 9 14-8 26-18 38-31z" fill="#fff"/>
+      <path d="M214 146c30-17 58-25 84-23-25 20-51 34-82 43-22 6-43 9-63 8 20-7 40-16 61-28z" fill="none" stroke="#fff" strokeWidth="6" strokeLinecap="round"/>
+      <path d="M222 174c24-13 49-20 74-21-23 19-47 32-75 40-17 5-34 7-50 7 16-6 33-14 51-26z" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
 function useViewportWidth() {
   const [width, setWidth] = useState(typeof window === 'undefined' ? 480 : window.innerWidth)
 
@@ -108,7 +137,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
   const viewportWidth = useViewportWidth()
   const navigate = useNavigate()
   const hoy = new Date().toISOString().split('T')[0]
-  const compacto = viewportWidth < 430
+  const compacto = viewportWidth < 520
   const muyChico = viewportWidth < 375
   const usarDashboardEscritorio = viewportWidth >= 1100
 
@@ -188,23 +217,23 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
 
   return (
     <div style={fondo}>
-      <div style={{ padding: compacto ? '20px 14px 96px' : '26px 20px 102px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: compacto ? 20 : 28 }}>
+      <div style={{ padding: compacto ? '16px 14px 88px' : '24px 20px 100px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: compacto ? 16 : 26 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: compacto ? 12 : 16 }}>
-            <LogoHS size={compacto ? 50 : 58} />
+            <LogoHS size={compacto ? 46 : 58} />
             <div>
               <div style={{ fontSize: compacto ? 11 : 13, color: 'rgba(255,255,255,0.56)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 3 }}>
                 Horticultura
               </div>
-              <div style={{ fontSize: compacto ? 22 : 24, color: '#fff', fontWeight: 850, letterSpacing: -0.7, lineHeight: 1.05 }}>
+              <div style={{ fontSize: compacto ? 21 : 24, color: '#fff', fontWeight: 850, letterSpacing: -0.7, lineHeight: 1.05 }}>
                 El Sembrador
               </div>
             </div>
           </div>
 
           <button onClick={() => navigate('/agenda')} style={{
-            width: compacto ? 42 : 48,
-            height: compacto ? 42 : 48,
+            width: compacto ? 38 : 48,
+            height: compacto ? 38 : 48,
             borderRadius: 18,
             border: 'none',
             background: 'transparent',
@@ -214,7 +243,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
             position: 'relative',
             cursor: 'pointer',
           }} aria-label="Abrir agenda">
-            <i className="ti ti-bell" style={{ fontSize: compacto ? 28 : 31, color: '#fff' }} aria-hidden="true"></i>
+            <i className="ti ti-bell" style={{ fontSize: compacto ? 25 : 31, color: '#fff' }} aria-hidden="true"></i>
             <span style={{
               position: 'absolute',
               top: 7,
@@ -230,10 +259,10 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
         <div style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${Math.max(campos.length, 1)}, minmax(0, 1fr))`,
-          gap: 8,
-          padding: compacto ? 6 : 8,
-          borderRadius: compacto ? 24 : 28,
-          marginBottom: compacto ? 14 : 18,
+          gap: compacto ? 6 : 8,
+          padding: compacto ? 5 : 8,
+          borderRadius: compacto ? 22 : 28,
+          marginBottom: compacto ? 12 : 18,
           background: 'linear-gradient(145deg, rgba(255,255,255,0.13), rgba(255,255,255,0.06))',
           border: '1px solid rgba(255,255,255,0.08)',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
@@ -244,12 +273,12 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
             const activo = campoActivo?.id === campo.id
             return (
               <button key={campo.id} onClick={() => seleccionarCampo(campo)} style={{
-                minHeight: compacto ? 48 : 54,
-                borderRadius: compacto ? 19 : 22,
+                minHeight: compacto ? 42 : 54,
+                borderRadius: compacto ? 17 : 22,
                 border: 'none',
                 background: activo ? '#050706' : 'rgba(255,255,255,0.03)',
                 color: activo ? '#fff' : 'rgba(255,255,255,0.72)',
-                fontSize: compacto ? 14 : 16,
+                fontSize: compacto ? 13 : 16,
                 fontWeight: activo ? 800 : 500,
                 cursor: 'pointer',
                 boxShadow: activo ? '0 14px 24px rgba(0,0,0,0.32)' : 'none',
@@ -261,29 +290,19 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
         </div>
 
         <div style={{
-          borderRadius: compacto ? 22 : 24,
+          borderRadius: compacto ? 20 : 24,
           border: '1px solid rgba(255,255,255,0.22)',
           background: `
             radial-gradient(circle at 78% 20%, rgba(140,116,70,0.30), transparent 35%),
             linear-gradient(135deg, #080b0a 0%, #171a18 52%, #231f16 100%)
           `,
-          padding: compacto ? '20px 18px 20px' : '26px 24px 24px',
-          marginBottom: compacto ? 14 : 18,
+          padding: compacto ? '18px 16px 18px' : '26px 24px 24px',
+          marginBottom: compacto ? 12 : 18,
           boxShadow: '0 24px 60px rgba(0,0,0,0.42)',
           position: 'relative',
           overflow: 'hidden',
         }}>
-          <div style={{
-            position: 'absolute',
-            right: 42,
-            top: 62,
-            fontSize: compacto ? 106 : 130,
-            lineHeight: 1,
-            fontWeight: 900,
-            color: 'rgba(255,255,255,0.045)',
-            letterSpacing: -10,
-            pointerEvents: 'none',
-          }}>HS</div>
+          <WatermarkHS compact={compacto} />
           <div style={{
             position: 'absolute',
             right: 22,
@@ -298,19 +317,19 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
             <div>
-              <div style={{ fontSize: compacto ? 13 : 15, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: compacto ? 12 : 16 }}>
+              <div style={{ fontSize: compacto ? 12 : 15, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: compacto ? 10 : 16 }}>
                 Bloques activos
               </div>
-              <div style={{ fontSize: muyChico ? 52 : compacto ? 58 : 66, lineHeight: 0.9, fontWeight: 900, letterSpacing: -4, color: '#fff' }}>
+              <div style={{ fontSize: muyChico ? 46 : compacto ? 52 : 66, lineHeight: 0.9, fontWeight: 900, letterSpacing: -4, color: '#fff' }}>
                 {loading ? '-' : stats.activos}
               </div>
-              <div style={{ fontSize: compacto ? 16 : 19, color: '#fff', marginTop: compacto ? 10 : 14 }}>
+              <div style={{ fontSize: compacto ? 15 : 19, color: '#fff', marginTop: compacto ? 9 : 14 }}>
                 de {stats.bloques} totales
               </div>
             </div>
             <div style={{
-              width: compacto ? 50 : 58,
-              height: compacto ? 50 : 58,
+              width: compacto ? 44 : 58,
+              height: compacto ? 44 : 58,
               borderRadius: compacto ? 15 : 17,
               border: '1px solid rgba(255,255,255,0.22)',
               background: 'rgba(255,255,255,0.06)',
@@ -318,11 +337,11 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-              <i className="ti ti-chart-bar" style={{ color: '#7bc043', fontSize: compacto ? 28 : 32 }} aria-hidden="true"></i>
+              <i className="ti ti-chart-bar" style={{ color: '#7bc043', fontSize: compacto ? 25 : 32 }} aria-hidden="true"></i>
             </div>
           </div>
 
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.18)', margin: compacto ? '24px 0 18px' : '34px 0 22px' }} />
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.18)', margin: compacto ? '20px 0 16px' : '34px 0 22px' }} />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, position: 'relative' }}>
             <span style={{ position: 'absolute', left: '33.333%', top: '8%', bottom: '8%', width: 1, background: 'rgba(255,255,255,0.20)' }} />
@@ -333,15 +352,15 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: compacto ? 8 : 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: compacto ? 7 : 12 }}>
           {accesos.map(item => (
             <button key={item.path} onClick={() => navigate(item.path)} style={{
               ...cardBlanca,
-              minHeight: compacto ? 76 : 98,
-              borderRadius: compacto ? 18 : 22,
-              padding: compacto ? '12px 10px' : '18px 14px',
+              minHeight: compacto ? 68 : 98,
+              borderRadius: compacto ? 16 : 22,
+              padding: compacto ? '10px 9px' : '18px 14px',
               display: 'grid',
-              gridTemplateColumns: compacto ? '38px minmax(0, 1fr) 12px' : '54px minmax(0, 1fr) 18px',
+              gridTemplateColumns: compacto ? '34px minmax(0, 1fr) 12px' : '54px minmax(0, 1fr) 18px',
               alignItems: 'center',
               gap: compacto ? 7 : 12,
               cursor: 'pointer',
@@ -350,21 +369,21 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
               minWidth: 0,
             }}>
               <span style={{
-                width: compacto ? 38 : 54,
-                height: compacto ? 38 : 54,
-                borderRadius: compacto ? 13 : 18,
+                width: compacto ? 34 : 54,
+                height: compacto ? 34 : 54,
+                borderRadius: compacto ? 12 : 18,
                 background: item.green ? '#eef6ea' : '#f1f1f0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-                <i className={`ti ${item.icon}`} style={{ fontSize: compacto ? 22 : 29, color: item.green ? '#2f741f' : '#080908' }} aria-hidden="true"></i>
+                <i className={`ti ${item.icon}`} style={{ fontSize: compacto ? 20 : 29, color: item.green ? '#2f741f' : '#080908' }} aria-hidden="true"></i>
               </span>
               <span style={{ minWidth: 0 }}>
                 <span style={{
                   display: 'block',
                   color: '#050505',
-                  fontSize: compacto ? (item.label.length > 10 ? 12 : 13.5) : 18,
+                  fontSize: compacto ? (item.label.length > 10 ? 11.5 : 13) : 18,
                   fontWeight: 850,
                   letterSpacing: -0.2,
                   lineHeight: 1.1,
@@ -374,7 +393,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
                 }}>
                   {item.label}
                 </span>
-                <span style={{ display: 'block', color: '#4f5358', fontSize: compacto ? 12 : 14, marginTop: compacto ? 4 : 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ display: 'block', color: '#4f5358', fontSize: compacto ? 11.5 : 14, marginTop: compacto ? 3 : 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {item.sub}
                 </span>
               </span>
@@ -390,14 +409,14 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
 function MiniStat({ icon, label, value, compact }) {
   return (
     <div style={{
-      padding: compact ? '0 9px' : '0 18px',
+      padding: compact ? '0 7px' : '0 18px',
       minWidth: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 6 : 9, color: '#fff', marginBottom: compact ? 9 : 13 }}>
-        <i className={`ti ${icon}`} style={{ color: '#7bc043', fontSize: compact ? 21 : 27, flexShrink: 0 }} aria-hidden="true"></i>
-        <span style={{ fontSize: compact ? 12 : 16, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 9, color: '#fff', marginBottom: compact ? 8 : 13 }}>
+        <i className={`ti ${icon}`} style={{ color: '#7bc043', fontSize: compact ? 19 : 27, flexShrink: 0 }} aria-hidden="true"></i>
+        <span style={{ fontSize: compact ? 11.5 : 16, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       </div>
-      <div style={{ fontSize: compact ? 28 : 34, color: '#fff', fontWeight: 900, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: compact ? 25 : 34, color: '#fff', fontWeight: 900, lineHeight: 1 }}>{value}</div>
     </div>
   )
 }
