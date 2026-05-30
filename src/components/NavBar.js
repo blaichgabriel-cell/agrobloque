@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 
 const moreTabs = [
   { path: '/mapa', icon: 'ti-map', label: 'Mapa' },
-  { path: '/vivero', icon: 'ti-seedling', label: 'Vivero' },
+  { path: '/vivero', icon: 'ti-seeding', label: 'Vivero' },
   { path: '/asistencia', icon: 'ti-users', label: 'Asistencia' },
   { path: '/cosecha', icon: 'ti-cut', label: 'Cosecha' },
   { path: '/inventario', icon: 'ti-box', label: 'Inventario' },

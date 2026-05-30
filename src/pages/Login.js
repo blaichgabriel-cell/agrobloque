@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { clearLocalAuth, supabase } from '../lib/supabase'
 
 function LogoHS({ size = 80 }) {
   const fs = Math.round(size * 0.72)
@@ -18,9 +18,16 @@ export default function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    setLoading(true); setError('')
+    setLoading(true)
+    setError('')
+    clearLocalAuth()
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setError('Usuario o contraseña incorrectos')
+    if (error) {
+      setError(error.message?.includes('Failed to fetch')
+        ? 'No se pudo conectar con Supabase. Proba de nuevo.'
+        : 'Usuario o contrasena incorrectos')
+    }
     setLoading(false)
   }
 
@@ -30,21 +37,31 @@ export default function Login() {
         <div style={{ textAlign:'center', marginBottom:28 }}>
           <LogoHS size={80} />
           <div style={{ fontSize:15, fontWeight:700, color:'#212121', marginBottom:2, marginTop:8, letterSpacing:-.2 }}>Horticultura El Sembrador</div>
-          <div style={{ fontSize:11, color:'#888', letterSpacing:.5, textTransform:'uppercase' }}>Sistema de gestión agrícola</div>
+          <div style={{ fontSize:11, color:'#888', letterSpacing:.5, textTransform:'uppercase' }}>Sistema de gestion agricola</div>
           <div style={{ fontSize:12, color:'#444444', marginTop:4, fontStyle:'italic' }}>Cosechando Confianza</div>
         </div>
         <form onSubmit={handleLogin}>
           {error && <div style={{ color:'#c0392b', fontSize:12, marginBottom:12, textAlign:'center', background:'#fff0f0', padding:'8px 12px', borderRadius:8 }}>{error}</div>}
           <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:5 }}>Email</div>
           <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#f0ede8', fontSize:13, color:'#1a1a1a', marginBottom:14, boxSizing:'border-box' }} type="email" placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)} required />
-          <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:5 }}>Contraseña</div>
-          <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#f0ede8', fontSize:13, color:'#1a1a1a', marginBottom:14, boxSizing:'border-box' }} type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+          <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:5 }}>Contrasena</div>
+          <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#f0ede8', fontSize:13, color:'#1a1a1a', marginBottom:14, boxSizing:'border-box' }} type="password" placeholder="********" value={password} onChange={e => setPassword(e.target.value)} required />
           <button style={{ width:'100%', padding:13, borderRadius:12, background: loading ? '#888888' : '#212121', color:'#fff', border:'none', fontSize:14, fontWeight:600, cursor:'pointer', marginTop:4 }} type="submit" disabled={loading}>
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
+        <button
+          type="button"
+          onClick={() => {
+            clearLocalAuth()
+            window.location.reload()
+          }}
+          style={{ width:'100%', padding:11, borderRadius:12, background:'transparent', color:'#777', border:'1px solid #e8e6e2', fontSize:12, fontWeight:600, cursor:'pointer', marginTop:10 }}
+        >
+          Limpiar sesion guardada
+        </button>
         <div style={{ borderTop:'1px solid #e8e6e2', margin:'20px 0' }}/>
-        <div style={{ fontSize:11, color:'#bbb', textAlign:'center' }}>AgroBloque · Campo Norte & Sur</div>
+        <div style={{ fontSize:11, color:'#bbb', textAlign:'center' }}>AgroBloque - Campo Norte & Sur</div>
       </div>
     </div>
   )
