@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+const ABONO_BASE_CATEGORIA = 'Abono de base'
+const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
+
 const CATEGORIAS = [
   { key:'Fungicida',     label:'Fungicidas',      icon:'ti-shield',    color:'#e07b00', bg:'#fff3e8' },
   { key:'Insecticida',   label:'Insecticidas',    icon:'ti-bug',       color:'#c84040', bg:'#fff0f0' },
@@ -34,9 +37,71 @@ export default function Inventario() {
   const [confirmar, setConfirmar] = useState(null)
   const [form, setForm] = useState({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' })
   const [saving, setSaving] = useState(false)
+  const [sincronizandoAbonos, setSincronizandoAbonos] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => { fetchProductos(); fetchCategorias() }, [])
+
+  const asegurarCategoriaProducto = async () => {
+    const { data: existente } = await supabase
+      .from('categorias_producto')
+      .select('id')
+      .eq('nombre', ABONO_BASE_CATEGORIA)
+      .maybeSingle()
+
+    if (existente?.id) return existente.id
+
+    const { data: creada } = await supabase
+      .from('categorias_producto')
+      .insert({ nombre: ABONO_BASE_CATEGORIA })
+      .select('id')
+      .single()
+
+    return creada?.id || null
+  }
+
+  const sincronizarAbonosBase = async () => {
+    const { data: abonosData } = await supabase.from('abonos').select('nombre').order('nombre')
+    if (!abonosData || abonosData.length === 0) return
+
+    const categoriaId = await asegurarCategoriaProducto()
+    if (!categoriaId) return
+
+    const { data: productosData } = await supabase
+      .from('productos')
+      .select('nombre')
+      .eq('categoria_id', categoriaId)
+
+    const nombresExistentes = new Set((productosData || []).map(p => normalizarNombre(p.nombre)))
+    const faltantes = abonosData
+      .map(a => String(a.nombre || '').trim())
+      .filter(nombre => nombre && !nombresExistentes.has(normalizarNombre(nombre)))
+
+    if (faltantes.length === 0) return
+
+    await supabase.from('productos').insert(faltantes.map(nombre => ({
+      nombre,
+      categoria_id: categoriaId,
+      unidad: 'kg',
+      stock_actual: 0,
+      stock_minimo: 0,
+      carencia_dias: 0,
+      activo: true,
+    })))
+  }
+
+  const sincronizarAbonosManual = async () => {
+    setSincronizandoAbonos(true)
+    setError('')
+    try {
+      await sincronizarAbonosBase()
+      await Promise.all([fetchProductos(), fetchCategorias()])
+      setCategoriaActiva(ABONO_BASE_CATEGORIA)
+    } catch (e) {
+      setError('Error al sincronizar abonos: ' + e.message)
+    }
+    setSincronizandoAbonos(false)
+  }
 
   const fetchProductos = async () => {
     const { data } = await supabase.from('productos').select('*, categorias_producto(nombre)').eq('activo', true).order('nombre')
@@ -130,11 +195,19 @@ export default function Inventario() {
                 <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Depósito</div>
                 <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Inventario</div>
               </div>
-              <button onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
-                style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-              </button>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={sincronizarAbonosManual} disabled={sincronizandoAbonos}
+                  title="Sincronizar abonos de base"
+                  style={{ width:40, height:40, borderRadius:14, background: sincronizandoAbonos ? '#888' : '#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor: sincronizandoAbonos ? 'default' : 'pointer' }}>
+                  <i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} style={{ color:'#212121', fontSize:20 }} aria-hidden="true"></i>
+                </button>
+                <button onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
+                  style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                  <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
+            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
             {bajoStockTotal > 0 && (
               <div style={{ background:'#fff3e8', borderRadius:14, padding:'10px 14px', display:'flex', alignItems:'center', gap:8 }}>
                 <i className="ti ti-alert-triangle" style={{ color:'#e07b00', fontSize:16 }} aria-hidden="true"></i>

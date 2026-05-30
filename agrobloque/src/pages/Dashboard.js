@@ -34,8 +34,9 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
       const { data } = await supabase.from('campos').select('*').order('nombre')
       if (!data || data.length === 0) return
       setCampos(data)
-      const campo = campoActivo || data[0]
-      if (!campoActivo) setCampoActivo(data[0])
+      const campoGuardado = typeof window !== 'undefined' ? window.localStorage.getItem('agrobloque-campo-activo') : null
+      const campo = campoActivo || data.find(c => c.id === campoGuardado) || data[0]
+      if (!campoActivo) setCampoActivo(campo)
       await cargarStats(campo)
     }
     init()

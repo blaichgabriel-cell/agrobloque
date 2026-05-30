@@ -25,12 +25,17 @@ export default function Costos({ campoActivo }) {
   const [periodo, setPeriodo] = useState('mes')
 
   useEffect(() => { fetchCampos() }, [])
-  useEffect(() => { if (campoActivo && !campoSel) setCampoSel(campoActivo) }, [campoActivo])
+  useEffect(() => { if (campoActivo) setCampoSel(campoActivo) }, [campoActivo])
   useEffect(() => { if (campoSel) { fetchBloques(); fetchCostos() } }, [campoSel, periodo])
 
   const fetchCampos = async () => {
     const { data } = await supabase.from('campos').select('*').order('nombre')
-    setCampos(data || [])
+    const lista = data || []
+    setCampos(lista)
+    if (!campoSel && lista.length > 0) {
+      const campoGuardado = typeof window !== 'undefined' ? window.localStorage.getItem('agrobloque-campo-activo') : null
+      setCampoSel(campoActivo || lista.find(c => c.id === campoGuardado) || lista[0])
+    }
   }
 
   const fetchBloques = async () => {

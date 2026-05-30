@@ -2,6 +2,31 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+const ABONO_BASE_CATEGORIA = 'Abono de base'
+
+const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
+
+const comprimirFotoPerfil = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onerror = () => reject(new Error('No se pudo leer la foto'))
+  reader.onload = () => {
+    const img = new Image()
+    img.onerror = () => reject(new Error('No se pudo procesar la foto'))
+    img.onload = () => {
+      const max = 320
+      const escala = Math.min(1, max / img.width, max / img.height)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(img.width * escala))
+      canvas.height = Math.max(1, Math.round(img.height * escala))
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/jpeg', 0.78))
+    }
+    img.src = reader.result
+  }
+  reader.readAsDataURL(file)
+})
+
 export default function Configuracion() {
   const navigate = useNavigate()
   const fotoRef = useRef()
@@ -23,9 +48,9 @@ export default function Configuracion() {
   const fetchAll = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) setPerfil({
-      nombre: user.user_metadata?.nombre || '',
+      nombre: user.user_metadata?.nombre || user.user_metadata?.full_name || user.user_metadata?.name || '',
       email: user.email,
-      foto: user.user_metadata?.foto || ''
+      foto: user.user_metadata?.foto || user.user_metadata?.avatar_url || user.user_metadata?.picture || ''
     })
     const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }] = await Promise.all([
       supabase.from('campos').select('*').order('nombre'),
@@ -42,16 +67,72 @@ export default function Configuracion() {
   const abrir = (tipo, datos = {}) => { setForm(datos); setModal(tipo); setError(''); setSuccess('') }
   const cerrar = () => { setModal(null); setForm({}); setError(''); setSuccess('') }
 
+  const asegurarCategoriaProducto = async () => {
+    const { data: existente } = await supabase
+      .from('categorias_producto')
+      .select('id')
+      .eq('nombre', ABONO_BASE_CATEGORIA)
+      .maybeSingle()
+
+    if (existente?.id) return existente.id
+
+    const { data: creada } = await supabase
+      .from('categorias_producto')
+      .insert({ nombre: ABONO_BASE_CATEGORIA })
+      .select('id')
+      .single()
+
+    return creada?.id || null
+  }
+
+  const sincronizarProductoAbono = async (nombre, nombreAnterior = '') => {
+    const nombreLimpio = String(nombre || '').trim()
+    if (!nombreLimpio) return
+
+    const categoriaId = await asegurarCategoriaProducto()
+    if (!categoriaId) return
+
+    const nombres = [nombreLimpio, nombreAnterior].filter(Boolean)
+    const { data: productos } = await supabase
+      .from('productos')
+      .select('id, nombre')
+      .in('nombre', nombres)
+
+    const producto = (productos || []).find(p =>
+      normalizarNombre(p.nombre) === normalizarNombre(nombreAnterior) ||
+      normalizarNombre(p.nombre) === normalizarNombre(nombreLimpio)
+    )
+
+    if (producto) {
+      await supabase.from('productos').update({
+        nombre: nombreLimpio,
+        categoria_id: categoriaId,
+        activo: true,
+      }).eq('id', producto.id)
+    } else {
+      await supabase.from('productos').insert({
+        nombre: nombreLimpio,
+        categoria_id: categoriaId,
+        unidad: 'kg',
+        stock_actual: 0,
+        stock_minimo: 0,
+        carencia_dias: 0,
+        activo: true,
+      })
+    }
+  }
+
   // ─── PERFIL ────────────────────────────────────────────────────────
 
   const guardarNombre = async () => {
     setLoading(true); setError(''); setSuccess('')
     try {
+      const nombre = form.nombre?.trim() || ''
       const { error } = await supabase.auth.updateUser({
-        data: { nombre: form.nombre?.trim() || '', foto: perfil.foto }
+        data: { nombre, full_name: nombre, name: nombre }
       })
       if (error) throw error
-      setPerfil(p => ({ ...p, nombre: form.nombre?.trim() || '' }))
+      setPerfil(p => ({ ...p, nombre }))
       setSuccess('Nombre actualizado')
     } catch (e) { setError('Error: ' + e.message) }
     setLoading(false)
@@ -81,23 +162,20 @@ export default function Configuracion() {
     setLoading(false)
   }
 
-  const subirFotoPerfil = (e) => {
+  const subirFotoPerfil = async (e) => {
     const file = e.target.files[0]; if (!file) return
-    const reader = new FileReader()
-    reader.onload = async (ev) => {
-      const fotoBase64 = ev.target.result
-      setLoading(true)
-      try {
-        const { error } = await supabase.auth.updateUser({
-          data: { nombre: perfil.nombre, foto: fotoBase64 }
-        })
-        if (error) throw error
-        setPerfil(p => ({ ...p, foto: fotoBase64 }))
-        setSuccess('Foto actualizada')
-      } catch (e) { setError('Error al subir foto: ' + e.message) }
-      setLoading(false)
-    }
-    reader.readAsDataURL(file)
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const fotoBase64 = await comprimirFotoPerfil(file)
+      const { error } = await supabase.auth.updateUser({
+        data: { foto: fotoBase64, avatar_url: fotoBase64, picture: fotoBase64 }
+      })
+      if (error) throw error
+      setPerfil(p => ({ ...p, foto: fotoBase64 }))
+      setSuccess('Foto actualizada')
+    } catch (e) { setError('Error al subir foto: ' + e.message) }
+    setLoading(false)
+    e.target.value = ''
   }
 
   // ─── OTROS ────────────────────────────────────────────────────────
@@ -125,8 +203,11 @@ export default function Configuracion() {
   const guardarAbono = async () => {
     if (!form.nombre) return; setLoading(true); setError('')
     try {
-      if (form.id) await supabase.from('abonos').update({ nombre: form.nombre }).eq('id', form.id)
-      else await supabase.from('abonos').insert({ nombre: form.nombre })
+      const nombre = form.nombre.trim()
+      const anterior = form.id ? abonos.find(a => a.id === form.id)?.nombre : ''
+      if (form.id) await supabase.from('abonos').update({ nombre }).eq('id', form.id)
+      else await supabase.from('abonos').insert({ nombre })
+      await sincronizarProductoAbono(nombre, anterior)
       await fetchAll(); abrir('abonos')
     } catch (e) { setError('Error: ' + e.message) }
     setLoading(false)

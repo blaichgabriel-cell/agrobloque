@@ -42,6 +42,13 @@ const allTabs = [
   { path:'/configuracion', icon:'ti-settings', label:'Configuración' },
 ]
 
+const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
+
+const getStoredCampoId = () => {
+  if (typeof window === 'undefined') return null
+  return window.localStorage.getItem(CAMPO_STORAGE_KEY)
+}
+
 function DesktopSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -174,6 +181,33 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (!session) {
+      setCampoActivo(null)
+      return
+    }
+
+    let cancelled = false
+    const cargarCampoActivo = async () => {
+      const { data } = await supabase.from('campos').select('*').order('nombre')
+      if (cancelled || !data || data.length === 0) return
+
+      setCampoActivo(actual => {
+        if (actual && data.some(c => c.id === actual.id)) return actual
+        const guardado = getStoredCampoId()
+        return data.find(c => c.id === guardado) || data[0]
+      })
+    }
+
+    cargarCampoActivo()
+    return () => { cancelled = true }
+  }, [session])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !campoActivo?.id) return
+    window.localStorage.setItem(CAMPO_STORAGE_KEY, campoActivo.id)
+  }, [campoActivo])
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#f0ede8' }}>
