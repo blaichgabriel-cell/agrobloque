@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { forceLocalSignOut, supabase } from '../lib/supabase'
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
+const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
 
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
 
@@ -50,7 +51,7 @@ export default function Configuracion() {
     if (user) setPerfil({
       nombre: user.user_metadata?.nombre || user.user_metadata?.full_name || user.user_metadata?.name || '',
       email: user.email,
-      foto: user.user_metadata?.foto || user.user_metadata?.avatar_url || user.user_metadata?.picture || ''
+      foto: typeof window !== 'undefined' ? (window.localStorage.getItem(FOTO_PERFIL_KEY) || '') : ''
     })
     const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }] = await Promise.all([
       supabase.from('campos').select('*').order('nombre'),
@@ -167,12 +168,11 @@ export default function Configuracion() {
     setLoading(true); setError(''); setSuccess('')
     try {
       const fotoBase64 = await comprimirFotoPerfil(file)
-      const { error } = await supabase.auth.updateUser({
-        data: { foto: fotoBase64, avatar_url: fotoBase64, picture: fotoBase64 }
-      })
-      if (error) throw error
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(FOTO_PERFIL_KEY, fotoBase64)
+      }
       setPerfil(p => ({ ...p, foto: fotoBase64 }))
-      setSuccess('Foto actualizada')
+      setSuccess('Foto actualizada en este dispositivo')
     } catch (e) { setError('Error al subir foto: ' + e.message) }
     setLoading(false)
     e.target.value = ''
