@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { supabase } from './lib/supabase'
+import { forceLocalSignOut, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Mapa from './pages/Mapa'
@@ -72,7 +72,12 @@ const elegirCampoConDatos = (campos, bloquesPorCampo, guardado) => {
 
 const esErrorSesion = (error) => {
   const texto = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
-  return error?.status === 401 || error?.status === 403 || texto.includes('jwt') || texto.includes('permission')
+  return error?.status === 401 ||
+    error?.status === 403 ||
+    texto.includes('jwt') ||
+    texto.includes('permission') ||
+    texto.includes('failed to fetch') ||
+    texto.includes('fetch failed')
 }
 
 function DesktopSidebar() {
@@ -139,7 +144,7 @@ function DesktopSidebar() {
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>Administrador</div>
           </div>
         </div>
-        <div onClick={() => supabase.auth.signOut()}
+        <div onClick={() => forceLocalSignOut()}
           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, cursor: 'pointer' }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -230,7 +235,7 @@ export default function App() {
       if (cancelled) return
 
       if (refreshError || userError || !userData?.user) {
-        await supabase.auth.signOut()
+        await forceLocalSignOut(false)
         setSession(null)
         setDataError('Tu sesion estaba vencida. Volve a iniciar sesion para cargar los datos.')
       } else {
@@ -264,7 +269,10 @@ export default function App() {
       if (error) {
         console.error('Error cargando campos', error)
         setDataError(`Supabase no permitio leer los campos: ${error.message}`)
-        if (esErrorSesion(error)) await supabase.auth.signOut()
+        if (esErrorSesion(error)) {
+          await forceLocalSignOut(false)
+          setSession(null)
+        }
         return
       }
       if (cancelled || !data || data.length === 0) return
@@ -272,7 +280,10 @@ export default function App() {
       if (bloquesError) {
         console.error('Error cargando bloques', bloquesError)
         setDataError(`Supabase no permitio leer los bloques: ${bloquesError.message}`)
-        if (esErrorSesion(bloquesError)) await supabase.auth.signOut()
+        if (esErrorSesion(bloquesError)) {
+          await forceLocalSignOut(false)
+          setSession(null)
+        }
         return
       }
       const bloquesPorCampo = contarBloquesPorCampo(bloques || [])
@@ -305,8 +316,9 @@ export default function App() {
   if (!session) return (
     <>
       {dataError && (
-        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 520, width: 'calc(100% - 28px)', textAlign: 'center' }}>
-          {dataError}
+        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 560, width: 'calc(100% - 28px)', textAlign: 'center' }}>
+          <span>{dataError}</span>
+          <button onClick={() => forceLocalSignOut()} style={{ marginLeft: 10, border: 'none', borderRadius: 8, background: '#7a4a00', color: '#fff', padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Limpiar sesion</button>
         </div>
       )}
       <Login />
@@ -316,8 +328,9 @@ export default function App() {
   return (
     <BrowserRouter>
       {dataError && (
-        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 520, width: 'calc(100% - 28px)', textAlign: 'center' }}>
-          {dataError}
+        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 560, width: 'calc(100% - 28px)', textAlign: 'center' }}>
+          <span>{dataError}</span>
+          <button onClick={() => forceLocalSignOut()} style={{ marginLeft: 10, border: 'none', borderRadius: 8, background: '#7a4a00', color: '#fff', padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Limpiar sesion</button>
         </div>
       )}
       <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} />
