@@ -1,353 +1,481 @@
-import React, { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { forceLocalSignOut, supabase } from './lib/supabase'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Mapa from './pages/Mapa'
-import FichaBloque from './pages/FichaBloque'
-import Configuracion from './pages/Configuracion'
-import Agenda from './pages/Agenda'
-import Asistencia from './pages/Asistencia'
-import Cosecha from './pages/Cosecha'
-import Inventario from './pages/Inventario'
-import Fumigaciones from './pages/Fumigaciones'
-import Costos from './pages/Costos'
-import Reportes from './pages/Reportes'
-import Compradores from './pages/Compradores'
-import NavBar from './components/NavBar'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { forceLocalSignOut, supabase } from '../lib/supabase'
 
-export function LogoHS({ size = 48 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#212121" letterSpacing="-4">HS</text>
-      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#aaaaaa"/>
-      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#212121"/>
-      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#212121"/>
-    </svg>
-  )
-}
+const ABONO_BASE_CATEGORIA = 'Abono de base'
+const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
 
-// Sidebar para desktop
-const allTabs = [
-  { path:'/', icon:'ti-home', label:'Inicio' },
-  { path:'/mapa', icon:'ti-map', label:'Mapa' },
-  { path:'/agenda', icon:'ti-calendar', label:'Agenda' },
-  { path:'/asistencia', icon:'ti-users', label:'Asistencia' },
-  { path:'/cosecha', icon:'ti-cut', label:'Cosecha' },
-  { path:'/inventario', icon:'ti-box', label:'Inventario' },
-  { path:'/fumigaciones', icon:'ti-spray', label:'Fumigaciones' },
-  { path:'/costos', icon:'ti-coin', label:'Costos' },
-  { path:'/reportes', icon:'ti-chart-bar', label:'Reportes' },
-  { path:'/compradores', icon:'ti-building-store', label:'Compradores' },
-  { path:'/configuracion', icon:'ti-settings', label:'Configuración' },
-]
+const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
 
-const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
-const SIDEBAR_WIDTH = 260
-
-const getStoredCampoId = () => {
-  if (typeof window === 'undefined') return null
-  return window.localStorage.getItem(CAMPO_STORAGE_KEY)
-}
-
-const contarBloquesPorCampo = (bloques = []) => bloques.reduce((acc, bloque) => {
-  if (bloque.campo_id) acc[bloque.campo_id] = (acc[bloque.campo_id] || 0) + 1
-  return acc
-}, {})
-
-const elegirCampoConDatos = (campos, bloquesPorCampo, guardado) => {
-  if (!campos || campos.length === 0) return null
-  const campoGuardado = campos.find(c => c.id === guardado)
-  const campoConMasBloques = campos.reduce((mejor, campo) => {
-    return (bloquesPorCampo[campo.id] || 0) > (bloquesPorCampo[mejor.id] || 0) ? campo : mejor
-  }, campos[0])
-  const hayCampoConDatos = (bloquesPorCampo[campoConMasBloques.id] || 0) > 0
-
-  if (campoGuardado && (!hayCampoConDatos || (bloquesPorCampo[campoGuardado.id] || 0) > 0)) {
-    return campoGuardado
+const comprimirFotoPerfil = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onerror = () => reject(new Error('No se pudo leer la foto'))
+  reader.onload = () => {
+    const img = new Image()
+    img.onerror = () => reject(new Error('No se pudo procesar la foto'))
+    img.onload = () => {
+      const max = 320
+      const escala = Math.min(1, max / img.width, max / img.height)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(img.width * escala))
+      canvas.height = Math.max(1, Math.round(img.height * escala))
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/jpeg', 0.78))
+    }
+    img.src = reader.result
   }
+  reader.readAsDataURL(file)
+})
 
-  return campoConMasBloques
-}
-
-const esErrorSesion = (error) => {
-  const texto = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
-  return error?.status === 401 ||
-    error?.status === 403 ||
-    texto.includes('jwt') ||
-    texto.includes('permission')
-}
-
-function DesktopSidebar() {
+export default function Configuracion() {
   const navigate = useNavigate()
-  const location = useLocation()
-  return (
-    <div style={{
-      width: SIDEBAR_WIDTH,
-      minHeight: '100vh',
-      background: 'linear-gradient(180deg, #080b0a 0%, #121512 52%, #080a09 100%)',
-      borderRight: '1px solid rgba(255,255,255,0.07)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '28px 0',
-      position: 'fixed',
-      left: 0,
-      top: 0,
-      bottom: 0,
-      zIndex: 100,
-    }}>
-      {/* Logo */}
-      <div style={{ padding: '0 24px 30px', marginBottom: 4 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', color: '#fff', fontWeight: 900, fontSize: 24, letterSpacing: -2, fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif" }}>
-            HS
-            <span style={{ position: 'absolute', top: 8, right: 9, width: 14, height: 7, background: '#7bc043', borderRadius: '14px 14px 2px 14px', transform: 'rotate(-10deg)' }} />
-          </div>
-          <div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', letterSpacing: 1.1, textTransform: 'uppercase' }}>Horticultura</div>
-            <div style={{ fontSize: 17, color: '#fff', fontWeight: 800, letterSpacing: -0.2 }}>El Sembrador</div>
-          </div>
-        </div>
-      </div>
+  const fotoRef = useRef()
+  const [modal, setModal] = useState(null)
+  const [perfil, setPerfil] = useState({ nombre:'', email:'', foto:'' })
+  const [campos, setCampos] = useState([])
+  const [cultivos, setCultivos] = useState([])
+  const [operarios, setOperarios] = useState([])
+  const [abonos, setAbonos] = useState([])
+  const [compradores, setCompradores] = useState([])
+  const [bloques, setBloques] = useState([])
+  const [form, setForm] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-      {/* Nav items */}
-      <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto' }}>
-        {allTabs.map(t => {
-          const active = location.pathname === t.path
-          return (
-            <div key={t.path} onClick={() => navigate(t.path)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '12px 14px', borderRadius: 12, marginBottom: 5,
-                cursor: 'pointer',
-                background: active ? 'linear-gradient(90deg, rgba(123,192,67,0.22), rgba(255,255,255,0.07))' : 'transparent',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
-              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
-            >
-              <i className={`ti ${t.icon}`} style={{ fontSize: 19, color: active ? '#7bc043' : 'rgba(255,255,255,0.86)' }} aria-hidden="true"></i>
-              <span style={{ fontSize: 15, fontWeight: active ? 700 : 500, color: active ? '#fff' : 'rgba(255,255,255,0.86)' }}>{t.label}</span>
-            </div>
-          )
-        })}
-      </div>
+  useEffect(() => { fetchAll() }, [])
 
-      {/* Cerrar sesión */}
-      <div style={{ padding: '16px 16px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px 16px', color: '#fff' }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#4f9e2f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>G</div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>Gabriel</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>Administrador</div>
-          </div>
-        </div>
-        <div onClick={() => forceLocalSignOut()}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, cursor: 'pointer' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <i className="ti ti-logout" style={{ fontSize: 17, color: '#ff8f8f' }} aria-hidden="true"></i>
-          <span style={{ fontSize: 13, color: '#c84040' }}>Cerrar sesión</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function AppLayout({ campoActivo, setCampoActivo }) {
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768)
-  const location = useLocation()
-  const dashboardDesktop = isDesktop && location.pathname === '/'
-
-  useEffect(() => {
-    const handler = () => setIsDesktop(window.innerWidth >= 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [])
-
-  return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#f6f7f5' : '#f2f1ef' }}>
-      {isDesktop && <DesktopSidebar />}
-
-      <div style={{
-        flex: 1,
-        marginLeft: isDesktop ? SIDEBAR_WIDTH : 0,
-        minHeight: '100vh',
-        background: dashboardDesktop ? '#f6f7f5' : '#f2f1ef',
-        paddingBottom: isDesktop ? 0 : 64,
-        maxWidth: isDesktop ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100%',
-      }}>
-        <div style={{
-          maxWidth: dashboardDesktop ? 'none' : (isDesktop ? 900 : 480),
-          width: '100%',
-          margin: dashboardDesktop ? 0 : '0 auto',
-          minHeight: '100vh',
-        }}>
-          <Routes>
-            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo}/>}/>
-            <Route path="/mapa" element={<Mapa campoActivo={campoActivo}/>}/>
-            <Route path="/bloque/:id" element={<FichaBloque/>}/>
-            <Route path="/agenda" element={<Agenda/>}/>
-            <Route path="/asistencia" element={<Asistencia/>}/>
-            <Route path="/cosecha" element={<Cosecha/>}/>
-            <Route path="/inventario" element={<Inventario/>}/>
-            <Route path="/fumigaciones" element={<Fumigaciones/>}/>
-            <Route path="/costos" element={<Costos campoActivo={campoActivo}/>}/>
-            <Route path="/reportes" element={<Reportes campoActivo={campoActivo}/>}/>
-            <Route path="/compradores" element={<Compradores/>}/>
-            <Route path="/configuracion" element={<Configuracion/>}/>
-            <Route path="*" element={<Navigate to="/"/>}/>
-          </Routes>
-        </div>
-      </div>
-
-      {!isDesktop && <NavBar />}
-    </div>
-  )
-}
-
-export default function App() {
-  const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [campoActivo, setCampoActivo] = useState(null)
-  const [dataError, setDataError] = useState('')
-
-  const limpiarSesionRota = async (mensaje) => {
-    setDataError(mensaje)
-    await forceLocalSignOut(false)
-    setCampoActivo(null)
-    setSession(null)
-
-    if (typeof window === 'undefined') return
-    const resetKey = 'agrobloque-auto-reset-done'
-    if (!window.sessionStorage.getItem(resetKey)) {
-      window.sessionStorage.setItem(resetKey, '1')
-      window.location.replace('/?sesion_limpiada=1')
-    }
+  const fetchAll = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) setPerfil({
+      nombre: user.user_metadata?.nombre || user.user_metadata?.full_name || user.user_metadata?.name || '',
+      email: user.email,
+      foto: typeof window !== 'undefined' ? (window.localStorage.getItem(FOTO_PERFIL_KEY) || '') : ''
+    })
+    const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }] = await Promise.all([
+      supabase.from('campos').select('*').order('nombre'),
+      supabase.from('cultivos').select('*').order('nombre'),
+      supabase.from('operarios').select('*').order('nombre'),
+      supabase.from('abonos').select('*').order('nombre'),
+      supabase.from('compradores').select('*').order('nombre'),
+      supabase.from('bloques').select('*').order('codigo'),
+    ])
+    setCampos(c||[]); setCultivos(cu||[]); setOperarios(op||[])
+    setAbonos(ab||[]); setCompradores(comp||[]); setBloques(bl||[])
   }
 
-  useEffect(() => {
-    let cancelled = false
+  const abrir = (tipo, datos = {}) => { setForm(datos); setModal(tipo); setError(''); setSuccess('') }
+  const cerrar = () => { setModal(null); setForm({}); setError(''); setSuccess('') }
 
-    const validarSesion = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (cancelled) return
+  const asegurarCategoriaProducto = async () => {
+    const { data: existente } = await supabase
+      .from('categorias_producto')
+      .select('id')
+      .eq('nombre', ABONO_BASE_CATEGORIA)
+      .maybeSingle()
 
-      if (!session) {
-        setSession(null)
-        setLoading(false)
-        return
-      }
+    if (existente?.id) return existente.id
 
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-      const sesionActual = refreshData?.session || session
-      const { data: userData, error: userError } = await supabase.auth.getUser()
+    const { data: creada } = await supabase
+      .from('categorias_producto')
+      .insert({ nombre: ABONO_BASE_CATEGORIA })
+      .select('id')
+      .single()
 
-      if (cancelled) return
+    return creada?.id || null
+  }
 
-      if (refreshError || userError || !userData?.user) {
-        await limpiarSesionRota('Tu sesion estaba vencida. Volve a iniciar sesion para cargar los datos.')
-      } else {
-        setSession(sesionActual)
-        setDataError('')
-      }
-      setLoading(false)
-    }
+  const sincronizarProductoAbono = async (nombre, nombreAnterior = '') => {
+    const nombreLimpio = String(nombre || '').trim()
+    if (!nombreLimpio) return
 
-    validarSesion()
+    const categoriaId = await asegurarCategoriaProducto()
+    if (!categoriaId) return
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      if (session) setDataError('')
-    })
-    return () => {
-      cancelled = true
-      subscription.unsubscribe()
-    }
-  }, [])
+    const nombres = [nombreLimpio, nombreAnterior].filter(Boolean)
+    const { data: productos } = await supabase
+      .from('productos')
+      .select('id, nombre')
+      .in('nombre', nombres)
 
-  useEffect(() => {
-    if (!session) {
-      setCampoActivo(null)
-      return
-    }
+    const producto = (productos || []).find(p =>
+      normalizarNombre(p.nombre) === normalizarNombre(nombreAnterior) ||
+      normalizarNombre(p.nombre) === normalizarNombre(nombreLimpio)
+    )
 
-    let cancelled = false
-    const cargarCampoActivo = async () => {
-      const { data, error } = await supabase.from('campos').select('*').order('nombre')
-      if (error) {
-        console.error('Error cargando campos', error)
-        if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch failed')) {
-          setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
-        } else if (esErrorSesion(error)) {
-          await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${error.message}`)
-        } else {
-          setDataError(`Supabase no permitio leer los campos: ${error.message}`)
-        }
-        return
-      }
-      if (cancelled || !data || data.length === 0) return
-      const { data: bloques, error: bloquesError } = await supabase.from('bloques').select('campo_id')
-      if (bloquesError) {
-        console.error('Error cargando bloques', bloquesError)
-        if (bloquesError.message?.includes('Failed to fetch') || bloquesError.message?.includes('fetch failed')) {
-          setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
-        } else if (esErrorSesion(bloquesError)) {
-          await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${bloquesError.message}`)
-        } else {
-          setDataError(`Supabase no permitio leer los bloques: ${bloquesError.message}`)
-        }
-        return
-      }
-      const bloquesPorCampo = contarBloquesPorCampo(bloques || [])
-
-      setCampoActivo(actual => {
-        if (actual && data.some(c => c.id === actual.id)) return actual
-        const guardado = getStoredCampoId()
-        return elegirCampoConDatos(data, bloquesPorCampo, guardado)
+    if (producto) {
+      await supabase.from('productos').update({
+        nombre: nombreLimpio,
+        categoria_id: categoriaId,
+        activo: true,
+      }).eq('id', producto.id)
+    } else {
+      await supabase.from('productos').insert({
+        nombre: nombreLimpio,
+        categoria_id: categoriaId,
+        unidad: 'kg',
+        stock_actual: 0,
+        stock_minimo: 0,
+        carencia_dias: 0,
+        activo: true,
       })
     }
+  }
 
-    cargarCampoActivo()
-    return () => { cancelled = true }
-  }, [session])
+  // ─── PERFIL ────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !campoActivo?.id) return
-    window.localStorage.setItem(CAMPO_STORAGE_KEY, campoActivo.id)
-  }, [campoActivo])
+  const guardarNombre = async () => {
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const nombre = form.nombre?.trim() || ''
+      const { error } = await supabase.auth.updateUser({
+        data: { nombre, full_name: nombre, name: nombre }
+      })
+      if (error) throw error
+      setPerfil(p => ({ ...p, nombre }))
+      setSuccess('Nombre actualizado')
+    } catch (e) { setError('Error: ' + e.message) }
+    setLoading(false)
+  }
 
-  if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#f0ede8' }}>
-      <div style={{ textAlign:'center' }}>
-        <LogoHS size={56} />
-        <div style={{ color:'#888', fontSize:13, marginTop:12 }}>Cargando...</div>
-      </div>
-    </div>
-  )
+  const guardarEmail = async () => {
+    if (!form.email || form.email === perfil.email) return
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const { error } = await supabase.auth.updateUser({ email: form.email.trim() })
+      if (error) throw error
+      setSuccess('Revisá tu nuevo email para confirmar el cambio')
+    } catch (e) { setError('Error: ' + e.message) }
+    setLoading(false)
+  }
 
-  if (!session) return (
-    <>
-      {dataError && (
-        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 560, width: 'calc(100% - 28px)', textAlign: 'center' }}>
-          <span>{dataError}</span>
-          <button onClick={() => forceLocalSignOut()} style={{ marginLeft: 10, border: 'none', borderRadius: 8, background: '#7a4a00', color: '#fff', padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Limpiar sesion</button>
-        </div>
-      )}
-      <Login />
-    </>
-  )
+  const guardarContrasena = async () => {
+    if (!form.nueva || form.nueva.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return }
+    if (form.nueva !== form.repetir) { setError('Las contraseñas no coinciden'); return }
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const { error } = await supabase.auth.updateUser({ password: form.nueva })
+      if (error) throw error
+      setSuccess('Contraseña actualizada correctamente')
+      setForm({})
+    } catch (e) { setError('Error: ' + e.message) }
+    setLoading(false)
+  }
+
+  const subirFotoPerfil = async (e) => {
+    const file = e.target.files[0]; if (!file) return
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const fotoBase64 = await comprimirFotoPerfil(file)
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(FOTO_PERFIL_KEY, fotoBase64)
+      }
+      setPerfil(p => ({ ...p, foto: fotoBase64 }))
+      setSuccess('Foto actualizada en este dispositivo')
+    } catch (e) { setError('Error al subir foto: ' + e.message) }
+    setLoading(false)
+    e.target.value = ''
+  }
+
+  // ─── OTROS ────────────────────────────────────────────────────────
+
+  const guardarCultivo = async () => {
+    if (!form.nombre) return; setLoading(true); setError('')
+    try {
+      if (form.id) await supabase.from('cultivos').update({ nombre: form.nombre }).eq('id', form.id)
+      else await supabase.from('cultivos').insert({ nombre: form.nombre })
+      await fetchAll(); abrir('cultivos')
+    } catch (e) { setError('Error: ' + e.message) }
+    setLoading(false)
+  }
+
+  const guardarOperario = async () => {
+    if (!form.nombre) return; setLoading(true); setError('')
+    try {
+      if (form.id) await supabase.from('operarios').update({ nombre: form.nombre }).eq('id', form.id)
+      else await supabase.from('operarios').insert({ nombre: form.nombre, campo_id: form.campo_id })
+      await fetchAll(); abrir('operarios')
+    } catch (e) { setError('Error: ' + e.message) }
+    setLoading(false)
+  }
+
+  const guardarAbono = async () => {
+    if (!form.nombre) return; setLoading(true); setError('')
+    try {
+      const nombre = form.nombre.trim()
+      const anterior = form.id ? abonos.find(a => a.id === form.id)?.nombre : ''
+      if (form.id) await supabase.from('abonos').update({ nombre }).eq('id', form.id)
+      else await supabase.from('abonos').insert({ nombre })
+      await sincronizarProductoAbono(nombre, anterior)
+      await fetchAll(); abrir('abonos')
+    } catch (e) { setError('Error: ' + e.message) }
+    setLoading(false)
+  }
+
+  const guardarBloque = async () => {
+    if (!form.id) return; setLoading(true); setError('')
+    try {
+      await supabase.from('bloques').update({ tipo: form.tipo }).eq('id', form.id)
+      await fetchAll(); abrir('bloques')
+    } catch (e) { setError('Error: ' + e.message) }
+    setLoading(false)
+  }
+
+  const eliminar = async (tabla, id, volver) => {
+    await supabase.from(tabla).delete().eq('id', id)
+    await fetchAll(); abrir(volver)
+  }
+
+  const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
+  const saveBtn = (color = '#212121') => ({ width:'100%', padding:14, borderRadius:14, background: color, border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' })
+  const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
+  const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f2f1ef' }
+  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #d4b89a', background:'#eeeeee', fontSize:13, color:'#212121', cursor:'pointer', marginTop:8, fontWeight:500 }
+
+  const menuItems = [
+    { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email }) },
+    { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', action: () => abrir('campos') },
+    { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#212121', bg:'#eeeeee', action: () => abrir('cultivos') },
+    { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
+    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#212121', bg:'#eeeeee', action: () => abrir('abonos') },
+    { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#212121', bg:'#eeeeee', action: () => abrir('bloques') },
+    { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
+  ]
 
   return (
-    <BrowserRouter>
-      {dataError && (
-        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 560, width: 'calc(100% - 28px)', textAlign: 'center' }}>
-          <span>{dataError}</span>
-          <button onClick={() => forceLocalSignOut()} style={{ marginLeft: 10, border: 'none', borderRadius: 8, background: '#7a4a00', color: '#fff', padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Limpiar sesion</button>
+    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+      <input type="file" accept="image/*" ref={fotoRef} style={{ display:'none' }} onChange={subirFotoPerfil} />
+
+      <div style={{ padding:'24px 20px 16px' }}>
+        <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Sistema</div>
+        <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:20 }}>Configuración</div>
+
+        {/* Tarjeta de perfil rápida */}
+        <div style={{ background:'#212121', borderRadius:20, padding:'16px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:14 }}>
+          <div style={{ position:'relative', flexShrink:0 }}>
+            {perfil.foto ? (
+              <img src={perfil.foto} alt="perfil"
+                style={{ width:52, height:52, borderRadius:'50%', objectFit:'cover', border:'2px solid rgba(255,255,255,0.2)' }}/>
+            ) : (
+              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(255,255,255,0.12)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <i className="ti ti-user" style={{ fontSize:24, color:'rgba(255,255,255,0.6)' }} aria-hidden="true"></i>
+              </div>
+            )}
+            <button onClick={() => fotoRef.current?.click()}
+              style={{ position:'absolute', bottom:-2, right:-2, width:20, height:20, borderRadius:'50%', background:'#fff', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>
+              <i className="ti ti-camera" style={{ fontSize:11, color:'#212121' }} aria-hidden="true"></i>
+            </button>
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              {perfil.nombre || 'Sin nombre'}
+            </div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{perfil.email}</div>
+          </div>
+          <button onClick={() => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email })}
+            style={{ padding:'6px 12px', borderRadius:10, background:'rgba(255,255,255,0.12)', border:'none', fontSize:11, color:'rgba(255,255,255,0.8)', cursor:'pointer', flexShrink:0 }}>
+            Editar
+          </button>
+        </div>
+      </div>
+
+      <div style={{ padding:'0 14px 100px' }}>
+        {menuItems.map((it, i) => (
+          <div key={i} onClick={it.action} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
+            <div style={{ width:40, height:40, borderRadius:12, background: it.bg || '#f2f1ef', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <i className={`ti ${it.icon}`} style={{ fontSize:18, color: it.color || '#0a0a0a' }} aria-hidden="true"></i>
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:14, fontWeight:600, color:'#0a0a0a' }}>{it.title}</div>
+              <div style={{ fontSize:11, color:'#b0b0b0', marginTop:2 }}>{it.sub}</div>
+            </div>
+            <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
+          </div>
+        ))}
+        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginTop:8, cursor:'pointer' }} onClick={() => forceLocalSignOut()}>
+          <div style={{ fontSize:14, fontWeight:600, color:'#c84040', textAlign:'center' }}>Cerrar sesión</div>
+        </div>
+      </div>
+
+      {modal && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+          onClick={e => e.target===e.currentTarget && cerrar()}>
+          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'88vh', overflowY:'auto' }}>
+
+            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
+            {success && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{success}</div>}
+
+            {/* ── CUENTA ── */}
+            {modal === 'cuenta' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Mi cuenta</div>
+
+              {/* Foto */}
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:24 }}>
+                <div style={{ position:'relative', marginBottom:10 }}>
+                  {perfil.foto ? (
+                    <img src={perfil.foto} alt="perfil"
+                      style={{ width:80, height:80, borderRadius:'50%', objectFit:'cover', border:'3px solid #e8e6e2' }}/>
+                  ) : (
+                    <div style={{ width:80, height:80, borderRadius:'50%', background:'#e8e6e2', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <i className="ti ti-user" style={{ fontSize:36, color:'#9a9a9a' }} aria-hidden="true"></i>
+                    </div>
+                  )}
+                  <button onClick={() => fotoRef.current?.click()}
+                    style={{ position:'absolute', bottom:0, right:0, width:26, height:26, borderRadius:'50%', background:'#212121', border:'2px solid #f2f1ef', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <i className="ti ti-camera" style={{ fontSize:13, color:'#fff' }} aria-hidden="true"></i>
+                  </button>
+                </div>
+                <span style={{ fontSize:11, color:'#9a9a9a' }}>Tocá la cámara para cambiar la foto</span>
+              </div>
+
+              {/* Nombre */}
+              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Nombre</div>
+                <input style={{ ...inp, marginBottom:8 }} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/>
+                <button style={saveBtn()} onClick={guardarNombre} disabled={loading}>{loading?'Guardando...':'Guardar nombre'}</button>
+              </div>
+
+              {/* Email */}
+              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Email</div>
+                <input style={{ ...inp, marginBottom:8 }} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/>
+                <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:10 }}>Si cambiás el email, recibirás un link de confirmación</div>
+                <button style={saveBtn('#1a5c2e')} onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
+              </div>
+
+              {/* Contraseña */}
+              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Contraseña</div>
+                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contraseña"/>
+                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contraseña"/>
+                <button style={saveBtn('#c84040')} onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contraseña'}</button>
+              </div>
+
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {/* ── CAMPOS ── */}
+            {modal === 'campos' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Campos</div>
+              {campos.map(c => (<div key={c.id} style={listItem}><div style={{ fontSize:13, fontWeight:500 }}>{c.nombre}</div></div>))}
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {/* ── CULTIVOS ── */}
+            {modal === 'cultivos' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Cultivos</div>
+              {cultivos.map(c => (
+                <div key={c.id} style={listItem}>
+                  <div style={{ fontSize:13, fontWeight:500 }}>{c.nombre}</div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
+                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('cultivos',c.id,'cultivos')}>Eliminar</button>
+                  </div>
+                </div>
+              ))}
+              <button style={addBtn} onClick={() => abrir('editarCultivo',{})}>+ Agregar cultivo</button>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'editarCultivo' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
+              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morrón"/>
+              <button style={saveBtn()} onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('cultivos')}>Volver</button>
+            </>}
+
+            {/* ── OPERARIOS ── */}
+            {modal === 'operarios' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Operarios</div>
+              {campos.map(campo => (
+                <div key={campo.id}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', padding:'10px 0 6px' }}>{campo.nombre}</div>
+                  {operarios.filter(o => o.campo_id === campo.id).map(o => (
+                    <div key={o.id} style={listItem}>
+                      <div style={{ fontSize:13, fontWeight:500 }}>{o.nombre}</div>
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
+                        <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('operarios',o.id,'operarios')}>Eliminar</button>
+                      </div>
+                    </div>
+                  ))}
+                  <button style={addBtn} onClick={() => abrir('editarOperario',{campo_id:campo.id})}>+ Agregar a {campo.nombre}</button>
+                </div>
+              ))}
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'editarOperario' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar operario':'Nuevo operario'}</div>
+              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
+              <button style={saveBtn()} onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('operarios')}>Volver</button>
+            </>}
+
+            {/* ── ABONOS ── */}
+            {modal === 'abonos' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Abonos de base</div>
+              {abonos.map(a => (
+                <div key={a.id} style={listItem}>
+                  <div style={{ fontSize:13, fontWeight:500 }}>{a.nombre}</div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
+                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('abonos',a.id,'abonos')}>Eliminar</button>
+                  </div>
+                </div>
+              ))}
+              <button style={addBtn} onClick={() => abrir('editarAbono',{})}>+ Agregar abono</button>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'editarAbono' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar abono':'Nuevo abono'}</div>
+              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
+              <button style={saveBtn()} onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('abonos')}>Volver</button>
+            </>}
+
+            {/* ── BLOQUES ── */}
+            {modal === 'bloques' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:6 }}>Tipo de bloques</div>
+              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Tocá un bloque para cambiar si es invernadero o campo abierto</div>
+              {campos.map(campo => (
+                <div key={campo.id}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', padding:'10px 0 6px' }}>{campo.nombre}</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
+                    {bloques.filter(b => b.campo_id === campo.id).map(b => (
+                      <div key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })}
+                        style={{ padding:'6px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', border:'1px solid #e8e6e2', background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
+                        {b.codigo} · {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'editarBloque' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:6 }}>Bloque {form.codigo}</div>
+              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Seleccioná el tipo de este bloque</div>
+              <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+                {['invernadero','campo_abierto'].map(t => (
+                  <button key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ flex:1, padding:14, borderRadius:14, border:'1px solid #e8e6e2', fontSize:13, fontWeight:600, cursor:'pointer', background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
+                    {t === 'invernadero' ? 'Invernadero' : 'Campo abierto'}
+                  </button>
+                ))}
+              </div>
+              <button style={saveBtn()} onClick={guardarBloque} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button style={cancelBtn} onClick={() => abrir('bloques')}>Volver</button>
+            </>}
+
+          </div>
         </div>
       )}
-      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} />
-    </BrowserRouter>
+    </div>
   )
 }
