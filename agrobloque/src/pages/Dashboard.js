@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import DesktopDashboard from './DesktopDashboard'
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 
@@ -90,6 +91,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
   const hoy = new Date().toISOString().split('T')[0]
   const compacto = viewportWidth < 430
   const muyChico = viewportWidth < 375
+  const usarDashboardEscritorio = viewportWidth >= 1100
 
   const cargarStats = async (campo) => {
     if (!campo?.id) return
@@ -111,6 +113,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
       supabase
         .from('tareas')
         .select('*, campos(nombre), bloques(codigo)')
+        .eq('campo_id', campo.id)
         .eq('completada', false)
         .lte('fecha_programada', hoy)
         .order('fecha_programada'),
@@ -155,6 +158,10 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(CAMPO_STORAGE_KEY, campo.id)
     }
+  }
+
+  if (usarDashboardEscritorio) {
+    return <DesktopDashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} />
   }
 
   return (
