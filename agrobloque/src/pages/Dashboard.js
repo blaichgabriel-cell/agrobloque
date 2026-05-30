@@ -81,6 +81,25 @@ const cardBlanca = {
   boxShadow: '0 18px 35px rgba(0,0,0,0.22)',
 }
 
+const elegirCampoConDatos = (campos, bloques = [], guardado) => {
+  if (!campos || campos.length === 0) return null
+  const conteo = bloques.reduce((acc, b) => {
+    if (b.campo_id) acc[b.campo_id] = (acc[b.campo_id] || 0) + 1
+    return acc
+  }, {})
+  const campoGuardado = campos.find(c => c.id === guardado)
+  const campoConMasBloques = campos.reduce((mejor, campo) => {
+    return (conteo[campo.id] || 0) > (conteo[mejor.id] || 0) ? campo : mejor
+  }, campos[0])
+  const hayCampoConDatos = (conteo[campoConMasBloques.id] || 0) > 0
+
+  if (campoGuardado && (!hayCampoConDatos || (conteo[campoGuardado.id] || 0) > 0)) {
+    return campoGuardado
+  }
+
+  return campoConMasBloques
+}
+
 export default function Dashboard({ campoActivo, setCampoActivo }) {
   const [campos, setCampos] = useState([])
   const [stats, setStats] = useState({ bloques: 0, activos: 0, cultivos: 0, operarios: 0 })
@@ -131,7 +150,10 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
 
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase.from('campos').select('*').order('nombre')
+      const [{ data }, { data: bloques }] = await Promise.all([
+        supabase.from('campos').select('*').order('nombre'),
+        supabase.from('bloques').select('campo_id'),
+      ])
       if (!data || data.length === 0) {
         setLoading(false)
         return
@@ -141,7 +163,7 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
       const guardado = typeof window !== 'undefined'
         ? window.localStorage.getItem(CAMPO_STORAGE_KEY)
         : null
-      const campo = campoActivo || data.find(c => c.id === guardado) || data[0]
+      const campo = campoActivo || elegirCampoConDatos(data, bloques || [], guardado)
       if (!campoActivo) setCampoActivo(campo)
       await cargarStats(campo)
     }
