@@ -43,6 +43,7 @@ const allTabs = [
 ]
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
+const SIDEBAR_WIDTH = 260
 
 const getStoredCampoId = () => {
   if (typeof window === 'undefined') return null
@@ -54,13 +55,13 @@ function DesktopSidebar() {
   const location = useLocation()
   return (
     <div style={{
-      width: 220,
+      width: SIDEBAR_WIDTH,
       minHeight: '100vh',
-      background: '#fff',
-      borderRight: '1px solid #e8e6e2',
+      background: 'linear-gradient(180deg, #080b0a 0%, #121512 52%, #080a09 100%)',
+      borderRight: '1px solid rgba(255,255,255,0.07)',
       display: 'flex',
       flexDirection: 'column',
-      padding: '24px 0',
+      padding: '28px 0',
       position: 'fixed',
       left: 0,
       top: 0,
@@ -68,47 +69,57 @@ function DesktopSidebar() {
       zIndex: 100,
     }}>
       {/* Logo */}
-      <div style={{ padding: '0 20px 24px', borderBottom: '1px solid #f2f1ef', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <LogoHS size={36} />
+      <div style={{ padding: '0 24px 30px', marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 14, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', color: '#fff', fontWeight: 900, fontSize: 24, letterSpacing: -2, fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif" }}>
+            HS
+            <span style={{ position: 'absolute', top: 8, right: 9, width: 14, height: 7, background: '#7bc043', borderRadius: '14px 14px 2px 14px', transform: 'rotate(-10deg)' }} />
+          </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#0a0a0a', letterSpacing: -0.3 }}>AgroBloque</div>
-            <div style={{ fontSize: 10, color: '#9a9a9a' }}>El Sembrador</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', letterSpacing: 1.1, textTransform: 'uppercase' }}>Horticultura</div>
+            <div style={{ fontSize: 17, color: '#fff', fontWeight: 800, letterSpacing: -0.2 }}>El Sembrador</div>
           </div>
         </div>
       </div>
 
       {/* Nav items */}
-      <div style={{ flex: 1, padding: '0 10px', overflowY: 'auto' }}>
+      <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto' }}>
         {allTabs.map(t => {
           const active = location.pathname === t.path
           return (
             <div key={t.path} onClick={() => navigate(t.path)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 12px', borderRadius: 12, marginBottom: 2,
+                padding: '12px 14px', borderRadius: 12, marginBottom: 5,
                 cursor: 'pointer',
-                background: active ? '#212121' : 'transparent',
+                background: active ? 'linear-gradient(90deg, rgba(123,192,67,0.22), rgba(255,255,255,0.07))' : 'transparent',
                 transition: 'background 0.15s',
               }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#f2f1ef' }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
               onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
             >
-              <i className={`ti ${t.icon}`} style={{ fontSize: 17, color: active ? '#fff' : '#555' }} aria-hidden="true"></i>
-              <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? '#fff' : '#333' }}>{t.label}</span>
+              <i className={`ti ${t.icon}`} style={{ fontSize: 19, color: active ? '#7bc043' : 'rgba(255,255,255,0.86)' }} aria-hidden="true"></i>
+              <span style={{ fontSize: 15, fontWeight: active ? 700 : 500, color: active ? '#fff' : 'rgba(255,255,255,0.86)' }}>{t.label}</span>
             </div>
           )
         })}
       </div>
 
       {/* Cerrar sesión */}
-      <div style={{ padding: '12px 10px 0', borderTop: '1px solid #f2f1ef' }}>
+      <div style={{ padding: '16px 16px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px 16px', color: '#fff' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#4f9e2f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>G</div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>Gabriel</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>Administrador</div>
+          </div>
+        </div>
         <div onClick={() => supabase.auth.signOut()}
           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, cursor: 'pointer' }}
-          onMouseEnter={e => e.currentTarget.style.background = '#fff0f0'}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
-          <i className="ti ti-logout" style={{ fontSize: 17, color: '#c84040' }} aria-hidden="true"></i>
+          <i className="ti ti-logout" style={{ fontSize: 17, color: '#ff8f8f' }} aria-hidden="true"></i>
           <span style={{ fontSize: 13, color: '#c84040' }}>Cerrar sesión</span>
         </div>
       </div>
@@ -118,6 +129,8 @@ function DesktopSidebar() {
 
 function AppLayout({ campoActivo, setCampoActivo }) {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768)
+  const location = useLocation()
+  const dashboardDesktop = isDesktop && location.pathname === '/'
 
   useEffect(() => {
     const handler = () => setIsDesktop(window.innerWidth >= 768)
@@ -126,22 +139,21 @@ function AppLayout({ campoActivo, setCampoActivo }) {
   }, [])
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f2f1ef' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#f6f7f5' : '#f2f1ef' }}>
       {isDesktop && <DesktopSidebar />}
 
       <div style={{
         flex: 1,
-        marginLeft: isDesktop ? 220 : 0,
+        marginLeft: isDesktop ? SIDEBAR_WIDTH : 0,
         minHeight: '100vh',
-        background: '#f2f1ef',
+        background: dashboardDesktop ? '#f6f7f5' : '#f2f1ef',
         paddingBottom: isDesktop ? 0 : 64,
-        // En desktop, limitar el ancho del contenido para que no sea demasiado ancho
-        maxWidth: isDesktop ? 'calc(100vw - 220px)' : '100%',
+        maxWidth: isDesktop ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100%',
       }}>
-        {/* En desktop, centrar el contenido */}
         <div style={{
-          maxWidth: isDesktop ? 900 : 480,
-          margin: '0 auto',
+          maxWidth: dashboardDesktop ? 'none' : (isDesktop ? 900 : 480),
+          width: '100%',
+          margin: dashboardDesktop ? 0 : '0 auto',
           minHeight: '100vh',
         }}>
           <Routes>
