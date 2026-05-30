@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
 const fmtGs = (n) => n > 0 ? `Gs. ${Math.round(n).toLocaleString('es-PY')}` : '—'
 const fmtKg = (n) => { const num = Number(n)||0; return num % 1 === 0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY', {minimumFractionDigits:1, maximumFractionDigits:2}) }
@@ -239,6 +240,7 @@ export default function Reportes({ campoActivo }) {
             </div>
           )}
         </>}
+        <NotasPanel modulo="reportes" titulo="Blog de notas de reportes" />
       </div>
     </div>
   )

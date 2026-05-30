@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
@@ -304,6 +305,10 @@ export default function Inventario() {
           </div>
         </>
       )}
+
+      <div style={{ padding:'0 14px 100px' }}>
+        <NotasPanel modulo="inventario" titulo="Blog de notas de inventario" />
+      </div>
 
       {/* Modal producto */}
       {modal === 'form' && (

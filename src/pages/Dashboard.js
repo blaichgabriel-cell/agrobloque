@@ -1,44 +1,203 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import DesktopDashboard from './DesktopDashboard'
 
-function LogoHS({ size = 36 }) {
-  const fs = Math.round(size * 0.72)
+const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
+
+function LogoHS({ size = 56 }) {
   return (
-    <div style={{ width:size, height:size, background:'#212121', borderRadius:Math.round(size*0.22), display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-      <span style={{ fontSize:fs, fontWeight:800, color:'#fff', letterSpacing:-2, lineHeight:1, fontFamily:"'Arial Black', 'Arial Bold', Arial, sans-serif" }}>HS</span>
+    <div style={{
+      width: size,
+      height: size,
+      borderRadius: 18,
+      border: '1px solid rgba(255,255,255,0.22)',
+      background: 'linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+      boxShadow: '0 14px 34px rgba(0,0,0,0.35)',
+      flexShrink: 0,
+    }}>
+      <span style={{
+        color: '#fff',
+        fontSize: Math.round(size * 0.42),
+        fontWeight: 900,
+        letterSpacing: -2,
+        lineHeight: 1,
+        fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif",
+      }}>HS</span>
+      <span style={{
+        position: 'absolute',
+        top: 12,
+        right: 13,
+        width: 17,
+        height: 8,
+        background: '#7bc043',
+        borderRadius: '16px 16px 2px 16px',
+        transform: 'rotate(-8deg)',
+      }} />
     </div>
   )
 }
 
+function WatermarkHS({ compact }) {
+  const width = compact ? 180 : 230
+  const height = compact ? 150 : 190
+
+  return (
+    <svg
+      viewBox="0 0 260 220"
+      width={width}
+      height={height}
+      style={{
+        position: 'absolute',
+        right: compact ? 8 : 22,
+        top: compact ? 54 : 58,
+        opacity: 0.16,
+        pointerEvents: 'none',
+      }}
+      aria-hidden="true"
+    >
+      <text x="10" y="170" fontFamily="Georgia, 'Times New Roman', serif" fontSize="132" fontWeight="800" fill="#fff" letterSpacing="-9">HS</text>
+      <path d="M145 69c10-22 19-35 27-51 16 25 16 48-1 72-10 14-21 23-32 30 0-18 0-34 6-51z" fill="#fff"/>
+      <path d="M119 86c-23-4-39-12-52-29 31-1 53 10 66 33 7 12 10 24 10 36-11-13-17-27-24-40z" fill="#fff"/>
+      <path d="M187 91c18-19 39-27 66-25-8 28-26 45-53 52-15 4-29 4-42 1 9-8 18-16 29-28z" fill="#fff"/>
+      <path d="M165 114c17-30 39-46 70-51-4 34-22 59-53 73-19 8-37 11-55 9 14-8 26-18 38-31z" fill="#fff"/>
+      <path d="M214 146c30-17 58-25 84-23-25 20-51 34-82 43-22 6-43 9-63 8 20-7 40-16 61-28z" fill="none" stroke="#fff" strokeWidth="6" strokeLinecap="round"/>
+      <path d="M222 174c24-13 49-20 74-21-23 19-47 32-75 40-17 5-34 7-50 7 16-6 33-14 51-26z" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function useViewportWidth() {
+  const [width, setWidth] = useState(typeof window === 'undefined' ? 480 : window.innerWidth)
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return width
+}
+
+const accesos = [
+  { icon: 'ti-map', label: 'Mapa', sub: 'Ver bloques', path: '/mapa', green: true },
+  { icon: 'ti-calendar', label: 'Agenda', sub: 'Tareas', path: '/agenda', green: true },
+  { icon: 'ti-seedling', label: 'Vivero', sub: 'Plantines', path: '/vivero', green: true },
+  { icon: 'ti-users', label: 'Asistencia', sub: 'Planilla', path: '/asistencia' },
+  { icon: 'ti-chart-bar', label: 'Reportes', sub: 'Rentabilidad', path: '/reportes' },
+  { icon: 'ti-spray', label: 'Fumigaciones', sub: 'Historial', path: '/fumigaciones', green: true },
+  { icon: 'ti-box', label: 'Inventario', sub: 'Stock', path: '/inventario' },
+  { icon: 'ti-cut', label: 'Cosecha', sub: 'Produccion', path: '/cosecha' },
+  { icon: 'ti-coin', label: 'Costos', sub: 'Gastos', path: '/costos' },
+]
+
+const fondo = {
+  minHeight: '100vh',
+  background: `
+    radial-gradient(circle at 20% 0%, rgba(74,124,50,0.22), transparent 28%),
+    radial-gradient(circle at 90% 30%, rgba(200,170,95,0.14), transparent 30%),
+    linear-gradient(180deg, #090b0a 0%, #111310 48%, #090a09 100%)
+  `,
+  color: '#fff',
+}
+
+const cardBlanca = {
+  background: 'linear-gradient(145deg, #ffffff, #f5f5f3)',
+  border: '1px solid rgba(255,255,255,0.82)',
+  boxShadow: '0 18px 35px rgba(0,0,0,0.22)',
+}
+
+const elegirCampoConDatos = (campos, bloques = [], guardado) => {
+  if (!campos || campos.length === 0) return null
+  const conteo = bloques.reduce((acc, b) => {
+    if (b.campo_id) acc[b.campo_id] = (acc[b.campo_id] || 0) + 1
+    return acc
+  }, {})
+  const campoGuardado = campos.find(c => c.id === guardado)
+  const campoConMasBloques = campos.reduce((mejor, campo) => {
+    return (conteo[campo.id] || 0) > (conteo[mejor.id] || 0) ? campo : mejor
+  }, campos[0])
+  const hayCampoConDatos = (conteo[campoConMasBloques.id] || 0) > 0
+
+  if (campoGuardado && (!hayCampoConDatos || (conteo[campoGuardado.id] || 0) > 0)) {
+    return campoGuardado
+  }
+
+  return campoConMasBloques
+}
+
 export default function Dashboard({ campoActivo, setCampoActivo }) {
   const [campos, setCampos] = useState([])
-  const [stats, setStats] = useState({ bloques:0, activos:0, cultivos:0, operarios:0 })
+  const [stats, setStats] = useState({ bloques: 0, activos: 0, cultivos: 0, operarios: 0 })
   const [alertas, setAlertas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const viewportWidth = useViewportWidth()
   const navigate = useNavigate()
   const hoy = new Date().toISOString().split('T')[0]
+  const compacto = viewportWidth < 520
+  const muyChico = viewportWidth < 375
+  const usarDashboardEscritorio = viewportWidth >= 1100
 
   const cargarStats = async (campo) => {
-    const [{ data: bloques }, { data: plantas }, { data: ops }, { data: tareas }] = await Promise.all([
-      supabase.from('bloques').select('id, activo').eq('campo_id', campo.id),
-      supabase.from('plantaciones').select('id').eq('activa', true),
+    if (!campo?.id) return
+    setLoading(true)
+
+    const { data: bloques } = await supabase
+      .from('bloques')
+      .select('id, activo')
+      .eq('campo_id', campo.id)
+
+    const bloqueIds = (bloques || []).map(b => b.id)
+    const plantacionesQuery = bloqueIds.length > 0
+      ? supabase.from('plantaciones').select('id').eq('activa', true).in('bloque_id', bloqueIds)
+      : Promise.resolve({ data: [] })
+
+    const [{ data: plantas }, { data: ops }, { data: tareas }] = await Promise.all([
+      plantacionesQuery,
       supabase.from('operarios').select('id').eq('campo_id', campo.id),
-      supabase.from('tareas').select('*, campos(nombre), bloques(codigo)').eq('completada', false).lte('fecha_programada', hoy).order('fecha_programada'),
+      supabase
+        .from('tareas')
+        .select('*, campos(nombre), bloques(codigo)')
+        .eq('campo_id', campo.id)
+        .eq('completada', false)
+        .lte('fecha_programada', hoy)
+        .order('fecha_programada'),
     ])
-    setStats({ bloques: bloques?.length||0, activos: bloques?.filter(b=>b.activo).length||0, cultivos: plantas?.length||0, operarios: ops?.length||0 })
+
+    setStats({
+      bloques: bloques?.length || 0,
+      activos: bloques?.filter(b => b.activo).length || 0,
+      cultivos: plantas?.length || 0,
+      operarios: ops?.length || 0,
+    })
     setAlertas(tareas || [])
+    setLoading(false)
   }
 
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase.from('campos').select('*').order('nombre')
-      if (!data || data.length === 0) return
+      const [{ data }, { data: bloques }] = await Promise.all([
+        supabase.from('campos').select('*').order('nombre'),
+        supabase.from('bloques').select('campo_id'),
+      ])
+      if (!data || data.length === 0) {
+        setLoading(false)
+        return
+      }
+
       setCampos(data)
-      const campoGuardado = typeof window !== 'undefined' ? window.localStorage.getItem('agrobloque-campo-activo') : null
-      const campo = campoActivo || data.find(c => c.id === campoGuardado) || data[0]
+      const guardado = typeof window !== 'undefined'
+        ? window.localStorage.getItem(CAMPO_STORAGE_KEY)
+        : null
+      const campo = campoActivo || elegirCampoConDatos(data, bloques || [], guardado)
       if (!campoActivo) setCampoActivo(campo)
       await cargarStats(campo)
     }
+
     init()
   }, [])
 
@@ -46,97 +205,219 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
     if (campoActivo) cargarStats(campoActivo)
   }, [campoActivo])
 
-  const accesos = [
-    { icon:'ti-map',        label:'Mapa',         sub:'Ver bloques',    path:'/mapa',         bg:'#eeeeee', color:'#212121' },
-    { icon:'ti-calendar',   label:'Agenda',       sub:'Tareas',         path:'/agenda',       bg:'#eeeeee', color:'#212121' },
-    { icon:'ti-users',      label:'Asistencia',   sub:'Planilla',       path:'/asistencia',   bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-chart-bar',  label:'Reportes',     sub:'Rentabilidad',   path:'/reportes',     bg:'#eeeeee', color:'#212121' },
-    { icon:'ti-spray',      label:'Fumigaciones', sub:'Historial',      path:'/fumigaciones', bg:'#fff3e8', color:'#e07b00' },
-    { icon:'ti-package',    label:'Inventario',   sub:'Stock',          path:'/inventario',   bg:'#f2f1ef', color:'#0a0a0a' },
-    { icon:'ti-cut',        label:'Cosecha',      sub:'Produccion',     path:'/cosecha',      bg:'#eeeeee', color:'#212121' },
-    { icon:'ti-coin',       label:'Costos',       sub:'Gastos',         path:'/costos',       bg:'#fff3e8', color:'#e07b00' },
-  ]
+  const seleccionarCampo = (campo) => {
+    setCampoActivo(campo)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CAMPO_STORAGE_KEY, campo.id)
+    }
+  }
+
+  if (usarDashboardEscritorio) {
+    return <DesktopDashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} />
+  }
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <LogoHS size={38} />
+    <div style={fondo}>
+      <div style={{ padding: compacto ? '16px 14px 88px' : '24px 20px 100px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: compacto ? 16 : 26 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: compacto ? 12 : 16 }}>
+            <LogoHS size={compacto ? 46 : 58} />
             <div>
-              <div style={{ fontSize:11, color:'#9a9a9a', letterSpacing:.3 }}>HORTICULTURA</div>
-              <div style={{ fontSize:17, fontWeight:700, color:'#212121', letterSpacing:-.3, lineHeight:1.1 }}>El Sembrador</div>
+              <div style={{ fontSize: compacto ? 11 : 13, color: 'rgba(255,255,255,0.56)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 3 }}>
+                Horticultura
+              </div>
+              <div style={{ fontSize: compacto ? 21 : 24, color: '#fff', fontWeight: 850, letterSpacing: -0.7, lineHeight: 1.05 }}>
+                El Sembrador
+              </div>
             </div>
           </div>
-          <button onClick={() => navigate('/agenda')} style={{ width:42, height:42, borderRadius:'50%', background: alertas.length > 0 ? '#212121' : '#e8e6e2', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative' }}>
-            <i className="ti ti-bell" style={{ fontSize:20, color: alertas.length > 0 ? '#fff' : '#9a9a9a' }} aria-hidden="true"></i>
-            {alertas.length > 0 && <div style={{ position:'absolute', top:-3, right:-3, background:'#e07b00', borderRadius:10, padding:'1px 5px', fontSize:8, fontWeight:700, color:'#fff', border:'2px solid #f2f1ef' }}>{alertas.length}</div>}
+
+          <button onClick={() => navigate('/agenda')} style={{
+            width: compacto ? 38 : 48,
+            height: compacto ? 38 : 48,
+            borderRadius: 18,
+            border: 'none',
+            background: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            cursor: 'pointer',
+          }} aria-label="Abrir agenda">
+            <i className="ti ti-bell" style={{ fontSize: compacto ? 25 : 31, color: '#fff' }} aria-hidden="true"></i>
+            <span style={{
+              position: 'absolute',
+              top: 7,
+              right: 8,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: alertas.length > 0 ? '#7bc043' : 'rgba(123,192,67,0.45)',
+            }} />
           </button>
         </div>
 
-        <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:4 }}>
-          {campos.map(c => (
-            <button key={c.id} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#212121' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }} onClick={() => setCampoActivo(c)}>
-              {c.nombre}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${Math.max(campos.length, 1)}, minmax(0, 1fr))`,
+          gap: compacto ? 6 : 8,
+          padding: compacto ? 5 : 8,
+          borderRadius: compacto ? 22 : 28,
+          marginBottom: compacto ? 12 : 18,
+          background: 'linear-gradient(145deg, rgba(255,255,255,0.13), rgba(255,255,255,0.06))',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+        }}>
+          {campos.length === 0 ? (
+            <div style={{ padding: 14, color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>Sin campos</div>
+          ) : campos.map(campo => {
+            const activo = campoActivo?.id === campo.id
+            return (
+              <button key={campo.id} onClick={() => seleccionarCampo(campo)} style={{
+                minHeight: compacto ? 42 : 54,
+                borderRadius: compacto ? 17 : 22,
+                border: 'none',
+                background: activo ? '#050706' : 'rgba(255,255,255,0.03)',
+                color: activo ? '#fff' : 'rgba(255,255,255,0.72)',
+                fontSize: compacto ? 13 : 16,
+                fontWeight: activo ? 800 : 500,
+                cursor: 'pointer',
+                boxShadow: activo ? '0 14px 24px rgba(0,0,0,0.32)' : 'none',
+              }}>
+                {campo.nombre}
+              </button>
+            )
+          })}
+        </div>
+
+        <div style={{
+          borderRadius: compacto ? 20 : 24,
+          border: '1px solid rgba(255,255,255,0.22)',
+          background: `
+            radial-gradient(circle at 78% 20%, rgba(140,116,70,0.30), transparent 35%),
+            linear-gradient(135deg, #080b0a 0%, #171a18 52%, #231f16 100%)
+          `,
+          padding: compacto ? '18px 16px 18px' : '26px 24px 24px',
+          marginBottom: compacto ? 12 : 18,
+          boxShadow: '0 24px 60px rgba(0,0,0,0.42)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          <WatermarkHS compact={compacto} />
+          <div style={{
+            position: 'absolute',
+            right: 22,
+            bottom: 28,
+            width: compacto ? 126 : 150,
+            height: compacto ? 70 : 82,
+            borderTop: '3px solid rgba(255,255,255,0.08)',
+            borderRadius: '70% 0 0 0',
+            transform: 'rotate(-16deg)',
+            pointerEvents: 'none',
+          }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
+            <div>
+              <div style={{ fontSize: compacto ? 12 : 15, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: compacto ? 10 : 16 }}>
+                Bloques activos
+              </div>
+              <div style={{ fontSize: muyChico ? 46 : compacto ? 52 : 66, lineHeight: 0.9, fontWeight: 900, letterSpacing: -4, color: '#fff' }}>
+                {loading ? '-' : stats.activos}
+              </div>
+              <div style={{ fontSize: compacto ? 15 : 19, color: '#fff', marginTop: compacto ? 9 : 14 }}>
+                de {stats.bloques} totales
+              </div>
+            </div>
+            <div style={{
+              width: compacto ? 44 : 58,
+              height: compacto ? 44 : 58,
+              borderRadius: compacto ? 15 : 17,
+              border: '1px solid rgba(255,255,255,0.22)',
+              background: 'rgba(255,255,255,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <i className="ti ti-chart-bar" style={{ color: '#7bc043', fontSize: compacto ? 25 : 32 }} aria-hidden="true"></i>
+            </div>
+          </div>
+
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.18)', margin: compacto ? '20px 0 16px' : '34px 0 22px' }} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '33.333%', top: '8%', bottom: '8%', width: 1, background: 'rgba(255,255,255,0.20)' }} />
+            <span style={{ position: 'absolute', left: '66.666%', top: '8%', bottom: '8%', width: 1, background: 'rgba(255,255,255,0.20)' }} />
+            <MiniStat icon="ti-plant-2" label="Cultivos" value={stats.cultivos} compact={compacto} />
+            <MiniStat icon="ti-users" label="Operarios" value={stats.operarios} compact={compacto} />
+            <MiniStat icon="ti-alert-triangle" label="Alertas" value={alertas.length} compact={compacto} />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: compacto ? 7 : 12 }}>
+          {accesos.map(item => (
+            <button key={item.path} onClick={() => navigate(item.path)} style={{
+              ...cardBlanca,
+              minHeight: compacto ? 68 : 98,
+              borderRadius: compacto ? 16 : 22,
+              padding: compacto ? '10px 9px' : '18px 14px',
+              display: 'grid',
+              gridTemplateColumns: compacto ? '34px minmax(0, 1fr) 12px' : '54px minmax(0, 1fr) 18px',
+              alignItems: 'center',
+              gap: compacto ? 7 : 12,
+              cursor: 'pointer',
+              textAlign: 'left',
+              boxSizing: 'border-box',
+              minWidth: 0,
+            }}>
+              <span style={{
+                width: compacto ? 34 : 54,
+                height: compacto ? 34 : 54,
+                borderRadius: compacto ? 12 : 18,
+                background: item.green ? '#eef6ea' : '#f1f1f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <i className={`ti ${item.icon}`} style={{ fontSize: compacto ? 20 : 29, color: item.green ? '#2f741f' : '#080908' }} aria-hidden="true"></i>
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <span style={{
+                  display: 'block',
+                  color: '#050505',
+                  fontSize: compacto ? (item.label.length > 10 ? 11.5 : 13) : 18,
+                  fontWeight: 850,
+                  letterSpacing: -0.2,
+                  lineHeight: 1.1,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}>
+                  {item.label}
+                </span>
+                <span style={{ display: 'block', color: '#4f5358', fontSize: compacto ? 11.5 : 14, marginTop: compacto ? 3 : 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {item.sub}
+                </span>
+              </span>
+              <i className="ti ti-chevron-right" style={{ color: '#151515', fontSize: compacto ? 17 : 22, justifySelf: 'end' }} aria-hidden="true"></i>
             </button>
           ))}
         </div>
       </div>
+    </div>
+  )
+}
 
-      <div style={{ padding:'0 14px 100px' }}>
-        <div style={{ background:'#212121', borderRadius:24, padding:20, marginBottom:10 }}>
-          <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', letterSpacing:.05, textTransform:'uppercase', marginBottom:6 }}>Bloques activos</div>
-          <div style={{ fontSize:52, fontWeight:800, color:'#fff', lineHeight:1, letterSpacing:-2 }}>{stats.activos}</div>
-          <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', marginTop:4, marginBottom:18 }}>de {stats.bloques} totales · {campoActivo?.nombre}</div>
-          <div style={{ display:'flex' }}>
-            <div style={{ flex:1, borderRight:'1px solid rgba(255,255,255,0.1)', paddingRight:12 }}>
-              <div style={{ fontSize:9, color:'rgba(255,255,255,0.4)', marginBottom:3 }}>Cultivos</div>
-              <div style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.85)' }}>{stats.cultivos} activos</div>
-            </div>
-            <div style={{ flex:1, padding:'0 12px', borderRight:'1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ fontSize:9, color:'rgba(255,255,255,0.4)', marginBottom:3 }}>Operarios</div>
-              <div style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.85)' }}>{stats.operarios}</div>
-            </div>
-            <div style={{ flex:1, paddingLeft:12 }}>
-              <div style={{ fontSize:9, color:'rgba(255,255,255,0.4)', marginBottom:3 }}>Alertas</div>
-              <div style={{ fontSize:13, fontWeight:600, color: alertas.length > 0 ? '#f0c060' : 'rgba(255,255,255,0.85)' }}>{alertas.length}</div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
-          {accesos.map((a, i) => (
-            <div key={i} onClick={() => navigate(a.path)} style={{ background:'#fff', borderRadius:20, padding:'16px 14px', cursor:'pointer' }}>
-              <div style={{ width:36, height:36, borderRadius:11, background:a.bg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12 }}>
-                <i className={`ti ${a.icon}`} style={{ fontSize:17, color:a.color }} aria-hidden="true"></i>
-              </div>
-              <div style={{ fontSize:15, fontWeight:700, color:'#0a0a0a', letterSpacing:-.3 }}>{a.label}</div>
-              <div style={{ fontSize:9, color:'#b0b0b0', marginTop:2 }}>{a.sub}</div>
-            </div>
-          ))}
-        </div>
-
-        {alertas.length > 0 && (
-          <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px' }}>
-            <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a', marginBottom:10, display:'flex', justifyContent:'space-between' }}>
-              Alertas activas
-              <button onClick={() => navigate('/agenda')} style={{ fontSize:11, color:'#212121', background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>Ver todas</button>
-            </div>
-            {alertas.slice(0,3).map(a => (
-              <div key={a.id} onClick={() => navigate('/agenda')} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid #f2f1ef', cursor:'pointer' }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background: a.fecha_programada < hoy ? '#c84040' : '#e07b00', flexShrink:0 }}></div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:12, fontWeight:500, color:'#0a0a0a' }}>{a.descripcion}</div>
-                  <div style={{ fontSize:10, color:'#9a9a9a', marginTop:1 }}>{a.campos?.nombre}{a.bloques?.codigo ? ' · ' + a.bloques.codigo : ''} · {a.fecha_programada}</div>
-                </div>
-                <div style={{ fontSize:9, fontWeight:600, padding:'2px 8px', borderRadius:8, background: a.fecha_programada < hoy ? '#fff0f0' : '#fff3e8', color: a.fecha_programada < hoy ? '#c84040' : '#c8700a' }}>
-                  {a.fecha_programada < hoy ? 'Vencida' : 'Hoy'}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+function MiniStat({ icon, label, value, compact }) {
+  return (
+    <div style={{
+      padding: compact ? '0 7px' : '0 18px',
+      minWidth: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 9, color: '#fff', marginBottom: compact ? 8 : 13 }}>
+        <i className={`ti ${icon}`} style={{ color: '#7bc043', fontSize: compact ? 19 : 27, flexShrink: 0 }} aria-hidden="true"></i>
+        <span style={{ fontSize: compact ? 11.5 : 16, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       </div>
+      <div style={{ fontSize: compact ? 25 : 34, color: '#fff', fontWeight: 900, lineHeight: 1 }}>{value}</div>
     </div>
   )
 }

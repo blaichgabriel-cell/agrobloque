@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
@@ -58,7 +59,7 @@ const calidadLabel = (calidad) => calidad === 'primera'
     ? '2da calidad'
     : 'Mixta'
 
-function ModalDetalle({ cosecha, onClose, onDelete }) {
+function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
   const ingreso = (Number(cosecha.kg_total) || 0) * (Number(cosecha.precio_kg) || 0)
   const cultivo = getCultivoCosecha(cosecha)
   const item = { display:'flex', justifyContent:'space-between', gap:16, padding:'11px 0', borderBottom:'1px solid #eeeeee' }
@@ -105,9 +106,14 @@ function ModalDetalle({ cosecha, onClose, onDelete }) {
           </div>
         )}
 
-        <button onClick={onDelete} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-          Eliminar cosecha
-        </button>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          <button onClick={onEdit} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #d9ddd8', background:'#fff', color:'#212121', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            Editar cosecha
+          </button>
+          <button onClick={onDelete} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            Eliminar
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -153,21 +159,49 @@ export default function Cosecha() {
     setCompradores(data || [])
   }
 
+  const limpiarForm = () => setForm({ bloque_id:'', fecha:'', kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
+
+  const abrirNuevaCosecha = () => {
+    limpiarForm()
+    setModal(true)
+  }
+
+  const abrirEditarCosecha = (cosecha) => {
+    const campoId = campos.find(c => c.nombre === cosecha.bloques?.campos?.nombre)?.id || campoFiltro || ''
+    if (campoId) setCampoFiltro(campoId)
+    setForm({
+      id: cosecha.id,
+      bloque_id: cosecha.bloque_id || '',
+      fecha: cosecha.fecha || '',
+      kg_total: cosecha.kg_total || '',
+      precio_kg: cosecha.precio_kg ? Number(cosecha.precio_kg).toLocaleString('es-PY') : '',
+      calidad: cosecha.calidad || 'primera',
+      comprador_id: cosecha.comprador_id || '',
+      notas: cosecha.notas || ''
+    })
+    setDetalle(null)
+    setModal(true)
+  }
+
   const guardar = async () => {
     if (!form.bloque_id || !form.fecha || !form.kg_total) return
     setSaving(true); setError('')
     try {
-      const { error } = await supabase.from('cosechas').insert({
+      const payload = {
         bloque_id: form.bloque_id, fecha: form.fecha,
         kg_total: parsearKg(form.kg_total),
         precio_kg: parsearGs(form.precio_kg),
         calidad: form.calidad,
         comprador_id: form.comprador_id || null,
         notas: form.notas || null
-      })
+      }
+
+      const { error } = form.id
+        ? await supabase.from('cosechas').update(payload).eq('id', form.id)
+        : await supabase.from('cosechas').insert(payload)
       if (error) throw error
       await fetchCosechas(); setModal(false)
-      setForm({ bloque_id:'', fecha:'', kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
+      limpiarForm()
     } catch (e) {
       setError('Error al guardar: ' + e.message)
     }
@@ -192,7 +226,7 @@ export default function Cosecha() {
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-      {detalle && <ModalDetalle cosecha={detalle} onClose={() => setDetalle(null)} onDelete={() => eliminar(detalle.id)} />}
+      {detalle && <ModalDetalle cosecha={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditarCosecha(detalle)} onDelete={() => eliminar(detalle.id)} />}
 
       <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
@@ -200,7 +234,7 @@ export default function Cosecha() {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Producción</div>
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Cosecha</div>
           </div>
-          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+          <button onClick={abrirNuevaCosecha} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
@@ -253,17 +287,21 @@ export default function Cosecha() {
               {c.notas && <div style={{ fontSize:11, color:'#9a9a9a', padding:'7px 10px', background:'#f2f1ef', borderRadius:8, marginBottom:8 }}>{c.notas}</div>}
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <span style={{ fontSize:11, color:'#777' }}>Tocar para ver detalle</span>
-                <button onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }}>Editar</button>
+                  <button onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                </div>
               </div>
             </div>
           )
         })}
+        <NotasPanel modulo="cosecha" titulo="Blog de notas de cosecha" />
       </div>
 
       {modal && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(false)}>
           <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Registrar cosecha</div>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar cosecha' : 'Registrar cosecha'}</div>
             {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Campo</div>
@@ -321,7 +359,7 @@ export default function Cosecha() {
               </div>
             )}
 
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar cosecha'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar cosecha'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </div>

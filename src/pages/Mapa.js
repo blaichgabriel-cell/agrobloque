@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
 const CULTIVO_COLORES = {
   'Morrón':'#c8793a','Tomate':'#c0392b','Pepino':'#27ae60',
@@ -104,6 +105,7 @@ export default function Mapa({ campoActivo }) {
             })}
           </div>
         )}
+        <NotasPanel modulo="mapa" titulo="Blog de notas de mapa" />
       </div>
     </div>
   )

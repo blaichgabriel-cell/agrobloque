@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
@@ -141,6 +142,7 @@ export default function Agenda() {
             </div>
           )
         })}
+        <NotasPanel modulo="agenda" titulo="Blog de notas de agenda" />
       </div>
 
       {modal && (

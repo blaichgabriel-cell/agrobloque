@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
 const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado']
 const DIAS_CORTO = ['L','M','M','J','V','S']
@@ -191,6 +192,7 @@ export default function Asistencia() {
           <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>Total semanal del campo</div>
           <div style={{ fontSize:20, fontWeight:800, color:'#fff', letterSpacing:-.5 }}>Gs. {fmtGs(getTotalGeneral())}</div>
         </div>
+        <NotasPanel modulo="asistencia" titulo="Blog de notas de asistencia" />
       </div>
 
       {/* Modal historial adelantos */}
