@@ -70,6 +70,11 @@ const elegirCampoConDatos = (campos, bloquesPorCampo, guardado) => {
   return campoConMasBloques
 }
 
+const esErrorSesion = (error) => {
+  const texto = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
+  return error?.status === 401 || error?.status === 403 || texto.includes('jwt') || texto.includes('permission')
+}
+
 function DesktopSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -203,15 +208,48 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [campoActivo, setCampoActivo] = useState(null)
+  const [dataError, setDataError] = useState('')
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session); setLoading(false)
-    })
+    let cancelled = false
+
+    const validarSesion = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled) return
+
+      if (!session) {
+        setSession(null)
+        setLoading(false)
+        return
+      }
+
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+      const sesionActual = refreshData?.session || session
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+
+      if (cancelled) return
+
+      if (refreshError || userError || !userData?.user) {
+        await supabase.auth.signOut()
+        setSession(null)
+        setDataError('Tu sesion estaba vencida. Volve a iniciar sesion para cargar los datos.')
+      } else {
+        setSession(sesionActual)
+        setDataError('')
+      }
+      setLoading(false)
+    }
+
+    validarSesion()
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
+      if (session) setDataError('')
     })
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
@@ -222,9 +260,21 @@ export default function App() {
 
     let cancelled = false
     const cargarCampoActivo = async () => {
-      const { data } = await supabase.from('campos').select('*').order('nombre')
+      const { data, error } = await supabase.from('campos').select('*').order('nombre')
+      if (error) {
+        console.error('Error cargando campos', error)
+        setDataError(`Supabase no permitio leer los campos: ${error.message}`)
+        if (esErrorSesion(error)) await supabase.auth.signOut()
+        return
+      }
       if (cancelled || !data || data.length === 0) return
-      const { data: bloques } = await supabase.from('bloques').select('campo_id')
+      const { data: bloques, error: bloquesError } = await supabase.from('bloques').select('campo_id')
+      if (bloquesError) {
+        console.error('Error cargando bloques', bloquesError)
+        setDataError(`Supabase no permitio leer los bloques: ${bloquesError.message}`)
+        if (esErrorSesion(bloquesError)) await supabase.auth.signOut()
+        return
+      }
       const bloquesPorCampo = contarBloquesPorCampo(bloques || [])
 
       setCampoActivo(actual => {
@@ -252,10 +302,24 @@ export default function App() {
     </div>
   )
 
-  if (!session) return <Login />
+  if (!session) return (
+    <>
+      {dataError && (
+        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 520, width: 'calc(100% - 28px)', textAlign: 'center' }}>
+          {dataError}
+        </div>
+      )}
+      <Login />
+    </>
+  )
 
   return (
     <BrowserRouter>
+      {dataError && (
+        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 520, width: 'calc(100% - 28px)', textAlign: 'center' }}>
+          {dataError}
+        </div>
+      )}
       <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} />
     </BrowserRouter>
   )
