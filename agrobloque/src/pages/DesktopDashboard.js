@@ -22,6 +22,25 @@ const quickLinks = [
 
 const cropIcons = ['🍅', '🫑', '🥒', '🥬', '🍆', '🌱']
 
+const elegirCampoConDatos = (campos, bloques = [], guardado) => {
+  if (!campos || campos.length === 0) return null
+  const conteo = bloques.reduce((acc, b) => {
+    if (b.campo_id) acc[b.campo_id] = (acc[b.campo_id] || 0) + 1
+    return acc
+  }, {})
+  const campoGuardado = campos.find(c => c.id === guardado)
+  const campoConMasBloques = campos.reduce((mejor, campo) => {
+    return (conteo[campo.id] || 0) > (conteo[mejor.id] || 0) ? campo : mejor
+  }, campos[0])
+  const hayCampoConDatos = (conteo[campoConMasBloques.id] || 0) > 0
+
+  if (campoGuardado && (!hayCampoConDatos || (conteo[campoGuardado.id] || 0) > 0)) {
+    return campoGuardado
+  }
+
+  return campoConMasBloques
+}
+
 export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
   const navigate = useNavigate()
   const [campos, setCampos] = useState([])
@@ -49,7 +68,10 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
 
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase.from('campos').select('*').order('nombre')
+      const [{ data }, { data: bloques }] = await Promise.all([
+        supabase.from('campos').select('*').order('nombre'),
+        supabase.from('bloques').select('campo_id'),
+      ])
       const lista = data || []
       setCampos(lista)
 
@@ -57,7 +79,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
         const guardado = typeof window !== 'undefined'
           ? window.localStorage.getItem(CAMPO_STORAGE_KEY)
           : null
-        setCampoActivo(lista.find(c => c.id === guardado) || lista[0])
+        setCampoActivo(elegirCampoConDatos(lista, bloques || [], guardado))
       }
     }
 
