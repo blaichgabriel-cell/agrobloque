@@ -187,9 +187,14 @@ export default function Vivero() {
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       <div style={{ padding:'24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
-          <div>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Plantinero</div>
-            <div style={{ fontSize:24, fontWeight:800, color:'#0a0a0a', letterSpacing:-.5 }}>Vivero</div>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{ width:44, height:44, borderRadius:15, background:'#eef6ea', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <i className="ti ti-leaf" style={{ fontSize:24, color:'#2f741f' }} aria-hidden="true"></i>
+            </div>
+            <div>
+              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Plantinero</div>
+              <div style={{ fontSize:24, fontWeight:800, color:'#0a0a0a', letterSpacing:-.5 }}>Vivero</div>
+            </div>
           </div>
           <button onClick={abrirNuevo} style={{ width:42, height:42, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:21 }} aria-hidden="true"></i>
