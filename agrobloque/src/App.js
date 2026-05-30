@@ -27,7 +27,6 @@ export function LogoHS({ size = 48 }) {
   )
 }
 
-// Sidebar para desktop
 const allTabs = [
   { path:'/', icon:'ti-home', label:'Inicio' },
   { path:'/mapa', icon:'ti-map', label:'Mapa' },
@@ -39,7 +38,7 @@ const allTabs = [
   { path:'/costos', icon:'ti-coin', label:'Costos' },
   { path:'/reportes', icon:'ti-chart-bar', label:'Reportes' },
   { path:'/compradores', icon:'ti-building-store', label:'Compradores' },
-  { path:'/configuracion', icon:'ti-settings', label:'Configuración' },
+  { path:'/configuracion', icon:'ti-settings', label:'Configuracion' },
 ]
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
@@ -83,6 +82,7 @@ const esErrorSesion = (error) => {
 function DesktopSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
+
   return (
     <div style={{
       width: SIDEBAR_WIDTH,
@@ -98,7 +98,6 @@ function DesktopSidebar() {
       bottom: 0,
       zIndex: 100,
     }}>
-      {/* Logo */}
       <div style={{ padding: '0 24px 30px', marginBottom: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
           <div style={{ width: 48, height: 48, borderRadius: 14, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', color: '#fff', fontWeight: 900, fontSize: 24, letterSpacing: -2, fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif" }}>
@@ -112,15 +111,18 @@ function DesktopSidebar() {
         </div>
       </div>
 
-      {/* Nav items */}
       <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto' }}>
         {allTabs.map(t => {
           const active = location.pathname === t.path
           return (
             <div key={t.path} onClick={() => navigate(t.path)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '12px 14px', borderRadius: 12, marginBottom: 5,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '12px 14px',
+                borderRadius: 12,
+                marginBottom: 5,
                 cursor: 'pointer',
                 background: active ? 'linear-gradient(90deg, rgba(123,192,67,0.22), rgba(255,255,255,0.07))' : 'transparent',
                 transition: 'background 0.15s',
@@ -135,7 +137,6 @@ function DesktopSidebar() {
         })}
       </div>
 
-      {/* Cerrar sesión */}
       <div style={{ padding: '16px 16px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px 16px', color: '#fff' }}>
           <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#4f9e2f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>G</div>
@@ -150,7 +151,7 @@ function DesktopSidebar() {
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
           <i className="ti ti-logout" style={{ fontSize: 17, color: '#ff8f8f' }} aria-hidden="true"></i>
-          <span style={{ fontSize: 13, color: '#c84040' }}>Cerrar sesión</span>
+          <span style={{ fontSize: 13, color: '#ff8f8f' }}>Cerrar sesion</span>
         </div>
       </div>
     </div>
@@ -215,6 +216,20 @@ export default function App() {
   const [campoActivo, setCampoActivo] = useState(null)
   const [dataError, setDataError] = useState('')
 
+  const limpiarSesionRota = async (mensaje) => {
+    setDataError(mensaje)
+    await forceLocalSignOut(false)
+    setCampoActivo(null)
+    setSession(null)
+
+    if (typeof window === 'undefined') return
+    const resetKey = 'agrobloque-auto-reset-done'
+    if (!window.sessionStorage.getItem(resetKey)) {
+      window.sessionStorage.setItem(resetKey, '1')
+      window.location.replace('/?sesion_limpiada=1')
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -235,9 +250,7 @@ export default function App() {
       if (cancelled) return
 
       if (refreshError || userError || !userData?.user) {
-        await forceLocalSignOut(false)
-        setSession(null)
-        setDataError('Tu sesion estaba vencida. Volve a iniciar sesion para cargar los datos.')
+        await limpiarSesionRota('Tu sesion estaba vencida. Volve a iniciar sesion para cargar los datos.')
       } else {
         setSession(sesionActual)
         setDataError('')
@@ -267,25 +280,26 @@ export default function App() {
     const cargarCampoActivo = async () => {
       const { data, error } = await supabase.from('campos').select('*').order('nombre')
       if (error) {
-        console.error('Error cargando campos', error)
-        setDataError(`Supabase no permitio leer los campos: ${error.message}`)
         if (esErrorSesion(error)) {
-          await forceLocalSignOut(false)
-          setSession(null)
+          await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${error.message}`)
+        } else {
+          setDataError(`Supabase no permitio leer los campos: ${error.message}`)
         }
         return
       }
+
       if (cancelled || !data || data.length === 0) return
+
       const { data: bloques, error: bloquesError } = await supabase.from('bloques').select('campo_id')
       if (bloquesError) {
-        console.error('Error cargando bloques', bloquesError)
-        setDataError(`Supabase no permitio leer los bloques: ${bloquesError.message}`)
         if (esErrorSesion(bloquesError)) {
-          await forceLocalSignOut(false)
-          setSession(null)
+          await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${bloquesError.message}`)
+        } else {
+          setDataError(`Supabase no permitio leer los bloques: ${bloquesError.message}`)
         }
         return
       }
+
       const bloquesPorCampo = contarBloquesPorCampo(bloques || [])
 
       setCampoActivo(actual => {
