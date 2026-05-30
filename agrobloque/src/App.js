@@ -50,6 +50,26 @@ const getStoredCampoId = () => {
   return window.localStorage.getItem(CAMPO_STORAGE_KEY)
 }
 
+const contarBloquesPorCampo = (bloques = []) => bloques.reduce((acc, bloque) => {
+  if (bloque.campo_id) acc[bloque.campo_id] = (acc[bloque.campo_id] || 0) + 1
+  return acc
+}, {})
+
+const elegirCampoConDatos = (campos, bloquesPorCampo, guardado) => {
+  if (!campos || campos.length === 0) return null
+  const campoGuardado = campos.find(c => c.id === guardado)
+  const campoConMasBloques = campos.reduce((mejor, campo) => {
+    return (bloquesPorCampo[campo.id] || 0) > (bloquesPorCampo[mejor.id] || 0) ? campo : mejor
+  }, campos[0])
+  const hayCampoConDatos = (bloquesPorCampo[campoConMasBloques.id] || 0) > 0
+
+  if (campoGuardado && (!hayCampoConDatos || (bloquesPorCampo[campoGuardado.id] || 0) > 0)) {
+    return campoGuardado
+  }
+
+  return campoConMasBloques
+}
+
 function DesktopSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -204,11 +224,13 @@ export default function App() {
     const cargarCampoActivo = async () => {
       const { data } = await supabase.from('campos').select('*').order('nombre')
       if (cancelled || !data || data.length === 0) return
+      const { data: bloques } = await supabase.from('bloques').select('campo_id')
+      const bloquesPorCampo = contarBloquesPorCampo(bloques || [])
 
       setCampoActivo(actual => {
         if (actual && data.some(c => c.id === actual.id)) return actual
         const guardado = getStoredCampoId()
-        return data.find(c => c.id === guardado) || data[0]
+        return elegirCampoConDatos(data, bloquesPorCampo, guardado)
       })
     }
 
