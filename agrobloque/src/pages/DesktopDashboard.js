@@ -10,7 +10,7 @@ const fmtNumber = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 const quickLinks = [
   { path: '/mapa', icon: 'ti-map', title: 'Mapa', sub: 'Ver bloques' },
   { path: '/agenda', icon: 'ti-calendar', title: 'Agenda', sub: 'Tareas' },
-  { path: '/vivero', icon: 'ti-seedling', title: 'Vivero', sub: 'Plantines' },
+  { path: '/vivero', icon: 'vivero-icon', title: 'Vivero', sub: 'Plantines' },
   { path: '/asistencia', icon: 'ti-users', title: 'Asistencia', sub: 'Planilla' },
   { path: '/reportes', icon: 'ti-chart-bar', title: 'Reportes', sub: 'Analisis' },
   { path: '/fumigaciones', icon: 'ti-spray', title: 'Fumigaciones', sub: 'Historial' },
@@ -20,6 +20,24 @@ const quickLinks = [
   { path: '/compradores', icon: 'ti-building-store', title: 'Compradores', sub: 'Clientes' },
   { path: '/configuracion', icon: 'ti-settings', title: 'Configuracion', sub: 'Ajustes' },
 ]
+
+function ViveroIcon({ size = 22, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 21V10" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 12C8.2 12 5.4 9.7 4.5 6.2C8.2 6 11.1 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 12C15.8 12 18.6 9.7 19.5 6.2C15.8 6 12.9 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 21H17" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function DashboardIcon({ icon, size = 22, color = 'currentColor' }) {
+  if (['vivero-icon', 'agro-vivero', 'ti-leaf', 'ti-seeding', 'ti-plant-2'].includes(icon)) {
+    return <ViveroIcon size={size} color={color} />
+  }
+  return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
+}
 
 const cropIcons = ['🍅', '🫑', '🥒', '🥬', '🍆', '🌱']
 
@@ -252,7 +270,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(180px, 1fr))', gap: 18, marginBottom: 22 }}>
-        <Kpi icon="ti-plant-2" title="Bloques activos" value={loading ? '-' : stats.activos} sub={`de ${stats.bloques} totales`} dark />
+        <Kpi icon="ti-plant" title="Bloques activos" value={loading ? '-' : stats.activos} sub={`de ${stats.bloques} totales`} dark />
         <Kpi icon="ti-plant" title="Cultivos activos" value={stats.cultivos} sub="plantaciones activas" />
         <Kpi icon="ti-users" title="Operarios activos" value={stats.operarios} sub="en el campo" />
         <Kpi icon="ti-alert-triangle" title="Alertas" value={stats.alertas} sub={stats.alertas === 0 ? 'sin alertas' : 'pendientes'} />
@@ -320,7 +338,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
                 textAlign: 'left',
                 cursor: 'pointer',
               }}>
-                <span style={iconPill}><i className={`ti ${link.icon}`} style={{ fontSize: 22, color: '#176a25' }} aria-hidden="true"></i></span>
+                <span style={iconPill}><DashboardIcon icon={link.icon} size={22} color="#176a25" /></span>
                 <span>
                   <span style={{ display: 'block', fontWeight: 800, fontSize: 14 }}>{link.title}</span>
                   <span style={{ display: 'block', color: '#69706a', fontSize: 12, marginTop: 2 }}>{link.sub}</span>
