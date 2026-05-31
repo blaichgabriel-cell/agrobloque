@@ -9,6 +9,7 @@ const moreTabs = [
   { path: '/inventario', icon: 'ti-box', label: 'Inventario' },
   { path: '/fumigaciones', icon: 'ti-spray', label: 'Fumig.' },
   { path: '/costos', icon: 'ti-coin', label: 'Costos' },
+  { path: '/contabilidad', icon: 'ti-calculator', label: 'Contab.' },
   { path: '/reportes', icon: 'ti-chart-bar', label: 'Reportes' },
   { path: '/compradores', icon: 'ti-building-store', label: 'Compradores' },
   { path: '/configuracion', icon: 'ti-settings', label: 'Config.' },

@@ -111,6 +111,7 @@ const accesos = [
   { icon: 'ti-box', label: 'Inventario', sub: 'Stock', path: '/inventario' },
   { icon: 'ti-cut', label: 'Cosecha', sub: 'Produccion', path: '/cosecha' },
   { icon: 'ti-coin', label: 'Costos', sub: 'Gastos', path: '/costos' },
+  { icon: 'ti-calculator', label: 'Contabilidad', sub: 'Balance', path: '/contabilidad' },
 ]
 
 const fondo = {

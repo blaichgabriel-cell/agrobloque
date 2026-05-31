@@ -12,6 +12,7 @@ import Cosecha from './pages/Cosecha'
 import Inventario from './pages/Inventario'
 import Fumigaciones from './pages/Fumigaciones'
 import Costos from './pages/Costos'
+import Contabilidad from './pages/Contabilidad'
 import Reportes from './pages/Reportes'
 import Compradores from './pages/Compradores'
 import Vivero from './pages/Vivero'
@@ -57,6 +58,7 @@ const allTabs = [
   { path:'/inventario', icon:'ti-box', label:'Inventario' },
   { path:'/fumigaciones', icon:'ti-spray', label:'Fumigaciones' },
   { path:'/costos', icon:'ti-coin', label:'Costos' },
+  { path:'/contabilidad', icon:'ti-calculator', label:'Contabilidad' },
   { path:'/reportes', icon:'ti-chart-bar', label:'Reportes' },
   { path:'/compradores', icon:'ti-building-store', label:'Compradores' },
   { path:'/configuracion', icon:'ti-settings', label:'Configuración' },
@@ -215,6 +217,7 @@ function AppLayout({ campoActivo, setCampoActivo }) {
             <Route path="/inventario" element={<Inventario/>}/>
             <Route path="/fumigaciones" element={<Fumigaciones/>}/>
             <Route path="/costos" element={<Costos campoActivo={campoActivo}/>}/>
+            <Route path="/contabilidad" element={<Contabilidad/>}/>
             <Route path="/reportes" element={<Reportes campoActivo={campoActivo}/>}/>
             <Route path="/compradores" element={<Compradores/>}/>
             <Route path="/configuracion" element={<Configuracion/>}/>
