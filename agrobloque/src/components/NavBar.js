@@ -3,12 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom'
 
 const moreTabs = [
   { path: '/mapa', icon: 'ti-map', label: 'Mapa' },
-  { path: '/vivero', icon: 'ti-seedling', label: 'Vivero' },
+  { path: '/vivero', icon: 'vivero-icon', label: 'Vivero' },
   { path: '/asistencia', icon: 'ti-users', label: 'Asistencia' },
   { path: '/cosecha', icon: 'ti-cut', label: 'Cosecha' },
   { path: '/inventario', icon: 'ti-box', label: 'Inventario' },
   { path: '/fumigaciones', icon: 'ti-spray', label: 'Fumig.' },
   { path: '/costos', icon: 'ti-coin', label: 'Costos' },
+  { path: '/contabilidad', icon: 'ti-calculator', label: 'Contab.' },
   { path: '/reportes', icon: 'ti-chart-bar', label: 'Reportes' },
   { path: '/compradores', icon: 'ti-building-store', label: 'Compradores' },
   { path: '/configuracion', icon: 'ti-settings', label: 'Config.' },
@@ -26,6 +27,24 @@ const navItem = {
   border: 'none',
   background: 'transparent',
   cursor: 'pointer',
+}
+
+function ViveroIcon({ size = 21, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 21V10" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 12C8.2 12 5.4 9.7 4.5 6.2C8.2 6 11.1 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 12C15.8 12 18.6 9.7 19.5 6.2C15.8 6 12.9 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 21H17" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function RenderIcon({ icon, size = 21, color = 'currentColor' }) {
+  if (['vivero-icon', 'agro-vivero', 'ti-leaf', 'ti-seeding', 'ti-plant-2'].includes(icon)) {
+    return <ViveroIcon size={size} color={color} />
+  }
+  return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
 }
 
 export default function NavBar() {
@@ -76,7 +95,7 @@ export default function NavBar() {
                 justifyContent: 'center',
                 gap: 4,
               }}>
-                <i className={`ti ${t.icon}`} style={{ fontSize: 21 }} aria-hidden="true"></i>
+                <RenderIcon icon={t.icon} size={21} color={active ? '#8fd24e' : 'rgba(255,255,255,0.74)'} />
                 <span style={{ fontSize: 10, fontWeight: 650 }}>{t.label}</span>
               </button>
             )

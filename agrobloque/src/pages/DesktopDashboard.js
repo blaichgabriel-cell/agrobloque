@@ -17,6 +17,7 @@ const quickLinks = [
   { path: '/inventario', icon: 'ti-box', title: 'Inventario', sub: 'Stock' },
   { path: '/cosecha', icon: 'ti-cut', title: 'Cosecha', sub: 'Produccion' },
   { path: '/costos', icon: 'ti-coin', title: 'Costos', sub: 'Gastos' },
+  { path: '/contabilidad', icon: 'ti-calculator', title: 'Contabilidad', sub: 'Balance' },
   { path: '/compradores', icon: 'ti-building-store', title: 'Compradores', sub: 'Clientes' },
   { path: '/configuracion', icon: 'ti-settings', title: 'Configuracion', sub: 'Ajustes' },
 ]
