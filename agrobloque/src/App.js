@@ -214,7 +214,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false }) {
           minHeight: '100vh',
         }}>
           <Routes>
-            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo}/>}/>
+            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest}/>}/>
             <Route path="/buscar" element={<Buscador/>}/>
             <Route path="/alertas" element={<Alertas/>}/>
             <Route path="/mapa" element={<Mapa campoActivo={campoActivo}/>}/>
@@ -225,9 +225,9 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false }) {
             <Route path="/cosecha" element={<Cosecha/>}/>
             <Route path="/inventario" element={<Inventario/>}/>
             <Route path="/fumigaciones" element={<Fumigaciones/>}/>
-            <Route path="/costos" element={<Costos campoActivo={campoActivo}/>}/>
+            <Route path="/costos" element={<Costos campoActivo={campoActivo} isGuest={isGuest}/>}/>
             <Route path="/contabilidad" element={<Contabilidad/>}/>
-            <Route path="/reportes" element={<Reportes campoActivo={campoActivo}/>}/>
+            <Route path="/reportes" element={<Reportes campoActivo={campoActivo} isGuest={isGuest}/>}/>
             <Route path="/compradores" element={<Compradores/>}/>
             <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <Auditoria/>}/>
             <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <Configuracion/>}/>

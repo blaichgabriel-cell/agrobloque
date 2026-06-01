@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { guestToken, supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 
@@ -41,6 +41,7 @@ export default function Fumigaciones() {
   const [form, setForm] = useState({ tipo:'fumigacion', fecha:'', campo_id:'', bloques_ids:[], operario:'', productos_form:[{ producto_id:'', dosis:'' }], notas:'' })
   const [saving, setSaving] = useState(false)
   const [filtro, setFiltro] = useState('todos')
+  const isGuest = Boolean(guestToken)
 
   useEffect(() => { fetchFumigaciones(); fetchCampos(); fetchProductos() }, [])
 
@@ -59,6 +60,10 @@ export default function Fumigaciones() {
   const fetchBloques = async (campo_id) => {
     const { data: bl } = await supabase.from('bloques').select('*').eq('campo_id', campo_id).order('codigo')
     setBloques(bl || [])
+    if (isGuest) {
+      setOperarios([])
+      return
+    }
     const { data: ops } = await supabase.from('operarios').select('*').eq('campo_id', campo_id)
     setOperarios(ops || [])
   }
@@ -141,9 +146,11 @@ export default function Fumigaciones() {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Control fitosanitario</div>
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Fumigaciones</div>
           </div>
-          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-          </button>
+          {!isGuest && (
+            <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+            </button>
+          )}
         </div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:4 }}>
           {[['todos','Todos'],['fumigacion','Fumigacion'],['fertiriego','Fertiriego'],['foliar','Foliar']].map(([k,v]) => (
@@ -244,7 +251,7 @@ export default function Fumigaciones() {
                     ))}
                   </div>
                 )}
-                <button onClick={() => eliminar(detalle.id)} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginBottom:8 }}>Eliminar registro</button>
+                {!isGuest && <button onClick={() => eliminar(detalle.id)} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginBottom:8 }}>Eliminar registro</button>}
                 <button onClick={() => setDetalle(null)} style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cerrar</button>
               </>
             })()}

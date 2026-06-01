@@ -6,7 +6,7 @@ import { descargarCsv, imprimirHtml } from '../lib/exporters'
 const fmtGs = (n) => n > 0 ? `Gs. ${Math.round(n).toLocaleString('es-PY')}` : '—'
 const fmtKg = (n) => { const num = Number(n)||0; return num % 1 === 0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY', {minimumFractionDigits:1, maximumFractionDigits:2}) }
 
-export default function Reportes({ campoActivo }) {
+export default function Reportes({ campoActivo, isGuest = false }) {
   const [campos, setCampos] = useState([])
   const [campoSel, setCampoSel] = useState(null)
   const [periodo, setPeriodo] = useState('mes')
@@ -68,7 +68,9 @@ export default function Reportes({ campoActivo }) {
       }
 
       // Costos jornales
-      const { data: asist } = await supabase.from('asistencia').select('monto, operarios(campo_id)').gte('fecha', desde)
+      const { data: asist } = isGuest
+        ? { data: [] }
+        : await supabase.from('asistencia').select('monto, operarios(campo_id)').gte('fecha', desde)
       const jornales = (asist || []).filter(a => a.operarios?.campo_id === campoSel.id).reduce((s, a) => s + Number(a.monto), 0)
 
       // Costos manuales
@@ -287,7 +289,7 @@ export default function Reportes({ campoActivo }) {
             <div style={{ background:'#fff', borderRadius:20, padding:'14px' }}>
               <div style={{ fontSize:9, color:'#9a9a9a', textTransform:'uppercase', marginBottom:4 }}>Costos</div>
               <div style={{ fontSize:18, fontWeight:800, color:'#e07b00', letterSpacing:-.5 }}>{fmtGs(datos.costos)}</div>
-              <div style={{ fontSize:10, color:'#b0b0b0', marginTop:2 }}>jornales + gastos</div>
+              <div style={{ fontSize:10, color:'#b0b0b0', marginTop:2 }}>{isGuest ? 'gastos registrados' : 'jornales + gastos'}</div>
             </div>
           </div>
 

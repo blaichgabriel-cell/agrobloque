@@ -16,7 +16,7 @@ const TIPOS_COSTO = [
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 
-export default function Costos({ campoActivo }) {
+export default function Costos({ campoActivo, isGuest = false }) {
   const [campos, setCampos] = useState([])
   const [campoSel, setCampoSel] = useState(null)
   const [bloques, setBloques] = useState([])
@@ -85,8 +85,10 @@ export default function Costos({ campoActivo }) {
     fumis?.forEach(f => f.fumigacion_productos?.forEach(fp => {
       totalAgro += (Number(fp.productos?.precio_unitario) || 0) * (parseFloat(fp.dosis) || 0)
     }))
-    const { data: asist } = await supabase.from('asistencia')
-      .select('monto, operarios(campo_id)').gte('fecha', desde)
+    const { data: asist } = isGuest
+      ? { data: [] }
+      : await supabase.from('asistencia')
+        .select('monto, operarios(campo_id)').gte('fecha', desde)
     let totalJornales = 0
     asist?.forEach(a => { if (a.operarios?.campo_id === campoSel.id) totalJornales += Number(a.monto) || 0 })
     setCostosAuto({ agroquimicos: totalAgro, jornales: totalJornales })
@@ -147,9 +149,11 @@ export default function Costos({ campoActivo }) {
             <button onClick={exportarCostos} style={{ width:40, height:40, borderRadius:14, background:'#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
               <i className="ti ti-download" style={{ color:'#212121', fontSize:19 }} aria-hidden="true"></i>
             </button>
-            <button onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-              <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-            </button>
+            {!isGuest && (
+              <button onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+              </button>
+            )}
           </div>
         </div>
         {campos.length > 1 && (
@@ -177,7 +181,7 @@ export default function Costos({ campoActivo }) {
           <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:12, textTransform:'uppercase' }}>Calculados automaticamente</div>
           {[
             { icon:'ti-spray', color:'#e07b00', bg:'#fff3e8', label:'Agroquimicos', sub:'Desde fumigaciones registradas', val: costosAuto.agroquimicos },
-            { icon:'ti-users', color:'#212121', bg:'#eeeeee', label:'Jornales', sub:'Desde asistencia registrada', val: costosAuto.jornales },
+            ...(!isGuest ? [{ icon:'ti-users', color:'#212121', bg:'#eeeeee', label:'Jornales', sub:'Desde asistencia registrada', val: costosAuto.jornales }] : []),
           ].map((item, i) => (
             <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom: i===0 ? '1px solid #f2f1ef' : 'none' }}>
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -213,12 +217,16 @@ export default function Costos({ campoActivo }) {
                   <div style={{ fontSize:10, color:'#9a9a9a' }}>{c.fecha}{c.bloques?.codigo ? ' · ' + c.bloques.codigo : ''}</div>
                 </div>
                 <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Gs. {fmtGs(c.monto)}</div>
-                <button onClick={() => abrirEditar(c)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #e8e6e2', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                  <i className="ti ti-pencil" style={{ fontSize:12, color:'#555' }} aria-hidden="true"></i>
-                </button>
-                <button onClick={() => eliminar(c.id)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #ffcccc', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                  <i className="ti ti-x" style={{ fontSize:12, color:'#c84040' }} aria-hidden="true"></i>
-                </button>
+                {!isGuest && (
+                  <>
+                    <button onClick={() => abrirEditar(c)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #e8e6e2', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                      <i className="ti ti-pencil" style={{ fontSize:12, color:'#555' }} aria-hidden="true"></i>
+                    </button>
+                    <button onClick={() => eliminar(c.id)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #ffcccc', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                      <i className="ti ti-x" style={{ fontSize:12, color:'#c84040' }} aria-hidden="true"></i>
+                    </button>
+                  </>
+                )}
               </div>
             )
           })}

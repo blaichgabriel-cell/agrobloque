@@ -91,6 +91,8 @@ grant select on
   public.fotos_bloque,
   public.muertes_plantas,
   public.fertilizaciones,
+  public.fertilizacion_planes,
+  public.fertilizacion_plan_aplicaciones,
   public.compradores,
   public.notas_modulo,
   public.vivero_lotes,
@@ -115,6 +117,8 @@ alter table public.fumigacion_bloques enable row level security;
 alter table public.fotos_bloque enable row level security;
 alter table public.muertes_plantas enable row level security;
 alter table public.fertilizaciones enable row level security;
+alter table public.fertilizacion_planes enable row level security;
+alter table public.fertilizacion_plan_aplicaciones enable row level security;
 alter table public.compradores enable row level security;
 alter table public.notas_modulo enable row level security;
 alter table public.vivero_lotes enable row level security;
@@ -211,6 +215,23 @@ drop policy if exists guest_select_fertilizaciones on public.fertilizaciones;
 create policy guest_select_fertilizaciones on public.fertilizaciones
   for select to anon using (
     exists (select 1 from public.bloques b where b.id = bloque_id and public.guest_allows_campo(b.campo_id))
+  );
+
+drop policy if exists guest_select_fertilizacion_planes on public.fertilizacion_planes;
+create policy guest_select_fertilizacion_planes on public.fertilizacion_planes
+  for select to anon using (
+    exists (select 1 from public.bloques b where b.id = bloque_id and public.guest_allows_campo(b.campo_id))
+  );
+
+drop policy if exists guest_select_fertilizacion_plan_aplicaciones on public.fertilizacion_plan_aplicaciones;
+create policy guest_select_fertilizacion_plan_aplicaciones on public.fertilizacion_plan_aplicaciones
+  for select to anon using (
+    exists (
+      select 1
+      from public.fertilizacion_planes fp
+      join public.bloques b on b.id = fp.bloque_id
+      where fp.id = plan_id and public.guest_allows_campo(b.campo_id)
+    )
   );
 
 drop policy if exists guest_select_compradores on public.compradores;

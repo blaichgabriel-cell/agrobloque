@@ -149,7 +149,7 @@ const elegirCampoConDatos = (campos, bloques = [], guardado) => {
   return campoConMasBloques
 }
 
-export default function Dashboard({ campoActivo, setCampoActivo }) {
+export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false }) {
   const [campos, setCampos] = useState([])
   const [stats, setStats] = useState({ bloques: 0, activos: 0, cultivos: 0, operarios: 0 })
   const [alertas, setAlertas] = useState([])
@@ -175,9 +175,13 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
       ? supabase.from('plantaciones').select('id').eq('activa', true).in('bloque_id', bloqueIds)
       : Promise.resolve({ data: [] })
 
+    const operariosQuery = isGuest
+      ? Promise.resolve({ data: [] })
+      : supabase.from('operarios').select('id').eq('campo_id', campo.id)
+
     const [{ data: plantas }, { data: ops }, { data: tareas }] = await Promise.all([
       plantacionesQuery,
-      supabase.from('operarios').select('id').eq('campo_id', campo.id),
+      operariosQuery,
       supabase
         .from('tareas')
         .select('*, campos(nombre), bloques(codigo)')
@@ -232,8 +236,12 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
   }
 
   if (usarDashboardEscritorio) {
-    return <DesktopDashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} />
+    return <DesktopDashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} />
   }
+
+  const accesosVisibles = isGuest
+    ? accesos.filter(item => !['/asistencia'].includes(item.path))
+    : accesos
 
   return (
     <div style={fondo}>
@@ -367,13 +375,17 @@ export default function Dashboard({ campoActivo, setCampoActivo }) {
             <span style={{ position: 'absolute', left: '33.333%', top: '8%', bottom: '8%', width: 1, background: 'rgba(255,255,255,0.20)' }} />
             <span style={{ position: 'absolute', left: '66.666%', top: '8%', bottom: '8%', width: 1, background: 'rgba(255,255,255,0.20)' }} />
             <MiniStat icon="ti-plant" label="Cultivos" value={stats.cultivos} compact={compacto} />
-            <MiniStat icon="ti-users" label="Operarios" value={stats.operarios} compact={compacto} />
+            {isGuest ? (
+              <MiniStat icon="ti-eye" label="Invitado" value="Ver" compact={compacto} />
+            ) : (
+              <MiniStat icon="ti-users" label="Operarios" value={stats.operarios} compact={compacto} />
+            )}
             <MiniStat icon="ti-alert-triangle" label="Alertas" value={alertas.length} compact={compacto} />
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: compacto ? 7 : 12 }}>
-          {accesos.map(item => (
+          {accesosVisibles.map(item => (
             <button key={item.path} onClick={() => navigate(item.path)} style={{
               ...cardBlanca,
               minHeight: compacto ? 68 : 98,

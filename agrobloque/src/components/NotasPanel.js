@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { guestToken, supabase } from '../lib/supabase'
 
 const hoy = () => new Date().toISOString().split('T')[0]
 
@@ -9,6 +9,7 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
   const [form, setForm] = useState({ fecha: hoy(), titulo: '', contenido: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const isGuest = Boolean(guestToken)
 
   useEffect(() => {
     fetchNotas()
@@ -65,10 +66,12 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
           <div style={{ fontSize:16, fontWeight:800, color:'#0a0a0a' }}>{titulo}</div>
           <div style={{ fontSize:11, color:'#8b928b', marginTop:2 }}>{notas.length} nota{notas.length === 1 ? '' : 's'}</div>
         </div>
-        <button type="button" onClick={() => setAbierto(v => !v)}
-          style={{ border:'none', borderRadius:12, background:'#212121', color:'#fff', padding:'9px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-          {abierto ? 'Cerrar' : '+ Nota'}
-        </button>
+        {!isGuest && (
+          <button type="button" onClick={() => setAbierto(v => !v)}
+            style={{ border:'none', borderRadius:12, background:'#212121', color:'#fff', padding:'9px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+            {abierto ? 'Cerrar' : '+ Nota'}
+          </button>
+        )}
       </div>
 
       {error && <div style={{ background:'#fff3e8', color:'#b26400', borderRadius:12, padding:'9px 11px', fontSize:12, marginBottom:10 }}>{error}</div>}
@@ -99,10 +102,12 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
                   <div style={{ fontSize:12, color:'#8b928b' }}>{n.fecha}</div>
                   {n.titulo && <div style={{ fontSize:13, fontWeight:800, color:'#0a0a0a', marginTop:2 }}>{n.titulo}</div>}
                 </div>
-                <button type="button" onClick={() => eliminar(n.id)}
-                  style={{ border:'1px solid #ffcccc', background:'transparent', color:'#c84040', borderRadius:10, padding:'5px 9px', fontSize:11, cursor:'pointer' }}>
-                  Eliminar
-                </button>
+                {!isGuest && (
+                  <button type="button" onClick={() => eliminar(n.id)}
+                    style={{ border:'1px solid #ffcccc', background:'transparent', color:'#c84040', borderRadius:10, padding:'5px 9px', fontSize:11, cursor:'pointer' }}>
+                    Eliminar
+                  </button>
+                )}
               </div>
               <div style={{ fontSize:13, color:'#3b403c', lineHeight:1.45, whiteSpace:'pre-wrap' }}>{n.contenido}</div>
             </div>

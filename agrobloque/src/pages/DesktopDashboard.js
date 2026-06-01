@@ -80,7 +80,7 @@ const elegirCampoConDatos = (campos, bloques = [], guardado) => {
   return campoConMasBloques
 }
 
-export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
+export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest = false }) {
   const navigate = useNavigate()
   const [campos, setCampos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -139,6 +139,10 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
   const cargarDashboard = async (campo) => {
     setLoading(true)
 
+    const operariosQuery = isGuest
+      ? Promise.resolve({ data: [] })
+      : supabase.from('operarios').select('id').eq('campo_id', campo.id)
+
     const [
       { data: bloquesCampo },
       { data: bloquesTotal },
@@ -149,7 +153,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
     ] = await Promise.all([
       supabase.from('bloques').select('id, codigo, activo').eq('campo_id', campo.id),
       supabase.from('bloques').select('id'),
-      supabase.from('operarios').select('id').eq('campo_id', campo.id),
+      operariosQuery,
       supabase.from('tareas').select('id, descripcion, fecha_programada').eq('campo_id', campo.id).eq('completada', false).lte('fecha_programada', hoy).order('fecha_programada'),
       supabase.from('productos').select('id').eq('activo', true),
       supabase.from('plantaciones').select('id'),
@@ -174,9 +178,13 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
         .in('bloque_id', bloqueIds)
       : { data: [] }
 
+    const asistenciaQuery = isGuest
+      ? Promise.resolve({ data: [] })
+      : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde)
+
     const [{ data: costosManuales }, { data: asistencia }, { data: fumigaciones }] = await Promise.all([
       supabase.from('costos').select('monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde),
-      supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde),
+      asistenciaQuery,
       supabase
         .from('fumigaciones')
         .select('fecha, fumigacion_productos(dosis, productos(precio_unitario))')
@@ -227,6 +235,9 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
   }
 
   const hayFinanzas = finanzas.ingresos > 0 || finanzas.costos > 0
+  const quickLinksVisibles = isGuest
+    ? quickLinks.filter(link => !['/asistencia', '/configuracion'].includes(link.path))
+    : quickLinks
 
   return (
     <div style={{ minHeight: '100vh', background: '#f6f7f5', color: '#101511', padding: '34px 36px 40px' }}>
@@ -273,7 +284,11 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(180px, 1fr))', gap: 18, marginBottom: 22 }}>
         <Kpi icon="ti-plant" title="Bloques activos" value={loading ? '-' : stats.activos} sub={`de ${stats.bloques} totales`} dark />
         <Kpi icon="ti-plant" title="Cultivos activos" value={stats.cultivos} sub="plantaciones activas" />
-        <Kpi icon="ti-users" title="Operarios activos" value={stats.operarios} sub="en el campo" />
+        {isGuest ? (
+          <Kpi icon="ti-eye" title="Modo invitado" value="Ver" sub="solo lectura" />
+        ) : (
+          <Kpi icon="ti-users" title="Operarios activos" value={stats.operarios} sub="en el campo" />
+        )}
         <Kpi icon="ti-alert-triangle" title="Alertas" value={stats.alertas} sub={stats.alertas === 0 ? 'sin alertas' : 'pendientes'} />
       </div>
 
@@ -326,7 +341,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
 
         <Panel title="Accesos rapidos">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            {quickLinks.map(link => (
+            {quickLinksVisibles.map(link => (
               <button key={link.path} onClick={() => navigate(link.path)} style={{
                 border: '1px solid #e7ece7',
                 background: '#fff',
@@ -362,7 +377,11 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo }) {
         <BottomStat dark icon="ti-stack-2" value={stats.bloquesTotal} label="Bloques totales en la base" />
         <BottomStat icon="ti-plant" value={stats.plantacionesTotal} label="Plantaciones registradas" />
         <BottomStat icon="ti-box" value={stats.productos} label="Productos en inventario" />
-        <BottomStat icon="ti-users" value={stats.operarios} label="Operarios activos en el campo" />
+        {isGuest ? (
+          <BottomStat icon="ti-eye" value="Ver" label="Acceso invitado de solo lectura" />
+        ) : (
+          <BottomStat icon="ti-users" value={stats.operarios} label="Operarios activos en el campo" />
+        )}
       </div>
     </div>
   )
