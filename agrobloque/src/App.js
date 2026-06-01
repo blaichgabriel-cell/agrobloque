@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { forceLocalSignOut, supabase } from './lib/supabase'
+import { forceLocalSignOut, guestToken, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Mapa from './pages/Mapa'
@@ -100,9 +100,10 @@ const esErrorSesion = (error) => {
     texto.includes('permission')
 }
 
-function DesktopSidebar() {
+function DesktopSidebar({ isGuest = false }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const tabs = isGuest ? allTabs.filter(t => !['/asistencia', '/configuracion'].includes(t.path)) : allTabs
   return (
     <div style={{
       width: SIDEBAR_WIDTH,
@@ -134,7 +135,7 @@ function DesktopSidebar() {
 
       {/* Nav items */}
       <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto' }}>
-        {allTabs.map(t => {
+        {tabs.map(t => {
           const active = location.pathname === t.path
           return (
             <div key={t.path} onClick={() => navigate(t.path)}
@@ -177,7 +178,7 @@ function DesktopSidebar() {
   )
 }
 
-function AppLayout({ campoActivo, setCampoActivo }) {
+function AppLayout({ campoActivo, setCampoActivo, isGuest = false }) {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768)
   const location = useLocation()
   const dashboardDesktop = isDesktop && location.pathname === '/'
@@ -190,7 +191,7 @@ function AppLayout({ campoActivo, setCampoActivo }) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#f6f7f5' : '#f2f1ef' }}>
-      {isDesktop && <DesktopSidebar />}
+      {isDesktop && <DesktopSidebar isGuest={isGuest} />}
 
       <div style={{
         flex: 1,
@@ -212,7 +213,7 @@ function AppLayout({ campoActivo, setCampoActivo }) {
             <Route path="/bloque/:id" element={<FichaBloque/>}/>
             <Route path="/agenda" element={<Agenda/>}/>
             <Route path="/vivero" element={<Vivero/>}/>
-            <Route path="/asistencia" element={<Asistencia/>}/>
+            <Route path="/asistencia" element={isGuest ? <Navigate to="/"/> : <Asistencia/>}/>
             <Route path="/cosecha" element={<Cosecha/>}/>
             <Route path="/inventario" element={<Inventario/>}/>
             <Route path="/fumigaciones" element={<Fumigaciones/>}/>
@@ -220,13 +221,13 @@ function AppLayout({ campoActivo, setCampoActivo }) {
             <Route path="/contabilidad" element={<Contabilidad/>}/>
             <Route path="/reportes" element={<Reportes campoActivo={campoActivo}/>}/>
             <Route path="/compradores" element={<Compradores/>}/>
-            <Route path="/configuracion" element={<Configuracion/>}/>
+            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <Configuracion/>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
         </div>
       </div>
 
-      {!isDesktop && <NavBar />}
+      {!isDesktop && <NavBar isGuest={isGuest} />}
     </div>
   )
 }
@@ -236,6 +237,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [campoActivo, setCampoActivo] = useState(null)
   const [dataError, setDataError] = useState('')
+  const guestPath = Boolean(guestToken)
 
   const limpiarSesionRota = async (mensaje) => {
     setDataError(mensaje)
@@ -292,7 +294,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!session) {
+    if (!session && !guestPath) {
       setCampoActivo(null)
       return
     }
@@ -335,12 +337,18 @@ export default function App() {
 
     cargarCampoActivo()
     return () => { cancelled = true }
-  }, [session])
+  }, [session, guestPath])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !campoActivo?.id) return
     window.localStorage.setItem(CAMPO_STORAGE_KEY, campoActivo.id)
   }, [campoActivo])
+
+  if (guestPath) return (
+    <BrowserRouter basename={`/invitado/${guestToken}`}>
+      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest />
+    </BrowserRouter>
+  )
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#f0ede8' }}>

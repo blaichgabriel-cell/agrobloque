@@ -40,6 +40,8 @@ export default function Configuracion() {
   const [abonos, setAbonos] = useState([])
   const [compradores, setCompradores] = useState([])
   const [bloques, setBloques] = useState([])
+  const [invitados, setInvitados] = useState([])
+  const [linkInvitado, setLinkInvitado] = useState('')
   const [form, setForm] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -54,16 +56,18 @@ export default function Configuracion() {
       email: user.email,
       foto: typeof window !== 'undefined' ? (window.localStorage.getItem(FOTO_PERFIL_KEY) || '') : ''
     })
-    const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }] = await Promise.all([
+    const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }, { data: inv }] = await Promise.all([
       supabase.from('campos').select('*').order('nombre'),
       supabase.from('cultivos').select('*').order('nombre'),
       supabase.from('operarios').select('*').order('nombre'),
       supabase.from('abonos').select('*').order('nombre'),
       supabase.from('compradores').select('*').order('nombre'),
       supabase.from('bloques').select('*').order('codigo'),
+      supabase.from('guest_access_links').select('*, campos(nombre)').order('created_at', { ascending:false }),
     ])
     setCampos(c||[]); setCultivos(cu||[]); setOperarios(op||[])
     setAbonos(ab||[]); setCompradores(comp||[]); setBloques(bl||[])
+    setInvitados(inv||[])
   }
 
   const abrir = (tipo, datos = {}) => { setForm(datos); setModal(tipo); setError(''); setSuccess('') }
@@ -256,6 +260,57 @@ export default function Configuracion() {
     setLoading(false)
   }
 
+  const generarToken = () => {
+    const bytes = new Uint8Array(24)
+    window.crypto.getRandomValues(bytes)
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+  }
+
+  const hashToken = async (token) => {
+    const bytes = new TextEncoder().encode(token)
+    const hash = await window.crypto.subtle.digest('SHA-256', bytes)
+    return Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('')
+  }
+
+  const crearInvitado = async () => {
+    if (!form.nombre) return
+    setLoading(true); setError(''); setSuccess(''); setLinkInvitado('')
+    try {
+      const token = generarToken()
+      const token_hash = await hashToken(token)
+      const vencimiento = form.dias && Number(form.dias) > 0
+        ? new Date(Date.now() + Number(form.dias) * 24 * 60 * 60 * 1000).toISOString()
+        : null
+      const { error } = await supabase.from('guest_access_links').insert({
+        nombre: form.nombre.trim(),
+        campo_id: form.campo_id || null,
+        token_hash,
+        expires_at: vencimiento,
+        activo: true,
+      })
+      if (error) throw error
+      const url = `${window.location.origin}/invitado/${token}`
+      setLinkInvitado(url)
+      setSuccess('Link invitado creado. Copialo ahora.')
+      setForm({ nombre:'', campo_id:'', dias:'30' })
+      await fetchAll()
+    } catch (e) {
+      setError('No se pudo crear el invitado. Ejecuta primero el SQL de invitados.')
+    }
+    setLoading(false)
+  }
+
+  const copiarLinkInvitado = async () => {
+    if (!linkInvitado) return
+    await navigator.clipboard.writeText(linkInvitado)
+    setSuccess('Link copiado')
+  }
+
+  const desactivarInvitado = async (id) => {
+    await supabase.from('guest_access_links').update({ activo:false }).eq('id', id)
+    await fetchAll()
+  }
+
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
   const saveBtn = (color = '#212121') => ({ width:'100%', padding:14, borderRadius:14, background: color, border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' })
   const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
@@ -270,6 +325,7 @@ export default function Configuracion() {
     { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#212121', bg:'#eeeeee', action: () => abrir('abonos') },
     { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#212121', bg:'#eeeeee', action: () => abrir('bloques') },
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
+    { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:'#176a25', bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30' }) },
     { icon:'ti-download', title:'Backup de datos', sub: 'Descargar copia JSON', color:'#176a25', bg:'#edf6ec', action: descargarBackup },
   ]
 
@@ -337,6 +393,57 @@ export default function Configuracion() {
 
             {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
             {success && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{success}</div>}
+
+            {modal === 'invitados' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:8 }}>Invitados de solo lectura</div>
+              <div style={{ fontSize:12, color:'#8b928b', marginBottom:16 }}>El invitado entra con un link y no puede editar ni borrar datos.</div>
+
+              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Crear link</div>
+                <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del invitado"/>
+                <select style={inp} value={form.campo_id||''} onChange={e=>setForm(f=>({...f,campo_id:e.target.value}))}>
+                  <option value="">Todos los campos</option>
+                  {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+                <select style={inp} value={form.dias||'30'} onChange={e=>setForm(f=>({...f,dias:e.target.value}))}>
+                  <option value="7">Vence en 7 dias</option>
+                  <option value="30">Vence en 30 dias</option>
+                  <option value="90">Vence en 90 dias</option>
+                  <option value="">Sin vencimiento</option>
+                </select>
+                <button style={saveBtn('#176a25')} onClick={crearInvitado} disabled={loading}>{loading ? 'Creando...' : 'Crear acceso invitado'}</button>
+              </div>
+
+              {linkInvitado && (
+                <div style={{ background:'#edf6ec', border:'1px solid #cde6c8', borderRadius:16, padding:'12px 14px', marginBottom:12 }}>
+                  <div style={{ fontSize:11, color:'#176a25', fontWeight:800, marginBottom:6 }}>Link creado</div>
+                  <div style={{ fontSize:12, color:'#1d261d', wordBreak:'break-all', lineHeight:1.4, marginBottom:10 }}>{linkInvitado}</div>
+                  <button style={saveBtn('#212121')} onClick={copiarLinkInvitado}>Copiar link</button>
+                </div>
+              )}
+
+              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Links creados</div>
+                {invitados.length === 0 ? (
+                  <div style={{ fontSize:12, color:'#9a9a9a', padding:'8px 0' }}>Sin invitados creados.</div>
+                ) : invitados.map(inv => (
+                  <div key={inv.id} style={listItem}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>{inv.nombre}</div>
+                      <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>
+                        {inv.campos?.nombre || 'Todos los campos'} · {inv.activo ? 'Activo' : 'Desactivado'}{inv.expires_at ? ` · vence ${String(inv.expires_at).slice(0,10)}` : ''}
+                      </div>
+                    </div>
+                    {inv.activo && (
+                      <button onClick={() => desactivarInvitado(inv.id)}
+                        style={{ border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', borderRadius:10, padding:'7px 10px', fontSize:11, cursor:'pointer' }}>
+                        Desactivar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>}
 
             {/* ── CUENTA ── */}
             {modal === 'cuenta' && <>

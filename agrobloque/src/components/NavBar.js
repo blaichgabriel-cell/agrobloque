@@ -47,11 +47,12 @@ function RenderIcon({ icon, size = 21, color = 'currentColor' }) {
   return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
 }
 
-export default function NavBar() {
+export default function NavBar({ isGuest = false }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [showMore, setShowMore] = useState(false)
-  const isMoreActive = moreTabs.some(t => t.path === location.pathname)
+  const tabs = isGuest ? moreTabs.filter(t => !['/asistencia', '/configuracion'].includes(t.path)) : moreTabs
+  const isMoreActive = tabs.some(t => t.path === location.pathname)
 
   const go = (path) => {
     navigate(path)
@@ -79,7 +80,7 @@ export default function NavBar() {
           zIndex: 45,
           backdropFilter: 'blur(14px)',
         }}>
-          {moreTabs.map(t => {
+          {tabs.map(t => {
             const active = location.pathname === t.path
             return (
               <button key={t.path} onClick={() => go(t.path)} style={{
