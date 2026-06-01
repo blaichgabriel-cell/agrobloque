@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { descargarCsv } from '../lib/exporters'
 
 const TIPOS_COSTO = [
-  { key:'insumos',              label:'Insumos',              icon:'ti-seedling',    color:'#212121', bg:'#eeeeee' },
+  { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:'#212121', bg:'#eeeeee' },
   { key:'combustible',          label:'Combustible',          icon:'ti-flame',       color:'#e07b00', bg:'#fff3e8' },
   { key:'herramientas',         label:'Herramientas',         icon:'ti-tool',        color:'#555',    bg:'#f2f1ef' },
   { key:'electricidad',         label:'Electricidad',         icon:'ti-bolt',        color:'#2980b9', bg:'#eaf4fb' },
@@ -50,6 +51,30 @@ export default function Costos({ campoActivo }) {
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
   }
 
+  const formVacio = () => ({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'' })
+
+  const abrirNuevo = () => {
+    setForm(formVacio())
+    setModal(true)
+  }
+
+  const abrirEditar = (costo) => {
+    setForm({
+      id: costo.id,
+      tipo: costo.tipo || 'insumos',
+      descripcion: costo.descripcion || '',
+      monto: costo.monto ? fmtGs(costo.monto) : '',
+      fecha: costo.fecha || new Date().toISOString().split('T')[0],
+      bloque_id: costo.bloque_id || '',
+    })
+    setModal(true)
+  }
+
+  const cerrarModal = () => {
+    setModal(false)
+    setForm(formVacio())
+  }
+
   const fetchCostos = async () => {
     const desde = getFechaDesde()
     const { data: fumis } = await supabase.from('fumigaciones')
@@ -72,13 +97,14 @@ export default function Costos({ campoActivo }) {
   const guardar = async () => {
     if (!form.monto || !form.fecha) return
     setSaving(true)
-    await supabase.from('costos').insert({
+    const payload = {
       tipo: form.tipo, descripcion: form.descripcion || null,
       monto: parsearGs(form.monto), fecha: form.fecha,
       campo_id: campoSel?.id || null, bloque_id: form.bloque_id || null
-    })
-    await fetchCostos(); setSaving(false); setModal(false)
-    setForm({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'' })
+    }
+    if (form.id) await supabase.from('costos').update(payload).eq('id', form.id)
+    else await supabase.from('costos').insert(payload)
+    await fetchCostos(); setSaving(false); cerrarModal()
   }
 
   const eliminar = async (id) => {
@@ -89,6 +115,17 @@ export default function Costos({ campoActivo }) {
   const totalManuales = costosManuales.reduce((s, c) => s + Number(c.monto), 0)
   const totalGeneral = costosAuto.agroquimicos + costosAuto.jornales + totalManuales
 
+  const exportarCostos = () => {
+    const rows = costosManuales.map(c => ({
+      Fecha: c.fecha,
+      Tipo: TIPOS_COSTO.find(t => t.key === c.tipo)?.label || c.tipo,
+      Descripcion: c.descripcion || '',
+      Bloque: c.bloques?.codigo || '',
+      Monto: Number(c.monto) || 0,
+    }))
+    descargarCsv('costos-manuales', ['Fecha', 'Tipo', 'Descripcion', 'Bloque', 'Monto'], rows)
+  }
+
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
@@ -97,9 +134,14 @@ export default function Costos({ campoActivo }) {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Gastos</div>
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Costos</div>
           </div>
-          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-          </button>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={exportarCostos} style={{ width:40, height:40, borderRadius:14, background:'#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <i className="ti ti-download" style={{ color:'#212121', fontSize:19 }} aria-hidden="true"></i>
+            </button>
+            <button onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
         {campos.length > 1 && (
           <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:12 }}>
@@ -162,6 +204,9 @@ export default function Costos({ campoActivo }) {
                   <div style={{ fontSize:10, color:'#9a9a9a' }}>{c.fecha}{c.bloques?.codigo ? ' · ' + c.bloques.codigo : ''}</div>
                 </div>
                 <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Gs. {fmtGs(c.monto)}</div>
+                <button onClick={() => abrirEditar(c)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #e8e6e2', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                  <i className="ti ti-pencil" style={{ fontSize:12, color:'#555' }} aria-hidden="true"></i>
+                </button>
                 <button onClick={() => eliminar(c.id)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #ffcccc', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
                   <i className="ti ti-x" style={{ fontSize:12, color:'#c84040' }} aria-hidden="true"></i>
                 </button>
@@ -173,9 +218,9 @@ export default function Costos({ campoActivo }) {
       </div>
 
       {modal && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(false)}>
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && cerrarModal()}>
           <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Nuevo costo</div>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar costo' : 'Nuevo costo'}</div>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:8 }}>Tipo</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginBottom:14 }}>
               {TIPOS_COSTO.map(t => (
@@ -202,8 +247,8 @@ export default function Costos({ campoActivo }) {
               <option value="">Sin bloque especifico</option>
               {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
             </select>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar costo'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar costo'}</button>
+            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={cerrarModal}>Cancelar</button>
           </div>
         </div>
       )}

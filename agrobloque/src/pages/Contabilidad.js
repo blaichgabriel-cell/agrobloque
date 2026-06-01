@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { descargarCsv, imprimirHtml } from '../lib/exporters'
 
 const meses = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -152,6 +153,33 @@ export default function Contabilidad() {
     else fetchMovimientos()
   }
 
+  const exportarCsv = () => {
+    const rows = movimientosFiltrados.map(m => ({
+      Fecha: m.fecha,
+      Tipo: m.tipo,
+      Descripcion: m.descripcion,
+      Categoria: m.categoria || '',
+      Contraparte: m.contraparte || '',
+      MedioPago: m.medio_pago || '',
+      Comprobante: m.comprobante || '',
+      Monto: Number(m.monto) || 0,
+      Notas: m.notas || '',
+    }))
+    descargarCsv('contabilidad-movimientos', ['Fecha', 'Tipo', 'Descripcion', 'Categoria', 'Contraparte', 'MedioPago', 'Comprobante', 'Monto', 'Notas'], rows)
+  }
+
+  const imprimirBalance = () => {
+    imprimirHtml('Balance contable AgroBloque', `
+      <h1>Balance contable AgroBloque</h1>
+      <div class="muted">Año ${anho}</div>
+      <table>
+        <tr><th>Mes</th><th class="right">Compras</th><th class="right">Ventas</th><th class="right">Balance</th></tr>
+        ${resumen.porMes.map(m => `<tr><td>${m.nombre}</td><td class="right">Gs. ${fmtGs(m.compras)}</td><td class="right">Gs. ${fmtGs(m.ventas)}</td><td class="right total">Gs. ${fmtGs(m.balance)}</td></tr>`).join('')}
+        <tr><td class="total">Total</td><td class="right total">Gs. ${fmtGs(resumen.compras)}</td><td class="right total">Gs. ${fmtGs(resumen.ventas)}</td><td class="right total">Gs. ${fmtGs(resumen.balance)}</td></tr>
+      </table>
+    `)
+  }
+
   const categorias = form.tipo === 'venta' ? categoriasVenta : categoriasCompra
 
   return (
@@ -177,6 +205,8 @@ export default function Contabilidad() {
             {[anhoActual() - 1, anhoActual(), anhoActual() + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           <div style={{ display:'flex', gap:6 }}>
+            <button onClick={exportarCsv} style={smallAction}>CSV</button>
+            <button onClick={imprimirBalance} style={smallAction}>PDF</button>
             <button onClick={() => abrirNuevo('compra')} style={smallAction}>Compra</button>
             <button onClick={() => abrirNuevo('venta')} style={{ ...smallAction, background:'#176a25', color:'#fff' }}>Venta</button>
           </div>

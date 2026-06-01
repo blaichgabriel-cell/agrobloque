@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { forceLocalSignOut, supabase } from '../lib/supabase'
+import { descargarJson } from '../lib/exporters'
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
@@ -227,6 +228,34 @@ export default function Configuracion() {
     await fetchAll(); abrir(volver)
   }
 
+  const descargarBackup = async () => {
+    setLoading(true); setError(''); setSuccess('')
+    const tablas = [
+      'campos', 'bloques', 'plantaciones', 'cultivos', 'abonos',
+      'productos', 'categorias_producto', 'operarios', 'asistencia',
+      'cosechas', 'costos', 'fumigaciones', 'fumigacion_productos',
+      'compradores', 'tareas', 'notas_modulo', 'vivero_lotes',
+      'vivero_tratamientos', 'contabilidad_movimientos',
+    ]
+
+    const backup = {
+      app: 'AgroBloque',
+      generado_en: new Date().toISOString(),
+      tablas: {},
+      errores: {},
+    }
+
+    for (const tabla of tablas) {
+      const { data, error } = await supabase.from(tabla).select('*')
+      if (error) backup.errores[tabla] = error.message
+      else backup.tablas[tabla] = data || []
+    }
+
+    descargarJson('agrobloque-backup', backup)
+    setSuccess('Backup descargado')
+    setLoading(false)
+  }
+
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
   const saveBtn = (color = '#212121') => ({ width:'100%', padding:14, borderRadius:14, background: color, border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' })
   const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
@@ -236,11 +265,12 @@ export default function Configuracion() {
   const menuItems = [
     { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email }) },
     { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', action: () => abrir('campos') },
-    { icon:'ti-plant-2', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#212121', bg:'#eeeeee', action: () => abrir('cultivos') },
+    { icon:'ti-seeding', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#212121', bg:'#eeeeee', action: () => abrir('cultivos') },
     { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
     { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#212121', bg:'#eeeeee', action: () => abrir('abonos') },
     { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#212121', bg:'#eeeeee', action: () => abrir('bloques') },
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
+    { icon:'ti-download', title:'Backup de datos', sub: 'Descargar copia JSON', color:'#176a25', bg:'#edf6ec', action: descargarBackup },
   ]
 
   return (
@@ -250,6 +280,8 @@ export default function Configuracion() {
       <div style={{ padding:'24px 20px 16px' }}>
         <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Sistema</div>
         <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:20 }}>Configuración</div>
+        {error && !modal && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
+        {success && !modal && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{success}</div>}
 
         {/* Tarjeta de perfil rápida */}
         <div style={{ background:'#212121', borderRadius:20, padding:'16px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:14 }}>

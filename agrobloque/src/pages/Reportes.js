@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { descargarCsv, imprimirHtml } from '../lib/exporters'
 
 const fmtGs = (n) => n > 0 ? `Gs. ${Math.round(n).toLocaleString('es-PY')}` : '—'
 const fmtKg = (n) => { const num = Number(n)||0; return num % 1 === 0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY', {minimumFractionDigits:1, maximumFractionDigits:2}) }
@@ -121,11 +122,64 @@ export default function Reportes({ campoActivo }) {
 
   const maxKg = Math.max(...porBloque.map(b => b.kg), 1)
 
+  const exportarCsv = () => {
+    const rows = [
+      { Seccion:'Resumen', Nombre:'Ingresos', Kg:'', Ingresos:datos.ingresos, PrecioProm:'', Registros:datos.registros },
+      { Seccion:'Resumen', Nombre:'Costos', Kg:'', Ingresos:datos.costos, PrecioProm:'', Registros:'' },
+      { Seccion:'Resumen', Nombre:'Ganancia neta', Kg:datos.kg, Ingresos:datos.ganancia, PrecioProm:'', Registros:datos.registros },
+      ...porCultivo.map(c => ({ Seccion:'Cultivo', Nombre:c.nombre, Kg:c.kg, Ingresos:c.ingresos, PrecioProm:c.precioProm, Registros:c.registros })),
+      ...porBloque.map(b => ({ Seccion:'Bloque', Nombre:b.codigo, Kg:b.kg, Ingresos:b.ingresos, PrecioProm:'', Registros:'' })),
+    ]
+    descargarCsv('reporte-produccion', ['Seccion', 'Nombre', 'Kg', 'Ingresos', 'PrecioProm', 'Registros'], rows)
+  }
+
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]))
+
+  const imprimirReporte = () => {
+    imprimirHtml('Reporte AgroBloque', `
+      <h1>Reporte AgroBloque</h1>
+      <div class="muted">${esc(campoSel?.nombre || '')} - Periodo: ${esc(periodo)}</div>
+      <h2>Resumen</h2>
+      <table>
+        <tr><th>Ingresos</th><th>Costos</th><th>Ganancia neta</th><th>Kg</th><th>Registros</th></tr>
+        <tr>
+          <td class="right">${fmtGs(datos.ingresos)}</td>
+          <td class="right">${fmtGs(datos.costos)}</td>
+          <td class="right total">${fmtGs(datos.ganancia)}</td>
+          <td class="right">${fmtKg(datos.kg)}</td>
+          <td class="right">${datos.registros}</td>
+        </tr>
+      </table>
+      <h2>Ingresos por cultivo</h2>
+      <table>
+        <tr><th>Cultivo</th><th class="right">Kg</th><th class="right">Ingresos</th><th class="right">Precio prom.</th><th class="right">Registros</th></tr>
+        ${porCultivo.map(c => `<tr><td>${esc(c.nombre)}</td><td class="right">${fmtKg(c.kg)}</td><td class="right">${fmtGs(c.ingresos)}</td><td class="right">${fmtGs(c.precioProm)}</td><td class="right">${c.registros}</td></tr>`).join('')}
+      </table>
+      <h2>Bloques mas productivos</h2>
+      <table>
+        <tr><th>Bloque</th><th class="right">Kg</th><th class="right">Ingresos</th></tr>
+        ${porBloque.map(b => `<tr><td>${esc(b.codigo)}</td><td class="right">${fmtKg(b.kg)}</td><td class="right">${fmtGs(b.ingresos)}</td></tr>`).join('')}
+      </table>
+    `)
+  }
+
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
-        <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Análisis</div>
-        <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:16 }}>Reportes</div>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
+          <div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Análisis</div>
+            <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Reportes</div>
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={exportarCsv} style={{ width:40, height:40, borderRadius:14, background:'#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <i className="ti ti-download" style={{ fontSize:19, color:'#212121' }} aria-hidden="true"></i>
+            </button>
+            <button onClick={imprimirReporte} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <i className="ti ti-printer" style={{ fontSize:19, color:'#fff' }} aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
         {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
 
         {campos.length > 1 && (
