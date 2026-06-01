@@ -163,6 +163,56 @@ export default function Reportes({ campoActivo }) {
     `)
   }
 
+  const imprimirTabla = (titulo, headers, rows) => {
+    imprimirHtml(titulo, `
+      <h1>${esc(titulo)}</h1>
+      <div class="muted">${esc(campoSel?.nombre || 'AgroBloque')} - ${new Date().toLocaleDateString('es-PY')}</div>
+      <table>
+        <tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr>
+        ${rows.map(row => `<tr>${headers.map(h => `<td>${esc(row[h] ?? '')}</td>`).join('')}</tr>`).join('')}
+      </table>
+    `)
+  }
+
+  const imprimirModulo = async (modulo) => {
+    if (modulo === 'cosechas') {
+      const { data } = await supabase.from('cosechas').select('fecha, kg_total, precio_kg, calidad, notas, bloques(codigo), compradores(nombre)').order('fecha', { ascending:false }).limit(200)
+      imprimirTabla('Reporte de cosechas', ['Fecha', 'Bloque', 'Kg', 'Precio', 'Comprador', 'Calidad', 'Notas'], (data || []).map(c => ({
+        Fecha:c.fecha, Bloque:c.bloques?.codigo || '', Kg:c.kg_total || '', Precio:c.precio_kg || '', Comprador:c.compradores?.nombre || '', Calidad:c.calidad || '', Notas:c.notas || '',
+      })))
+    }
+    if (modulo === 'costos') {
+      const { data } = await supabase.from('costos').select('fecha, tipo, descripcion, monto, bloques(codigo)').order('fecha', { ascending:false }).limit(200)
+      imprimirTabla('Reporte de costos manuales', ['Fecha', 'Tipo', 'Descripcion', 'Bloque', 'Monto'], (data || []).map(c => ({
+        Fecha:c.fecha, Tipo:c.tipo || '', Descripcion:c.descripcion || '', Bloque:c.bloques?.codigo || '', Monto:c.monto || '',
+      })))
+    }
+    if (modulo === 'inventario') {
+      const { data } = await supabase.from('productos').select('nombre, unidad, stock_actual, stock_minimo, carencia_dias, categorias_producto(nombre)').eq('activo', true).order('nombre')
+      imprimirTabla('Reporte de inventario', ['Categoria', 'Producto', 'Unidad', 'Stock', 'Minimo', 'Carencia'], (data || []).map(p => ({
+        Categoria:p.categorias_producto?.nombre || '', Producto:p.nombre || '', Unidad:p.unidad || '', Stock:p.stock_actual || 0, Minimo:p.stock_minimo || 0, Carencia:p.carencia_dias || 0,
+      })))
+    }
+    if (modulo === 'vivero') {
+      const { data } = await supabase.from('vivero_lotes').select('fecha_siembra, cultivo, variedad, cantidad_semillas, germinadas, perdidas, estado').order('fecha_siembra', { ascending:false }).limit(200)
+      imprimirTabla('Reporte de vivero', ['Fecha', 'Cultivo', 'Variedad', 'Semillas', 'Germinadas', 'Perdidas', 'Estado'], (data || []).map(v => ({
+        Fecha:v.fecha_siembra || '', Cultivo:v.cultivo || '', Variedad:v.variedad || '', Semillas:v.cantidad_semillas || 0, Germinadas:v.germinadas || 0, Perdidas:v.perdidas || 0, Estado:v.estado || '',
+      })))
+    }
+    if (modulo === 'fumigaciones') {
+      const { data } = await supabase.from('fumigaciones').select('fecha, tipo, operario, notas, campos(nombre), fumigacion_bloques(bloques(codigo))').order('fecha', { ascending:false }).limit(200)
+      imprimirTabla('Reporte de fumigaciones', ['Fecha', 'Tipo', 'Campo', 'Bloques', 'Operario', 'Notas'], (data || []).map(f => ({
+        Fecha:f.fecha || '', Tipo:f.tipo || '', Campo:f.campos?.nombre || '', Bloques:(f.fumigacion_bloques || []).map(b => b.bloques?.codigo).filter(Boolean).join(', '), Operario:f.operario || '', Notas:f.notas || '',
+      })))
+    }
+    if (modulo === 'contabilidad') {
+      const { data } = await supabase.from('contabilidad_movimientos').select('fecha, tipo, descripcion, categoria, contraparte, monto').order('fecha', { ascending:false }).limit(300)
+      imprimirTabla('Reporte de contabilidad', ['Fecha', 'Tipo', 'Descripcion', 'Categoria', 'Contraparte', 'Monto'], (data || []).map(m => ({
+        Fecha:m.fecha || '', Tipo:m.tipo || '', Descripcion:m.descripcion || '', Categoria:m.categoria || '', Contraparte:m.contraparte || '', Monto:m.monto || '',
+      })))
+    }
+  }
+
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
@@ -194,6 +244,24 @@ export default function Reportes({ campoActivo }) {
           {[['mes','Mes'],['trimestre','Trimestre'],['año','Año'],['total','Total']].map(([k,v]) => (
             <button key={k} onClick={() => setPeriodo(k)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
           ))}
+        </div>
+        <div style={{ background:'#fff', borderRadius:18, padding:'12px', marginTop:10, border:'1px solid #e8ece8' }}>
+          <div style={{ fontSize:12, color:'#8b928b', fontWeight:800, marginBottom:8 }}>Reportes por modulo</div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:6 }}>
+            {[
+              ['cosechas', 'Cosechas'],
+              ['costos', 'Costos'],
+              ['inventario', 'Inventario'],
+              ['vivero', 'Vivero'],
+              ['fumigaciones', 'Fumigaciones'],
+              ['contabilidad', 'Contabilidad'],
+            ].map(([key, label]) => (
+              <button key={key} onClick={() => imprimirModulo(key)}
+                style={{ border:'1px solid #e8ece8', background:'#fff', borderRadius:12, padding:'9px 7px', fontSize:11, fontWeight:750, cursor:'pointer' }}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

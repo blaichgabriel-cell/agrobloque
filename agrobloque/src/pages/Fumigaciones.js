@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { registrarAuditoria } from '../lib/audit'
 
 const TIPOS = {
   fumigacion: { label:'Fumigacion', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
@@ -77,6 +78,7 @@ export default function Fumigaciones() {
       operario: form.operario || null, notas: form.notas || null
     }).select().single()
     if (fum) {
+      await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
       await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => ({ fumigacion_id: fum.id, bloque_id: b })))
       const prods = form.productos_form.filter(p => p.producto_id)
       if (prods.length > 0) {
@@ -98,6 +100,7 @@ export default function Fumigaciones() {
   const eliminar = (id) => {
     setConfirmar({ fn: async () => {
       await supabase.from('fumigaciones').delete().eq('id', id)
+      await registrarAuditoria({ accion:'Elimino fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:id })
       setConfirmar(null); setDetalle(null); fetchFumigaciones()
     }})
   }

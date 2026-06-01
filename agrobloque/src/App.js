@@ -16,6 +16,9 @@ import Contabilidad from './pages/Contabilidad'
 import Reportes from './pages/Reportes'
 import Compradores from './pages/Compradores'
 import Vivero from './pages/Vivero'
+import Buscador from './pages/Buscador'
+import Alertas from './pages/Alertas'
+import Auditoria from './pages/Auditoria'
 import NavBar from './components/NavBar'
 
 export function LogoHS({ size = 48 }) {
@@ -50,6 +53,8 @@ function MenuIcon({ icon, color, size = 19 }) {
 // Sidebar para desktop
 const allTabs = [
   { path:'/', icon:'ti-home', label:'Inicio' },
+  { path:'/buscar', icon:'ti-search', label:'Buscar' },
+  { path:'/alertas', icon:'ti-bell-ringing', label:'Alertas' },
   { path:'/mapa', icon:'ti-map', label:'Mapa' },
   { path:'/agenda', icon:'ti-calendar', label:'Agenda' },
   { path:'/vivero', icon:'vivero-icon', label:'Vivero' },
@@ -61,6 +66,7 @@ const allTabs = [
   { path:'/contabilidad', icon:'ti-calculator', label:'Contabilidad' },
   { path:'/reportes', icon:'ti-chart-bar', label:'Reportes' },
   { path:'/compradores', icon:'ti-building-store', label:'Compradores' },
+  { path:'/auditoria', icon:'ti-history', label:'Auditoria' },
   { path:'/configuracion', icon:'ti-settings', label:'Configuración' },
 ]
 
@@ -103,7 +109,7 @@ const esErrorSesion = (error) => {
 function DesktopSidebar({ isGuest = false }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const tabs = isGuest ? allTabs.filter(t => !['/asistencia', '/configuracion'].includes(t.path)) : allTabs
+  const tabs = isGuest ? allTabs.filter(t => !['/asistencia', '/configuracion', '/auditoria'].includes(t.path)) : allTabs
   return (
     <div style={{
       width: SIDEBAR_WIDTH,
@@ -209,6 +215,8 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false }) {
         }}>
           <Routes>
             <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo}/>}/>
+            <Route path="/buscar" element={<Buscador/>}/>
+            <Route path="/alertas" element={<Alertas/>}/>
             <Route path="/mapa" element={<Mapa campoActivo={campoActivo}/>}/>
             <Route path="/bloque/:id" element={<FichaBloque/>}/>
             <Route path="/agenda" element={<Agenda/>}/>
@@ -221,6 +229,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false }) {
             <Route path="/contabilidad" element={<Contabilidad/>}/>
             <Route path="/reportes" element={<Reportes campoActivo={campoActivo}/>}/>
             <Route path="/compradores" element={<Compradores/>}/>
+            <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <Auditoria/>}/>
             <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <Configuracion/>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>

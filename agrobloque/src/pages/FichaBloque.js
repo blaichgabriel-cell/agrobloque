@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { registrarAuditoria } from '../lib/audit'
 
 const diasDesde = (fecha) => {
   if (!fecha) return null
@@ -45,6 +46,10 @@ export default function FichaBloque() {
 
   // Fertilización
   const [fertilizaciones, setFertilizaciones] = useState([])
+  const [planSemanal, setPlanSemanal] = useState(null)
+  const [aplicacionesPlan, setAplicacionesPlan] = useState([])
+  const [showPlanSemanal, setShowPlanSemanal] = useState(false)
+  const [showAplicarPlan, setShowAplicarPlan] = useState(false)
   const [showNuevaFertilizacion, setShowNuevaFertilizacion] = useState(false)
   const [formFert, setFormFert] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -52,6 +57,21 @@ export default function FichaBloque() {
     soluciones: [
       { nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }
     ]
+  })
+  const [formPlan, setFormPlan] = useState({
+    nombre: 'Plan semanal',
+    fecha_inicio: new Date().toISOString().split('T')[0],
+    litros_preparados: '',
+    notas: '',
+    soluciones: [
+      { nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }
+    ],
+  })
+  const [formAplicacionPlan, setFormAplicacionPlan] = useState({
+    fecha: new Date().toISOString().split('T')[0],
+    litros_aplicados: '',
+    responsable: '',
+    notas: '',
   })
   const [savingFert, setSavingFert] = useState(false)
   const [fertDetalle, setFertDetalle] = useState(null)
@@ -120,6 +140,24 @@ export default function FichaBloque() {
       .eq('bloque_id', id)
       .order('fecha', { ascending: false })
     setFertilizaciones(ferts || [])
+
+    const { data: planes } = await supabase.from('fertilizacion_planes')
+      .select('*')
+      .eq('bloque_id', id)
+      .eq('activo', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const plan = (planes || [])[0] || null
+    setPlanSemanal(plan)
+    if (plan) {
+      const { data: apps } = await supabase.from('fertilizacion_plan_aplicaciones')
+        .select('*')
+        .eq('plan_id', plan.id)
+        .order('fecha', { ascending: false })
+      setAplicacionesPlan(apps || [])
+    } else {
+      setAplicacionesPlan([])
+    }
   }
 
   const fetchCultivos = async () => {
@@ -192,6 +230,7 @@ export default function FichaBloque() {
       )
     }
     setSaving(false); setShowNuevaPlantacion(false)
+    await registrarAuditoria({ accion:'Registro plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:nueva?.id || '', detalle:`Bloque ${bloque?.codigo || ''}` })
     fetchData()
   }
 
@@ -214,6 +253,7 @@ export default function FichaBloque() {
       )
     }
     setSaving(false); setShowEditarPlantacion(false)
+    await registrarAuditoria({ accion:'Edito plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
     fetchData()
   }
 
@@ -224,6 +264,7 @@ export default function FichaBloque() {
       mensaje: 'La plantacion actual pasara al historial del bloque. No se borra ningun dato.',
       fn: async () => {
         await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
+        await registrarAuditoria({ accion:'Finalizo plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
         setConfirmar(null)
         setSeccion('historial')
         fetchData()
@@ -241,6 +282,7 @@ export default function FichaBloque() {
         await supabase.from('fotos_bloque').delete().eq('plantacion_id', plantacionActiva.id)
         await supabase.from('muertes_plantas').delete().eq('plantacion_id', plantacionActiva.id)
         await supabase.from('plantaciones').delete().eq('id', plantacionActiva.id)
+        await registrarAuditoria({ accion:'Elimino plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
         setConfirmar(null)
         setSeccion('plantacion')
         fetchData()
@@ -341,6 +383,124 @@ export default function FichaBloque() {
       sols[si] = { ...sols[si], productos: prods }
       return { ...f, soluciones: sols }
     })
+  }
+
+  const actualizarProductoPlan = (si, pi, campo, valor) => {
+    setFormPlan(f => {
+      const sols = [...f.soluciones]
+      const prods = [...sols[si].productos]
+      prods[pi] = { ...prods[pi], [campo]: valor }
+      sols[si] = { ...sols[si], productos: prods }
+      return { ...f, soluciones: sols }
+    })
+  }
+
+  const agregarSolucionPlan = () => {
+    const letras = ['A','B','C','D','E','F']
+    const usadas = formPlan.soluciones.map(s => s.nombre)
+    const siguiente = letras.find(l => !usadas.includes(l)) || `S${formPlan.soluciones.length + 1}`
+    setFormPlan(f => ({
+      ...f,
+      soluciones: [...f.soluciones, { nombre: siguiente, productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }]
+    }))
+  }
+
+  const eliminarSolucionPlan = (si) => {
+    setFormPlan(f => ({ ...f, soluciones: f.soluciones.filter((_,i) => i !== si) }))
+  }
+
+  const agregarProductoPlan = (si) => {
+    setFormPlan(f => {
+      const sols = [...f.soluciones]
+      sols[si] = { ...sols[si], productos: [...sols[si].productos, { nombre: '', cantidad: '', unidad: 'kg' }] }
+      return { ...f, soluciones: sols }
+    })
+  }
+
+  const eliminarProductoPlan = (si, pi) => {
+    setFormPlan(f => {
+      const sols = [...f.soluciones]
+      sols[si] = { ...sols[si], productos: sols[si].productos.filter((_,i) => i !== pi) }
+      return { ...f, soluciones: sols }
+    })
+  }
+
+  const abrirPlanSemanal = () => {
+    if (planSemanal) {
+      setFormPlan({
+        id: planSemanal.id,
+        nombre: planSemanal.nombre || 'Plan semanal',
+        fecha_inicio: planSemanal.fecha_inicio || new Date().toISOString().split('T')[0],
+        litros_preparados: planSemanal.litros_preparados || '',
+        notas: planSemanal.notas || '',
+        soluciones: Array.isArray(planSemanal.soluciones) && planSemanal.soluciones.length > 0
+          ? planSemanal.soluciones
+          : [{ nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }],
+      })
+    } else {
+      setFormPlan({
+        nombre: 'Plan semanal',
+        fecha_inicio: new Date().toISOString().split('T')[0],
+        litros_preparados: '',
+        notas: '',
+        soluciones: [{ nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }],
+      })
+    }
+    setShowPlanSemanal(true)
+  }
+
+  const guardarPlanSemanal = async () => {
+    if (!formPlan.nombre || !formPlan.fecha_inicio) return
+    setSavingFert(true)
+    const payload = {
+      bloque_id: id,
+      nombre: formPlan.nombre,
+      fecha_inicio: formPlan.fecha_inicio,
+      litros_preparados: formPlan.litros_preparados || null,
+      notas: formPlan.notas || null,
+      soluciones: formPlan.soluciones,
+      activo: true,
+    }
+    if (formPlan.id) await supabase.from('fertilizacion_planes').update(payload).eq('id', formPlan.id)
+    else await supabase.from('fertilizacion_planes').insert(payload)
+    await registrarAuditoria({ accion: formPlan.id ? 'Edito plan semanal' : 'Creo plan semanal', modulo:'Bloque', tabla:'fertilizacion_planes', registroId:formPlan.id || '', detalle:`Bloque ${bloque?.codigo || ''}` })
+    setSavingFert(false)
+    setShowPlanSemanal(false)
+    fetchData()
+  }
+
+  const desactivarPlanSemanal = async () => {
+    if (!planSemanal?.id) return
+    await supabase.from('fertilizacion_planes').update({ activo:false }).eq('id', planSemanal.id)
+    await registrarAuditoria({ accion:'Desactivo plan semanal', modulo:'Bloque', tabla:'fertilizacion_planes', registroId:planSemanal.id, detalle:`Bloque ${bloque?.codigo || ''}` })
+    fetchData()
+  }
+
+  const abrirAplicarPlan = () => {
+    setFormAplicacionPlan({
+      fecha: new Date().toISOString().split('T')[0],
+      litros_aplicados: '',
+      responsable: '',
+      notas: '',
+    })
+    setShowAplicarPlan(true)
+  }
+
+  const guardarAplicacionPlan = async () => {
+    if (!planSemanal?.id || !formAplicacionPlan.fecha) return
+    setSavingFert(true)
+    await supabase.from('fertilizacion_plan_aplicaciones').insert({
+      plan_id: planSemanal.id,
+      bloque_id: id,
+      fecha: formAplicacionPlan.fecha,
+      litros_aplicados: formAplicacionPlan.litros_aplicados || null,
+      responsable: formAplicacionPlan.responsable || null,
+      notas: formAplicacionPlan.notas || null,
+    })
+    await registrarAuditoria({ accion:'Aplico plan semanal', modulo:'Bloque', tabla:'fertilizacion_plan_aplicaciones', registroId:planSemanal.id, detalle:`Bloque ${bloque?.codigo || ''} - ${formAplicacionPlan.litros_aplicados || 0} L` })
+    setSavingFert(false)
+    setShowAplicarPlan(false)
+    fetchData()
   }
 
   const guardarFertilizacion = async () => {
@@ -619,6 +779,54 @@ export default function FichaBloque() {
         {/* FERTILIZACIÓN */}
         {seccion === 'fertilizacion' && (
           <>
+            <div style={{ background: planSemanal ? '#eef6ea' : '#fff', borderRadius:20, padding:'16px', marginBottom:10, border: planSemanal ? '1px solid #cde6c8' : '1px dashed #d6d6d6' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start', marginBottom:10 }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:800, color: planSemanal ? '#1a5c2e' : '#8b928b', textTransform:'uppercase', marginBottom:4 }}>Plan semanal</div>
+                  <div style={{ fontSize:15, fontWeight:800, color:'#0a0a0a' }}>{planSemanal ? planSemanal.nombre : 'Sin plan activo'}</div>
+                  <div style={{ fontSize:12, color:'#687068', marginTop:3 }}>
+                    {planSemanal ? `${planSemanal.litros_preparados || '—'} L preparados · ${aplicacionesPlan.length} aplicaciones` : 'Solo para los bloques que usan receta semanal.'}
+                  </div>
+                </div>
+                <button onClick={abrirPlanSemanal}
+                  style={{ padding:'8px 12px', borderRadius:12, border:'none', background:'#212121', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                  {planSemanal ? 'Editar' : 'Crear'}
+                </button>
+              </div>
+              {planSemanal && (
+                <>
+                  <div style={{ display:'grid', gap:6, marginBottom:10 }}>
+                    {(planSemanal.soluciones || []).slice(0, 3).map((sol, si) => (
+                      <div key={si} style={{ fontSize:12, color:'#263026' }}>
+                        <strong>Sol. {sol.nombre}:</strong> {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x => x.trim()).join(' · ') || 'Sin productos'}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                    <button onClick={abrirAplicarPlan}
+                      style={{ padding:'11px', borderRadius:14, border:'none', background:'#1a5c2e', color:'#fff', fontSize:12, fontWeight:800, cursor:'pointer' }}>
+                      Aplicar hoy
+                    </button>
+                    <button onClick={desactivarPlanSemanal}
+                      style={{ padding:'11px', borderRadius:14, border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', fontSize:12, fontWeight:800, cursor:'pointer' }}>
+                      Desactivar
+                    </button>
+                  </div>
+                  {aplicacionesPlan.length > 0 && (
+                    <div style={{ marginTop:12 }}>
+                      <div style={{ fontSize:11, fontWeight:800, color:'#8b928b', textTransform:'uppercase', marginBottom:6 }}>Ultimas aplicaciones</div>
+                      {aplicacionesPlan.slice(0, 5).map(app => (
+                        <div key={app.id} style={{ display:'flex', justifyContent:'space-between', gap:10, padding:'7px 0', borderTop:'1px solid rgba(0,0,0,0.06)' }}>
+                          <span style={{ fontSize:12, color:'#202820' }}>{app.fecha}{app.responsable ? ` · ${app.responsable}` : ''}</span>
+                          <strong style={{ fontSize:12 }}>{app.litros_aplicados || '—'} L</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
             <button onClick={abrirNuevaFertilizacion}
               style={{ width:'100%', padding:13, borderRadius:14, border:'none', background:'#1a5c2e', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', marginBottom:16 }}>
               + Nueva fertilización
@@ -912,6 +1120,75 @@ export default function FichaBloque() {
       )}
 
       {/* Modal nueva fertilización */}
+      {showPlanSemanal && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+          onClick={e => e.target===e.currentTarget && setShowPlanSemanal(false)}>
+          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'88vh', overflowY:'auto' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>{formPlan.id ? 'Editar plan semanal' : 'Nuevo plan semanal'}</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:16 }}>Usalo solo en los bloques donde preparas fertilizacion para varios dias.</div>
+
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
+            <input style={inpStyle} value={formPlan.nombre} onChange={e => setFormPlan(f => ({ ...f, nombre:e.target.value }))} />
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              <div>
+                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha inicio</div>
+                <input type="date" style={inpStyle} value={formPlan.fecha_inicio} onChange={e => setFormPlan(f => ({ ...f, fecha_inicio:e.target.value }))} />
+              </div>
+              <div>
+                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Litros preparados</div>
+                <input style={inpStyle} value={formPlan.litros_preparados} onChange={e => setFormPlan(f => ({ ...f, litros_preparados:e.target.value }))} placeholder="Ej: 200" />
+              </div>
+            </div>
+
+            {formPlan.soluciones.map((sol, si) => (
+              <div key={si} style={{ background:'#fff', borderRadius:16, padding:14, marginBottom:12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#1a5c2e' }}>Solucion {sol.nombre}</div>
+                  {formPlan.soluciones.length > 1 && <button onClick={() => eliminarSolucionPlan(si)} style={{ border:'none', background:'none', color:'#c84040', cursor:'pointer' }}>Eliminar</button>}
+                </div>
+                {(sol.productos || []).map((prod, pi) => (
+                  <div key={pi} style={{ display:'grid', gridTemplateColumns:'1fr 74px 72px 28px', gap:6, marginBottom:8 }}>
+                    <input style={{ ...inpStyle, marginBottom:0 }} value={prod.nombre} onChange={e => actualizarProductoPlan(si, pi, 'nombre', e.target.value)} placeholder="Producto"/>
+                    <input style={{ ...inpStyle, marginBottom:0 }} value={prod.cantidad} onChange={e => actualizarProductoPlan(si, pi, 'cantidad', e.target.value)} placeholder="Cant."/>
+                    <select style={{ ...inpStyle, marginBottom:0 }} value={prod.unidad} onChange={e => actualizarProductoPlan(si, pi, 'unidad', e.target.value)}>
+                      {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                    <button onClick={() => eliminarProductoPlan(si, pi)} style={{ border:'none', background:'transparent', color:'#c84040', cursor:'pointer' }}>×</button>
+                  </div>
+                ))}
+                <button onClick={() => agregarProductoPlan(si)} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #b8c9b5', background:'transparent', fontSize:12, color:'#1a5c2e', cursor:'pointer' }}>+ Producto</button>
+              </div>
+            ))}
+            <button onClick={agregarSolucionPlan} style={{ width:'100%', padding:11, borderRadius:14, border:'1px dashed #1a5c2e', background:'#fff', fontSize:12, color:'#1a5c2e', cursor:'pointer', marginBottom:12 }}>+ Agregar solucion</button>
+            <textarea style={{ ...inpStyle, minHeight:70, resize:'vertical' }} value={formPlan.notas} onChange={e => setFormPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas del plan"/>
+            <button onClick={guardarPlanSemanal} disabled={savingFert} style={{ width:'100%', padding:14, borderRadius:14, border:'none', background:'#1a5c2e', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+              {savingFert ? 'Guardando...' : 'Guardar plan semanal'}
+            </button>
+            <button onClick={() => setShowPlanSemanal(false)} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #e8e6e2', background:'transparent', marginTop:8, fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {showAplicarPlan && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+          onClick={e => e.target===e.currentTarget && setShowAplicarPlan(false)}>
+          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:16 }}>Aplicar plan semanal</div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha</div>
+            <input type="date" style={inpStyle} value={formAplicacionPlan.fecha} onChange={e => setFormAplicacionPlan(f => ({ ...f, fecha:e.target.value }))} />
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Litros aplicados</div>
+            <input style={inpStyle} value={formAplicacionPlan.litros_aplicados} onChange={e => setFormAplicacionPlan(f => ({ ...f, litros_aplicados:e.target.value }))} placeholder="Ej: 40" />
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Responsable</div>
+            <input style={inpStyle} value={formAplicacionPlan.responsable} onChange={e => setFormAplicacionPlan(f => ({ ...f, responsable:e.target.value }))} placeholder="Opcional" />
+            <textarea style={{ ...inpStyle, minHeight:70, resize:'vertical' }} value={formAplicacionPlan.notas} onChange={e => setFormAplicacionPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas"/>
+            <button onClick={guardarAplicacionPlan} disabled={savingFert} style={{ width:'100%', padding:14, borderRadius:14, border:'none', background:'#1a5c2e', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+              {savingFert ? 'Guardando...' : 'Guardar aplicacion'}
+            </button>
+            <button onClick={() => setShowAplicarPlan(false)} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #e8e6e2', background:'transparent', marginTop:8, fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
       {showNuevaFertilizacion && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
           onClick={e => e.target===e.currentTarget && setShowNuevaFertilizacion(false)}>

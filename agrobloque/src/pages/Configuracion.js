@@ -41,6 +41,7 @@ export default function Configuracion() {
   const [compradores, setCompradores] = useState([])
   const [bloques, setBloques] = useState([])
   const [invitados, setInvitados] = useState([])
+  const [roles, setRoles] = useState([])
   const [linkInvitado, setLinkInvitado] = useState('')
   const [form, setForm] = useState({})
   const [loading, setLoading] = useState(false)
@@ -56,7 +57,7 @@ export default function Configuracion() {
       email: user.email,
       foto: typeof window !== 'undefined' ? (window.localStorage.getItem(FOTO_PERFIL_KEY) || '') : ''
     })
-    const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }, { data: inv }] = await Promise.all([
+    const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }, { data: inv }, { data: rolData }] = await Promise.all([
       supabase.from('campos').select('*').order('nombre'),
       supabase.from('cultivos').select('*').order('nombre'),
       supabase.from('operarios').select('*').order('nombre'),
@@ -64,10 +65,12 @@ export default function Configuracion() {
       supabase.from('compradores').select('*').order('nombre'),
       supabase.from('bloques').select('*').order('codigo'),
       supabase.from('guest_access_links').select('*, campos(nombre)').order('created_at', { ascending:false }),
+      supabase.from('app_user_roles').select('*').order('email'),
     ])
     setCampos(c||[]); setCultivos(cu||[]); setOperarios(op||[])
     setAbonos(ab||[]); setCompradores(comp||[]); setBloques(bl||[])
     setInvitados(inv||[])
+    setRoles(rolData||[])
   }
 
   const abrir = (tipo, datos = {}) => { setForm(datos); setModal(tipo); setError(''); setSuccess('') }
@@ -311,6 +314,34 @@ export default function Configuracion() {
     await fetchAll()
   }
 
+  const guardarRol = async () => {
+    if (!form.email || !form.rol) return
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const payload = {
+        email: form.email.trim().toLowerCase(),
+        nombre: form.nombre || null,
+        rol: form.rol,
+        activo: form.activo !== false,
+        notas: form.notas || null,
+      }
+      const { error } = form.id
+        ? await supabase.from('app_user_roles').update(payload).eq('id', form.id)
+        : await supabase.from('app_user_roles').insert(payload)
+      if (error) throw error
+      await fetchAll()
+      abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'' })
+    } catch (e) {
+      setError('No se pudo guardar. Ejecuta primero el SQL profesional.')
+    }
+    setLoading(false)
+  }
+
+  const eliminarRol = async (id) => {
+    await supabase.from('app_user_roles').delete().eq('id', id)
+    await fetchAll()
+  }
+
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
   const saveBtn = (color = '#212121') => ({ width:'100%', padding:14, borderRadius:14, background: color, border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' })
   const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
@@ -326,6 +357,8 @@ export default function Configuracion() {
     { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#212121', bg:'#eeeeee', action: () => abrir('bloques') },
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
     { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:'#176a25', bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30' }) },
+    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:'#176a25', bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'' }) },
+    { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:'#212121', bg:'#eeeeee', action: () => navigate('/auditoria') },
     { icon:'ti-download', title:'Backup de datos', sub: 'Descargar copia JSON', color:'#176a25', bg:'#edf6ec', action: descargarBackup },
   ]
 
@@ -446,6 +479,43 @@ export default function Configuracion() {
             </>}
 
             {/* ── CUENTA ── */}
+            {modal === 'roles' && <>
+              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:8 }}>Usuarios y permisos</div>
+              <div style={{ fontSize:12, color:'#8b928b', marginBottom:16 }}>Registro interno de roles. Para dar acceso real, el usuario tambien debe existir en Supabase Authentication.</div>
+
+              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>{form.id ? 'Editar usuario' : 'Agregar usuario'}</div>
+                <input style={inp} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="correo@empresa.com"/>
+                <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre"/>
+                <select style={inp} value={form.rol||'operador'} onChange={e=>setForm(f=>({...f,rol:e.target.value}))}>
+                  <option value="admin">Admin</option>
+                  <option value="operador">Operador</option>
+                  <option value="lectura">Solo lectura</option>
+                </select>
+                <textarea style={{ ...inp, minHeight:64, resize:'vertical' }} value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
+                <button style={saveBtn('#176a25')} onClick={guardarRol} disabled={loading}>{loading ? 'Guardando...' : 'Guardar permiso'}</button>
+              </div>
+
+              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Registrados</div>
+                {roles.length === 0 ? (
+                  <div style={{ fontSize:12, color:'#9a9a9a', padding:'8px 0' }}>Sin usuarios registrados.</div>
+                ) : roles.map(r => (
+                  <div key={r.id} style={listItem}>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>{r.nombre || r.email}</div>
+                      <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.email} - {r.rol}</div>
+                    </div>
+                    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                      <button style={{ padding:'5px 10px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => setForm(r)}>Editar</button>
+                      <button style={{ padding:'5px 10px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminarRol(r.id)}>Borrar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
             {modal === 'cuenta' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Mi cuenta</div>
 

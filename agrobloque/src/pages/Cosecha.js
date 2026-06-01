@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { registrarAuditoria } from '../lib/audit'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
@@ -200,6 +201,13 @@ export default function Cosecha() {
         ? await supabase.from('cosechas').update(payload).eq('id', form.id)
         : await supabase.from('cosechas').insert(payload)
       if (error) throw error
+      await registrarAuditoria({
+        accion: form.id ? 'Edito cosecha' : 'Registro cosecha',
+        modulo: 'Cosecha',
+        tabla: 'cosechas',
+        registroId: form.id || '',
+        detalle: `${payload.kg_total} kg - Gs. ${payload.precio_kg}/kg`,
+      })
       await fetchCosechas(); setModal(false)
       limpiarForm()
     } catch (e) {
@@ -211,6 +219,7 @@ export default function Cosecha() {
   const eliminar = (id) => {
     setConfirmar({ fn: async () => {
       await supabase.from('cosechas').delete().eq('id', id)
+      await registrarAuditoria({ accion:'Elimino cosecha', modulo:'Cosecha', tabla:'cosechas', registroId:id })
       setConfirmar(null); setDetalle(null); fetchCosechas()
     }})
   }

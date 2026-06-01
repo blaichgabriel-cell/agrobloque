@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { registrarAuditoria } from '../lib/audit'
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
@@ -59,6 +60,29 @@ export default function Inventario() {
       .single()
 
     return creada?.id || null
+  }
+
+  const sincronizarAbonoBase = async (nombre, categoriaNombre, nombreAnterior = '') => {
+    if (categoriaNombre !== ABONO_BASE_CATEGORIA) return
+    const nombreLimpio = String(nombre || '').trim()
+    if (!nombreLimpio) return
+
+    const nombres = [nombreLimpio, nombreAnterior].filter(Boolean)
+    const { data: existentes } = await supabase
+      .from('abonos')
+      .select('id, nombre')
+      .in('nombre', nombres)
+
+    const abono = (existentes || []).find(a =>
+      normalizarNombre(a.nombre) === normalizarNombre(nombreAnterior) ||
+      normalizarNombre(a.nombre) === normalizarNombre(nombreLimpio)
+    )
+
+    if (abono) {
+      await supabase.from('abonos').update({ nombre: nombreLimpio }).eq('id', abono.id)
+    } else {
+      await supabase.from('abonos').insert({ nombre: nombreLimpio })
+    }
   }
 
   const sincronizarAbonosBase = async () => {
@@ -153,8 +177,17 @@ export default function Inventario() {
         carencia_dias: Number(form.carencia_dias) || 0,
         notas: form.notas || null
       }
+      const anterior = form.id ? productos.find(p => p.id === form.id)?.nombre : ''
       if (form.id) await supabase.from('productos').update(payload).eq('id', form.id)
       else await supabase.from('productos').insert(payload)
+      await sincronizarAbonoBase(form.nombre, form.categoria_nombre, anterior)
+      await registrarAuditoria({
+        accion: form.id ? 'Edito producto' : 'Registro producto',
+        modulo: 'Inventario',
+        tabla: 'productos',
+        registroId: form.id || '',
+        detalle: `${payload.nombre} - stock ${payload.stock_actual}`,
+      })
       await fetchProductos(); setSaving(false); setModal(null)
       setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' })
     } catch (e) { setError('Error: ' + e.message); setSaving(false) }
@@ -164,12 +197,14 @@ export default function Inventario() {
     const p = productos.find(x => x.id === id)
     if (!p) return
     await supabase.from('productos').update({ stock_actual: Math.max(0, Number(p.stock_actual) + delta) }).eq('id', id)
+    await registrarAuditoria({ accion:'Ajusto stock', modulo:'Inventario', tabla:'productos', registroId:id, detalle:`${p.nombre}: ${delta > 0 ? '+' : ''}${delta}` })
     fetchProductos()
   }
 
   const eliminar = (id, nombre) => {
     setConfirmar({ mensaje: `"${nombre}" será eliminado.`, fn: async () => {
       await supabase.from('productos').update({ activo: false }).eq('id', id)
+      await registrarAuditoria({ accion:'Desactivo producto', modulo:'Inventario', tabla:'productos', registroId:id, detalle:nombre })
       setConfirmar(null); fetchProductos()
     }})
   }

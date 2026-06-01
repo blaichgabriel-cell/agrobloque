@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 const moreTabs = [
+  { path: '/buscar', icon: 'ti-search', label: 'Buscar' },
+  { path: '/alertas', icon: 'ti-bell-ringing', label: 'Alertas' },
   { path: '/mapa', icon: 'ti-map', label: 'Mapa' },
   { path: '/vivero', icon: 'vivero-icon', label: 'Vivero' },
   { path: '/asistencia', icon: 'ti-users', label: 'Asistencia' },
@@ -12,6 +14,7 @@ const moreTabs = [
   { path: '/contabilidad', icon: 'ti-calculator', label: 'Contab.' },
   { path: '/reportes', icon: 'ti-chart-bar', label: 'Reportes' },
   { path: '/compradores', icon: 'ti-building-store', label: 'Compradores' },
+  { path: '/auditoria', icon: 'ti-history', label: 'Audit.' },
   { path: '/configuracion', icon: 'ti-settings', label: 'Config.' },
 ]
 
@@ -51,7 +54,7 @@ export default function NavBar({ isGuest = false }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [showMore, setShowMore] = useState(false)
-  const tabs = isGuest ? moreTabs.filter(t => !['/asistencia', '/configuracion'].includes(t.path)) : moreTabs
+  const tabs = isGuest ? moreTabs.filter(t => !['/asistencia', '/configuracion', '/auditoria'].includes(t.path)) : moreTabs
   const isMoreActive = tabs.some(t => t.path === location.pathname)
 
   const go = (path) => {
@@ -141,11 +144,11 @@ export default function NavBar({ isGuest = false }) {
             onClick={() => go('/agenda')}
           />
           <MainButton
-            active={location.pathname === '/agenda'}
+            active={location.pathname === '/alertas'}
             icon="ti-bell"
-            label="Notificaciones"
+            label="Alertas"
             hasDot
-            onClick={() => go('/agenda')}
+            onClick={() => go('/alertas')}
           />
           <button style={navItem} onClick={() => setShowMore(v => !v)}>
             <i className={`ti ${showMore ? 'ti-x' : 'ti-dots'}`} style={{

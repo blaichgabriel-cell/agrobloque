@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { descargarCsv } from '../lib/exporters'
+import { registrarAuditoria } from '../lib/audit'
 
 const TIPOS_COSTO = [
   { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:'#212121', bg:'#eeeeee' },
@@ -104,11 +105,19 @@ export default function Costos({ campoActivo }) {
     }
     if (form.id) await supabase.from('costos').update(payload).eq('id', form.id)
     else await supabase.from('costos').insert(payload)
+    await registrarAuditoria({
+      accion: form.id ? 'Edito costo manual' : 'Registro costo manual',
+      modulo: 'Costos',
+      tabla: 'costos',
+      registroId: form.id || '',
+      detalle: `${payload.descripcion || payload.tipo} - Gs. ${payload.monto}`,
+    })
     await fetchCostos(); setSaving(false); cerrarModal()
   }
 
   const eliminar = async (id) => {
     await supabase.from('costos').delete().eq('id', id)
+    await registrarAuditoria({ accion:'Elimino costo manual', modulo:'Costos', tabla:'costos', registroId:id })
     fetchCostos()
   }
 
