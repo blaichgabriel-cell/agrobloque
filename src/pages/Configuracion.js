@@ -8,6 +8,7 @@ const ABONO_BASE_CATEGORIA = 'Abono de base'
 const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
 
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
+const esDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 768
 
 const comprimirFotoPerfil = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader()
@@ -425,9 +426,31 @@ export default function Configuracion() {
       </div>
 
       {modal && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+        <div style={{
+          position:'fixed',
+          top:0,
+          left:0,
+          right:0,
+          bottom:0,
+          background:'rgba(0,0,0,0.4)',
+          zIndex:100,
+          display:'flex',
+          alignItems: esDesktop() ? 'center' : 'flex-end',
+          justifyContent:'center',
+          padding: esDesktop() ? 24 : 0,
+          boxSizing:'border-box',
+        }}
           onClick={e => e.target===e.currentTarget && cerrar()}>
-          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'88vh', overflowY:'auto' }}>
+          <div style={{
+            background:'#f2f1ef',
+            borderRadius: esDesktop() ? 24 : '24px 24px 0 0',
+            width:'100%',
+            maxWidth: esDesktop() ? 620 : 480,
+            padding:'24px 20px 40px',
+            maxHeight: esDesktop() ? '82vh' : '88vh',
+            overflowY:'auto',
+            boxShadow: esDesktop() ? '0 28px 70px rgba(0,0,0,0.28)' : 'none',
+          }}>
 
             {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
             {success && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{success}</div>}
