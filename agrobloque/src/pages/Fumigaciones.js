@@ -64,6 +64,7 @@ const formatFechaLabel = (fecha) => {
 }
 
 export default function Fumigaciones() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [fumigaciones, setFumigaciones] = useState([])
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
@@ -272,8 +273,30 @@ export default function Fumigaciones() {
 
       {/* Detalle */}
       {detalle && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setDetalle(null)}>
-          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto' }}>
+        <div style={{
+          position:'fixed',
+          top:0,
+          left:0,
+          right:0,
+          bottom:0,
+          background:'rgba(0,0,0,0.4)',
+          zIndex:100,
+          display:'flex',
+          alignItems: isDesktop ? 'flex-start' : 'flex-end',
+          justifyContent:'center',
+          padding: isDesktop ? '56px 24px 24px' : 0,
+          overflowY:'auto',
+        }} onClick={e => e.target===e.currentTarget && setDetalle(null)}>
+          <div style={{
+            background:'#f2f1ef',
+            borderRadius: isDesktop ? 24 : '24px 24px 0 0',
+            width:'100%',
+            maxWidth:480,
+            padding:'24px 20px 40px',
+            maxHeight: isDesktop ? 'calc(100vh - 96px)' : '85vh',
+            overflowY:'auto',
+            boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
+          }}>
             {(() => {
               const tipo = TIPOS[detalle.tipo] || TIPOS.fumigacion
               const bloquesCodes = detalle.fumigacion_bloques?.map(fb => fb.bloques?.codigo).filter(Boolean).join(', ')
@@ -328,8 +351,30 @@ export default function Fumigaciones() {
 
       {/* Modal nuevo */}
       {modal && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(false)}>
-          <div style={{ background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto' }}>
+        <div style={{
+          position:'fixed',
+          top:0,
+          left:0,
+          right:0,
+          bottom:0,
+          background:'rgba(0,0,0,0.4)',
+          zIndex:100,
+          display:'flex',
+          alignItems: isDesktop ? 'flex-start' : 'flex-end',
+          justifyContent:'center',
+          padding: isDesktop ? '56px 24px 24px' : 0,
+          overflowY:'auto',
+        }} onClick={e => e.target===e.currentTarget && setModal(false)}>
+          <div style={{
+            background:'#f2f1ef',
+            borderRadius: isDesktop ? 24 : '24px 24px 0 0',
+            width:'100%',
+            maxWidth:480,
+            padding:'24px 20px 40px',
+            maxHeight: isDesktop ? 'calc(100vh - 96px)' : '90vh',
+            overflowY:'auto',
+            boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
+          }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Nuevo registro</div>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Tipo</div>
             <div style={{ display:'flex', gap:6, marginBottom:12 }}>
