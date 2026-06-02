@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { filterTabsByRole } from '../lib/permissions'
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 
@@ -81,7 +82,7 @@ const elegirCampoConDatos = (campos, bloques = [], guardado) => {
   return campoConMasBloques
 }
 
-export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest = false }) {
+export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest = false, role }) {
   const navigate = useNavigate()
   const [campos, setCampos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -236,9 +237,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
   }
 
   const hayFinanzas = finanzas.ingresos > 0 || finanzas.costos > 0
-  const quickLinksVisibles = isGuest
-    ? quickLinks.filter(link => !['/asistencia', '/configuracion'].includes(link.path))
-    : quickLinks
+  const quickLinksVisibles = filterTabsByRole(quickLinks, role, isGuest)
 
   return (
     <div style={{ minHeight: '100vh', background: '#f6f7f5', color: '#101511', padding: '34px 36px 40px' }}>

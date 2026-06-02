@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import DesktopDashboard from './DesktopDashboard'
+import { filterTabsByRole } from '../lib/permissions'
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 
@@ -150,7 +151,7 @@ const elegirCampoConDatos = (campos, bloques = [], guardado) => {
   return campoConMasBloques
 }
 
-export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false }) {
+export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false, role }) {
   const [campos, setCampos] = useState([])
   const [stats, setStats] = useState({ bloques: 0, activos: 0, cultivos: 0, operarios: 0 })
   const [alertas, setAlertas] = useState([])
@@ -237,12 +238,10 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
   }
 
   if (usarDashboardEscritorio) {
-    return <DesktopDashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} />
+    return <DesktopDashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} />
   }
 
-  const accesosVisibles = isGuest
-    ? accesos.filter(item => !['/asistencia'].includes(item.path))
-    : accesos
+  const accesosVisibles = filterTabsByRole(accesos, role, isGuest)
 
   return (
     <div style={fondo}>

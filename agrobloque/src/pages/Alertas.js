@@ -30,12 +30,14 @@ export default function Alertas() {
       { data: plantaciones },
       { data: vivero },
       { data: fumigaciones },
+      { data: planesFertilizacion },
     ] = await Promise.all([
       supabase.from('tareas').select('id, descripcion, fecha_programada, completada').eq('completada', false).order('fecha_programada'),
       supabase.from('productos').select('id, nombre, stock_actual, stock_minimo').eq('activo', true).order('nombre'),
       supabase.from('plantaciones').select('id, fecha_siembra, activa, bloques(id, codigo), cultivos(nombre)').eq('activa', true),
       supabase.from('vivero_lotes').select('id, cultivo, variedad, fecha_siembra, fecha_trasplante_estimada, estado').order('fecha_siembra', { ascending:false }),
       supabase.from('fumigaciones').select('id, fecha, campo_id, fumigacion_bloques(bloque_id, bloques(id, codigo)), fumigacion_productos(productos(nombre, carencia_dias))').order('fecha', { ascending:false }),
+      supabase.from('fertilizacion_planes').select('id, nombre, fecha_inicio, bloque_id, bloques(codigo), fertilizacion_plan_aplicaciones(fecha)').eq('activo', true),
     ])
 
     const lista = []
@@ -68,6 +70,26 @@ export default function Alertas() {
           titulo:'Lote de vivero listo para revisar',
           detalle:`${l.cultivo || 'Cultivo'} ${l.variedad || ''} - trasplante estimado ${l.fecha_trasplante_estimada}`,
           path:'/vivero',
+        })
+      }
+    })
+
+    ;(planesFertilizacion || []).forEach(plan => {
+      const aplicaciones = plan.fertilizacion_plan_aplicaciones || []
+      const ultima = aplicaciones
+        .map(a => a.fecha)
+        .filter(Boolean)
+        .sort()
+        .pop()
+      const fechaBase = ultima || plan.fecha_inicio
+      if (!fechaBase) return
+      const dias = diasEntre(fechaBase)
+      if (dias >= 7) {
+        lista.push({
+          tipo: dias >= 10 ? 'alta' : 'media',
+          titulo: 'Plan semanal sin aplicacion reciente',
+          detalle:`Bloque ${plan.bloques?.codigo || '-'} - ${plan.nombre || 'Plan semanal'} - ${dias} dias desde la ultima aplicacion`,
+          path: plan.bloque_id ? `/bloque/${plan.bloque_id}` : '/mapa',
         })
       }
     })

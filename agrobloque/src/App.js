@@ -21,15 +21,40 @@ import Alertas from './pages/Alertas'
 import Auditoria from './pages/Auditoria'
 import Historial from './pages/Historial'
 import NavBar from './components/NavBar'
+import { canAccessModule, filterTabsByRole, normalizeRole } from './lib/permissions'
 
 export function LogoHS({ size = 48 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#212121" letterSpacing="-4">HS</text>
-      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#aaaaaa"/>
-      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#212121"/>
-      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#212121"/>
-    </svg>
+    <div style={{
+      width: size,
+      height: size,
+      borderRadius: Math.round(size * 0.28),
+      background: 'linear-gradient(145deg, #111 0%, #252525 100%)',
+      color: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+      overflow: 'hidden',
+      boxSizing: 'border-box',
+      fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif",
+      fontWeight: 900,
+      fontSize: Math.round(size * 0.46),
+      lineHeight: 1,
+      letterSpacing: -1,
+    }}>
+      HS
+      <span style={{
+        position: 'absolute',
+        top: Math.round(size * 0.17),
+        right: Math.round(size * 0.16),
+        width: Math.round(size * 0.25),
+        height: Math.round(size * 0.12),
+        background: '#7bc043',
+        borderRadius: '14px 14px 2px 14px',
+        transform: 'rotate(-10deg)',
+      }} />
+    </div>
   )
 }
 
@@ -108,10 +133,37 @@ const esErrorSesion = (error) => {
     texto.includes('permission')
 }
 
-function DesktopSidebar({ isGuest = false }) {
+function SinPermiso() {
+  const navigate = useNavigate()
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f2f1ef', padding:24 }}>
+      <div style={{ background:'#fff', border:'1px solid #e8ece8', borderRadius:22, padding:24, maxWidth:360, textAlign:'center', boxShadow:'0 18px 40px rgba(0,0,0,0.08)' }}>
+        <i className="ti ti-lock" style={{ fontSize:34, color:'#176a25' }} aria-hidden="true"></i>
+        <h2 style={{ margin:'12px 0 8px', fontSize:20 }}>Sin permiso</h2>
+        <p style={{ margin:'0 0 18px', fontSize:13, color:'#687068', lineHeight:1.45 }}>Tu usuario no tiene acceso a este modulo.</p>
+        <button onClick={() => navigate('/')} style={{ border:'none', background:'#212121', color:'#fff', borderRadius:12, padding:'11px 16px', fontWeight:700, cursor:'pointer' }}>Volver al inicio</button>
+      </div>
+    </div>
+  )
+}
+
+function ProtectedRoute({ role, moduleKey, children }) {
+  if (!canAccessModule(role, moduleKey)) return <SinPermiso />
+  return children
+}
+
+function ScrollToTop() {
+  const location = useLocation()
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [location.pathname])
+  return null
+}
+
+function DesktopSidebar({ isGuest = false, role }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const tabs = isGuest ? allTabs.filter(t => !['/asistencia', '/configuracion', '/auditoria'].includes(t.path)) : allTabs
+  const tabs = filterTabsByRole(allTabs, role, isGuest)
   return (
     <div style={{
       width: SIDEBAR_WIDTH,
@@ -186,7 +238,7 @@ function DesktopSidebar({ isGuest = false }) {
   )
 }
 
-function AppLayout({ campoActivo, setCampoActivo, isGuest = false }) {
+function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768)
   const location = useLocation()
   const dashboardDesktop = isDesktop && location.pathname === '/'
@@ -199,9 +251,9 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false }) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#f6f7f5' : '#f2f1ef' }}>
-      {isDesktop && <DesktopSidebar isGuest={isGuest} />}
+      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
-      <div style={{
+      <div data-app-scroll style={{
         flex: 1,
         marginLeft: isDesktop ? SIDEBAR_WIDTH : 0,
         minHeight: '100vh',
@@ -216,30 +268,30 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false }) {
           minHeight: '100vh',
         }}>
           <Routes>
-            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest}/>}/>
-            <Route path="/buscar" element={<Buscador/>}/>
-            <Route path="/alertas" element={<Alertas/>}/>
-            <Route path="/historial" element={<Historial campoActivo={campoActivo}/>}/>
-            <Route path="/mapa" element={<Mapa campoActivo={campoActivo}/>}/>
-            <Route path="/bloque/:id" element={<FichaBloque/>}/>
-            <Route path="/agenda" element={<Agenda/>}/>
-            <Route path="/vivero" element={<Vivero/>}/>
-            <Route path="/asistencia" element={isGuest ? <Navigate to="/"/> : <Asistencia/>}/>
-            <Route path="/cosecha" element={<Cosecha/>}/>
-            <Route path="/inventario" element={<Inventario/>}/>
-            <Route path="/fumigaciones" element={<Fumigaciones/>}/>
-            <Route path="/costos" element={<Costos campoActivo={campoActivo} isGuest={isGuest}/>}/>
-            <Route path="/contabilidad" element={<Contabilidad/>}/>
-            <Route path="/reportes" element={<Reportes campoActivo={campoActivo} isGuest={isGuest}/>}/>
-            <Route path="/compradores" element={<Compradores/>}/>
-            <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <Auditoria/>}/>
-            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <Configuracion/>}/>
+            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role}/>}/>
+            <Route path="/buscar" element={<ProtectedRoute role={role} moduleKey="buscar"><Buscador/></ProtectedRoute>}/>
+            <Route path="/alertas" element={<ProtectedRoute role={role} moduleKey="alertas"><Alertas/></ProtectedRoute>}/>
+            <Route path="/historial" element={<ProtectedRoute role={role} moduleKey="historial"><Historial campoActivo={campoActivo}/></ProtectedRoute>}/>
+            <Route path="/mapa" element={<ProtectedRoute role={role} moduleKey="mapa"><Mapa campoActivo={campoActivo}/></ProtectedRoute>}/>
+            <Route path="/bloque/:id" element={<ProtectedRoute role={role} moduleKey="mapa"><FichaBloque/></ProtectedRoute>}/>
+            <Route path="/agenda" element={<ProtectedRoute role={role} moduleKey="agenda"><Agenda/></ProtectedRoute>}/>
+            <Route path="/vivero" element={<ProtectedRoute role={role} moduleKey="vivero"><Vivero/></ProtectedRoute>}/>
+            <Route path="/asistencia" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="asistencia"><Asistencia/></ProtectedRoute>}/>
+            <Route path="/cosecha" element={<ProtectedRoute role={role} moduleKey="cosecha"><Cosecha/></ProtectedRoute>}/>
+            <Route path="/inventario" element={<ProtectedRoute role={role} moduleKey="inventario"><Inventario/></ProtectedRoute>}/>
+            <Route path="/fumigaciones" element={<ProtectedRoute role={role} moduleKey="fumigaciones"><Fumigaciones/></ProtectedRoute>}/>
+            <Route path="/costos" element={<ProtectedRoute role={role} moduleKey="costos"><Costos campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
+            <Route path="/contabilidad" element={<ProtectedRoute role={role} moduleKey="contabilidad"><Contabilidad/></ProtectedRoute>}/>
+            <Route path="/reportes" element={<ProtectedRoute role={role} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
+            <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
+            <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="auditoria"><Auditoria/></ProtectedRoute>}/>
+            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
         </div>
       </div>
 
-      {!isDesktop && <NavBar isGuest={isGuest} />}
+      {!isDesktop && <NavBar isGuest={isGuest} role={role} />}
     </div>
   )
 }
@@ -249,6 +301,11 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [campoActivo, setCampoActivo] = useState(null)
   const [dataError, setDataError] = useState('')
+  const [role, setRole] = useState(normalizeRole(null))
+  const [guestRole, setGuestRole] = useState(normalizeRole({
+    rol:'lectura',
+    permisos:['buscar','alertas','historial','mapa','agenda','vivero','cosecha','inventario','fumigaciones','costos','contabilidad','reportes','compradores'],
+  }))
   const guestPath = Boolean(guestToken)
 
   const limpiarSesionRota = async (mensaje) => {
@@ -289,6 +346,13 @@ export default function App() {
       } else {
         setSession(sesionActual)
         setDataError('')
+        const email = userData.user.email || ''
+        const { data: roleData } = await supabase
+          .from('app_user_roles')
+          .select('*')
+          .eq('email', email.toLowerCase())
+          .maybeSingle()
+        setRole(normalizeRole(roleData, email))
       }
       setLoading(false)
     }
@@ -304,6 +368,17 @@ export default function App() {
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!guestPath) return
+    supabase.rpc('guest_get_permissions')
+      .then(({ data }) => {
+        if (Array.isArray(data?.permisos)) {
+          setGuestRole(normalizeRole({ rol:'lectura', permisos:data.permisos }))
+        }
+      })
+      .catch(() => {})
+  }, [guestPath])
 
   useEffect(() => {
     if (!session && !guestPath) {
@@ -358,7 +433,8 @@ export default function App() {
 
   if (guestPath) return (
     <BrowserRouter basename={`/invitado/${guestToken}`}>
-      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest />
+      <ScrollToTop />
+      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest role={guestRole} />
     </BrowserRouter>
   )
 
@@ -385,13 +461,14 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       {dataError && (
         <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 560, width: 'calc(100% - 28px)', textAlign: 'center' }}>
           <span>{dataError}</span>
           <button onClick={() => forceLocalSignOut()} style={{ marginLeft: 10, border: 'none', borderRadius: 8, background: '#7a4a00', color: '#fff', padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Limpiar sesion</button>
         </div>
       )}
-      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} />
+      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} />
     </BrowserRouter>
   )
 }

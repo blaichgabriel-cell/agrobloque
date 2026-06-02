@@ -89,7 +89,17 @@ export default function FichaBloque() {
   const [formMuerte, setFormMuerte] = useState({ cantidad:'', causa:'Enfermedad', descripcion:'' })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { fetchData() }, [id])
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      const main = document.querySelector('[data-app-scroll]')
+      if (main) main.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }
+    setSeccion('plantacion')
+    setHistorialDetalle(null)
+    setFertDetalle(null)
+    fetchData()
+  }, [id])
 
   const fetchData = async () => {
     const { data: b } = await supabase.from('bloques').select('*, sectores(nombre), campos(nombre)').eq('id', id).single()

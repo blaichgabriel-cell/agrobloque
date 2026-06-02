@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { filterTabsByRole } from '../lib/permissions'
 
 const moreTabs = [
   { path: '/buscar', icon: 'ti-search', label: 'Buscar' },
@@ -51,11 +52,11 @@ function RenderIcon({ icon, size = 21, color = 'currentColor' }) {
   return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
 }
 
-export default function NavBar({ isGuest = false }) {
+export default function NavBar({ isGuest = false, role }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [showMore, setShowMore] = useState(false)
-  const tabs = isGuest ? moreTabs.filter(t => !['/asistencia', '/configuracion', '/auditoria'].includes(t.path)) : moreTabs
+  const tabs = filterTabsByRole(moreTabs, role, isGuest)
   const isMoreActive = tabs.some(t => t.path === location.pathname)
 
   const go = (path) => {
