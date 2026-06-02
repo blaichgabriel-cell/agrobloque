@@ -27,10 +27,11 @@ const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
 const esDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 768
 
-function PermisosSelector({ permisos, onChange }) {
+function PermisosSelector({ permisos, onChange, ayuda }) {
   return (
-    <div style={{ background:'#f7f8f6', border:'1px solid #e8ece8', borderRadius:14, padding:12, marginBottom:12 }}>
-      <div style={{ fontSize:11, fontWeight:800, color:'#687068', marginBottom:8, textTransform:'uppercase' }}>Modulos permitidos</div>
+    <div style={{ background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:14, padding:12, marginBottom:12 }}>
+      <div style={{ fontSize:12, fontWeight:900, color:'#176a25', marginBottom:4, textTransform:'uppercase' }}>Modulos permitidos</div>
+      {ayuda && <div style={{ fontSize:11, color:'#687068', marginBottom:9, lineHeight:1.35 }}>{ayuda}</div>}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
         {PERMISOS_MODULOS.map(m => {
           const checked = !Array.isArray(permisos) || permisos.length === 0 || permisos.includes(m.key)
@@ -54,7 +55,7 @@ function PermisosSelector({ permisos, onChange }) {
           )
         })}
       </div>
-      <div style={{ fontSize:11, color:'#8b928b', marginTop:6 }}>Desmarcado significa que no aparece en el menu ni en accesos.</div>
+      <div style={{ fontSize:11, color:'#8b928b', marginTop:6 }}>Si desmarcas un modulo, no aparece en el menu ni en accesos.</div>
     </div>
   )
 }
@@ -512,6 +513,7 @@ export default function Configuracion() {
               <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
                 <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Crear link</div>
                 <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del invitado"/>
+                <div style={{ fontSize:11, fontWeight:800, color:'#687068', margin:'2px 0 7px', textTransform:'uppercase' }}>Campo permitido</div>
                 <select style={inp} value={form.campo_id||''} onChange={e=>setForm(f=>({...f,campo_id:e.target.value}))}>
                   <option value="">Todos los campos</option>
                   {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -522,7 +524,11 @@ export default function Configuracion() {
                   <option value="90">Vence en 90 dias</option>
                   <option value="">Sin vencimiento</option>
                 </select>
-                <PermisosSelector permisos={form.permisos} onChange={permisos => setForm(f => ({ ...f, permisos }))} />
+                <PermisosSelector
+                  permisos={form.permisos}
+                  ayuda="Elegí exactamente a que apartados puede entrar este invitado."
+                  onChange={permisos => setForm(f => ({ ...f, permisos }))}
+                />
                 <button style={saveBtn('#176a25')} onClick={crearInvitado} disabled={loading}>{loading ? 'Creando...' : 'Crear acceso invitado'}</button>
               </div>
 
@@ -571,35 +577,11 @@ export default function Configuracion() {
                   <option value="operador">Operador</option>
                   <option value="lectura">Solo lectura</option>
                 </select>
-                <div style={{ background:'#f7f8f6', border:'1px solid #e8ece8', borderRadius:14, padding:12, marginBottom:12 }}>
-                  <div style={{ fontSize:11, fontWeight:800, color:'#687068', marginBottom:8, textTransform:'uppercase' }}>Modulos permitidos</div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-                    {PERMISOS_MODULOS.map(m => {
-                      const checked = !Array.isArray(form.permisos) || form.permisos.length === 0 || form.permisos.includes(m.key)
-                      return (
-                        <label key={m.key} style={{ display:'flex', alignItems:'center', gap:7, fontSize:12, color:'#1d241f', padding:'6px 4px' }}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={e => setForm(f => {
-                              const actual = Array.isArray(f.permisos) && f.permisos.length > 0
-                                ? f.permisos
-                                : PERMISOS_MODULOS.map(x => x.key)
-                              return {
-                                ...f,
-                                permisos: e.target.checked
-                                  ? [...new Set([...actual, m.key])]
-                                  : actual.filter(k => k !== m.key),
-                              }
-                            })}
-                          />
-                          <span>{m.label}</span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                  <div style={{ fontSize:11, color:'#8b928b', marginTop:6 }}>Si no marcas nada, se usa el permiso normal del rol.</div>
-                </div>
+                <PermisosSelector
+                  permisos={form.permisos}
+                  ayuda="Elegí exactamente a que apartados puede entrar este usuario."
+                  onChange={permisos => setForm(f => ({ ...f, permisos }))}
+                />
                 <textarea style={{ ...inp, minHeight:64, resize:'vertical' }} value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
                 <button style={saveBtn('#176a25')} onClick={guardarRol} disabled={loading}>{loading ? 'Guardando...' : 'Guardar permiso'}</button>
               </div>

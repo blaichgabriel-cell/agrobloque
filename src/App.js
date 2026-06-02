@@ -25,12 +25,36 @@ import { canAccessModule, filterTabsByRole, normalizeRole } from './lib/permissi
 
 export function LogoHS({ size = 48 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text x="2" y="72" fontFamily="Georgia, 'Times New Roman', serif" fontSize="72" fontWeight="700" fill="#212121" letterSpacing="-4">HS</text>
-      <path d="M50 18c0 0-4-12 0-18 4 6 0 18 0 18z" fill="#aaaaaa"/>
-      <path d="M50 16c0 0-11-8-9-16 9 2 9 16 9 16z" fill="#212121"/>
-      <path d="M50 16c0 0 11-8 9-16-9 2-9 16-9 16z" fill="#212121"/>
-    </svg>
+    <div style={{
+      width: size,
+      height: size,
+      borderRadius: Math.round(size * 0.28),
+      background: 'linear-gradient(145deg, #111 0%, #252525 100%)',
+      color: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+      overflow: 'hidden',
+      boxSizing: 'border-box',
+      fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif",
+      fontWeight: 900,
+      fontSize: Math.round(size * 0.46),
+      lineHeight: 1,
+      letterSpacing: -1,
+    }}>
+      HS
+      <span style={{
+        position: 'absolute',
+        top: Math.round(size * 0.17),
+        right: Math.round(size * 0.16),
+        width: Math.round(size * 0.25),
+        height: Math.round(size * 0.12),
+        background: '#7bc043',
+        borderRadius: '14px 14px 2px 14px',
+        transform: 'rotate(-10deg)',
+      }} />
+    </div>
   )
 }
 
@@ -229,7 +253,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
     <div style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#f6f7f5' : '#f2f1ef' }}>
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
-      <div style={{
+      <div data-app-scroll style={{
         flex: 1,
         marginLeft: isDesktop ? SIDEBAR_WIDTH : 0,
         minHeight: '100vh',
