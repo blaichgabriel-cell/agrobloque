@@ -176,6 +176,62 @@ export default function Reportes({ campoActivo, isGuest = false }) {
     `)
   }
 
+  const tablaHtml = (titulo, headers, rows) => `
+    <h2>${esc(titulo)}</h2>
+    <table>
+      <tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr>
+      ${rows.length === 0
+        ? `<tr><td colspan="${headers.length}">Sin datos</td></tr>`
+        : rows.map(row => `<tr>${headers.map(h => `<td>${esc(row[h] ?? '')}</td>`).join('')}</tr>`).join('')}
+    </table>
+  `
+
+  const imprimirCompleto = async () => {
+    const [
+      { data: cosechas },
+      { data: costos },
+      { data: inventario },
+      { data: vivero },
+      { data: fumigaciones },
+      { data: contabilidad },
+    ] = await Promise.all([
+      supabase.from('cosechas').select('fecha, kg_total, precio_kg, calidad, notas, bloques(codigo), compradores(nombre)').order('fecha', { ascending:false }).limit(150),
+      supabase.from('costos').select('fecha, tipo, descripcion, monto, bloques(codigo)').order('fecha', { ascending:false }).limit(150),
+      supabase.from('productos').select('nombre, unidad, stock_actual, stock_minimo, carencia_dias, categorias_producto(nombre)').eq('activo', true).order('nombre'),
+      supabase.from('vivero_lotes').select('fecha_siembra, cultivo, variedad, cantidad_semillas, germinadas, perdidas, estado').order('fecha_siembra', { ascending:false }).limit(150),
+      supabase.from('fumigaciones').select('fecha, tipo, operario, notas, tanques_cantidad, tanque_litros, campos(nombre), fumigacion_bloques(bloques(codigo))').order('fecha', { ascending:false }).limit(150),
+      supabase.from('contabilidad_movimientos').select('fecha, tipo, descripcion, categoria, contraparte, monto').order('fecha', { ascending:false }).limit(200),
+    ])
+
+    imprimirHtml('Reporte completo AgroBloque', `
+      <h1>Reporte completo AgroBloque</h1>
+      <div class="muted">${esc(campoSel?.nombre || 'AgroBloque')} - ${new Date().toLocaleDateString('es-PY')}</div>
+      <h2>Resumen</h2>
+      <table>
+        <tr><th>Ingresos</th><th>Costos</th><th>Ganancia neta</th><th>Kg cosechados</th><th>Registros</th></tr>
+        <tr><td>${fmtGs(datos.ingresos)}</td><td>${fmtGs(datos.costos)}</td><td>${fmtGs(datos.ganancia)}</td><td>${fmtKg(datos.kg)}</td><td>${datos.registros}</td></tr>
+      </table>
+      ${tablaHtml('Cosechas', ['Fecha', 'Bloque', 'Kg', 'Precio', 'Comprador', 'Calidad'], (cosechas || []).map(c => ({
+        Fecha:c.fecha, Bloque:c.bloques?.codigo || '', Kg:c.kg_total || '', Precio:c.precio_kg || '', Comprador:c.compradores?.nombre || '', Calidad:c.calidad || '',
+      })))}
+      ${tablaHtml('Costos manuales', ['Fecha', 'Tipo', 'Descripcion', 'Bloque', 'Monto'], (costos || []).map(c => ({
+        Fecha:c.fecha, Tipo:c.tipo || '', Descripcion:c.descripcion || '', Bloque:c.bloques?.codigo || '', Monto:c.monto || '',
+      })))}
+      ${tablaHtml('Inventario', ['Categoria', 'Producto', 'Stock', 'Unidad', 'Minimo', 'Carencia'], (inventario || []).map(p => ({
+        Categoria:p.categorias_producto?.nombre || '', Producto:p.nombre || '', Stock:p.stock_actual || 0, Unidad:p.unidad || '', Minimo:p.stock_minimo || 0, Carencia:p.carencia_dias || 0,
+      })))}
+      ${tablaHtml('Vivero', ['Fecha', 'Cultivo', 'Variedad', 'Semillas', 'Germinadas', 'Perdidas', 'Estado'], (vivero || []).map(v => ({
+        Fecha:v.fecha_siembra || '', Cultivo:v.cultivo || '', Variedad:v.variedad || '', Semillas:v.cantidad_semillas || 0, Germinadas:v.germinadas || 0, Perdidas:v.perdidas || 0, Estado:v.estado || '',
+      })))}
+      ${tablaHtml('Fumigaciones', ['Fecha', 'Tipo', 'Campo', 'Bloques', 'Tanques', 'Operario'], (fumigaciones || []).map(f => ({
+        Fecha:f.fecha || '', Tipo:f.tipo || '', Campo:f.campos?.nombre || '', Bloques:(f.fumigacion_bloques || []).map(b => b.bloques?.codigo).filter(Boolean).join(', '), Tanques:f.tanques_cantidad && f.tanque_litros ? `${f.tanques_cantidad} x ${f.tanque_litros} L` : '', Operario:f.operario || '',
+      })))}
+      ${tablaHtml('Contabilidad', ['Fecha', 'Tipo', 'Descripcion', 'Categoria', 'Contraparte', 'Monto'], (contabilidad || []).map(m => ({
+        Fecha:m.fecha || '', Tipo:m.tipo || '', Descripcion:m.descripcion || '', Categoria:m.categoria || '', Contraparte:m.contraparte || '', Monto:m.monto || '',
+      })))}
+    `)
+  }
+
   const imprimirModulo = async (modulo) => {
     if (modulo === 'cosechas') {
       const { data } = await supabase.from('cosechas').select('fecha, kg_total, precio_kg, calidad, notas, bloques(codigo), compradores(nombre)').order('fecha', { ascending:false }).limit(200)
@@ -229,6 +285,9 @@ export default function Reportes({ campoActivo, isGuest = false }) {
             </button>
             <button onClick={imprimirReporte} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
               <i className="ti ti-printer" style={{ fontSize:19, color:'#fff' }} aria-hidden="true"></i>
+            </button>
+            <button onClick={imprimirCompleto} style={{ height:40, borderRadius:14, background:'#176a25', border:'none', padding:'0 12px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#fff', fontSize:12, fontWeight:800 }}>
+              Completo
             </button>
           </div>
         </div>

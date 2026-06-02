@@ -19,6 +19,7 @@ import Vivero from './pages/Vivero'
 import Buscador from './pages/Buscador'
 import Alertas from './pages/Alertas'
 import Auditoria from './pages/Auditoria'
+import Historial from './pages/Historial'
 import NavBar from './components/NavBar'
 
 export function LogoHS({ size = 48 }) {
@@ -55,6 +56,7 @@ const allTabs = [
   { path:'/', icon:'ti-home', label:'Inicio' },
   { path:'/buscar', icon:'ti-search', label:'Buscar' },
   { path:'/alertas', icon:'ti-bell-ringing', label:'Alertas' },
+  { path:'/historial', icon:'ti-timeline', label:'Historial' },
   { path:'/mapa', icon:'ti-map', label:'Mapa' },
   { path:'/agenda', icon:'ti-calendar', label:'Agenda' },
   { path:'/vivero', icon:'vivero-icon', label:'Vivero' },
@@ -217,6 +219,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false }) {
             <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest}/>}/>
             <Route path="/buscar" element={<Buscador/>}/>
             <Route path="/alertas" element={<Alertas/>}/>
+            <Route path="/historial" element={<Historial campoActivo={campoActivo}/>}/>
             <Route path="/mapa" element={<Mapa campoActivo={campoActivo}/>}/>
             <Route path="/bloque/:id" element={<FichaBloque/>}/>
             <Route path="/agenda" element={<Agenda/>}/>

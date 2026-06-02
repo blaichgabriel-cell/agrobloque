@@ -241,8 +241,11 @@ export default function Configuracion() {
       'campos', 'bloques', 'plantaciones', 'cultivos', 'abonos',
       'productos', 'categorias_producto', 'operarios', 'asistencia',
       'cosechas', 'costos', 'fumigaciones', 'fumigacion_productos',
+      'fumigacion_bloques', 'fertilizaciones', 'fertilizacion_planes',
+      'fertilizacion_plan_aplicaciones',
       'compradores', 'tareas', 'notas_modulo', 'vivero_lotes',
       'vivero_tratamientos', 'contabilidad_movimientos',
+      'guest_access_links', 'app_user_roles', 'audit_log',
     ]
 
     const backup = {

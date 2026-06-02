@@ -11,6 +11,7 @@ const quickLinks = [
   { path: '/mapa', icon: 'ti-map', title: 'Mapa', sub: 'Ver bloques' },
   { path: '/agenda', icon: 'ti-calendar', title: 'Agenda', sub: 'Tareas' },
   { path: '/vivero', icon: 'vivero-icon', title: 'Vivero', sub: 'Plantines' },
+  { path: '/historial', icon: 'ti-timeline', title: 'Historial', sub: 'Trazabilidad' },
   { path: '/asistencia', icon: 'ti-users', title: 'Asistencia', sub: 'Planilla' },
   { path: '/reportes', icon: 'ti-chart-bar', title: 'Reportes', sub: 'Analisis' },
   { path: '/fumigaciones', icon: 'ti-spray', title: 'Fumigaciones', sub: 'Historial' },

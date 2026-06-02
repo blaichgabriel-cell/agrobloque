@@ -35,7 +35,7 @@ export default function Alertas() {
       supabase.from('productos').select('id, nombre, stock_actual, stock_minimo').eq('activo', true).order('nombre'),
       supabase.from('plantaciones').select('id, fecha_siembra, activa, bloques(id, codigo), cultivos(nombre)').eq('activa', true),
       supabase.from('vivero_lotes').select('id, cultivo, variedad, fecha_siembra, fecha_trasplante_estimada, estado').order('fecha_siembra', { ascending:false }),
-      supabase.from('fumigaciones').select('id, fecha, campo_id, fumigacion_bloques(bloque_id, bloques(id, codigo))').order('fecha', { ascending:false }),
+      supabase.from('fumigaciones').select('id, fecha, campo_id, fumigacion_bloques(bloque_id, bloques(id, codigo)), fumigacion_productos(productos(nombre, carencia_dias))').order('fecha', { ascending:false }),
     ])
 
     const lista = []
@@ -78,6 +78,23 @@ export default function Alertas() {
         const id = fb.bloque_id
         if (!id || ultimaFumiPorBloque[id]) return
         ultimaFumiPorBloque[id] = { fecha:f.fecha, codigo:fb.bloques?.codigo }
+      })
+    })
+
+    ;(fumigaciones || []).forEach(f => {
+      const maxCarencia = Math.max(0, ...(f.fumigacion_productos || []).map(fp => Number(fp.productos?.carencia_dias) || 0))
+      if (maxCarencia <= 0) return
+      const fechaFin = new Date(f.fecha + 'T00:00:00')
+      fechaFin.setDate(fechaFin.getDate() + maxCarencia)
+      const restantes = Math.ceil((fechaFin - new Date(hoy + 'T00:00:00')) / 86400000)
+      if (restantes <= 0) return
+      const bloquesTxt = (f.fumigacion_bloques || []).map(fb => fb.bloques?.codigo).filter(Boolean).join(', ')
+      const productosTxt = (f.fumigacion_productos || []).map(fp => fp.productos?.nombre).filter(Boolean).join(', ')
+      lista.push({
+        tipo:'alta',
+        titulo:'Carencia activa',
+        detalle:`Bloques ${bloquesTxt || '-'} - faltan ${restantes} dia${restantes === 1 ? '' : 's'} - ${productosTxt || 'producto con carencia'}`,
+        path:'/fumigaciones',
       })
     })
 

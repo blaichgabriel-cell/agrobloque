@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 const moreTabs = [
   { path: '/buscar', icon: 'ti-search', label: 'Buscar' },
   { path: '/alertas', icon: 'ti-bell-ringing', label: 'Alertas' },
+  { path: '/historial', icon: 'ti-timeline', label: 'Historial' },
   { path: '/mapa', icon: 'ti-map', label: 'Mapa' },
   { path: '/vivero', icon: 'vivero-icon', label: 'Vivero' },
   { path: '/asistencia', icon: 'ti-users', label: 'Asistencia' },
