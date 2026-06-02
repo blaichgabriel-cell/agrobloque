@@ -326,6 +326,13 @@ export default function App() {
   }))
   const guestPath = Boolean(guestToken)
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual'
+    }
+  }, [])
+
   const limpiarSesionRota = async (mensaje) => {
     setDataError(mensaje)
     await forceLocalSignOut(false)
