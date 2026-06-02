@@ -4,6 +4,9 @@
 alter table if exists public.app_user_roles
   add column if not exists permisos jsonb;
 
+alter table if exists public.guest_access_links
+  add column if not exists permisos jsonb;
+
 create or replace function public.app_current_role()
 returns text
 language sql
@@ -46,6 +49,46 @@ $$;
 grant execute on function public.app_current_role() to authenticated;
 grant execute on function public.app_can_write() to authenticated;
 grant execute on function public.app_is_admin() to authenticated;
+
+create or replace function public.guest_get_permissions()
+returns jsonb
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  headers jsonb;
+  token text;
+  digest_hex text;
+  permisos_json jsonb;
+begin
+  begin
+    headers := nullif(current_setting('request.headers', true), '')::jsonb;
+  exception when others then
+    headers := '{}'::jsonb;
+  end;
+
+  token := headers->>'x-guest-token';
+  if token is null or length(token) < 20 then
+    return jsonb_build_object('ok', false, 'permisos', '[]'::jsonb);
+  end if;
+
+  digest_hex := encode(digest(token, 'sha256'), 'hex');
+
+  select coalesce(g.permisos, '["buscar","alertas","historial","mapa","agenda","vivero","cosecha","inventario","fumigaciones","costos","contabilidad","reportes","compradores"]'::jsonb)
+  into permisos_json
+  from public.guest_access_links g
+  where g.token_hash = digest_hex
+    and g.activo = true
+    and (g.expires_at is null or g.expires_at > now())
+  limit 1;
+
+  return jsonb_build_object('ok', permisos_json is not null, 'permisos', coalesce(permisos_json, '[]'::jsonb));
+end;
+$$;
+
+grant execute on function public.guest_get_permissions() to anon, authenticated;
 
 do $$
 declare

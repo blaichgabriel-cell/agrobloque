@@ -128,6 +128,14 @@ function ProtectedRoute({ role, moduleKey, children }) {
   return children
 }
 
+function ScrollToTop() {
+  const location = useLocation()
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [location.pathname])
+  return null
+}
+
 function DesktopSidebar({ isGuest = false, role }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -270,6 +278,10 @@ export default function App() {
   const [campoActivo, setCampoActivo] = useState(null)
   const [dataError, setDataError] = useState('')
   const [role, setRole] = useState(normalizeRole(null))
+  const [guestRole, setGuestRole] = useState(normalizeRole({
+    rol:'lectura',
+    permisos:['buscar','alertas','historial','mapa','agenda','vivero','cosecha','inventario','fumigaciones','costos','contabilidad','reportes','compradores'],
+  }))
   const guestPath = Boolean(guestToken)
 
   const limpiarSesionRota = async (mensaje) => {
@@ -334,6 +346,17 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (!guestPath) return
+    supabase.rpc('guest_get_permissions')
+      .then(({ data }) => {
+        if (Array.isArray(data?.permisos)) {
+          setGuestRole(normalizeRole({ rol:'lectura', permisos:data.permisos }))
+        }
+      })
+      .catch(() => {})
+  }, [guestPath])
+
+  useEffect(() => {
     if (!session && !guestPath) {
       setCampoActivo(null)
       return
@@ -386,7 +409,8 @@ export default function App() {
 
   if (guestPath) return (
     <BrowserRouter basename={`/invitado/${guestToken}`}>
-      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest role={normalizeRole({ rol:'lectura', permisos:['buscar','alertas','historial','mapa','agenda','vivero','cosecha','inventario','fumigaciones','costos','contabilidad','reportes','compradores'] })} />
+      <ScrollToTop />
+      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest role={guestRole} />
     </BrowserRouter>
   )
 
@@ -413,6 +437,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       {dataError && (
         <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 560, width: 'calc(100% - 28px)', textAlign: 'center' }}>
           <span>{dataError}</span>
