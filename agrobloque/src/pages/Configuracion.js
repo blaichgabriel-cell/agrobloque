@@ -499,7 +499,7 @@ export default function Configuracion() {
             maxWidth: esDesktop() ? 620 : 480,
             padding:'24px 20px 40px',
             maxHeight: esDesktop() ? '82vh' : '88vh',
-            overflowY:'auto',
+            overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
             boxShadow: esDesktop() ? '0 28px 70px rgba(0,0,0,0.28)' : 'none',
           }}>
 

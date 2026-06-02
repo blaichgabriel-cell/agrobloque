@@ -399,8 +399,8 @@ function Select({ label, value, onChange, options }) {
   )
 }
 
-const overlay = { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.42)', zIndex:120, display:'flex', alignItems:'flex-end', justifyContent:'center' }
-const sheet = { background:'#f2f1ef', borderRadius:'24px 24px 0 0', width:'100%', maxWidth:520, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxSizing:'border-box' }
+const overlay = { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.42)', zIndex:120, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'flex-start' : 'flex-end', justifyContent:'center' }
+const sheet = { background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:520, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none', boxSizing:'border-box' }
 const inputStyle = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e3e5e1', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
 const labelStyle = { fontSize:10, color:'#8d938d', marginBottom:6 }
 const primaryBtn = { width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' }

@@ -494,7 +494,7 @@ const overlay = {
   background:'rgba(0,0,0,0.42)',
   zIndex:100,
   display:'flex',
-  alignItems:'flex-end',
+  alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'flex-start' : 'flex-end',
   justifyContent:'center',
 }
 
@@ -502,9 +502,9 @@ const sheet = {
   width:'100%',
   maxWidth:520,
   maxHeight:'88vh',
-  overflowY:'auto',
+  overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
   background:'#f2f1ef',
-  borderRadius:'24px 24px 0 0',
+  borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0',
   padding:'24px 20px 40px',
   boxSizing:'border-box',
 }

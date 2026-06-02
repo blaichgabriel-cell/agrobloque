@@ -285,7 +285,7 @@ export default function Fumigaciones() {
           alignItems: isDesktop ? 'flex-start' : 'flex-end',
           justifyContent:'center',
           padding: isDesktop ? '56px 24px 24px' : 0,
-          overflowY:'auto',
+          overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
         }} onClick={e => e.target===e.currentTarget && setDetalle(null)}>
           <div style={{
             background:'#f2f1ef',
@@ -294,7 +294,7 @@ export default function Fumigaciones() {
             maxWidth:480,
             padding:'24px 20px 40px',
             maxHeight: isDesktop ? 'calc(100vh - 96px)' : '85vh',
-            overflowY:'auto',
+            overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
             boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
           }}>
             {(() => {
@@ -363,7 +363,7 @@ export default function Fumigaciones() {
           alignItems: isDesktop ? 'flex-start' : 'flex-end',
           justifyContent:'center',
           padding: isDesktop ? '56px 24px 24px' : 0,
-          overflowY:'auto',
+          overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
         }} onClick={e => e.target===e.currentTarget && setModal(false)}>
           <div style={{
             background:'#f2f1ef',
@@ -372,7 +372,7 @@ export default function Fumigaciones() {
             maxWidth:480,
             padding:'24px 20px 40px',
             maxHeight: isDesktop ? 'calc(100vh - 96px)' : '90vh',
-            overflowY:'auto',
+            overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
             boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
           }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Nuevo registro</div>
