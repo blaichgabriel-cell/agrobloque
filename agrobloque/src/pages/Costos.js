@@ -79,11 +79,11 @@ export default function Costos({ campoActivo, isGuest = false }) {
   const fetchCostos = async () => {
     const desde = getFechaDesde()
     const { data: fumis } = await supabase.from('fumigaciones')
-      .select('fumigacion_productos(dosis, productos(precio_unitario))')
+      .select('fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
       .eq('campo_id', campoSel.id).gte('fecha', desde)
     let totalAgro = 0
     fumis?.forEach(f => f.fumigacion_productos?.forEach(fp => {
-      totalAgro += (Number(fp.productos?.precio_unitario) || 0) * (parseFloat(fp.dosis) || 0)
+        totalAgro += (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
     }))
     const { data: asist } = isGuest
       ? { data: [] }

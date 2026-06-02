@@ -9,6 +9,40 @@ const TIPOS = {
   foliar:      { label:'Foliar',     icon:'ti-leaf',    color:'#212121', bg:'#eeeeee' },
 }
 
+const UNIDADES_USO = ['g', 'kg', 'cc', 'ml', 'L', 'unidades']
+
+const normalizarUnidad = (unidad = '') => {
+  const u = String(unidad).trim().toLowerCase()
+  if (['kg', 'kilo', 'kilos'].includes(u)) return 'kg'
+  if (['g', 'gr', 'gramo', 'gramos'].includes(u)) return 'g'
+  if (['l', 'lt', 'lts', 'litro', 'litros'].includes(u)) return 'L'
+  if (['cc', 'ml'].includes(u)) return 'cc'
+  if (['unidad', 'unidades', 'u'].includes(u)) return 'unidades'
+  return u
+}
+
+const unidadUsoDefault = (unidadStock = '') => {
+  const u = normalizarUnidad(unidadStock)
+  if (u === 'kg') return 'g'
+  if (u === 'L') return 'cc'
+  return u || 'g'
+}
+
+const convertirAStock = (cantidad, unidadUso, unidadStock) => {
+  const valor = Number(String(cantidad || '').replace(',', '.')) || 0
+  const uso = normalizarUnidad(unidadUso)
+  const stock = normalizarUnidad(unidadStock)
+  if (valor <= 0) return 0
+  if (uso === stock) return valor
+  if (stock === 'kg' && uso === 'g') return valor / 1000
+  if (stock === 'g' && uso === 'kg') return valor * 1000
+  if (stock === 'L' && uso === 'cc') return valor / 1000
+  if (stock === 'cc' && uso === 'L') return valor * 1000
+  return null
+}
+
+const fmtCantidad = (n) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDigits: 3 })
+
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
@@ -38,7 +72,18 @@ export default function Fumigaciones() {
   const [modal, setModal] = useState(false)
   const [detalle, setDetalle] = useState(null)
   const [confirmar, setConfirmar] = useState(null)
-  const [form, setForm] = useState({ tipo:'fumigacion', fecha:'', campo_id:'', bloques_ids:[], operario:'', productos_form:[{ producto_id:'', dosis:'' }], notas:'' })
+  const formVacio = () => ({
+    tipo:'fumigacion',
+    fecha:'',
+    campo_id:'',
+    bloques_ids:[],
+    operario:'',
+    tanques_cantidad:'',
+    tanque_litros:'',
+    productos_form:[{ producto_id:'', cantidad:'', unidad_uso:'g' }],
+    notas:'',
+  })
+  const [form, setForm] = useState(formVacio())
   const [saving, setSaving] = useState(false)
   const [filtro, setFiltro] = useState('todos')
   const isGuest = Boolean(guestToken)
@@ -80,26 +125,40 @@ export default function Fumigaciones() {
     setSaving(true)
     const { data: fum } = await supabase.from('fumigaciones').insert({
       campo_id: form.campo_id || null, tipo: form.tipo, fecha: form.fecha,
-      operario: form.operario || null, notas: form.notas || null
+      operario: form.operario || null,
+      tanques_cantidad: Number(form.tanques_cantidad) || null,
+      tanque_litros: Number(form.tanque_litros) || null,
+      notas: form.notas || null
     }).select().single()
     if (fum) {
       await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
       await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => ({ fumigacion_id: fum.id, bloque_id: b })))
-      const prods = form.productos_form.filter(p => p.producto_id)
+      const prods = form.productos_form.filter(p => p.producto_id && p.cantidad)
       if (prods.length > 0) {
-        await supabase.from('fumigacion_productos').insert(prods.map(p => ({ fumigacion_id: fum.id, producto_id: p.producto_id, dosis: p.dosis || null })))
+        await supabase.from('fumigacion_productos').insert(prods.map(p => {
+          const prod = productos.find(x => x.id === p.producto_id)
+          const descuento = convertirAStock(p.cantidad, p.unidad_uso, prod?.unidad)
+          return {
+            fumigacion_id: fum.id,
+            producto_id: p.producto_id,
+            dosis: `${p.cantidad} ${p.unidad_uso}`,
+            cantidad: Number(String(p.cantidad || '').replace(',', '.')) || null,
+            unidad_uso: p.unidad_uso || null,
+            descuento_stock: descuento === null ? null : descuento,
+          }
+        }))
         for (const p of prods) {
-          const dosis = parseFloat(p.dosis) || 0
-          if (dosis <= 0) continue
           const prod = productos.find(x => x.id === p.producto_id)
           if (!prod) continue
-          await supabase.from('productos').update({ stock_actual: Math.max(0, Number(prod.stock_actual) - dosis) }).eq('id', p.producto_id)
+          const descuento = convertirAStock(p.cantidad, p.unidad_uso, prod.unidad)
+          if (!descuento || descuento <= 0) continue
+          await supabase.from('productos').update({ stock_actual: Math.max(0, Number(prod.stock_actual) - descuento) }).eq('id', p.producto_id)
         }
       }
     }
     await fetchFumigaciones(); await fetchProductos()
     setSaving(false); setModal(false)
-    setForm({ tipo:'fumigacion', fecha:'', campo_id:'', bloques_ids:[], operario:'', productos_form:[{ producto_id:'', dosis:'' }], notas:'' })
+    setForm(formVacio())
   }
 
   const eliminar = (id) => {
@@ -178,6 +237,7 @@ export default function Fumigaciones() {
               const bloquesCodes = f.fumigacion_bloques?.map(fb => fb.bloques?.codigo).filter(Boolean).join(', ')
               const nombresProductos = f.fumigacion_productos?.map(fp => fp.productos?.nombre).filter(Boolean).join(' + ')
               const carencia = getCarencia(f)
+              const tanques = f.tanques_cantidad && f.tanque_litros ? `${fmtCantidad(f.tanques_cantidad)} tanque${Number(f.tanques_cantidad) === 1 ? '' : 's'} x ${fmtCantidad(f.tanque_litros)} L` : ''
 
               return (
                 <div key={f.id} onClick={() => setDetalle(f)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, cursor:'pointer' }}>
@@ -189,6 +249,7 @@ export default function Fumigaciones() {
                       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
                         <span style={{ fontSize:10, fontWeight:600, color:tipo.color, background:tipo.bg, padding:'2px 8px', borderRadius:20 }}>{tipo.label}</span>
                         {f.campos?.nombre && <span style={{ fontSize:10, color:'#9a9a9a' }}>{f.campos.nombre}</span>}
+                        {tanques && <span style={{ fontSize:10, color:'#9a9a9a' }}>· {tanques}</span>}
                         {carencia && <span style={{ fontSize:9, fontWeight:600, padding:'2px 7px', borderRadius:6, background:'#fff3e8', color:'#c8700a' }}>{carencia}d carencia</span>}
                       </div>
                       {nombresProductos && (
@@ -233,7 +294,13 @@ export default function Fumigaciones() {
                   )}
                 </div>
                 <div style={{ background:'#fff', borderRadius:16, padding:'12px 16px', marginBottom:10 }}>
-                  {[['Fecha', detalle.fecha], detalle.operario && ['Operario', detalle.operario], bloquesCodes && ['Bloques', bloquesCodes], detalle.notas && ['Notas', detalle.notas]].filter(Boolean).map(([k,v]) => (
+                  {[
+                    ['Fecha', detalle.fecha],
+                    detalle.operario && ['Operario', detalle.operario],
+                    bloquesCodes && ['Bloques', bloquesCodes],
+                    detalle.tanques_cantidad && detalle.tanque_litros && ['Tanques', `${fmtCantidad(detalle.tanques_cantidad)} x ${fmtCantidad(detalle.tanque_litros)} L`],
+                    detalle.notas && ['Notas', detalle.notas]
+                  ].filter(Boolean).map(([k,v]) => (
                     <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f2f1ef' }}>
                       <div style={{ fontSize:12, color:'#9a9a9a' }}>{k}</div>
                       <div style={{ fontSize:12, fontWeight:500, color:'#0a0a0a', textAlign:'right', maxWidth:'60%' }}>{v}</div>
@@ -292,23 +359,46 @@ export default function Fumigaciones() {
                 {operarios.map(o=><option key={o.id} value={o.nombre}>{o.nombre}</option>)}
               </select>
             </>}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12 }}>
+              <div>
+                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Cantidad de tanques</div>
+                <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', boxSizing:'border-box' }} type="number" min="0" value={form.tanques_cantidad} onChange={e=>setForm(f=>({...f,tanques_cantidad:e.target.value}))} placeholder="Ej: 3"/>
+              </div>
+              <div>
+                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Litros por tanque</div>
+                <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', boxSizing:'border-box' }} type="number" min="0" value={form.tanque_litros} onChange={e=>setForm(f=>({...f,tanque_litros:e.target.value}))} placeholder="Ej: 20"/>
+              </div>
+            </div>
+            {form.tanques_cantidad && form.tanque_litros && (
+              <div style={{ fontSize:11, color:'#555', margin:'-6px 0 12px', paddingLeft:4 }}>
+                Total preparado: {fmtCantidad((Number(form.tanques_cantidad) || 0) * (Number(form.tanque_litros) || 0))} L
+              </div>
+            )}
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos <span style={{ color:'#212121' }}>(descuenta stock automaticamente)</span></div>
             {form.productos_form.map((pf,i)=>{
               const prod = productos.find(p=>p.id===pf.producto_id)
+              const descuento = prod ? convertirAStock(pf.cantidad, pf.unidad_uso, prod.unidad) : 0
               return (
                 <div key={i} style={{ marginBottom:8 }}>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <select style={{ flex:2, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.producto_id} onChange={e=>{const np=[...form.productos_form];np[i].producto_id=e.target.value;setForm(f=>({...f,productos_form:np}))}}>
+                  <div style={{ display:'grid', gridTemplateColumns:'1.5fr .75fr .75fr', gap:6 }}>
+                    <select style={{ minWidth:0, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.producto_id} onChange={e=>{const prodSel=productos.find(p=>p.id===e.target.value); const np=[...form.productos_form];np[i].producto_id=e.target.value;np[i].unidad_uso=unidadUsoDefault(prodSel?.unidad);setForm(f=>({...f,productos_form:np}))}}>
                       <option value="">Producto...</option>
                       {productos.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
                     </select>
-                    <input style={{ flex:1, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.dosis} onChange={e=>{const np=[...form.productos_form];np[i].dosis=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder={prod?`Dosis (${prod.unidad})`:'Dosis'}/>
+                    <input style={{ minWidth:0, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.cantidad} onChange={e=>{const np=[...form.productos_form];np[i].cantidad=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Cant." inputMode="decimal"/>
+                    <select style={{ minWidth:0, padding:'9px 8px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.unidad_uso} onChange={e=>{const np=[...form.productos_form];np[i].unidad_uso=e.target.value;setForm(f=>({...f,productos_form:np}))}}>
+                      {UNIDADES_USO.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
                   </div>
-                  {prod && <div style={{ fontSize:10, color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#212121', marginTop:3, paddingLeft:4 }}>Stock: {Number(prod.stock_actual).toLocaleString('es-PY')} {prod.unidad}{prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}</div>}
+                  {prod && <div style={{ fontSize:10, color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#212121', marginTop:3, paddingLeft:4 }}>
+                    Stock: {Number(prod.stock_actual).toLocaleString('es-PY')} {prod.unidad}
+                    {descuento === null ? ' · medida incompatible con el stock' : descuento > 0 ? ` · descuenta ${fmtCantidad(descuento)} ${prod.unidad}` : ''}
+                    {prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}
+                  </div>}
                 </div>
               )
             })}
-            <button onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{producto_id:'',dosis:''}]}))} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #e8e6e2', background:'transparent', fontSize:12, color:'#9a9a9a', cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
+            <button onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{producto_id:'',cantidad:'',unidad_uso:'g'}]}))} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #e8e6e2', background:'transparent', fontSize:12, color:'#9a9a9a', cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas</div>
             <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, minHeight:60, resize:'vertical', boxSizing:'border-box' }} value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/>
             <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving?'Guardando...':'Guardar registro'}</button>

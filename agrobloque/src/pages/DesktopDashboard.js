@@ -187,7 +187,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       asistenciaQuery,
       supabase
         .from('fumigaciones')
-        .select('fecha, fumigacion_productos(dosis, productos(precio_unitario))')
+        .select('fecha, fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
         .eq('campo_id', campo.id)
         .gte('fecha', mesDesde),
     ])
@@ -200,7 +200,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       .reduce((s, a) => s + (Number(a.monto) || 0), 0)
     const agroquimicos = (fumigaciones || []).reduce((total, f) => {
       return total + (f.fumigacion_productos || []).reduce((s, fp) => {
-        return s + (Number(fp.productos?.precio_unitario) || 0) * (parseFloat(fp.dosis) || 0)
+        return s + (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
       }, 0)
     }, 0)
     const costos = costosManual + jornales + agroquimicos
@@ -212,7 +212,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       ...(fumigaciones || []).map(f => ({
         fecha: f.fecha,
         monto: (f.fumigacion_productos || []).reduce((s, fp) => {
-          return s + (Number(fp.productos?.precio_unitario) || 0) * (parseFloat(fp.dosis) || 0)
+          return s + (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
         }, 0),
       })),
     ]
