@@ -155,8 +155,22 @@ function ProtectedRoute({ role, moduleKey, children }) {
 function ScrollToTop() {
   const location = useLocation()
   useEffect(() => {
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-  }, [location.pathname])
+    if (typeof window === 'undefined') return
+
+    const resetScroll = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+
+      const appScroll = document.querySelector('[data-app-scroll]')
+      if (appScroll) appScroll.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }
+
+    resetScroll()
+    window.requestAnimationFrame(resetScroll)
+    const timer = window.setTimeout(resetScroll, 80)
+    return () => window.clearTimeout(timer)
+  }, [location.pathname, location.search])
   return null
 }
 
@@ -256,10 +270,14 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
       <div data-app-scroll style={{
         flex: 1,
         marginLeft: isDesktop ? SIDEBAR_WIDTH : 0,
+        height: '100vh',
         minHeight: '100vh',
         background: dashboardDesktop ? '#f6f7f5' : '#f2f1ef',
         paddingBottom: isDesktop ? 0 : 64,
         maxWidth: isDesktop ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100%',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        scrollBehavior: 'auto',
       }}>
         <div style={{
           maxWidth: dashboardDesktop ? 'none' : (isDesktop ? 900 : 480),
