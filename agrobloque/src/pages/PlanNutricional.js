@@ -69,6 +69,8 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   const [registros, setRegistros] = useState([])
   const [modo, setModo] = useState('manual')
   const [saving, setSaving] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
   const [form, setForm] = useState({
     fecha: today(),
     bloque_id: '',
@@ -106,8 +108,8 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     setRegistros(r || [])
   }
 
-  const generarAsistente = () => {
-    const productosBase = recomendacionBase(form.objetivo).map(rec => {
+  const aplicarProductosRecomendados = (recomendados) => {
+    return recomendados.map(rec => {
       const encontrado = buscarProductoInventario(productos, rec.producto)
       return {
         ...rec,
@@ -118,6 +120,10 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
         estado: estadoInventario(encontrado).key,
       }
     })
+  }
+
+  const generarAsistenteBase = (mensajeExtra = '') => {
+    const productosBase = aplicarProductosRecomendados(recomendacionBase(form.objetivo))
     const ecAgua = Number(String(form.ec_agua).replace(',', '.')) || 0
     const ecObjetivo = Number(String(form.ec_objetivo).replace(',', '.')) || 0
     const ecEstimada = ecObjetivo || (ecAgua ? ecAgua + 1.1 : 0)
@@ -125,9 +131,66 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
       ...f,
       productos: productosBase,
       ec_final: ecEstimada ? String(ecEstimada.toFixed(2)) : '',
-      notas: `${guiaObjetivo(f.objetivo)} Incluye productos recomendables aunque no esten cargados o disponibles en inventario. Revisar conductividad antes de aplicar.`,
+      notas: `${guiaObjetivo(f.objetivo)} Incluye productos recomendables aunque no esten cargados o disponibles en inventario. Revisar conductividad antes de aplicar.${mensajeExtra ? ` ${mensajeExtra}` : ''}`,
     }))
     setModo('asistente')
+  }
+
+  const generarAsistente = async () => {
+    setAiError('')
+    setAiLoading(true)
+    const ecAgua = Number(String(form.ec_agua).replace(',', '.')) || 0
+    const ecObjetivo = Number(String(form.ec_objetivo).replace(',', '.')) || 0
+    const ecEstimada = ecObjetivo || (ecAgua ? ecAgua + 1.1 : 0)
+
+    try {
+      const respuesta = await fetch('/api/plan-nutricional-ia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campo: campoActivo?.nombre || '',
+          bloque: bloqueActivo ? {
+            codigo: bloqueActivo.codigo,
+            cultivo: bloqueActivo.plantaciones?.find(p => p.activa)?.cultivos?.nombre || '',
+          } : null,
+          objetivo: form.objetivo,
+          tanque_litros: form.tanque_litros,
+          ec_agua: form.ec_agua,
+          ec_objetivo: form.ec_objetivo,
+          productos_ideales_base: recomendacionBase(form.objetivo),
+          productos_disponibles: productos.map(p => ({
+            nombre: p.nombre,
+            unidad: p.unidad,
+            stock_actual: p.stock_actual,
+          })),
+          registros_recientes: registros.map(r => ({
+            fecha: r.fecha,
+            objetivo: r.objetivo,
+            bloque: r.bloques?.codigo || '',
+            tanque_litros: r.tanque_litros,
+            ec_final: r.ec_final,
+            productos: r.productos || [],
+          })),
+        }),
+      })
+      const data = await respuesta.json()
+      if (!respuesta.ok) throw new Error(data?.error || 'La IA no respondio correctamente.')
+
+      const productosIA = aplicarProductosRecomendados(data.productos?.length ? data.productos : recomendacionBase(form.objetivo))
+      setForm(f => ({
+        ...f,
+        productos: productosIA,
+        ec_final: data.ec_final || (ecEstimada ? String(ecEstimada.toFixed(2)) : ''),
+        notas: data.notas || `${guiaObjetivo(f.objetivo)} Recomendacion generada con IA. Revisar conductividad antes de aplicar.`,
+      }))
+      setModo('asistente')
+    } catch (error) {
+      const mensaje = error.message || 'No se pudo usar la IA.'
+      setAiError(mensaje)
+      generarAsistenteBase(`IA no disponible: ${mensaje}`)
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   const agregarProducto = () => {
@@ -173,7 +236,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
         </div>
         <div style={{ display:'flex', gap:10 }}>
           <button onClick={() => setModo('manual')} style={btn(modo === 'manual' ? '#212121' : '#fff', modo === 'manual' ? '#fff' : '#212121')}>Registro manual</button>
-          <button onClick={generarAsistente} style={btn('#176a25', '#fff')}>Asistente IA</button>
+          <button onClick={generarAsistente} disabled={aiLoading} style={btn('#176a25', '#fff')}>{aiLoading ? 'Pensando...' : 'Asistente IA'}</button>
         </div>
       </div>
 
@@ -254,6 +317,11 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             ))}
           </div>
           <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Notas, advertencias o instrucciones..." style={{ ...field, width:'100%', minHeight:80, resize:'vertical', marginTop:10 }} />
+          {aiError && (
+            <div style={{ marginTop:10, background:'#fff7e8', border:'1px solid #f1d7a7', color:'#855a10', borderRadius:12, padding:10, fontSize:12 }}>
+              IA no disponible. Se uso la guia base para no dejarte sin recomendacion.
+            </div>
+          )}
           {!isGuest && <button onClick={guardar} disabled={saving} style={{ ...btn('#212121', '#fff'), width:'100%', marginTop:12 }}>{saving ? 'Guardando...' : 'Guardar plan'}</button>}
         </section>
 
