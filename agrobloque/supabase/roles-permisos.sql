@@ -76,7 +76,7 @@ begin
 
   digest_hex := encode(digest(token, 'sha256'), 'hex');
 
-  select coalesce(g.permisos, '["buscar","alertas","historial","mapa","agenda","vivero","cosecha","inventario","fumigaciones","costos","contabilidad","reportes","compradores"]'::jsonb)
+  select coalesce(g.permisos, '["buscar","alertas","historial","mapa","agenda","vivero","cosecha","inventario","fumigaciones","plan_nutricional","costos","contabilidad","reportes","compradores"]'::jsonb)
   into permisos_json
   from public.guest_access_links g
   where g.token_hash = digest_hex
@@ -113,9 +113,11 @@ declare
     'fertilizaciones',
     'fertilizacion_planes',
     'fertilizacion_plan_aplicaciones',
+    'plan_nutricional_registros',
     'compradores',
     'tareas',
     'notas_modulo',
+    'asistencia_notas_dia',
     'vivero_lotes',
     'vivero_tratamientos',
     'contabilidad_movimientos',

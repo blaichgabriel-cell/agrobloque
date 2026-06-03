@@ -30,6 +30,9 @@ export default function Asistencia() {
   const [modalAdelanto, setModalAdelanto] = useState(null)
   const [modalHistorial, setModalHistorial] = useState(null)
   const [formAdelanto, setFormAdelanto] = useState({ monto:'', descripcion:'' })
+  const [notasDia, setNotasDia] = useState({})
+  const [diaNotaActivo, setDiaNotaActivo] = useState(0)
+  const [savingNota, setSavingNota] = useState(false)
   const [savingAdelanto, setSavingAdelanto] = useState(false)
   const [error, setError] = useState('')
   const saveTimers = useRef({})
@@ -40,7 +43,7 @@ export default function Asistencia() {
   })
 
   useEffect(() => { fetchCampos() }, [])
-  useEffect(() => { if (campoActivo) { fetchOperarios(); fetchRegistros() } }, [campoActivo, semanaOffset])
+  useEffect(() => { if (campoActivo) { fetchOperarios(); fetchRegistros(); fetchNotasDia() } }, [campoActivo, semanaOffset])
 
   const fetchCampos = async () => {
     const { data } = await supabase.from('campos').select('*').order('nombre')
@@ -65,6 +68,19 @@ export default function Asistencia() {
     })
     setRegistros(mapa)
     setInputs(newInputs)
+  }
+
+  const fetchNotasDia = async () => {
+    if (!campoActivo) return
+    const { data } = await supabase
+      .from('asistencia_notas_dia')
+      .select('*')
+      .eq('campo_id', campoActivo.id)
+      .in('fecha', diasFechas)
+
+    const mapa = {}
+    ;(data || []).forEach(n => { mapa[n.fecha] = n })
+    setNotasDia(mapa)
   }
 
   const fetchAdelantos = async (ops) => {
@@ -107,6 +123,42 @@ export default function Asistencia() {
     diasFechas.reduce((sum, f) => sum + parsearGs(inputs[getKey(operario_id, f)] || '0'), 0)
 
   const getTotalGeneral = () => operarios.reduce((sum, o) => sum + getTotalSemana(o.id), 0)
+
+  const guardarNotaDia = async () => {
+    if (!campoActivo) return
+    const fecha = diasFechas[diaNotaActivo]
+    const texto = (notasDia[fecha]?.trabajos || '').trim()
+    setSavingNota(true)
+    try {
+      const payload = {
+        campo_id: campoActivo.id,
+        fecha,
+        dia_semana: DIAS[diaNotaActivo],
+        trabajos: texto,
+        updated_at: new Date().toISOString(),
+      }
+      const { data } = await supabase
+        .from('asistencia_notas_dia')
+        .upsert(payload, { onConflict: 'campo_id,fecha' })
+        .select()
+        .single()
+      if (data) setNotasDia(prev => ({ ...prev, [fecha]: data }))
+    } catch (e) {
+      setError('Error al guardar trabajos del dia')
+    }
+    setSavingNota(false)
+  }
+
+  const actualizarNotaDia = (texto) => {
+    const fecha = diasFechas[diaNotaActivo]
+    setNotasDia(prev => ({
+      ...prev,
+      [fecha]: {
+        ...(prev[fecha] || { campo_id: campoActivo?.id, fecha, dia_semana: DIAS[diaNotaActivo] }),
+        trabajos: texto,
+      },
+    }))
+  }
 
   const getAdelantosOperario = (operario_id) => adelantos.filter(a => a.operario_id === operario_id)
   const getTotalAdelantos = (operario_id) => getAdelantosOperario(operario_id).reduce((s, a) => s + Number(a.monto), 0)
@@ -191,6 +243,45 @@ export default function Asistencia() {
         <div style={{ background:'#212121', borderRadius:20, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>Total semanal del campo</div>
           <div style={{ fontSize:20, fontWeight:800, color:'#fff', letterSpacing:-.5 }}>Gs. {fmtGs(getTotalGeneral())}</div>
+        </div>
+
+        <div style={{ background:'#fff', borderRadius:20, padding:'16px', marginTop:12, marginBottom:12 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:12 }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:800, color:'#0a0a0a' }}>Trabajos realizados</div>
+              <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>Bitacora diaria vinculada a la asistencia</div>
+            </div>
+            <button onClick={guardarNotaDia} disabled={savingNota} style={{ border:'none', background:'#176a25', color:'#fff', borderRadius:12, padding:'9px 13px', fontSize:12, fontWeight:800, cursor:'pointer' }}>
+              {savingNota ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:6, marginBottom:10 }}>
+            {DIAS.map((dia, i) => {
+              const fecha = diasFechas[i]
+              const activo = diaNotaActivo === i
+              const tieneNota = Boolean((notasDia[fecha]?.trabajos || '').trim())
+              return (
+                <button key={dia} onClick={() => setDiaNotaActivo(i)} style={{
+                  border:'1px solid #e8e6e2',
+                  background: activo ? '#212121' : tieneNota ? '#edf6ec' : '#f8f8f6',
+                  color: activo ? '#fff' : tieneNota ? '#176a25' : '#687068',
+                  borderRadius:12,
+                  padding:'9px 4px',
+                  fontSize:11,
+                  fontWeight:800,
+                  cursor:'pointer',
+                }}>
+                  {DIAS_CORTO[i]}
+                </button>
+              )
+            })}
+          </div>
+          <textarea
+            value={notasDia[diasFechas[diaNotaActivo]]?.trabajos || ''}
+            onChange={e => actualizarNotaDia(e.target.value)}
+            placeholder="Ej: limpieza de canteros, riego, cosecha parcial, preparación de sustrato..."
+            style={{ width:'100%', minHeight:92, resize:'vertical', border:'1px solid #e8e6e2', borderRadius:14, background:'#f8f8f6', padding:12, fontSize:13, color:'#0a0a0a', lineHeight:1.45 }}
+          />
         </div>
         <NotasPanel modulo="asistencia" titulo="Blog de notas de asistencia" />
       </div>

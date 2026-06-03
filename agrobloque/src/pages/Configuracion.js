@@ -13,6 +13,7 @@ const PERMISOS_MODULOS = [
   { key: 'cosecha', label: 'Cosecha' },
   { key: 'inventario', label: 'Inventario' },
   { key: 'fumigaciones', label: 'Fumigaciones' },
+  { key: 'plan_nutricional', label: 'Plan Nutricional' },
   { key: 'costos', label: 'Costos' },
   { key: 'contabilidad', label: 'Contabilidad' },
   { key: 'reportes', label: 'Reportes' },
@@ -297,6 +298,7 @@ export default function Configuracion() {
       'fertilizacion_plan_aplicaciones',
       'compradores', 'tareas', 'notas_modulo', 'vivero_lotes',
       'vivero_tratamientos', 'contabilidad_movimientos',
+      'asistencia_notas_dia', 'plan_nutricional_registros',
       'guest_access_links', 'app_user_roles', 'audit_log',
     ]
 

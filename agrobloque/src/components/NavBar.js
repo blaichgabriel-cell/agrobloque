@@ -12,6 +12,7 @@ const moreTabs = [
   { path: '/cosecha', icon: 'ti-cut', label: 'Cosecha' },
   { path: '/inventario', icon: 'ti-box', label: 'Inventario' },
   { path: '/fumigaciones', icon: 'ti-spray', label: 'Fumig.' },
+  { path: '/plan-nutricional', icon: 'ti-leaf', label: 'Nutricion' },
   { path: '/costos', icon: 'ti-coin', label: 'Costos' },
   { path: '/contabilidad', icon: 'ti-calculator', label: 'Contab.' },
   { path: '/reportes', icon: 'ti-chart-bar', label: 'Reportes' },

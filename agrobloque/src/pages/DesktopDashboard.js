@@ -18,6 +18,7 @@ const quickLinks = [
   { path: '/fumigaciones', icon: 'ti-spray', title: 'Fumigaciones', sub: 'Historial' },
   { path: '/inventario', icon: 'ti-box', title: 'Inventario', sub: 'Stock' },
   { path: '/cosecha', icon: 'ti-cut', title: 'Cosecha', sub: 'Produccion' },
+  { path: '/plan-nutricional', icon: 'ti-leaf', title: 'Plan Nutricional', sub: 'Fertirriego' },
   { path: '/costos', icon: 'ti-coin', title: 'Costos', sub: 'Gastos' },
   { path: '/contabilidad', icon: 'ti-calculator', title: 'Contabilidad', sub: 'Balance' },
   { path: '/compradores', icon: 'ti-building-store', title: 'Compradores', sub: 'Clientes' },
@@ -97,6 +98,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
     bloquesTotal: 0,
   })
   const [finanzas, setFinanzas] = useState({ ingresos: 0, costos: 0, margen: 0 })
+  const [costBreakdown, setCostBreakdown] = useState([])
   const [produccion, setProduccion] = useState([])
   const [actividades, setActividades] = useState([])
   const [chart, setChart] = useState([])
@@ -206,6 +208,11 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       }, 0)
     }, 0)
     const costos = costosManual + jornales + agroquimicos
+    const breakdown = [
+      { label: 'Jornales', value: jornales, color: '#176a25' },
+      { label: 'Insumos y fumigaciones', value: agroquimicos, color: '#d88918' },
+      { label: 'Costos manuales', value: costosManual, color: '#2563eb' },
+    ].filter(item => item.value > 0)
     const costosGrafico = [
       ...(costosManuales || []).map(c => ({ fecha: c.fecha, monto: Number(c.monto) || 0 })),
       ...(asistencia || [])
@@ -230,6 +237,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       bloquesTotal: bloquesTotal?.length || 0,
     })
     setFinanzas({ ingresos, costos, margen: ingresos - costos })
+    setCostBreakdown(breakdown)
     setProduccion(agruparProduccion(plantasActivas || []))
     setActividades(tareas || [])
     setChart(construirGrafico(cosechas || [], costosGrafico))
@@ -303,6 +311,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
             <div style={{ fontSize: 13, fontWeight: 750, marginBottom: 12 }}>Ingresos vs. Costos</div>
             <MiniChart data={chart} hasData={hayFinanzas} />
           </div>
+          <CostBreakdown data={costBreakdown} total={finanzas.costos} />
         </Panel>
 
         <Panel title="Produccion por cultivo" action="Ver mapa" onAction={() => navigate('/mapa')}>
@@ -487,6 +496,37 @@ function Money({ title, value }) {
       <div style={{ color: '#333b34', fontSize: 13, marginBottom: 8 }}>{title}</div>
       <div style={{ fontSize: 24, fontWeight: 850, letterSpacing: -0.5 }}>{fmtGs(value)}</div>
       <div style={{ color: '#6d746e', fontSize: 12, marginTop: 5 }}>{value > 0 ? 'calculado automaticamente' : 'Sin datos aun'}</div>
+    </div>
+  )
+}
+
+function CostBreakdown({ data, total }) {
+  const items = data.length > 0 ? data : [{ label: 'Sin costos registrados', value: 0, color: '#d8ddd8' }]
+  return (
+    <div style={{ borderTop:'1px solid #ecefec', marginTop:18, paddingTop:16 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+        <div style={{ fontSize:13, fontWeight:800 }}>Distribucion de costos</div>
+        <div style={{ fontSize:12, color:'#69706a' }}>{total > 0 ? fmtGs(total) : 'Sin datos'}</div>
+      </div>
+      <div style={{ height:10, borderRadius:20, overflow:'hidden', background:'#edf0ed', display:'flex', marginBottom:10 }}>
+        {total > 0 ? items.map(item => (
+          <div key={item.label} style={{ width:`${Math.max(4, (item.value / total) * 100)}%`, background:item.color }} />
+        )) : <div style={{ width:'100%', background:'#d8ddd8' }} />}
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+        {items.map(item => {
+          const pct = total > 0 ? Math.round((item.value / total) * 100) : 0
+          return (
+            <div key={item.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, border:'1px solid #edf0ed', borderRadius:11, padding:'8px 10px' }}>
+              <span style={{ display:'flex', alignItems:'center', gap:7, minWidth:0 }}>
+                <span style={{ width:9, height:9, borderRadius:'50%', background:item.color, flexShrink:0 }} />
+                <span style={{ fontSize:12, color:'#333b34', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.label}</span>
+              </span>
+              <strong style={{ fontSize:12 }}>{pct}%</strong>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

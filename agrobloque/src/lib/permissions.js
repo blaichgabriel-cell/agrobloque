@@ -9,6 +9,7 @@ export const MODULES = [
   { key: 'cosecha', label: 'Cosecha', path: '/cosecha' },
   { key: 'inventario', label: 'Inventario', path: '/inventario' },
   { key: 'fumigaciones', label: 'Fumigaciones', path: '/fumigaciones' },
+  { key: 'plan_nutricional', label: 'Plan Nutricional', path: '/plan-nutricional' },
   { key: 'costos', label: 'Costos', path: '/costos' },
   { key: 'contabilidad', label: 'Contabilidad', path: '/contabilidad' },
   { key: 'reportes', label: 'Reportes', path: '/reportes' },

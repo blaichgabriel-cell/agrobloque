@@ -93,8 +93,10 @@ grant select on
   public.fertilizaciones,
   public.fertilizacion_planes,
   public.fertilizacion_plan_aplicaciones,
+  public.plan_nutricional_registros,
   public.compradores,
   public.notas_modulo,
+  public.asistencia_notas_dia,
   public.vivero_lotes,
   public.vivero_tratamientos,
   public.contabilidad_movimientos
@@ -119,8 +121,10 @@ alter table public.muertes_plantas enable row level security;
 alter table public.fertilizaciones enable row level security;
 alter table public.fertilizacion_planes enable row level security;
 alter table public.fertilizacion_plan_aplicaciones enable row level security;
+alter table public.plan_nutricional_registros enable row level security;
 alter table public.compradores enable row level security;
 alter table public.notas_modulo enable row level security;
+alter table public.asistencia_notas_dia enable row level security;
 alter table public.vivero_lotes enable row level security;
 alter table public.vivero_tratamientos enable row level security;
 alter table public.contabilidad_movimientos enable row level security;
@@ -234,6 +238,10 @@ create policy guest_select_fertilizacion_plan_aplicaciones on public.fertilizaci
     )
   );
 
+drop policy if exists guest_select_plan_nutricional_registros on public.plan_nutricional_registros;
+create policy guest_select_plan_nutricional_registros on public.plan_nutricional_registros
+  for select to anon using (public.guest_allows_campo(campo_id));
+
 drop policy if exists guest_select_compradores on public.compradores;
 create policy guest_select_compradores on public.compradores
   for select to anon using (public.guest_allows_campo(null));
@@ -241,6 +249,10 @@ create policy guest_select_compradores on public.compradores
 drop policy if exists guest_select_notas_modulo on public.notas_modulo;
 create policy guest_select_notas_modulo on public.notas_modulo
   for select to anon using (public.guest_allows_campo(null));
+
+drop policy if exists guest_select_asistencia_notas_dia on public.asistencia_notas_dia;
+create policy guest_select_asistencia_notas_dia on public.asistencia_notas_dia
+  for select to anon using (false);
 
 drop policy if exists guest_select_vivero_lotes on public.vivero_lotes;
 create policy guest_select_vivero_lotes on public.vivero_lotes
