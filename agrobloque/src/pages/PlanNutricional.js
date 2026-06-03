@@ -6,25 +6,45 @@ const fmt = (n) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDig
 
 const objetivos = ['Crecimiento', 'Floracion', 'Produccion', 'Recuperacion', 'Mantenimiento']
 
+const normalizar = (valor = '') => String(valor)
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+
 const recomendacionBase = (objetivo) => {
   const o = String(objetivo || '').toLowerCase()
   if (o.includes('produccion')) return [
-    { producto: 'Nitrato de calcio', cantidad: '350', unidad: 'g' },
-    { producto: 'NPK 15-15-15', cantidad: '280', unidad: 'g' },
-    { producto: 'Sulfato de magnesio', cantidad: '120', unidad: 'g' },
+    { producto: 'Nitrato de calcio', cantidad: '350', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Aporta calcio para firmeza y crecimiento activo.' },
+    { producto: 'NPK 15-15-15', cantidad: '280', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Mantiene aporte general de nitrogeno, fosforo y potasio.' },
+    { producto: 'Sulfato de magnesio', cantidad: '120', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Ayuda a clorofila y actividad fotosintetica.' },
   ]
   if (o.includes('floracion')) return [
-    { producto: 'NPK alto en fosforo', cantidad: '250', unidad: 'g' },
-    { producto: 'Calcio boro', cantidad: '100', unidad: 'cc' },
+    { producto: 'NPK alto en fosforo', cantidad: '250', unidad: 'g', nutrientes: 'Fosforo + potasio', motivo: 'Apoya floracion y raiz.' },
+    { producto: 'Calcio boro', cantidad: '100', unidad: 'cc', nutrientes: 'Calcio + boro', motivo: 'Ayuda cuaje y calidad de flor.' },
   ]
   if (o.includes('recuperacion')) return [
-    { producto: 'Aminoacidos', cantidad: '120', unidad: 'cc' },
-    { producto: 'Extracto de algas', cantidad: '80', unidad: 'cc' },
+    { producto: 'Aminoacidos', cantidad: '120', unidad: 'cc', nutrientes: 'Bioestimulante', motivo: 'Apoyo ante estres o recuperacion.' },
+    { producto: 'Extracto de algas', cantidad: '80', unidad: 'cc', nutrientes: 'Bioestimulante', motivo: 'Estimula recuperacion general.' },
   ]
   return [
-    { producto: 'NPK 15-15-15', cantidad: '250', unidad: 'g' },
-    { producto: 'Sulfato de magnesio', cantidad: '100', unidad: 'g' },
+    { producto: 'NPK 15-15-15', cantidad: '250', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Base nutricional general.' },
+    { producto: 'Sulfato de magnesio', cantidad: '100', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Complemento de magnesio.' },
   ]
+}
+
+const buscarProductoInventario = (productos, recomendado) => {
+  const nombre = normalizar(recomendado)
+  const tokens = nombre.split(/\s+/).filter(t => t.length > 2)
+  return productos.find(p => {
+    const prod = normalizar(p.nombre)
+    return prod.includes(nombre) || tokens.every(t => prod.includes(t)) || tokens.some(t => prod.includes(t))
+  })
+}
+
+const estadoInventario = (producto) => {
+  if (!producto) return { key: 'no_cargado', label: 'No cargado en inventario', color: '#8a5a00', bg: '#fff7e8' }
+  if ((Number(producto.stock_actual) || 0) <= 0) return { key: 'sin_stock', label: 'Sin stock', color: '#c84040', bg: '#fff0f0' }
+  return { key: 'disponible', label: 'Disponible', color: '#176a25', bg: '#edf6ec' }
 }
 
 export default function PlanNutricional({ campoActivo, isGuest = false }) {
@@ -72,8 +92,15 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
 
   const generarAsistente = () => {
     const productosBase = recomendacionBase(form.objetivo).map(rec => {
-      const encontrado = productos.find(p => p.nombre.toLowerCase().includes(rec.producto.toLowerCase().split(' ')[0]))
-      return { ...rec, producto_id: encontrado?.id || '', producto: encontrado?.nombre || rec.producto }
+      const encontrado = buscarProductoInventario(productos, rec.producto)
+      return {
+        ...rec,
+        producto_id: encontrado?.id || '',
+        producto: rec.producto,
+        producto_inventario: encontrado?.nombre || '',
+        stock_actual: encontrado?.stock_actual ?? null,
+        estado: estadoInventario(encontrado).key,
+      }
     })
     const ecAgua = Number(String(form.ec_agua).replace(',', '.')) || 0
     const ecObjetivo = Number(String(form.ec_objetivo).replace(',', '.')) || 0
@@ -82,7 +109,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
       ...f,
       productos: productosBase,
       ec_final: ecEstimada ? String(ecEstimada.toFixed(2)) : '',
-      notas: `Propuesta generada para ${f.objetivo.toLowerCase()}. Revisar conductividad antes de aplicar.`,
+      notas: `Propuesta generada para ${f.objetivo.toLowerCase()}. Incluye productos recomendables aunque no esten cargados o disponibles en inventario. Revisar conductividad antes de aplicar.`,
     }))
     setModo('asistente')
   }
@@ -178,16 +205,32 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             {(form.productos || []).length === 0 ? (
               <div style={{ color:'#8b928b', fontSize:13, background:'#f7f8f6', borderRadius:14, padding:14 }}>Sin productos cargados.</div>
             ) : form.productos.map((p, idx) => (
-              <div key={idx} style={{ display:'grid', gridTemplateColumns:'1.5fr 80px 80px', gap:8, marginBottom:8 }}>
-                <select value={p.producto_id || ''} onChange={e => {
-                  const prod = productos.find(x => x.id === e.target.value)
-                  actualizarProducto(idx, { producto_id:e.target.value, producto:prod?.nombre || p.producto })
-                }} style={field}>
-                  <option value="">{p.producto || 'Producto'}</option>
-                  {productos.map(prod => <option key={prod.id} value={prod.id}>{prod.nombre}</option>)}
-                </select>
-                <input value={p.cantidad || ''} onChange={e => actualizarProducto(idx, { cantidad:e.target.value })} placeholder="Cant." style={field} />
-                <input value={p.unidad || ''} onChange={e => actualizarProducto(idx, { unidad:e.target.value })} placeholder="Unidad" style={field} />
+              <div key={idx} style={{ marginBottom:8 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1.5fr 80px 80px', gap:8, marginBottom:6 }}>
+                  <select value={p.producto_id || ''} onChange={e => {
+                    const prod = productos.find(x => x.id === e.target.value)
+                    actualizarProducto(idx, {
+                      producto_id:e.target.value,
+                      producto: p.producto || prod?.nombre || '',
+                      producto_inventario: prod?.nombre || '',
+                      stock_actual: prod?.stock_actual ?? null,
+                      estado: estadoInventario(prod).key,
+                    })
+                  }} style={field}>
+                    <option value="">{p.producto || 'Producto recomendado'}</option>
+                    {productos.map(prod => <option key={prod.id} value={prod.id}>{prod.nombre}</option>)}
+                  </select>
+                  <input value={p.cantidad || ''} onChange={e => actualizarProducto(idx, { cantidad:e.target.value })} placeholder="Cant." style={field} />
+                  <input value={p.unidad || ''} onChange={e => actualizarProducto(idx, { unidad:e.target.value })} placeholder="Unidad" style={field} />
+                </div>
+                {p.producto && (
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, padding:'0 2px' }}>
+                    <span style={{ fontSize:11, color:'#69706a' }}>
+                      Recomendado: <strong>{p.producto}</strong>{p.producto_inventario ? ` · Inventario: ${p.producto_inventario}` : ''}
+                    </span>
+                    <EstadoBadge estado={p.estado} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -203,9 +246,16 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             <div style={{ color:'rgba(255,255,255,0.72)', fontSize:13, marginTop:6 }}>Tanque {form.tanque_litros || 0} L · EC estimada {form.ec_final || '—'} mS/cm</div>
           </div>
           {(form.productos || []).map((p, idx) => (
-            <div key={idx} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'10px 0' }}>
-              <span style={{ fontSize:13 }}>{p.producto || 'Producto sin definir'}</span>
-              <strong style={{ fontSize:13 }}>{p.cantidad || 0} {p.unidad || ''}</strong>
+            <div key={idx} style={{ borderBottom:'1px solid #eef0ee', padding:'10px 0' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
+                <span style={{ fontSize:13, fontWeight:750 }}>{p.producto || 'Producto sin definir'}</span>
+                <strong style={{ fontSize:13 }}>{p.cantidad || 0} {p.unidad || ''}</strong>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', gap:10, marginTop:6, alignItems:'center' }}>
+                <span style={{ fontSize:11, color:'#69706a' }}>{p.nutrientes || p.motivo || 'Recomendacion nutricional'}</span>
+                <EstadoBadge estado={p.estado} />
+              </div>
+              {p.producto_inventario && <div style={{ fontSize:11, color:'#8b928b', marginTop:4 }}>Coincide con inventario: {p.producto_inventario}</div>}
             </div>
           ))}
           <div style={{ marginTop:14, background:'#fff7e8', border:'1px solid #f1d7a7', color:'#855a10', borderRadius:14, padding:12, fontSize:12 }}>
@@ -300,5 +350,18 @@ function Select({ label, value, onChange, children }) {
       <span style={{ fontSize:11, color:'#69706a', textTransform:'uppercase', fontWeight:750 }}>{label}</span>
       <select value={value || ''} onChange={e => onChange(e.target.value)} style={field}>{children}</select>
     </label>
+  )
+}
+
+function EstadoBadge({ estado }) {
+  const info = estado === 'disponible'
+    ? { label:'Disponible', color:'#176a25', bg:'#edf6ec' }
+    : estado === 'sin_stock'
+      ? { label:'Sin stock', color:'#c84040', bg:'#fff0f0' }
+      : { label:'No cargado', color:'#8a5a00', bg:'#fff7e8' }
+  return (
+    <span style={{ flexShrink:0, borderRadius:999, padding:'4px 8px', background:info.bg, color:info.color, fontSize:10, fontWeight:850 }}>
+      {info.label}
+    </span>
   )
 }
