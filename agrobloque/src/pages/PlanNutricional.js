@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 const today = () => new Date().toISOString().split('T')[0]
 const fmt = (n) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDigits: 2 })
 
-const objetivos = ['Crecimiento', 'Floracion', 'Produccion', 'Recuperacion', 'Mantenimiento']
+const objetivos = ['Crecimiento', 'Floracion', 'Produccion', 'Cargado', 'Recuperacion', 'Mantenimiento']
 
 const normalizar = (valor = '') => String(valor)
   .toLowerCase()
@@ -13,6 +13,12 @@ const normalizar = (valor = '') => String(valor)
 
 const recomendacionBase = (objetivo) => {
   const o = String(objetivo || '').toLowerCase()
+  if (o.includes('cargado')) return [
+    { producto: 'Nitrato de potasio', cantidad: '320', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Favorece llenado, calibre y calidad de fruto.' },
+    { producto: 'Nitrato de calcio', cantidad: '280', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Ayuda firmeza de fruto y reduce problemas asociados a falta de calcio.' },
+    { producto: 'Sulfato de magnesio', cantidad: '100', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Sostiene fotosintesis durante alta demanda de frutos.' },
+    { producto: 'Quelato de micronutrientes', cantidad: '40', unidad: 'g', nutrientes: 'Micronutrientes', motivo: 'Apoyo general cuando la planta esta cargando frutos.' },
+  ]
   if (o.includes('produccion')) return [
     { producto: 'Nitrato de calcio', cantidad: '350', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Aporta calcio para firmeza y crecimiento activo.' },
     { producto: 'NPK 15-15-15', cantidad: '280', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Mantiene aporte general de nitrogeno, fosforo y potasio.' },
@@ -30,6 +36,16 @@ const recomendacionBase = (objetivo) => {
     { producto: 'NPK 15-15-15', cantidad: '250', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Base nutricional general.' },
     { producto: 'Sulfato de magnesio', cantidad: '100', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Complemento de magnesio.' },
   ]
+}
+
+const guiaObjetivo = (objetivo) => {
+  const o = normalizar(objetivo)
+  if (o.includes('crecimiento')) return 'Crecimiento vegetativo: prioriza nitrogeno balanceado, raiz y hoja sana sin subir de golpe la EC.'
+  if (o.includes('floracion')) return 'Floracion: busca cuaje parejo con fosforo, potasio, calcio y boro, cuidando no estresar la planta.'
+  if (o.includes('produccion')) return 'Produccion: mantiene la planta trabajando, con nutricion estable para sostener cosecha continua.'
+  if (o.includes('cargado')) return 'Cargado de frutos: etapa enfocada en llenado, calibre y firmeza. Sube importancia de potasio, calcio y magnesio; controlar EC final.'
+  if (o.includes('recuperacion')) return 'Recuperacion: para estres, poda, calor o golpe de manejo. Conviene bajar exigencia y usar apoyo suave.'
+  return 'Mantenimiento: nutricion base para sostener la planta sin empujar demasiado crecimiento ni carga.'
 }
 
 const buscarProductoInventario = (productos, recomendado) => {
@@ -109,7 +125,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
       ...f,
       productos: productosBase,
       ec_final: ecEstimada ? String(ecEstimada.toFixed(2)) : '',
-      notas: `Propuesta generada para ${f.objetivo.toLowerCase()}. Incluye productos recomendables aunque no esten cargados o disponibles en inventario. Revisar conductividad antes de aplicar.`,
+      notas: `${guiaObjetivo(f.objetivo)} Incluye productos recomendables aunque no esten cargados o disponibles en inventario. Revisar conductividad antes de aplicar.`,
     }))
     setModo('asistente')
   }
@@ -186,6 +202,9 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             <Select label="Objetivo" value={form.objetivo} onChange={objetivo => setForm(f => ({ ...f, objetivo }))}>
               {objetivos.map(o => <option key={o} value={o}>{o}</option>)}
             </Select>
+            <div style={{ gridColumn:'1 / -1', background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:14, padding:12, fontSize:12, lineHeight:1.45, color:'#4d544e' }}>
+              {guiaObjetivo(form.objetivo)}
+            </div>
             <Input label="Tanque (L)" value={form.tanque_litros} onChange={tanque_litros => setForm(f => ({ ...f, tanque_litros }))} />
             <Input label="EC agua base" value={form.ec_agua} onChange={ec_agua => setForm(f => ({ ...f, ec_agua }))} />
             <Input label="EC objetivo" value={form.ec_objetivo} onChange={ec_objetivo => setForm(f => ({ ...f, ec_objetivo }))} />
