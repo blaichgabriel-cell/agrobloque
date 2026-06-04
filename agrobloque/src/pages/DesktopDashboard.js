@@ -158,7 +158,13 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       supabase.from('bloques').select('id, codigo, activo').eq('campo_id', campo.id),
       supabase.from('bloques').select('id'),
       operariosQuery,
-      supabase.from('tareas').select('id, descripcion, fecha_programada, tipo').eq('campo_id', campo.id).eq('completada', false).order('fecha_programada').limit(8),
+      supabase
+        .from('tareas')
+        .select('id, descripcion, fecha_programada, tipo, completada')
+        .eq('campo_id', campo.id)
+        .gte('fecha_programada', mesDesde)
+        .order('fecha_programada', { ascending: false })
+        .limit(8),
       supabase.from('productos').select('id').eq('activo', true),
       supabase.from('plantaciones').select('id'),
     ])
@@ -187,7 +193,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde)
 
     const [{ data: costosManuales }, { data: asistencia }, { data: fumigaciones }, { data: planesNutricionales }] = await Promise.all([
-      supabase.from('costos').select('monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde),
+      supabase.from('costos').select('id, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
       asistenciaQuery,
       supabase
         .from('fumigaciones')
@@ -201,18 +207,6 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         .gte('fecha', mesDesde)
         .order('fecha', { ascending: false })
         .limit(5),
-    ])
-
-    const [
-      { data: tareasGenerales },
-      { data: cosechasGenerales },
-      { data: fumigacionesGenerales },
-      { data: planesNutricionalesGenerales },
-    ] = await Promise.all([
-      supabase.from('tareas').select('id, descripcion, fecha_programada, tipo').eq('completada', false).order('fecha_programada').limit(8),
-      supabase.from('cosechas').select('id, kg_total, precio_kg, fecha, bloque_id, bloques(codigo, campo_id)').order('fecha', { ascending: false }).limit(8),
-      supabase.from('fumigaciones').select('id, fecha, tipo, fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))').order('fecha', { ascending: false }).limit(8),
-      supabase.from('plan_nutricional_registros').select('id, fecha, objetivo, bloque_id, bloques(codigo)').order('fecha', { ascending: false }).limit(8),
     ])
 
     const ingresos = (cosechas || []).reduce((s, c) =>
@@ -250,7 +244,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       activos: bloques.filter(b => b.activo).length,
       cultivos: plantasActivas?.length || 0,
       operarios: operarios?.length || 0,
-      alertas: (tareas?.length || tareasGenerales?.length || 0),
+      alertas: (tareas || []).filter(t => !t.completada).length,
       productos: productos?.length || 0,
       plantacionesTotal: plantacionesTotal?.length || 0,
       bloquesTotal: bloquesTotal?.length || 0,
@@ -261,10 +255,11 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
     setCostBreakdown(breakdown)
     setProduccion(agruparProduccion(plantasActivas || []))
     setActividades(construirActividadDashboard({
-      tareas: (tareas || []).length ? tareas : (tareasGenerales || []),
-      cosechas: (cosechas || []).length ? cosechas : (cosechasGenerales || []),
-      fumigaciones: (fumigaciones || []).length ? fumigaciones : (fumigacionesGenerales || []),
-      planesNutricionales: (planesNutricionales || []).length ? planesNutricionales : (planesNutricionalesGenerales || []),
+      tareas: tareas || [],
+      cosechas: cosechas || [],
+      fumigaciones: fumigaciones || [],
+      planesNutricionales: planesNutricionales || [],
+      costos: costosManuales || [],
       resumen: {
         stats: statsActuales,
         finanzas: { ingresos, costos, margen: ingresos - costos },
@@ -338,7 +333,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
             <Money title="Gastos del mes" value={finanzas.costos} />
             <Money title="Margen estimado" value={finanzas.margen} />
           </div>
-          <div style={{ borderTop: '1px solid #ecefec', paddingTop: 14, display: 'grid', gridTemplateColumns: '1fr 230px', gap: 18, alignItems: 'stretch' }}>
+          <div style={{ borderTop: '1px solid #ecefec', paddingTop: 14, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 270px', gap: 16, alignItems: 'stretch' }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 750, marginBottom: 8 }}>Ingresos vs. Costos</div>
               <MiniChart data={chart} hasData={hayFinanzas} />
@@ -469,16 +464,16 @@ function formatFechaCorta(fecha) {
   return d.toLocaleDateString('es-PY', { day: 'numeric', month: 'short' })
 }
 
-function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNutricionales, resumen }) {
+function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNutricionales, costos, resumen }) {
   const agenda = (tareas || []).map(t => ({
     id: `tarea-${t.id}`,
-    title: t.descripcion || 'Tarea pendiente',
-    date: `Agenda - ${formatFechaCorta(t.fecha_programada)}`,
-    tag: t.tipo || 'Tarea',
+    title: t.descripcion || (t.completada ? 'Tarea completada' : 'Tarea pendiente'),
+    date: `${t.completada ? 'Completada' : 'Agenda'} - ${formatFechaCorta(t.fecha_programada)}`,
+    tag: t.completada ? 'Hecha' : (t.tipo || 'Tarea'),
     icon: 'ti-calendar',
-    color: '#2563eb',
+    color: t.completada ? '#176a25' : '#2563eb',
     path: '/agenda',
-    order: fechaValor(t.fecha_programada) + 1000000000000,
+    order: fechaValor(t.fecha_programada),
   }))
 
   const cosecha = (cosechas || []).map(c => ({
@@ -514,17 +509,19 @@ function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNut
     order: fechaValor(p.fecha),
   }))
 
-  const recientes = [...cosecha, ...fumigacion, ...nutricion]
-    .sort((a, b) => b.order - a.order)
-    .slice(0, 3)
+  const costosMes = (costos || []).map((c, index) => ({
+    id: `costo-${c.id || index}`,
+    title: `Gasto registrado ${fmtGs(c.monto || 0)}`,
+    date: `Costos - ${formatFechaCorta(c.fecha)}`,
+    tag: 'Costo',
+    icon: 'ti-coin',
+    color: '#d88918',
+    path: '/costos',
+    order: fechaValor(c.fecha),
+  }))
 
-  const actividad = [...agenda.slice(0, 3), ...recientes]
-    .sort((a, b) => {
-      const aAgenda = a.id.startsWith('tarea-') ? 1 : 0
-      const bAgenda = b.id.startsWith('tarea-') ? 1 : 0
-      if (aAgenda !== bAgenda) return bAgenda - aAgenda
-      return b.order - a.order
-    })
+  const actividad = [...agenda, ...cosecha, ...fumigacion, ...nutricion, ...costosMes]
+    .sort((a, b) => b.order - a.order)
     .slice(0, 5)
 
   if (actividad.length > 0) return actividad
@@ -664,8 +661,8 @@ function CostBreakdown({ data, total }) {
         <div style={{ fontSize:13, fontWeight:800 }}>Distribucion de costos</div>
         <div style={{ fontSize:12, color:'#69706a' }}>{total > 0 ? fmtGs(total) : 'Sin datos'}</div>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'104px 1fr', gap:12, alignItems:'center' }}>
-        <div style={{ position:'relative', width:104, height:104 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'96px minmax(0, 1fr)', gap:10, alignItems:'center' }}>
+        <div style={{ position:'relative', width:96, height:96 }}>
           <svg viewBox="0 0 120 120" style={{ width:'100%', height:'100%', transform:'rotate(-90deg)' }}>
             <circle cx="60" cy="60" r={radio} fill="none" stroke="#edf0ed" strokeWidth="16" />
             {total > 0 && items.map(item => {
@@ -694,16 +691,16 @@ function CostBreakdown({ data, total }) {
             <span style={{ fontSize:10, color:'#69706a', marginTop:3 }}>costos</span>
           </div>
         </div>
-        <div style={{ display:'grid', gap:7 }}>
+        <div style={{ display:'grid', gap:7, minWidth:0 }}>
         {items.map(item => {
           const pct = total > 0 ? Math.round((item.value / total) * 100) : 0
           return (
-            <div key={item.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, border:'1px solid #edf0ed', borderRadius:10, padding:'7px 9px' }}>
-              <span style={{ display:'flex', alignItems:'center', gap:7, minWidth:0 }}>
+            <div key={item.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:7, border:'1px solid #edf0ed', borderRadius:10, padding:'7px 8px', minWidth:0, boxSizing:'border-box' }}>
+              <span style={{ display:'flex', alignItems:'center', gap:7, minWidth:0, flex:1 }}>
                 <span style={{ width:9, height:9, borderRadius:'50%', background:item.color, flexShrink:0 }} />
                 <span style={{ fontSize:12, color:'#333b34', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.label}</span>
               </span>
-              <strong style={{ fontSize:12 }}>{pct}%</strong>
+              <strong style={{ fontSize:12, minWidth:34, textAlign:'right', flexShrink:0 }}>{pct}%</strong>
             </div>
           )
         })}
