@@ -158,7 +158,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       supabase.from('bloques').select('id, codigo, activo').eq('campo_id', campo.id),
       supabase.from('bloques').select('id'),
       operariosQuery,
-      supabase.from('tareas').select('id, descripcion, fecha_programada').eq('campo_id', campo.id).eq('completada', false).lte('fecha_programada', hoy).order('fecha_programada'),
+      supabase.from('tareas').select('id, descripcion, fecha_programada, tipo').eq('campo_id', campo.id).eq('completada', false).order('fecha_programada').limit(8),
       supabase.from('productos').select('id').eq('activo', true),
       supabase.from('plantaciones').select('id'),
     ])
@@ -177,7 +177,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
     const { data: cosechas } = bloqueIds.length > 0
       ? await supabase
         .from('cosechas')
-        .select('kg_total, precio_kg, fecha, bloque_id')
+        .select('id, kg_total, precio_kg, fecha, bloque_id')
         .gte('fecha', mesDesde)
         .in('bloque_id', bloqueIds)
       : { data: [] }
@@ -186,14 +186,21 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       ? Promise.resolve({ data: [] })
       : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde)
 
-    const [{ data: costosManuales }, { data: asistencia }, { data: fumigaciones }] = await Promise.all([
+    const [{ data: costosManuales }, { data: asistencia }, { data: fumigaciones }, { data: planesNutricionales }] = await Promise.all([
       supabase.from('costos').select('monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde),
       asistenciaQuery,
       supabase
         .from('fumigaciones')
-        .select('fecha, fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
+        .select('id, fecha, tipo, fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
         .eq('campo_id', campo.id)
         .gte('fecha', mesDesde),
+      supabase
+        .from('plan_nutricional_registros')
+        .select('id, fecha, objetivo, bloque_id, bloques(codigo)')
+        .eq('campo_id', campo.id)
+        .gte('fecha', mesDesde)
+        .order('fecha', { ascending: false })
+        .limit(5),
     ])
 
     const ingresos = (cosechas || []).reduce((s, c) =>
@@ -239,7 +246,12 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
     setFinanzas({ ingresos, costos, margen: ingresos - costos })
     setCostBreakdown(breakdown)
     setProduccion(agruparProduccion(plantasActivas || []))
-    setActividades(tareas || [])
+    setActividades(construirActividadDashboard({
+      tareas: tareas || [],
+      cosechas: cosechas || [],
+      fumigaciones: fumigaciones || [],
+      planesNutricionales: planesNutricionales || [],
+    }))
     setChart(construirGrafico(cosechas || [], costosGrafico))
     setLoading(false)
   }
@@ -337,17 +349,17 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 16, marginBottom: 16 }}>
-        <Panel title="Actividad reciente" action="Ver agenda" onAction={() => navigate('/agenda')}>
+        <Panel title="Actividad y agenda" action="Ver agenda" onAction={() => navigate('/agenda')}>
           {actividades.length === 0 ? (
-            <EmptyState text="Sin tareas pendientes para hoy." />
+            <EmptyState text="Sin movimientos recientes ni tareas pendientes." />
           ) : (
             <div>
-              {actividades.slice(0, 5).map((a, i) => (
-                <Activity key={a.id} icon={i % 2 === 0 ? 'ti-calendar' : 'ti-users'} title={a.descripcion} date={a.fecha_programada} />
+              {actividades.slice(0, 5).map(a => (
+                <Activity key={a.id} icon={a.icon} title={a.title} date={a.date} tag={a.tag} color={a.color} onClick={() => navigate(a.path)} />
               ))}
             </div>
           )}
-          <button onClick={() => navigate('/agenda')} style={linkRow}>Ver todas las actividades <i className="ti ti-chevron-right" /></button>
+          <button onClick={() => navigate('/historial')} style={linkRow}>Ver historial completo <i className="ti ti-chevron-right" /></button>
         </Panel>
 
         <Panel title="Accesos rapidos">
@@ -424,6 +436,77 @@ function construirGrafico(cosechas, costos) {
       .reduce((s, c) => s + (Number(c.monto) || 0), 0)
     return { dia, ingresos, gastos }
   })
+}
+
+function fechaValor(fecha) {
+  const time = new Date(fecha || 0).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+function formatFechaCorta(fecha) {
+  if (!fecha) return 'Sin fecha'
+  const d = new Date(`${fecha}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return fecha
+  return d.toLocaleDateString('es-PY', { day: 'numeric', month: 'short' })
+}
+
+function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNutricionales }) {
+  const agenda = (tareas || []).map(t => ({
+    id: `tarea-${t.id}`,
+    title: t.descripcion || 'Tarea pendiente',
+    date: `Agenda - ${formatFechaCorta(t.fecha_programada)}`,
+    tag: t.tipo || 'Tarea',
+    icon: 'ti-calendar',
+    color: '#2563eb',
+    path: '/agenda',
+    order: fechaValor(t.fecha_programada) + 1000000000000,
+  }))
+
+  const cosecha = (cosechas || []).map(c => ({
+    id: `cosecha-${c.id}`,
+    title: `${fmtNumber(c.kg_total)} kg cosechados`,
+    date: `Cosecha - ${formatFechaCorta(c.fecha)}`,
+    tag: fmtGs((Number(c.kg_total) || 0) * (Number(c.precio_kg) || 0)),
+    icon: 'ti-cut',
+    color: '#176a25',
+    path: '/cosecha',
+    order: fechaValor(c.fecha),
+  }))
+
+  const fumigacion = (fumigaciones || []).map(f => ({
+    id: `fumigacion-${f.id}`,
+    title: f.tipo ? `Registro de ${f.tipo}` : 'Fumigacion registrada',
+    date: `Fumigacion - ${formatFechaCorta(f.fecha)}`,
+    tag: `${f.fumigacion_productos?.length || 0} productos`,
+    icon: 'ti-spray',
+    color: '#d88918',
+    path: '/fumigaciones',
+    order: fechaValor(f.fecha),
+  }))
+
+  const nutricion = (planesNutricionales || []).map(p => ({
+    id: `plan-${p.id}`,
+    title: `${p.objetivo || 'Plan nutricional'}${p.bloques?.codigo ? ` - ${p.bloques.codigo}` : ''}`,
+    date: `Nutricion - ${formatFechaCorta(p.fecha)}`,
+    tag: 'Plan',
+    icon: 'ti-leaf',
+    color: '#0f7a3a',
+    path: '/plan-nutricional',
+    order: fechaValor(p.fecha),
+  }))
+
+  const recientes = [...cosecha, ...fumigacion, ...nutricion]
+    .sort((a, b) => b.order - a.order)
+    .slice(0, 3)
+
+  return [...agenda.slice(0, 3), ...recientes]
+    .sort((a, b) => {
+      const aAgenda = a.id.startsWith('tarea-') ? 1 : 0
+      const bAgenda = b.id.startsWith('tarea-') ? 1 : 0
+      if (aAgenda !== bAgenda) return bAgenda - aAgenda
+      return b.order - a.order
+    })
+    .slice(0, 5)
 }
 
 const panelStyle = {
@@ -615,16 +698,17 @@ function CropRow({ crop, icon }) {
   )
 }
 
-function Activity({ icon, title, date }) {
+function Activity({ icon, title, date, tag, color = '#176a25', onClick }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr auto', gap: 14, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eef0ee' }}>
-      <span style={iconPill}><i className={`ti ${icon}`} style={{ color: '#176a25', fontSize: 21 }} aria-hidden="true"></i></span>
+    <button onClick={onClick} style={{ width: '100%', border: 'none', background: 'transparent', display: 'grid', gridTemplateColumns: '40px 1fr auto 16px', gap: 14, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eef0ee', textAlign: 'left', cursor: 'pointer' }}>
+      <span style={{ ...iconPill, background: `${color}14` }}><i className={`ti ${icon}`} style={{ color, fontSize: 21 }} aria-hidden="true"></i></span>
       <div>
         <strong style={{ fontSize: 14 }}>{title}</strong>
         <div style={{ color: '#69706a', fontSize: 12, marginTop: 3 }}>{date}</div>
       </div>
-      <span style={{ background: '#edf6ec', color: '#176a25', borderRadius: 8, padding: '5px 9px', fontSize: 12 }}>Agenda</span>
-    </div>
+      <span style={{ background: `${color}12`, color, borderRadius: 8, padding: '5px 9px', fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' }}>{tag || 'Actividad'}</span>
+      <i className="ti ti-chevron-right" style={{ fontSize: 16, color: '#9aa09a' }} aria-hidden="true"></i>
+    </button>
   )
 }
 
