@@ -23,6 +23,7 @@ import Auditoria from './pages/Auditoria'
 import Historial from './pages/Historial'
 import NavBar from './components/NavBar'
 import { canAccessModule, filterTabsByRole, normalizeRole } from './lib/permissions'
+import { textoErrorProfesional } from './lib/errors'
 
 export function LogoHS({ size = 48 }) {
   return (
@@ -423,9 +424,7 @@ export default function App() {
           setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
         } else if (esErrorSesion(error)) {
           await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${error.message}`)
-        } else {
-          setDataError(`Supabase no permitio leer los campos: ${error.message}`)
-        }
+        } else setDataError(textoErrorProfesional(error, { modulo:'Campos', accion:'leer' }))
         return
       }
       if (cancelled || !data || data.length === 0) return
@@ -436,9 +435,7 @@ export default function App() {
           setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
         } else if (esErrorSesion(bloquesError)) {
           await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${bloquesError.message}`)
-        } else {
-          setDataError(`Supabase no permitio leer los bloques: ${bloquesError.message}`)
-        }
+        } else setDataError(textoErrorProfesional(bloquesError, { modulo:'Bloques', accion:'leer' }))
         return
       }
       const bloquesPorCampo = contarBloquesPorCampo(bloques || [])

@@ -18,9 +18,22 @@ export const MODULES = [
   { key: 'configuracion', label: 'Configuracion', path: '/configuracion', adminOnly: true },
 ]
 
+export const ACTIONS = [
+  { key: 'view', label: 'Ver' },
+  { key: 'create', label: 'Crear' },
+  { key: 'edit', label: 'Editar' },
+  { key: 'delete', label: 'Borrar' },
+]
+
 const ALL_KEYS = MODULES.map(m => m.key)
 const OPERADOR_KEYS = ALL_KEYS.filter(key => !['configuracion', 'auditoria'].includes(key))
 const LECTURA_KEYS = ALL_KEYS.filter(key => !['asistencia', 'configuracion', 'auditoria'].includes(key))
+
+const DEFAULT_ACTIONS_BY_ROLE = {
+  admin: ['view', 'create', 'edit', 'delete'],
+  operador: ['view', 'create', 'edit'],
+  lectura: ['view'],
+}
 
 export const ROLE_LABELS = {
   admin: 'Administrador',
@@ -31,8 +44,21 @@ export const ROLE_LABELS = {
 export const DEFAULT_ROLE = {
   rol: 'admin',
   permisos: ALL_KEYS,
+  acciones: {},
   canWrite: true,
   label: ROLE_LABELS.admin,
+}
+
+const normalizeActions = (acciones, permisos, rol) => {
+  const defaults = DEFAULT_ACTIONS_BY_ROLE[rol] || DEFAULT_ACTIONS_BY_ROLE.lectura
+  const validActions = ACTIONS.map(a => a.key)
+  return permisos.reduce((acc, key) => {
+    const custom = acciones && typeof acciones === 'object' && Array.isArray(acciones[key])
+      ? acciones[key].filter(a => validActions.includes(a))
+      : null
+    acc[key] = custom && custom.length > 0 ? custom : defaults
+    return acc
+  }, {})
 }
 
 export const normalizeRole = (roleRow, fallbackEmail = '') => {
@@ -40,6 +66,7 @@ export const normalizeRole = (roleRow, fallbackEmail = '') => {
   const base = rol === 'admin' ? ALL_KEYS : rol === 'operador' ? OPERADOR_KEYS : LECTURA_KEYS
   const custom = Array.isArray(roleRow?.permisos) ? roleRow.permisos : null
   const permisos = custom && custom.length > 0 ? custom.filter(k => ALL_KEYS.includes(k)) : base
+  const acciones = normalizeActions(roleRow?.acciones, permisos, rol)
 
   return {
     id: roleRow?.id || null,
@@ -47,7 +74,8 @@ export const normalizeRole = (roleRow, fallbackEmail = '') => {
     nombre: roleRow?.nombre || '',
     rol,
     permisos,
-    canWrite: rol !== 'lectura',
+    acciones,
+    canWrite: Object.values(acciones).some(lista => lista.includes('create') || lista.includes('edit') || lista.includes('delete')),
     label: ROLE_LABELS[rol] || ROLE_LABELS.admin,
   }
 }
@@ -63,6 +91,14 @@ export const canAccessModule = (role, moduleKey) => {
   if (!role) return true
   if (role.rol === 'admin') return true
   return role.permisos.includes(moduleKey)
+}
+
+export const canPerformAction = (role, moduleKey, action = 'view') => {
+  if (!moduleKey || moduleKey === 'inicio') return true
+  if (!role) return true
+  if (role.rol === 'admin') return true
+  if (!canAccessModule(role, moduleKey)) return false
+  return (role.acciones?.[moduleKey] || ['view']).includes(action)
 }
 
 export const filterTabsByRole = (tabs, role, isGuest = false) => {

@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { forceLocalSignOut, supabase } from '../lib/supabase'
 import { descargarJson } from '../lib/exporters'
+import { ACTIONS } from '../lib/permissions'
 const PERMISOS_MODULOS = [
   { key: 'buscar', label: 'Buscar' },
   { key: 'alertas', label: 'Alertas' },
@@ -24,6 +25,7 @@ const PERMISOS_MODULOS = [
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
+const BACKUP_KEY = 'agrobloque-ultimo-backup'
 
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
 const esDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 768
@@ -57,6 +59,51 @@ function PermisosSelector({ permisos, onChange, ayuda }) {
         })}
       </div>
       <div style={{ fontSize:11, color:'#8b928b', marginTop:6 }}>Si desmarcas un modulo, no aparece en el menu ni en accesos.</div>
+    </div>
+  )
+}
+
+function AccionesSelector({ permisos, acciones, rol, onChange }) {
+  const modulosActivos = Array.isArray(permisos) && permisos.length > 0
+    ? PERMISOS_MODULOS.filter(m => permisos.includes(m.key))
+    : PERMISOS_MODULOS
+  const defaults = rol === 'admin'
+    ? ['view', 'create', 'edit', 'delete']
+    : rol === 'operador'
+      ? ['view', 'create', 'edit']
+      : ['view']
+
+  return (
+    <div style={{ background:'#fff', border:'1px solid #e8ece8', borderRadius:14, padding:12, marginBottom:12 }}>
+      <div style={{ fontSize:12, fontWeight:900, color:'#176a25', marginBottom:4, textTransform:'uppercase' }}>Acciones permitidas</div>
+      <div style={{ fontSize:11, color:'#687068', marginBottom:9, lineHeight:1.35 }}>Define si este usuario puede ver, crear, editar o borrar en cada modulo permitido.</div>
+      <div style={{ display:'grid', gap:7, maxHeight:240, overflowY:'auto', paddingRight:4 }}>
+        {modulosActivos.map(m => {
+          const actuales = Array.isArray(acciones?.[m.key]) ? acciones[m.key] : defaults
+          return (
+            <div key={m.key} style={{ display:'grid', gridTemplateColumns:'115px repeat(4, 1fr)', gap:6, alignItems:'center', fontSize:11, borderBottom:'1px solid #f2f1ef', paddingBottom:6 }}>
+              <strong style={{ color:'#1d241f' }}>{m.label}</strong>
+              {ACTIONS.map(a => (
+                <label key={a.key} style={{ display:'flex', alignItems:'center', gap:4, color:'#4d544e' }}>
+                  <input
+                    type="checkbox"
+                    checked={actuales.includes(a.key)}
+                    disabled={a.key === 'view'}
+                    onChange={e => {
+                      const base = Array.isArray(acciones?.[m.key]) ? acciones[m.key] : defaults
+                      const nuevo = e.target.checked
+                        ? [...new Set([...base, a.key, 'view'])]
+                        : base.filter(k => k !== a.key)
+                      onChange({ ...(acciones || {}), [m.key]: nuevo })
+                    }}
+                  />
+                  {a.label}
+                </label>
+              ))}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -100,8 +147,19 @@ export default function Configuracion() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [ultimoBackup, setUltimoBackup] = useState('')
 
-  useEffect(() => { fetchAll() }, [])
+  useEffect(() => {
+    fetchAll()
+    if (typeof window !== 'undefined') {
+      setUltimoBackup(window.localStorage.getItem(BACKUP_KEY) || '')
+    }
+  }, [])
+
+  const backupVencido = () => {
+    if (!ultimoBackup) return true
+    return Math.floor((Date.now() - new Date(ultimoBackup).getTime()) / 86400000) >= 7
+  }
 
   const fetchAll = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -316,6 +374,9 @@ export default function Configuracion() {
     }
 
     descargarJson('agrobloque-backup', backup)
+    const ahora = new Date().toISOString()
+    if (typeof window !== 'undefined') window.localStorage.setItem(BACKUP_KEY, ahora)
+    setUltimoBackup(ahora)
     setSuccess('Backup descargado')
     setLoading(false)
   }
@@ -381,6 +442,7 @@ export default function Configuracion() {
         nombre: form.nombre || null,
         rol: form.rol,
         permisos: Array.isArray(form.permisos) ? form.permisos : null,
+        acciones: form.acciones && typeof form.acciones === 'object' ? form.acciones : null,
         activo: form.activo !== false,
         notas: form.notas || null,
       }
@@ -388,10 +450,26 @@ export default function Configuracion() {
         ? await supabase.from('app_user_roles').update(payload).eq('id', form.id)
         : await supabase.from('app_user_roles').insert(payload)
       if (error) throw error
+
+      if (form.invitar_real) {
+        const { data: { session } } = await supabase.auth.getSession()
+        const resp = await fetch('/api/invitar-usuario', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token || ''}`,
+          },
+          body: JSON.stringify(payload),
+        })
+        const result = await resp.json().catch(() => ({}))
+        if (!resp.ok) throw new Error(result.error || 'No se pudo enviar la invitacion real.')
+      }
+
       await fetchAll()
-      abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [] })
+      abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false })
+      setSuccess(form.invitar_real ? 'Usuario guardado e invitacion enviada.' : 'Permiso guardado.')
     } catch (e) {
-      setError('No se pudo guardar. Ejecuta primero el SQL profesional.')
+      setError('No se pudo guardar: ' + (e.message || 'Ejecuta primero el SQL profesional.'))
     }
     setLoading(false)
   }
@@ -416,9 +494,9 @@ export default function Configuracion() {
     { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#212121', bg:'#eeeeee', action: () => abrir('bloques') },
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
     { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:'#176a25', bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30', permisos: [] }) },
-    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:'#176a25', bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [] }) },
+    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:'#176a25', bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false }) },
     { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:'#212121', bg:'#eeeeee', action: () => navigate('/auditoria') },
-    { icon:'ti-download', title:'Backup de datos', sub: 'Descargar copia JSON', color:'#176a25', bg:'#edf6ec', action: descargarBackup },
+    { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Ultimo: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
   ]
 
   return (
@@ -584,6 +662,16 @@ export default function Configuracion() {
                   ayuda="Elegí exactamente a que apartados puede entrar este usuario."
                   onChange={permisos => setForm(f => ({ ...f, permisos }))}
                 />
+                <AccionesSelector
+                  permisos={form.permisos}
+                  acciones={form.acciones}
+                  rol={form.rol || 'operador'}
+                  onChange={acciones => setForm(f => ({ ...f, acciones }))}
+                />
+                <label style={{ display:'flex', alignItems:'center', gap:8, background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:14, padding:12, marginBottom:12, fontSize:12, color:'#1d241f' }}>
+                  <input type="checkbox" checked={Boolean(form.invitar_real)} onChange={e=>setForm(f=>({...f,invitar_real:e.target.checked}))}/>
+                  Enviar invitacion real por email
+                </label>
                 <textarea style={{ ...inp, minHeight:64, resize:'vertical' }} value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
                 <button style={saveBtn('#176a25')} onClick={guardarRol} disabled={loading}>{loading ? 'Guardando...' : 'Guardar permiso'}</button>
               </div>
@@ -599,7 +687,7 @@ export default function Configuracion() {
                       <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.email} - {r.rol}</div>
                     </div>
                     <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-                      <button style={{ padding:'5px 10px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [] })}>Editar</button>
+                      <button style={{ padding:'5px 10px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, invitar_real:false })}>Editar</button>
                       <button style={{ padding:'5px 10px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminarRol(r.id)}>Borrar</button>
                     </div>
                   </div>
