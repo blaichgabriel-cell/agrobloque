@@ -203,6 +203,18 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         .limit(5),
     ])
 
+    const [
+      { data: tareasGenerales },
+      { data: cosechasGenerales },
+      { data: fumigacionesGenerales },
+      { data: planesNutricionalesGenerales },
+    ] = await Promise.all([
+      supabase.from('tareas').select('id, descripcion, fecha_programada, tipo').eq('completada', false).order('fecha_programada').limit(8),
+      supabase.from('cosechas').select('id, kg_total, precio_kg, fecha, bloque_id, bloques(codigo, campo_id)').order('fecha', { ascending: false }).limit(8),
+      supabase.from('fumigaciones').select('id, fecha, tipo, fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))').order('fecha', { ascending: false }).limit(8),
+      supabase.from('plan_nutricional_registros').select('id, fecha, objetivo, bloque_id, bloques(codigo)').order('fecha', { ascending: false }).limit(8),
+    ])
+
     const ingresos = (cosechas || []).reduce((s, c) =>
       s + (Number(c.kg_total) || 0) * (Number(c.precio_kg) || 0), 0)
     const costosManual = (costosManuales || []).reduce((s, c) => s + (Number(c.monto) || 0), 0)
@@ -233,24 +245,31 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       })),
     ]
 
-    setStats({
+    const statsActuales = {
       bloques: bloques.length,
       activos: bloques.filter(b => b.activo).length,
       cultivos: plantasActivas?.length || 0,
       operarios: operarios?.length || 0,
-      alertas: tareas?.length || 0,
+      alertas: (tareas?.length || tareasGenerales?.length || 0),
       productos: productos?.length || 0,
       plantacionesTotal: plantacionesTotal?.length || 0,
       bloquesTotal: bloquesTotal?.length || 0,
-    })
+    }
+
+    setStats(statsActuales)
     setFinanzas({ ingresos, costos, margen: ingresos - costos })
     setCostBreakdown(breakdown)
     setProduccion(agruparProduccion(plantasActivas || []))
     setActividades(construirActividadDashboard({
-      tareas: tareas || [],
-      cosechas: cosechas || [],
-      fumigaciones: fumigaciones || [],
-      planesNutricionales: planesNutricionales || [],
+      tareas: (tareas || []).length ? tareas : (tareasGenerales || []),
+      cosechas: (cosechas || []).length ? cosechas : (cosechasGenerales || []),
+      fumigaciones: (fumigaciones || []).length ? fumigaciones : (fumigacionesGenerales || []),
+      planesNutricionales: (planesNutricionales || []).length ? planesNutricionales : (planesNutricionalesGenerales || []),
+      resumen: {
+        stats: statsActuales,
+        finanzas: { ingresos, costos, margen: ingresos - costos },
+        produccion: agruparProduccion(plantasActivas || []),
+      },
     }))
     setChart(construirGrafico(cosechas || [], costosGrafico))
     setLoading(false)
@@ -450,7 +469,7 @@ function formatFechaCorta(fecha) {
   return d.toLocaleDateString('es-PY', { day: 'numeric', month: 'short' })
 }
 
-function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNutricionales }) {
+function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNutricionales, resumen }) {
   const agenda = (tareas || []).map(t => ({
     id: `tarea-${t.id}`,
     title: t.descripcion || 'Tarea pendiente',
@@ -499,7 +518,7 @@ function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNut
     .sort((a, b) => b.order - a.order)
     .slice(0, 3)
 
-  return [...agenda.slice(0, 3), ...recientes]
+  const actividad = [...agenda.slice(0, 3), ...recientes]
     .sort((a, b) => {
       const aAgenda = a.id.startsWith('tarea-') ? 1 : 0
       const bAgenda = b.id.startsWith('tarea-') ? 1 : 0
@@ -507,6 +526,55 @@ function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNut
       return b.order - a.order
     })
     .slice(0, 5)
+
+  if (actividad.length > 0) return actividad
+
+  const stats = resumen?.stats || {}
+  const finanzas = resumen?.finanzas || {}
+  const topCultivo = (resumen?.produccion || [])[0]
+
+  return [
+    {
+      id: 'estado-cultivos',
+      title: `${fmtNumber(stats.cultivos || 0)} plantaciones activas`,
+      date: topCultivo ? `Cultivo principal: ${topCultivo.nombre}` : 'Estado actual del campo',
+      tag: `${fmtNumber(stats.activos || 0)} bloques`,
+      icon: 'ti-plant',
+      color: '#176a25',
+      path: '/mapa',
+      order: 4,
+    },
+    {
+      id: 'estado-inventario',
+      title: `${fmtNumber(stats.productos || 0)} productos en inventario`,
+      date: 'Stock disponible para operaciones',
+      tag: 'Inventario',
+      icon: 'ti-box',
+      color: '#2563eb',
+      path: '/inventario',
+      order: 3,
+    },
+    {
+      id: 'estado-costos',
+      title: `${fmtGs(finanzas.costos || 0)} en gastos del mes`,
+      date: finanzas.ingresos ? `Ingresos: ${fmtGs(finanzas.ingresos)}` : 'Resumen financiero mensual',
+      tag: 'Costos',
+      icon: 'ti-coin',
+      color: '#d88918',
+      path: '/costos',
+      order: 2,
+    },
+    {
+      id: 'estado-plan',
+      title: 'Plan nutricional listo para usar',
+      date: 'Asistente contextual por cultivo, EC y bloque',
+      tag: 'Nutricion',
+      icon: 'ti-leaf',
+      color: '#0f7a3a',
+      path: '/plan-nutricional',
+      order: 1,
+    },
+  ]
 }
 
 const panelStyle = {
