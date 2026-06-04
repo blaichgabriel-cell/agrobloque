@@ -5,6 +5,35 @@ import { registrarAuditoria } from '../lib/audit'
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
+const fmtNumero = (n, decimales = 3) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDigits: decimales })
+
+const normalizarUnidad = (unidad = '') => {
+  const u = String(unidad).trim().toLowerCase()
+  if (['kg', 'kilo', 'kilos'].includes(u)) return 'kg'
+  if (['g', 'gr', 'gramo', 'gramos'].includes(u)) return 'g'
+  if (['l', 'lt', 'lts', 'litro', 'litros'].includes(u)) return 'L'
+  if (['cc', 'ml'].includes(u)) return 'cc'
+  if (['unidad', 'unidades', 'u'].includes(u)) return 'unidades'
+  return u || 'unidades'
+}
+
+const formatearStock = (cantidad, unidad) => {
+  const valor = Number(cantidad) || 0
+  const u = normalizarUnidad(unidad)
+
+  if (u === 'kg' && valor > 0 && valor < 1) {
+    return { cantidad: fmtNumero(valor * 1000, 0), unidad: 'g' }
+  }
+  if (u === 'L' && valor > 0 && valor < 1) {
+    return { cantidad: fmtNumero(valor * 1000, 0), unidad: 'cc' }
+  }
+  return { cantidad: fmtNumero(valor), unidad: u }
+}
+
+const formatearCantidadConUnidad = (cantidad, unidad) => {
+  const stock = formatearStock(cantidad, unidad)
+  return `${stock.cantidad} ${stock.unidad}`
+}
 
 const CATEGORIAS = [
   { key:'Fungicida',     label:'Fungicidas',      icon:'ti-shield',    color:'#e07b00', bg:'#fff3e8' },
@@ -301,7 +330,9 @@ export default function Inventario() {
           <div style={{ padding:'8px 14px 100px' }}>
             {productosCat.length === 0 ? (
               <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin productos en esta categoría</div>
-            ) : productosCat.map(p => (
+            ) : productosCat.map(p => {
+              const stockVisible = formatearStock(p.stock_actual, p.unidad)
+              return (
               <div key={p.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8 }}>
                 <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
                   <div style={{ flex:1 }}>
@@ -309,8 +340,8 @@ export default function Inventario() {
                     <div style={{ fontSize:10, color:'#9a9a9a', marginTop:2 }}>{p.principio_activo || '—'}</div>
                   </div>
                   <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:22, fontWeight:800, color: getStockColor(p) }}>{Number(p.stock_actual).toLocaleString('es-PY')}</div>
-                    <div style={{ fontSize:9, color:'#9a9a9a' }}>{p.unidad}</div>
+                    <div style={{ fontSize:22, fontWeight:800, color: getStockColor(p) }}>{stockVisible.cantidad}</div>
+                    <div style={{ fontSize:9, color:'#9a9a9a' }}>{stockVisible.unidad}</div>
                   </div>
                 </div>
 
@@ -320,7 +351,7 @@ export default function Inventario() {
 
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
                   <div style={{ background: getStockBg(p), borderRadius:8, padding:'3px 10px', fontSize:10, fontWeight:600, color: getStockColor(p) }}>
-                    {p.stock_actual <= 0 ? 'Sin stock' : p.stock_actual <= p.stock_minimo ? `Bajo · mín ${p.stock_minimo} ${p.unidad}` : `OK · mín ${p.stock_minimo} ${p.unidad}`}
+                    {p.stock_actual <= 0 ? 'Sin stock' : p.stock_actual <= p.stock_minimo ? `Bajo - min ${formatearCantidadConUnidad(p.stock_minimo, p.unidad)}` : `OK - min ${formatearCantidadConUnidad(p.stock_minimo, p.unidad)}`}
                   </div>
                   {p.carencia_dias > 0 && (
                     <div style={{ background:'#fff3e8', borderRadius:8, padding:'3px 10px', fontSize:10, fontWeight:600, color:'#c8700a' }}>
@@ -336,7 +367,8 @@ export default function Inventario() {
                   <button onClick={() => eliminar(p.id, p.nombre)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         </>
       )}

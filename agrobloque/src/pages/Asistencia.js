@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 
+const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado']
 const DIAS_CORTO = ['L','M','M','J','V','S']
 
@@ -18,6 +19,11 @@ const formatFecha = (d) => d.toISOString().split('T')[0]
 const formatLabel = (d) => d.toLocaleDateString('es-PY', { day:'numeric', month:'short' })
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
+
+const getCampoGuardado = () => {
+  if (typeof window === 'undefined') return null
+  return window.localStorage.getItem(CAMPO_STORAGE_KEY)
+}
 
 export default function Asistencia() {
   const [campoActivo, setCampoActivo] = useState(null)
@@ -47,8 +53,19 @@ export default function Asistencia() {
 
   const fetchCampos = async () => {
     const { data } = await supabase.from('campos').select('*').order('nombre')
-    setCampos(data || [])
-    if (data?.length > 0) setCampoActivo(data[0])
+    const lista = data || []
+    setCampos(lista)
+    if (lista.length > 0) {
+      const guardado = getCampoGuardado()
+      setCampoActivo(lista.find(c => c.id === guardado) || lista[0])
+    }
+  }
+
+  const seleccionarCampo = (campo) => {
+    setCampoActivo(campo)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CAMPO_STORAGE_KEY, campo.id)
+    }
   }
 
   const fetchOperarios = async () => {
@@ -72,11 +89,16 @@ export default function Asistencia() {
 
   const fetchNotasDia = async () => {
     if (!campoActivo) return
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('asistencia_notas_dia')
       .select('*')
       .eq('campo_id', campoActivo.id)
       .in('fecha', diasFechas)
+
+    if (error) {
+      setError(`No se pudieron cargar los trabajos realizados: ${error.message}`)
+      return
+    }
 
     const mapa = {}
     ;(data || []).forEach(n => { mapa[n.fecha] = n })
@@ -129,6 +151,7 @@ export default function Asistencia() {
     const fecha = diasFechas[diaNotaActivo]
     const texto = (notasDia[fecha]?.trabajos || '').trim()
     setSavingNota(true)
+    setError('')
     try {
       const payload = {
         campo_id: campoActivo.id,
@@ -137,14 +160,44 @@ export default function Asistencia() {
         trabajos: texto,
         updated_at: new Date().toISOString(),
       }
-      const { data } = await supabase
-        .from('asistencia_notas_dia')
-        .upsert(payload, { onConflict: 'campo_id,fecha' })
-        .select()
-        .single()
-      if (data) setNotasDia(prev => ({ ...prev, [fecha]: data }))
+      let resultado
+      const existenteId = notasDia[fecha]?.id
+
+      if (existenteId) {
+        resultado = await supabase
+          .from('asistencia_notas_dia')
+          .update(payload)
+          .eq('id', existenteId)
+          .select()
+          .single()
+      } else {
+        const buscado = await supabase
+          .from('asistencia_notas_dia')
+          .select('id')
+          .eq('campo_id', campoActivo.id)
+          .eq('fecha', fecha)
+          .maybeSingle()
+
+        if (buscado.error) throw buscado.error
+
+        resultado = buscado.data?.id
+          ? await supabase
+            .from('asistencia_notas_dia')
+            .update(payload)
+            .eq('id', buscado.data.id)
+            .select()
+            .single()
+          : await supabase
+            .from('asistencia_notas_dia')
+            .insert(payload)
+            .select()
+            .single()
+      }
+
+      if (resultado.error) throw resultado.error
+      if (resultado.data) setNotasDia(prev => ({ ...prev, [fecha]: resultado.data }))
     } catch (e) {
-      setError('Error al guardar trabajos del dia')
+      setError(`Error al guardar trabajos del dia: ${e.message || 'sin detalle'}`)
     }
     setSavingNota(false)
   }
@@ -198,7 +251,7 @@ export default function Asistencia() {
         {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
         <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:16 }}>
           {campos.map(c => (
-            <button key={c.id} onClick={() => setCampoActivo(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#212121' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }}>
+            <button key={c.id} onClick={() => seleccionarCampo(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#212121' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }}>
               {c.nombre}
             </button>
           ))}

@@ -5,12 +5,35 @@ const today = () => new Date().toISOString().split('T')[0]
 const fmt = (n) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDigits: 2 })
 const RECETAS_KEY = 'agrobloque-plan-nutricional-recetas'
 
+function useViewportWidth() {
+  const [width, setWidth] = useState(typeof window === 'undefined' ? 480 : window.innerWidth)
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return width
+}
+
 const objetivos = ['Crecimiento', 'Floracion', 'Produccion', 'Cargado', 'Recuperacion', 'Mantenimiento']
+const CATEGORIAS_NUTRICION = ['fertilizante', 'foliar', 'hidrosoluble']
 
 const normalizar = (valor = '') => String(valor)
   .toLowerCase()
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
+
+const esProductoNutricional = (producto = {}) => {
+  const categoria = normalizar(producto.categorias_producto?.nombre || producto.categoria_nombre || '')
+  if (CATEGORIAS_NUTRICION.some(c => categoria.includes(c))) return true
+  if (!categoria) {
+    const nombre = normalizar(producto.nombre || producto.producto || '')
+    return contiene(nombre, ['nitrato', 'sulfato', 'npk', 'calcio', 'magnesio', 'potasio', 'fosforo', 'boro', 'aminoacido', 'algas', 'quelato'])
+  }
+  return false
+}
 
 const numero = (valor) => {
   const parsed = Number(String(valor || '').replace(',', '.'))
@@ -200,6 +223,9 @@ const resumenProductosAplicados = (productos = []) => {
 }
 
 export default function PlanNutricional({ campoActivo, isGuest = false }) {
+  const viewportWidth = useViewportWidth()
+  const isMobile = viewportWidth < 760
+  const isVerySmall = viewportWidth < 390
   const [bloques, setBloques] = useState([])
   const [productos, setProductos] = useState([])
   const [registros, setRegistros] = useState([])
@@ -254,13 +280,13 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
       filtroCampo
         ? supabase.from('bloques').select('id, codigo, campo_id, plantaciones(activa, cultivos(nombre))').eq('campo_id', filtroCampo).order('codigo')
         : supabase.from('bloques').select('id, codigo, campo_id, plantaciones(activa, cultivos(nombre))').order('codigo'),
-      supabase.from('productos').select('id, nombre, unidad, stock_actual, activo').eq('activo', true).order('nombre'),
+      supabase.from('productos').select('id, nombre, unidad, stock_actual, activo, categorias_producto(nombre)').eq('activo', true).order('nombre'),
       filtroCampo
         ? supabase.from('plan_nutricional_registros').select('*, bloques(codigo), campos(nombre)').eq('campo_id', filtroCampo).order('fecha', { ascending:false }).limit(20)
         : supabase.from('plan_nutricional_registros').select('*, bloques(codigo), campos(nombre)').order('fecha', { ascending:false }).limit(20),
     ])
     setBloques(b || [])
-    setProductos(p || [])
+    setProductos((p || []).filter(esProductoNutricional))
     setRegistros(r || [])
   }
 
@@ -568,32 +594,32 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f6f7f5', padding:'30px 28px 44px', color:'#101511' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:20, marginBottom:22 }}>
+    <div style={{ minHeight:'100vh', background:'#f6f7f5', padding:isMobile ? '18px 14px 92px' : '30px 28px 44px', color:'#101511', overflowX:'hidden', boxSizing:'border-box' }}>
+      <div style={{ display:'flex', flexDirection:isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems:isMobile ? 'stretch' : 'flex-start', gap:isMobile ? 14 : 20, marginBottom:22 }}>
         <div>
           <div style={{ fontSize:12, color:'#687068', marginBottom:4 }}>Fertirriego y nutricion por cultivo</div>
           <h1 style={{ margin:0, fontSize:30, lineHeight:1.1, letterSpacing:-1 }}>Plan Nutricional</h1>
         </div>
-        <div style={{ display:'flex', gap:10 }}>
-          <button onClick={() => setModo('manual')} style={btn(modo === 'manual' ? '#212121' : '#fff', modo === 'manual' ? '#fff' : '#212121')}>Registro manual</button>
-          <button onClick={generarAsistente} disabled={aiLoading} style={btn('#176a25', '#fff')}>{aiLoading ? 'Pensando...' : 'Asistente IA'}</button>
+        <div style={{ display:'flex', gap:10, width:isMobile ? '100%' : 'auto' }}>
+          <button onClick={() => setModo('manual')} style={{ ...btn(modo === 'manual' ? '#212121' : '#fff', modo === 'manual' ? '#fff' : '#212121'), flex:1 }}>Registro manual</button>
+          <button onClick={generarAsistente} disabled={aiLoading} style={{ ...btn('#176a25', '#fff'), flex:1 }}>{aiLoading ? 'Pensando...' : 'Asistente IA'}</button>
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, minmax(150px, 1fr))', gap:14, marginBottom:18 }}>
+      <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(150px, 1fr))', gap:isMobile ? 9 : 14, marginBottom:18 }}>
         <Kpi label="EC agua base" value={form.ec_agua ? `${form.ec_agua} mS/cm` : '—'} icon="ti-droplet" />
         <Kpi label="EC objetivo" value={form.ec_objetivo ? `${form.ec_objetivo} mS/cm` : '—'} icon="ti-target" />
         <Kpi label="Registros" value={registros.length} icon="ti-clipboard-list" />
         <Kpi label="EC promedio" value={promedioEcFinal ? `${fmt(promedioEcFinal)} mS/cm` : '—'} icon="ti-chart-line" />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:18, alignItems:'start' }}>
-        <section style={panel}>
+      <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr', gap:18, alignItems:'start' }}>
+        <section style={{ ...panel, padding:isMobile ? 16 : 22, minWidth:0 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
             <h2 style={{ margin:0, fontSize:18 }}>Carga del plan</h2>
             <span style={{ fontSize:11, color:'#176a25', background:'#edf6ec', borderRadius:20, padding:'5px 9px' }}>{modo === 'asistente' ? 'Asistente IA' : 'Manual'}</span>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr', gap:10 }}>
             <Input label="Fecha" type="date" value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
             <Select label="Bloque" value={form.bloque_id} onChange={bloque_id => setForm(f => ({ ...f, bloque_id }))}>
               <option value="">Seleccionar bloque</option>
@@ -631,7 +657,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
               <div style={{ color:'#8b928b', fontSize:13, background:'#f7f8f6', borderRadius:14, padding:14 }}>Sin productos cargados.</div>
             ) : form.productos.map((p, idx) => (
               <div key={idx} style={{ marginBottom:8 }}>
-                <div style={{ display:'grid', gridTemplateColumns:'1.5fr 80px 80px', gap:8, marginBottom:6 }}>
+                <div style={{ display:'grid', gridTemplateColumns:isVerySmall ? 'minmax(0, 1fr)' : isMobile ? 'minmax(0, 1fr) 76px 70px' : '1.5fr 80px 80px', gap:8, marginBottom:6 }}>
                   <select value={p.producto_id || ''} onChange={e => {
                     const prod = productos.find(x => x.id === e.target.value)
                     actualizarProducto(idx, {
@@ -649,7 +675,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
                   <input value={p.unidad || ''} onChange={e => actualizarProducto(idx, { unidad:e.target.value })} placeholder="Unidad" style={field} />
                 </div>
                 {p.producto && (
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, padding:'0 2px' }}>
+                  <div style={{ display:'flex', flexDirection:isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems:isMobile ? 'flex-start' : 'center', gap:8, padding:'0 2px' }}>
                     <span style={{ fontSize:11, color:'#69706a' }}>
                       Recomendado: <strong>{p.producto}</strong>{p.producto_inventario ? ` · Inventario: ${p.producto_inventario}` : ''}
                     </span>
@@ -666,14 +692,14 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             </div>
           )}
           {!isGuest && (
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:12 }}>
+            <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr', gap:8, marginTop:12 }}>
               <button onClick={guardarReceta} disabled={saving || !(form.productos || []).length} style={{ ...btn('#fff', '#212121'), width:'100%' }}>Guardar receta</button>
               <button onClick={guardar} disabled={saving} style={{ ...btn('#212121', '#fff'), width:'100%' }}>{saving ? 'Guardando...' : 'Guardar plan'}</button>
             </div>
           )}
         </section>
 
-        <section style={panel}>
+        <section style={{ ...panel, padding:isMobile ? 16 : 22, minWidth:0 }}>
           <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Plan sugerido</h2>
           <div style={{ background:'#0f1410', color:'#fff', borderRadius:18, padding:18, marginBottom:14 }}>
             <div style={{ fontSize:12, color:'rgba(255,255,255,0.62)', marginBottom:6 }}>Resumen</div>
@@ -699,12 +725,12 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
         </section>
       </div>
 
-      <section style={{ ...panel, marginTop:18 }}>
+      <section style={{ ...panel, marginTop:18, padding:isMobile ? 16 : 22, minWidth:0 }}>
         <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Recetas guardadas</h2>
         {recetas.length === 0 ? (
           <div style={{ color:'#8b928b', fontSize:13, padding:'10px 0' }}>Sin recetas guardadas en este dispositivo.</div>
         ) : recetas.map(receta => (
-          <div key={receta.id} style={{ display:'grid', gridTemplateColumns:'1fr 110px 150px', gap:12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
+          <div key={receta.id} style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 110px 150px', gap:isMobile ? 8 : 12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
             <span>
               <strong style={{ display:'block', fontSize:13 }}>{receta.nombre}</strong>
               <span style={{ display:'block', fontSize:11, color:'#69706a', marginTop:3 }}>{receta.objetivo} - tanque {receta.tanque_litros || '-'} L - {receta.productos?.length || 0} productos</span>
@@ -720,12 +746,12 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
         ))}
       </section>
 
-      <section style={{ ...panel, marginTop:18 }}>
+      <section style={{ ...panel, marginTop:18, padding:isMobile ? 16 : 22, minWidth:0 }}>
         <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Aplicaciones recientes</h2>
         {registros.length === 0 ? (
           <div style={{ color:'#8b928b', fontSize:13, padding:'10px 0' }}>Sin registros de plan nutricional.</div>
         ) : registros.map(r => (
-          <div key={r.id} style={{ display:'grid', gridTemplateColumns:'110px 1fr 90px 90px 180px', gap:12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
+          <div key={r.id} style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '110px 1fr 90px 90px 180px', gap:isMobile ? 7 : 12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
             <span style={{ fontSize:12, color:'#69706a' }}>{r.fecha}</span>
             <strong style={{ fontSize:13 }}>{r.bloques?.codigo || 'Sin bloque'} · {r.objetivo}</strong>
             <span style={{ fontSize:12, color:'#69706a' }}>{r.tanque_litros || '-'} L</span>

@@ -43,6 +43,35 @@ const convertirAStock = (cantidad, unidadUso, unidadStock) => {
 
 const fmtCantidad = (n) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDigits: 3 })
 
+const formatearStock = (cantidad, unidad) => {
+  const valor = Number(cantidad) || 0
+  const u = normalizarUnidad(unidad)
+  if (u === 'kg' && valor > 0 && valor < 1) return `${fmtCantidad(valor * 1000)} g`
+  if (u === 'L' && valor > 0 && valor < 1) return `${fmtCantidad(valor * 1000)} cc`
+  return `${fmtCantidad(valor)} ${u}`
+}
+
+const getCultivoBloque = (bloque) => {
+  const activa = bloque?.plantaciones?.find(p => p.activa)
+  return activa?.cultivos?.nombre || ''
+}
+
+const getPlantacionActivaId = (bloque) => {
+  const activa = bloque?.plantaciones?.find(p => p.activa)
+  return activa?.id || null
+}
+
+const getBloquesConCultivo = (fumigacion) => {
+  return (fumigacion.fumigacion_bloques || [])
+    .map(fb => {
+      const codigo = fb.bloques?.codigo || ''
+      const cultivo = fb.cultivo_snapshot || getCultivoBloque(fb.bloques)
+      return codigo ? `${codigo}${cultivo ? ` (${cultivo})` : ''}` : ''
+    })
+    .filter(Boolean)
+    .join(', ')
+}
+
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
@@ -93,7 +122,7 @@ export default function Fumigaciones() {
 
   const fetchFumigaciones = async () => {
     const { data } = await supabase.from('fumigaciones')
-      .select('*, campos(nombre), fumigacion_bloques(bloques(codigo)), fumigacion_productos(*, productos(nombre, carencia_dias))')
+      .select('*, campos(nombre), fumigacion_bloques(cultivo_snapshot, plantacion_id_snapshot, bloques(codigo, plantaciones(id, activa, cultivos(nombre)))), fumigacion_productos(*, productos(nombre, carencia_dias))')
       .order('fecha', { ascending:false })
     setFumigaciones(data || [])
   }
@@ -104,7 +133,7 @@ export default function Fumigaciones() {
   }
 
   const fetchBloques = async (campo_id) => {
-    const { data: bl } = await supabase.from('bloques').select('*').eq('campo_id', campo_id).order('codigo')
+    const { data: bl } = await supabase.from('bloques').select('*, plantaciones(id, activa, cultivos(nombre))').eq('campo_id', campo_id).order('codigo')
     setBloques(bl || [])
     if (isGuest) {
       setOperarios([])
@@ -133,7 +162,15 @@ export default function Fumigaciones() {
     }).select().single()
     if (fum) {
       await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
-      await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => ({ fumigacion_id: fum.id, bloque_id: b })))
+      await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => {
+        const bloque = bloques.find(x => x.id === b)
+        return {
+          fumigacion_id: fum.id,
+          bloque_id: b,
+          cultivo_snapshot: getCultivoBloque(bloque) || null,
+          plantacion_id_snapshot: getPlantacionActivaId(bloque),
+        }
+      }))
       const prods = form.productos_form.filter(p => p.producto_id && p.cantidad)
       if (prods.length > 0) {
         await supabase.from('fumigacion_productos').insert(prods.map(p => {
@@ -235,7 +272,7 @@ export default function Fumigaciones() {
 
             {porFecha[fecha].map(f => {
               const tipo = TIPOS[f.tipo] || TIPOS.fumigacion
-              const bloquesCodes = f.fumigacion_bloques?.map(fb => fb.bloques?.codigo).filter(Boolean).join(', ')
+              const bloquesCodes = getBloquesConCultivo(f)
               const nombresProductos = f.fumigacion_productos?.map(fp => fp.productos?.nombre).filter(Boolean).join(' + ')
               const carencia = getCarencia(f)
               const tanques = f.tanques_cantidad && f.tanque_litros ? `${fmtCantidad(f.tanques_cantidad)} tanque${Number(f.tanques_cantidad) === 1 ? '' : 's'} x ${fmtCantidad(f.tanque_litros)} L` : ''
@@ -299,7 +336,7 @@ export default function Fumigaciones() {
           }}>
             {(() => {
               const tipo = TIPOS[detalle.tipo] || TIPOS.fumigacion
-              const bloquesCodes = detalle.fumigacion_bloques?.map(fb => fb.bloques?.codigo).filter(Boolean).join(', ')
+              const bloquesCodes = getBloquesConCultivo(detalle)
               const carencia = getCarencia(detalle)
               return <>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
@@ -436,7 +473,7 @@ export default function Fumigaciones() {
                     </select>
                   </div>
                   {prod && <div style={{ fontSize:10, color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#212121', marginTop:3, paddingLeft:4 }}>
-                    Stock: {Number(prod.stock_actual).toLocaleString('es-PY')} {prod.unidad}
+                    Stock: {formatearStock(prod.stock_actual, prod.unidad)}
                     {descuento === null ? ' · medida incompatible con el stock' : descuento > 0 ? ` · descuenta ${fmtCantidad(descuento)} ${prod.unidad}` : ''}
                     {prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}
                   </div>}

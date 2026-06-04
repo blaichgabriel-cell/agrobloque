@@ -110,6 +110,7 @@ const accesos = [
   { icon: 'ti-users', label: 'Asistencia', sub: 'Planilla', path: '/asistencia' },
   { icon: 'ti-chart-bar', label: 'Reportes', sub: 'Rentabilidad', path: '/reportes' },
   { icon: 'ti-spray', label: 'Fumigaciones', sub: 'Historial', path: '/fumigaciones', green: true },
+  { icon: 'ti-plant', label: 'Plan Nutricional', sub: 'Fertirriego', path: '/plan-nutricional', green: true },
   { icon: 'ti-box', label: 'Inventario', sub: 'Stock', path: '/inventario' },
   { icon: 'ti-cut', label: 'Cosecha', sub: 'Produccion', path: '/cosecha' },
   { icon: 'ti-coin', label: 'Costos', sub: 'Gastos', path: '/costos' },
@@ -388,11 +389,11 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
           {accesosVisibles.map(item => (
             <button key={item.path} onClick={() => navigate(item.path)} style={{
               ...cardBlanca,
-              minHeight: compacto ? 68 : 98,
+              minHeight: compacto ? 58 : 98,
               borderRadius: compacto ? 16 : 22,
-              padding: compacto ? '10px 9px' : '18px 14px',
+              padding: compacto ? '8px 8px' : '18px 14px',
               display: 'grid',
-              gridTemplateColumns: compacto ? '34px minmax(0, 1fr) 12px' : '54px minmax(0, 1fr) 18px',
+              gridTemplateColumns: compacto ? '31px minmax(0, 1fr) 10px' : '54px minmax(0, 1fr) 18px',
               alignItems: 'center',
               gap: compacto ? 7 : 12,
               cursor: 'pointer',
@@ -401,8 +402,8 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
               minWidth: 0,
             }}>
               <span style={{
-                width: compacto ? 34 : 54,
-                height: compacto ? 34 : 54,
+                width: compacto ? 31 : 54,
+                height: compacto ? 31 : 54,
                 borderRadius: compacto ? 12 : 18,
                 background: item.green ? '#eef6ea' : '#f1f1f0',
                 display: 'flex',
@@ -411,7 +412,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
               }}>
                 <DashboardIcon
                   icon={item.icon}
-                  size={compacto ? 20 : 29}
+                  size={compacto ? 18 : 29}
                   color={item.green ? '#2f741f' : '#080908'}
                 />
               </span>
@@ -419,7 +420,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
                 <span style={{
                   display: 'block',
                   color: '#050505',
-                  fontSize: compacto ? (item.label.length > 10 ? 11.5 : 13) : 18,
+                  fontSize: compacto ? (item.label.length > 12 ? 10.5 : 12.5) : 18,
                   fontWeight: 850,
                   letterSpacing: -0.2,
                   lineHeight: 1.1,
@@ -429,7 +430,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
                 }}>
                   {item.label}
                 </span>
-                <span style={{ display: 'block', color: '#4f5358', fontSize: compacto ? 11.5 : 14, marginTop: compacto ? 3 : 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ display: 'block', color: '#4f5358', fontSize: compacto ? 10.5 : 14, marginTop: compacto ? 2 : 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {item.sub}
                 </span>
               </span>
