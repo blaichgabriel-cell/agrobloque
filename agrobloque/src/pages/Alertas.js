@@ -31,6 +31,7 @@ export default function Alertas() {
       { data: vivero },
       { data: fumigaciones },
       { data: planesFertilizacion },
+      { data: planesNutricionales },
     ] = await Promise.all([
       supabase.from('tareas').select('id, descripcion, fecha_programada, completada').eq('completada', false).order('fecha_programada'),
       supabase.from('productos').select('id, nombre, stock_actual, stock_minimo').eq('activo', true).order('nombre'),
@@ -38,6 +39,7 @@ export default function Alertas() {
       supabase.from('vivero_lotes').select('id, cultivo, variedad, fecha_siembra, fecha_trasplante_estimada, estado').order('fecha_siembra', { ascending:false }),
       supabase.from('fumigaciones').select('id, fecha, campo_id, fumigacion_bloques(bloque_id, bloques(id, codigo)), fumigacion_productos(productos(nombre, carencia_dias))').order('fecha', { ascending:false }),
       supabase.from('fertilizacion_planes').select('id, nombre, fecha_inicio, bloque_id, bloques(codigo), fertilizacion_plan_aplicaciones(fecha)').eq('activo', true),
+      supabase.from('plan_nutricional_registros').select('id, fecha, objetivo, ec_final, bloque_id, bloques(codigo)').order('fecha', { ascending:false }).limit(250),
     ])
 
     const lista = []
@@ -94,6 +96,29 @@ export default function Alertas() {
       }
     })
 
+    const ultimoPlanNutricionalPorBloque = {}
+    ;(planesNutricionales || []).forEach(plan => {
+      if (plan.bloque_id && !ultimoPlanNutricionalPorBloque[plan.bloque_id]) {
+        ultimoPlanNutricionalPorBloque[plan.bloque_id] = plan
+      }
+      const ec = Number(plan.ec_final) || 0
+      if (ec >= 3.2) {
+        lista.push({
+          tipo:'alta',
+          titulo:'EC alta en plan nutricional',
+          detalle:`Bloque ${plan.bloques?.codigo || '-'} - ${ec} mS/cm - ${plan.objetivo || 'sin objetivo'}`,
+          path:'/plan-nutricional',
+        })
+      } else if (ec > 0 && ec <= 0.8) {
+        lista.push({
+          tipo:'media',
+          titulo:'EC baja en plan nutricional',
+          detalle:`Bloque ${plan.bloques?.codigo || '-'} - ${ec} mS/cm - revisar si corresponde al objetivo`,
+          path:'/plan-nutricional',
+        })
+      }
+    })
+
     const ultimaFumiPorBloque = {}
     ;(fumigaciones || []).forEach(f => {
       ;(f.fumigacion_bloques || []).forEach(fb => {
@@ -123,6 +148,15 @@ export default function Alertas() {
     ;(plantaciones || []).forEach(p => {
       const dias = diasEntre(p.fecha_siembra)
       const ultima = ultimaFumiPorBloque[p.bloques?.id]
+      const ultimoPlan = ultimoPlanNutricionalPorBloque[p.bloques?.id]
+      if (dias >= 14 && (!ultimoPlan || diasEntre(ultimoPlan.fecha) >= 14)) {
+        lista.push({
+          tipo:'media',
+          titulo:'Bloque activo sin plan nutricional reciente',
+          detalle:`Bloque ${p.bloques?.codigo || '-'} - ${p.cultivos?.nombre || 'cultivo'} - ${ultimoPlan ? `${diasEntre(ultimoPlan.fecha)} dias desde ultimo plan` : 'sin plan registrado'}`,
+          path:'/plan-nutricional',
+        })
+      }
       if (dias >= 21 && (!ultima || diasEntre(ultima.fecha) >= 21)) {
         lista.push({
           tipo:'baja',

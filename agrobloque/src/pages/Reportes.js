@@ -280,14 +280,16 @@ export default function Reportes({ campoActivo, isGuest = false }) {
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Reportes</div>
           </div>
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={exportarCsv} style={{ width:40, height:40, borderRadius:14, background:'#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+            <button onClick={exportarCsv} style={{ height:40, borderRadius:14, background:'#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', gap:6, cursor:'pointer', padding:'0 12px', fontSize:12, fontWeight:800 }}>
               <i className="ti ti-download" style={{ fontSize:19, color:'#212121' }} aria-hidden="true"></i>
+              CSV
             </button>
-            <button onClick={imprimirReporte} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+            <button onClick={imprimirReporte} style={{ height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', gap:6, cursor:'pointer', color:'#fff', padding:'0 12px', fontSize:12, fontWeight:800 }}>
               <i className="ti ti-printer" style={{ fontSize:19, color:'#fff' }} aria-hidden="true"></i>
+              PDF resumen
             </button>
             <button onClick={imprimirCompleto} style={{ height:40, borderRadius:14, background:'#176a25', border:'none', padding:'0 12px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#fff', fontSize:12, fontWeight:800 }}>
-              Completo
+              PDF completo
             </button>
           </div>
         </div>

@@ -494,7 +494,7 @@ const overlay = {
   background:'rgba(0,0,0,0.42)',
   zIndex:100,
   display:'flex',
-  alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'flex-start' : 'flex-end',
+  alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end',
   justifyContent:'center',
 }
 

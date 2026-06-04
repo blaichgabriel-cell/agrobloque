@@ -282,9 +282,9 @@ export default function Fumigaciones() {
           background:'rgba(0,0,0,0.4)',
           zIndex:100,
           display:'flex',
-          alignItems: isDesktop ? 'flex-start' : 'flex-end',
+          alignItems: isDesktop ? 'center' : 'flex-end',
           justifyContent:'center',
-          padding: isDesktop ? '56px 24px 24px' : 0,
+          padding: isDesktop ? '24px' : 0,
           overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
         }} onClick={e => e.target===e.currentTarget && setDetalle(null)}>
           <div style={{
@@ -360,9 +360,9 @@ export default function Fumigaciones() {
           background:'rgba(0,0,0,0.4)',
           zIndex:100,
           display:'flex',
-          alignItems: isDesktop ? 'flex-start' : 'flex-end',
+          alignItems: isDesktop ? 'center' : 'flex-end',
           justifyContent:'center',
-          padding: isDesktop ? '56px 24px 24px' : 0,
+          padding: isDesktop ? '24px' : 0,
           overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
         }} onClick={e => e.target===e.currentTarget && setModal(false)}>
           <div style={{

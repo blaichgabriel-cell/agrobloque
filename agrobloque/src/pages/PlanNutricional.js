@@ -227,6 +227,44 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     setSaving(false)
   }
 
+  const copiarRegistro = (registro, aplicarHoy = false) => {
+    setForm({
+      fecha: aplicarHoy ? today() : (registro.fecha || today()),
+      bloque_id: registro.bloque_id || '',
+      objetivo: registro.objetivo || 'Produccion',
+      tanque_litros: registro.tanque_litros ? String(registro.tanque_litros) : '200',
+      ec_agua: registro.ec_agua ? String(registro.ec_agua) : '',
+      ec_objetivo: registro.ec_objetivo ? String(registro.ec_objetivo) : '',
+      ec_final: registro.ec_final ? String(registro.ec_final) : '',
+      productos: aplicarProductosRecomendados(registro.productos || []),
+      notas: aplicarHoy
+        ? `Aplicacion repetida desde plan del ${registro.fecha || ''}. ${registro.notas || ''}`.trim()
+        : (registro.notas || ''),
+    })
+    setModo(registro.origen === 'asistente' ? 'asistente' : 'manual')
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const aplicarHoy = async (registro) => {
+    if (isGuest || !campoActivo?.id) return
+    setSaving(true)
+    await supabase.from('plan_nutricional_registros').insert({
+      campo_id: campoActivo.id,
+      bloque_id: registro.bloque_id || null,
+      fecha: today(),
+      objetivo: registro.objetivo || 'Produccion',
+      tanque_litros: registro.tanque_litros || null,
+      ec_agua: registro.ec_agua || null,
+      ec_objetivo: registro.ec_objetivo || null,
+      ec_final: registro.ec_final || null,
+      productos: registro.productos || [],
+      notas: `Aplicado hoy repitiendo plan del ${registro.fecha || ''}. ${registro.notas || ''}`.trim(),
+      origen: 'repetido',
+    })
+    await cargarDatos()
+    setSaving(false)
+  }
+
   return (
     <div style={{ minHeight:'100vh', background:'#f6f7f5', padding:'30px 28px 44px', color:'#101511' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:20, marginBottom:22 }}>
@@ -356,11 +394,17 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
         {registros.length === 0 ? (
           <div style={{ color:'#8b928b', fontSize:13, padding:'10px 0' }}>Sin registros de plan nutricional.</div>
         ) : registros.map(r => (
-          <div key={r.id} style={{ display:'grid', gridTemplateColumns:'110px 1fr 90px 90px', gap:12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
+          <div key={r.id} style={{ display:'grid', gridTemplateColumns:'110px 1fr 90px 90px 180px', gap:12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
             <span style={{ fontSize:12, color:'#69706a' }}>{r.fecha}</span>
             <strong style={{ fontSize:13 }}>{r.bloques?.codigo || 'Sin bloque'} · {r.objetivo}</strong>
             <span style={{ fontSize:12, color:'#69706a' }}>{r.tanque_litros || '-'} L</span>
             <span style={{ fontSize:12, fontWeight:800, color:'#176a25' }}>{r.ec_final ? `${r.ec_final} EC` : '-'}</span>
+            {!isGuest && (
+              <span style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+                <button onClick={() => copiarRegistro(r)} style={miniAction}>Copiar</button>
+                <button onClick={() => aplicarHoy(r)} disabled={saving} style={{ ...miniAction, background:'#176a25', color:'#fff', borderColor:'#176a25' }}>Aplicar hoy</button>
+              </span>
+            )}
           </div>
         ))}
       </section>
@@ -404,6 +448,17 @@ const smallBtn = {
   borderRadius:10,
   padding:'7px 10px',
   fontSize:12,
+  fontWeight:800,
+  cursor:'pointer',
+}
+
+const miniAction = {
+  border:'1px solid #dfe5df',
+  background:'#fff',
+  color:'#1d241f',
+  borderRadius:10,
+  padding:'7px 9px',
+  fontSize:11,
   fontWeight:800,
   cursor:'pointer',
 }
