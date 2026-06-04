@@ -267,7 +267,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   }, [])
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#ecefec' : '#f2f1ef' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#dfe3df' : '#f2f1ef' }}>
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
       <div data-app-scroll style={{
@@ -275,7 +275,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
         marginLeft: isDesktop ? SIDEBAR_WIDTH : 0,
         height: '100vh',
         minHeight: '100vh',
-        background: dashboardDesktop ? '#ecefec' : '#f2f1ef',
+        background: dashboardDesktop ? '#dfe3df' : '#f2f1ef',
         paddingBottom: isDesktop ? 0 : 64,
         maxWidth: isDesktop ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100%',
         overflowY: 'auto',

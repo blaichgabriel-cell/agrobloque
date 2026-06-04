@@ -248,7 +248,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
   const quickLinksVisibles = filterTabsByRole(quickLinks, role, isGuest)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#ecefec', color: '#101511', padding: '30px 34px 36px' }}>
+    <div style={{ minHeight: '100vh', background: '#dfe3df', color: '#101511', padding: '30px 34px 36px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 32, letterSpacing: -1.2, lineHeight: 1.1 }}>Hola, Gabriel</h1>
