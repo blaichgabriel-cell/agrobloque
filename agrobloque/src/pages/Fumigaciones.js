@@ -201,9 +201,35 @@ export default function Fumigaciones() {
 
   const eliminar = (id) => {
     setConfirmar({ fn: async () => {
+      const { data: productosUsados } = await supabase
+        .from('fumigacion_productos')
+        .select('producto_id, descuento_stock, productos(stock_actual)')
+        .eq('fumigacion_id', id)
+
+      const devoluciones = (productosUsados || []).reduce((acc, item) => {
+        const descuento = Number(item.descuento_stock) || 0
+        if (!item.producto_id || descuento <= 0) return acc
+        if (!acc[item.producto_id]) {
+          acc[item.producto_id] = {
+            producto_id: item.producto_id,
+            stock_actual: Number(item.productos?.stock_actual) || 0,
+            devolver: 0,
+          }
+        }
+        acc[item.producto_id].devolver += descuento
+        return acc
+      }, {})
+
+      for (const item of Object.values(devoluciones)) {
+        await supabase
+          .from('productos')
+          .update({ stock_actual: item.stock_actual + item.devolver })
+          .eq('id', item.producto_id)
+      }
+
       await supabase.from('fumigaciones').delete().eq('id', id)
       await registrarAuditoria({ accion:'Elimino fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:id })
-      setConfirmar(null); setDetalle(null); fetchFumigaciones()
+      setConfirmar(null); setDetalle(null); fetchFumigaciones(); fetchProductos()
     }})
   }
 
