@@ -10,6 +10,8 @@ export default function Reportes({ campoActivo, isGuest = false }) {
   const [campos, setCampos] = useState([])
   const [campoSel, setCampoSel] = useState(null)
   const [periodo, setPeriodo] = useState('mes')
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
   const [datos, setDatos] = useState({ ingresos:0, costos:0, ganancia:0, kg:0, registros:0 })
   const [porCultivo, setPorCultivo] = useState([])
   const [porBloque, setPorBloque] = useState([])
@@ -19,7 +21,7 @@ export default function Reportes({ campoActivo, isGuest = false }) {
 
   useEffect(() => { fetchCampos() }, [])
   useEffect(() => { if (campoActivo) setCampoSel(campoActivo) }, [campoActivo])
-  useEffect(() => { if (campoSel) fetchDatos() }, [campoSel, periodo])
+  useEffect(() => { if (campoSel) fetchDatos() }, [campoSel, periodo, fechaDesde, fechaHasta])
 
   const fetchCampos = async () => {
     const { data } = await supabase.from('campos').select('*').order('nombre')
@@ -32,6 +34,7 @@ export default function Reportes({ campoActivo, isGuest = false }) {
   }
 
   const getFechaDesde = () => {
+    if (periodo === 'custom') return fechaDesde || '2020-01-01'
     if (periodo === 'total') return '2020-01-01'
     const d = new Date()
     if (periodo === 'mes') return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
@@ -39,16 +42,23 @@ export default function Reportes({ campoActivo, isGuest = false }) {
     return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0]
   }
 
+  const getFechaHasta = () => {
+    if (periodo === 'custom') return fechaHasta || new Date().toISOString().split('T')[0]
+    return new Date().toISOString().split('T')[0]
+  }
+
   const fetchDatos = async () => {
     setLoading(true); setError('')
     try {
       const desde = getFechaDesde()
+      const hasta = getFechaHasta()
 
       // Cosechas — query simple sin joins anidados
       const { data: cosechas, error: e1 } = await supabase
         .from('cosechas')
         .select('id, kg_total, precio_kg, bloque_id, fecha, bloques(codigo, campo_id)')
         .gte('fecha', desde)
+        .lte('fecha', hasta)
       if (e1) throw e1
 
       const cosechasCampo = (cosechas || []).filter(c => c.bloques?.campo_id === campoSel.id)
@@ -70,11 +80,11 @@ export default function Reportes({ campoActivo, isGuest = false }) {
       // Costos jornales
       const { data: asist } = isGuest
         ? { data: [] }
-        : await supabase.from('asistencia').select('monto, operarios(campo_id)').gte('fecha', desde)
+        : await supabase.from('asistencia').select('monto, operarios(campo_id)').gte('fecha', desde).lte('fecha', hasta)
       const jornales = (asist || []).filter(a => a.operarios?.campo_id === campoSel.id).reduce((s, a) => s + Number(a.monto), 0)
 
       // Costos manuales
-      const { data: manuales } = await supabase.from('costos').select('monto').eq('campo_id', campoSel.id).gte('fecha', desde)
+      const { data: manuales } = await supabase.from('costos').select('monto').eq('campo_id', campoSel.id).gte('fecha', desde).lte('fecha', hasta)
       const costosManuales = (manuales || []).reduce((s, c) => s + Number(c.monto), 0)
 
       const costos = jornales + costosManuales
@@ -140,7 +150,7 @@ export default function Reportes({ campoActivo, isGuest = false }) {
   const imprimirReporte = () => {
     imprimirHtml('Reporte AgroBloque', `
       <h1>Reporte AgroBloque</h1>
-      <div class="muted">${esc(campoSel?.nombre || '')} - Periodo: ${esc(periodo)}</div>
+      <div class="muted">${esc(campoSel?.nombre || '')} - Periodo: ${esc(periodo === 'custom' ? `${getFechaDesde()} a ${getFechaHasta()}` : periodo)}</div>
       <h2>Resumen</h2>
       <table>
         <tr><th>Ingresos</th><th>Costos</th><th>Ganancia neta</th><th>Kg</th><th>Registros</th></tr>
@@ -307,6 +317,18 @@ export default function Reportes({ campoActivo, isGuest = false }) {
           {[['mes','Mes'],['trimestre','Trimestre'],['año','Año'],['total','Total']].map(([k,v]) => (
             <button key={k} onClick={() => setPeriodo(k)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
           ))}
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10 }}>
+          <label style={{ display:'grid', gap:5, fontSize:11, color:'#8b928b', fontWeight:800 }}>
+            Desde
+            <input type="date" value={fechaDesde} onChange={e => { setPeriodo('custom'); setFechaDesde(e.target.value) }}
+              style={{ border:'1px solid #e8e6e2', borderRadius:12, padding:'10px 12px', fontSize:13, background:'#fff' }} />
+          </label>
+          <label style={{ display:'grid', gap:5, fontSize:11, color:'#8b928b', fontWeight:800 }}>
+            Hasta
+            <input type="date" value={fechaHasta} onChange={e => { setPeriodo('custom'); setFechaHasta(e.target.value) }}
+              style={{ border:'1px solid #e8e6e2', borderRadius:12, padding:'10px 12px', fontSize:13, background:'#fff' }} />
+          </label>
         </div>
         <div style={{ background:'#fff', borderRadius:18, padding:'12px', marginTop:10, border:'1px solid #e8ece8' }}>
           <div style={{ fontSize:12, color:'#8b928b', fontWeight:800, marginBottom:8 }}>Reportes por modulo</div>

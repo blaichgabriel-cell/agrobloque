@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 const today = () => new Date().toISOString().split('T')[0]
 const fmt = (n) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDigits: 2 })
+const RECETAS_KEY = 'agrobloque-plan-nutricional-recetas'
 
 const objetivos = ['Crecimiento', 'Floracion', 'Produccion', 'Cargado', 'Recuperacion', 'Mantenimiento']
 
@@ -71,6 +72,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   const [saving, setSaving] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
+  const [recetas, setRecetas] = useState([])
   const [form, setForm] = useState({
     fecha: today(),
     bloque_id: '',
@@ -87,10 +89,28 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     cargarDatos()
   }, [campoActivo?.id])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      setRecetas(JSON.parse(window.localStorage.getItem(RECETAS_KEY) || '[]'))
+    } catch {
+      setRecetas([])
+    }
+  }, [])
+
   const bloqueActivo = useMemo(() => bloques.find(b => b.id === form.bloque_id), [bloques, form.bloque_id])
-  const promedioEcFinal = registros.length
-    ? registros.reduce((s, r) => s + (Number(r.ec_final) || 0), 0) / registros.filter(r => Number(r.ec_final) > 0).length
+  const registrosConEc = registros.filter(r => Number(r.ec_final) > 0)
+  const promedioEcFinal = registrosConEc.length
+    ? registrosConEc.reduce((s, r) => s + (Number(r.ec_final) || 0), 0) / registrosConEc.length
     : 0
+  const diferenciaEc = (Number(String(form.ec_final).replace(',', '.')) || 0) - (Number(String(form.ec_objetivo).replace(',', '.')) || 0)
+  const estadoEc = !form.ec_final || !form.ec_objetivo
+    ? { label:'Sin comparar EC', color:'#687068', bg:'#f7f8f6' }
+    : Math.abs(diferenciaEc) <= 0.2
+      ? { label:'EC dentro del rango', color:'#176a25', bg:'#edf6ec' }
+      : diferenciaEc > 0
+        ? { label:`EC alta por ${fmt(diferenciaEc)}`, color:'#c84040', bg:'#fff0f0' }
+        : { label:`EC baja por ${fmt(Math.abs(diferenciaEc))}`, color:'#8a5a00', bg:'#fff7e8' }
 
   const cargarDatos = async () => {
     const filtroCampo = campoActivo?.id
@@ -265,6 +285,44 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     setSaving(false)
   }
 
+  const guardarReceta = () => {
+    if (isGuest || !(form.productos || []).length) return
+    const nombre = window.prompt('Nombre de la receta nutricional', `${form.objetivo} ${form.tanque_litros || 0}L`)
+    if (!nombre) return
+    const nueva = {
+      id: Date.now(),
+      nombre,
+      objetivo: form.objetivo,
+      tanque_litros: form.tanque_litros,
+      ec_objetivo: form.ec_objetivo,
+      productos: form.productos || [],
+      notas: form.notas || '',
+      creada_en: new Date().toISOString(),
+    }
+    const lista = [nueva, ...recetas].slice(0, 20)
+    setRecetas(lista)
+    window.localStorage.setItem(RECETAS_KEY, JSON.stringify(lista))
+  }
+
+  const aplicarReceta = (receta) => {
+    setForm(f => ({
+      ...f,
+      objetivo: receta.objetivo || f.objetivo,
+      tanque_litros: receta.tanque_litros || f.tanque_litros,
+      ec_objetivo: receta.ec_objetivo || f.ec_objetivo,
+      productos: aplicarProductosRecomendados(receta.productos || []),
+      notas: receta.notas || f.notas,
+    }))
+    setModo('manual')
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const eliminarReceta = (id) => {
+    const lista = recetas.filter(r => r.id !== id)
+    setRecetas(lista)
+    window.localStorage.setItem(RECETAS_KEY, JSON.stringify(lista))
+  }
+
   return (
     <div style={{ minHeight:'100vh', background:'#f6f7f5', padding:'30px 28px 44px', color:'#101511' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:20, marginBottom:22 }}>
@@ -310,6 +368,9 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             <Input label="EC agua base" value={form.ec_agua} onChange={ec_agua => setForm(f => ({ ...f, ec_agua }))} />
             <Input label="EC objetivo" value={form.ec_objetivo} onChange={ec_objetivo => setForm(f => ({ ...f, ec_objetivo }))} />
             <Input label="EC final / estimada" value={form.ec_final} onChange={ec_final => setForm(f => ({ ...f, ec_final }))} />
+          </div>
+          <div style={{ marginTop:12, background:estadoEc.bg, color:estadoEc.color, border:'1px solid rgba(0,0,0,0.06)', borderRadius:14, padding:12, fontSize:12, fontWeight:800 }}>
+            {estadoEc.label}
           </div>
           {bloqueActivo && (
             <div style={{ marginTop:12, background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:14, padding:12, fontSize:12, color:'#4d544e' }}>
@@ -360,7 +421,12 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
               IA no disponible. Se uso la guia base para no dejarte sin recomendacion.
             </div>
           )}
-          {!isGuest && <button onClick={guardar} disabled={saving} style={{ ...btn('#212121', '#fff'), width:'100%', marginTop:12 }}>{saving ? 'Guardando...' : 'Guardar plan'}</button>}
+          {!isGuest && (
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:12 }}>
+              <button onClick={guardarReceta} disabled={saving || !(form.productos || []).length} style={{ ...btn('#fff', '#212121'), width:'100%' }}>Guardar receta</button>
+              <button onClick={guardar} disabled={saving} style={{ ...btn('#212121', '#fff'), width:'100%' }}>{saving ? 'Guardando...' : 'Guardar plan'}</button>
+            </div>
+          )}
         </section>
 
         <section style={panel}>
@@ -388,6 +454,27 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
           </div>
         </section>
       </div>
+
+      <section style={{ ...panel, marginTop:18 }}>
+        <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Recetas guardadas</h2>
+        {recetas.length === 0 ? (
+          <div style={{ color:'#8b928b', fontSize:13, padding:'10px 0' }}>Sin recetas guardadas en este dispositivo.</div>
+        ) : recetas.map(receta => (
+          <div key={receta.id} style={{ display:'grid', gridTemplateColumns:'1fr 110px 150px', gap:12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
+            <span>
+              <strong style={{ display:'block', fontSize:13 }}>{receta.nombre}</strong>
+              <span style={{ display:'block', fontSize:11, color:'#69706a', marginTop:3 }}>{receta.objetivo} - tanque {receta.tanque_litros || '-'} L - {receta.productos?.length || 0} productos</span>
+            </span>
+            <span style={{ fontSize:12, color:'#69706a' }}>{receta.ec_objetivo ? `${receta.ec_objetivo} EC` : 'Sin EC'}</span>
+            {!isGuest && (
+              <span style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+                <button onClick={() => aplicarReceta(receta)} style={miniAction}>Usar</button>
+                <button onClick={() => eliminarReceta(receta.id)} style={{ ...miniAction, color:'#c84040' }}>Borrar</button>
+              </span>
+            )}
+          </div>
+        ))}
+      </section>
 
       <section style={{ ...panel, marginTop:18 }}>
         <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Aplicaciones recientes</h2>
