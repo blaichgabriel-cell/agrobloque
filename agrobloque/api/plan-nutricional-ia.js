@@ -1,4 +1,4 @@
-const OPENAI_API_URL = 'https://api.openai.com/v1/responses';
+﻿const OPENAI_API_URL = 'https://api.openai.com/v1/responses';
 
 const jsonHeaders = {
   'Content-Type': 'application/json',
@@ -43,24 +43,29 @@ module.exports = async function handler(req, res) {
       tanque_litros: safeNumber(body.tanque_litros) || 200,
       ec_agua: safeNumber(body.ec_agua),
       ec_objetivo: safeNumber(body.ec_objetivo),
+      contexto_bloque: body.contexto_bloque || null,
       productos_disponibles: Array.isArray(body.productos_disponibles) ? body.productos_disponibles.slice(0, 80) : [],
       productos_ideales_base: Array.isArray(body.productos_ideales_base) ? body.productos_ideales_base : [],
       registros_recientes: Array.isArray(body.registros_recientes) ? body.registros_recientes.slice(0, 8) : [],
     };
 
     const prompt = `
-Sos un asistente tecnico para fertirriego hortícola familiar-profesional.
+Sos un asistente tecnico para fertirriego hortÃ­cola familiar-profesional.
 Tu tarea es proponer un plan nutricional editable y prudente.
 
 Reglas:
 - No inventes datos que no fueron enviados.
-- Separá producto ideal de disponibilidad en inventario.
-- Podés recomendar productos aunque no estén en inventario si son agronómicamente importantes.
-- Tené en cuenta objetivo, cultivo, tanque, EC de agua, EC objetivo, historial reciente y productos disponibles.
-- Para cargado de frutos priorizá llenado/calibre/firmeza: potasio, calcio, magnesio y control de EC.
-- Si faltan datos, dejá advertencias en "notas".
-- No des indicaciones peligrosas ni definitivas; todo debe quedar editable y con revisión de EC.
-- Respondé SOLO JSON válido, sin markdown.
+- SeparÃ¡ producto ideal de disponibilidad en inventario.
+- PodÃ©s recomendar productos aunque no estÃ©n en inventario si son agronÃ³micamente importantes.
+- TenÃ© en cuenta objetivo, cultivo, tanque, EC de agua, EC objetivo, historial reciente y productos disponibles.
+- Si se envio contexto_bloque, usalo como dato principal: cultivo activo, dias en campo, abonos de base, fertilizaciones recientes, plan semanal activo, fumigaciones y registros nutricionales del mismo bloque.
+- No devuelvas una receta generica igual para todos los cultivos. Diferencia tomate, morron, pepino, zucchini, berenjena u otros segun demanda nutricional, objetivo y contexto enviado.
+- Si el bloque ya tuvo abono de base o fertilizaciones recientes con mucho NPK/calcio/potasio/magnesio, ajusta cantidades o explica en notas por que mantienes/refuerzas.
+- En tomate y morron cargado, suele pesar mucho calcio + potasio + magnesio y control de EC; en pepino/zucchini cuidar exceso de sales y sostener potasio/nitrogeno moderado segun vigor.
+- Para cargado de frutos priorizÃ¡ llenado/calibre/firmeza: potasio, calcio, magnesio y control de EC.
+- Si faltan datos, dejÃ¡ advertencias en "notas".
+- No des indicaciones peligrosas ni definitivas; todo debe quedar editable y con revisiÃ³n de EC.
+- RespondÃ© SOLO JSON vÃ¡lido, sin markdown.
 
 Formato exacto:
 {

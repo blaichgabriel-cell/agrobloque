@@ -64,6 +64,16 @@ const estadoInventario = (producto) => {
   return { key: 'disponible', label: 'Disponible', color: '#176a25', bg: '#edf6ec' }
 }
 
+const resumenProductosAplicados = (productos = []) => {
+  if (!Array.isArray(productos)) return []
+  return productos.map(p => ({
+    producto: p.producto || p.nombre || p.productos?.nombre || '',
+    cantidad: p.cantidad || p.dosis || '',
+    unidad: p.unidad || '',
+    nutrientes: p.nutrientes || '',
+  })).filter(p => p.producto)
+}
+
 export default function PlanNutricional({ campoActivo, isGuest = false }) {
   const [bloques, setBloques] = useState([])
   const [productos, setProductos] = useState([])
@@ -156,6 +166,96 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     setModo('asistente')
   }
 
+  const cargarContextoBloqueIA = async () => {
+    if (!form.bloque_id) return null
+
+    const [{ data: plantaciones }, { data: ferts }, { data: planes }, { data: registrosBloque }, { data: fumBloques }] = await Promise.all([
+      supabase
+        .from('plantaciones')
+        .select('id, activa, fecha_siembra, densidad_plantas_m2, notas, cultivos(nombre), plantacion_abonos(cantidad, unidad, alcance, abonos(nombre))')
+        .eq('bloque_id', form.bloque_id)
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('fertilizaciones')
+        .select('fecha, notas, soluciones')
+        .eq('bloque_id', form.bloque_id)
+        .order('fecha', { ascending: false })
+        .limit(8),
+      supabase
+        .from('fertilizacion_planes')
+        .select('nombre, fecha_inicio, litros_preparados, soluciones, notas, activo')
+        .eq('bloque_id', form.bloque_id)
+        .eq('activo', true)
+        .order('created_at', { ascending: false })
+        .limit(2),
+      supabase
+        .from('plan_nutricional_registros')
+        .select('fecha, objetivo, tanque_litros, ec_agua, ec_objetivo, ec_final, productos, notas')
+        .eq('bloque_id', form.bloque_id)
+        .order('fecha', { ascending: false })
+        .limit(8),
+      supabase
+        .from('fumigacion_bloques')
+        .select('fumigaciones(fecha, tipo, notas, fumigacion_productos(dosis, unidad, productos(nombre)))')
+        .eq('bloque_id', form.bloque_id)
+        .limit(8),
+    ])
+
+    const activa = (plantaciones || []).find(p => p.activa) || (plantaciones || [])[0] || null
+    return {
+      bloque_codigo: bloqueActivo?.codigo || '',
+      cultivo_activo: activa?.cultivos?.nombre || bloqueActivo?.plantaciones?.find(p => p.activa)?.cultivos?.nombre || '',
+      fecha_siembra: activa?.fecha_siembra || '',
+      dias_en_campo: activa?.fecha_siembra ? Math.max(0, Math.floor((new Date() - new Date(activa.fecha_siembra)) / 86400000)) : null,
+      cantidad_plantas: activa?.densidad_plantas_m2 || '',
+      variedad_notas: activa?.notas || '',
+      abonos_base: (activa?.plantacion_abonos || []).map(a => ({
+        producto: a.abonos?.nombre || '',
+        cantidad: a.cantidad || '',
+        unidad: a.unidad || 'kg',
+        alcance: a.alcance || 'total',
+      })),
+      fertilizaciones_recientes: (ferts || []).map(f => ({
+        fecha: f.fecha,
+        notas: f.notas || '',
+        productos: Array.isArray(f.soluciones)
+          ? f.soluciones.flatMap(sol => resumenProductosAplicados(sol.productos || sol.items || []))
+          : [],
+      })),
+      plan_semanal_activo: (planes || []).map(p => ({
+        nombre: p.nombre,
+        fecha_inicio: p.fecha_inicio,
+        litros_preparados: p.litros_preparados,
+        soluciones: (p.soluciones || []).map(sol => ({
+          nombre: sol.nombre,
+          productos: resumenProductosAplicados(sol.productos || []),
+        })),
+        notas: p.notas || '',
+      })),
+      planes_nutricionales_recientes: (registrosBloque || []).map(r => ({
+        fecha: r.fecha,
+        objetivo: r.objetivo,
+        tanque_litros: r.tanque_litros,
+        ec_agua: r.ec_agua,
+        ec_objetivo: r.ec_objetivo,
+        ec_final: r.ec_final,
+        productos: resumenProductosAplicados(r.productos || []),
+        notas: r.notas || '',
+      })),
+      fumigaciones_recientes: (fumBloques || []).map(fb => ({
+        fecha: fb.fumigaciones?.fecha,
+        tipo: fb.fumigaciones?.tipo,
+        notas: fb.fumigaciones?.notas || '',
+        productos: (fb.fumigaciones?.fumigacion_productos || []).map(fp => ({
+          producto: fp.productos?.nombre || '',
+          dosis: fp.dosis || '',
+          unidad: fp.unidad || '',
+        })),
+      })),
+    }
+  }
+
   const generarAsistente = async () => {
     setAiError('')
     setAiLoading(true)
@@ -164,6 +264,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     const ecEstimada = ecObjetivo || (ecAgua ? ecAgua + 1.1 : 0)
 
     try {
+      const contextoBloque = await cargarContextoBloqueIA()
       const respuesta = await fetch('/api/plan-nutricional-ia', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,6 +278,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
           tanque_litros: form.tanque_litros,
           ec_agua: form.ec_agua,
           ec_objetivo: form.ec_objetivo,
+          contexto_bloque: contextoBloque,
           productos_ideales_base: recomendacionBase(form.objetivo),
           productos_disponibles: productos.map(p => ({
             nombre: p.nombre,
