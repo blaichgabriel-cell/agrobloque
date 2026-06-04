@@ -248,8 +248,8 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
   const quickLinksVisibles = filterTabsByRole(quickLinks, role, isGuest)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f6f7f5', color: '#101511', padding: '34px 36px 40px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+    <div style={{ minHeight: '100vh', background: '#ecefec', color: '#101511', padding: '30px 34px 36px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 32, letterSpacing: -1.2, lineHeight: 1.1 }}>Hola, Gabriel</h1>
           <div style={{ color: '#656b66', fontSize: 15, marginTop: 8 }}>
@@ -289,7 +289,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(180px, 1fr))', gap: 18, marginBottom: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(180px, 1fr))', gap: 16, marginBottom: 18 }}>
         <Kpi icon="ti-plant" title="Bloques activos" value={loading ? '-' : stats.activos} sub={`de ${stats.bloques} totales`} dark />
         <Kpi icon="ti-plant" title="Cultivos activos" value={stats.cultivos} sub="plantaciones activas" />
         {isGuest ? (
@@ -300,32 +300,34 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         <Kpi icon="ti-alert-triangle" title="Alertas" value={stats.alertas} sub={stats.alertas === 0 ? 'sin alertas' : 'pendientes'} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 18, marginBottom: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 16, marginBottom: 16 }}>
         <Panel title="Resumen financiero del mes" action="Ver costos" onAction={() => navigate('/costos')} wide>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18, marginBottom: 22 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
             <Money title="Ingresos del mes" value={finanzas.ingresos} />
             <Money title="Gastos del mes" value={finanzas.costos} />
             <Money title="Margen estimado" value={finanzas.margen} />
           </div>
-          <div style={{ borderTop: '1px solid #ecefec', paddingTop: 18 }}>
-            <div style={{ fontSize: 13, fontWeight: 750, marginBottom: 12 }}>Ingresos vs. Costos</div>
-            <MiniChart data={chart} hasData={hayFinanzas} />
+          <div style={{ borderTop: '1px solid #ecefec', paddingTop: 14, display: 'grid', gridTemplateColumns: '1fr 230px', gap: 18, alignItems: 'stretch' }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 750, marginBottom: 8 }}>Ingresos vs. Costos</div>
+              <MiniChart data={chart} hasData={hayFinanzas} />
+            </div>
+            <CostBreakdown data={costBreakdown} total={finanzas.costos} />
           </div>
-          <CostBreakdown data={costBreakdown} total={finanzas.costos} />
         </Panel>
 
         <Panel title="Produccion por cultivo" action="Ver mapa" onAction={() => navigate('/mapa')}>
           {produccion.length === 0 ? (
             <EmptyState text="Sin plantaciones activas para mostrar." />
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 150px', gap: 22, alignItems: 'stretch' }}>
-              <div style={{ display: 'grid', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 140px', gap: 18, alignItems: 'stretch' }}>
+              <div style={{ display: 'grid', gap: 12 }}>
                 {produccion.slice(0, 3).map(c => <CropRow key={c.nombre} crop={c} icon={getCropIcon(c.nombre)} />)}
               </div>
-              <div style={{ display: 'grid', gap: 16 }}>
+              <div style={{ display: 'grid', gap: 12 }}>
                 {produccion.slice(3, 6).map(c => <CropRow key={c.nombre} crop={c} icon={getCropIcon(c.nombre)} />)}
               </div>
-              <div style={{ borderLeft: '1px solid #eef0ee', display: 'grid', alignContent: 'center', gap: 28, paddingLeft: 20 }}>
+              <div style={{ borderLeft: '1px solid #eef0ee', display: 'grid', alignContent: 'center', gap: 22, paddingLeft: 18 }}>
                 <SideTotal icon="ti-plant" value={stats.plantacionesTotal} label="Plantaciones registradas" />
                 <SideTotal icon="ti-box" value={stats.productos} label="Productos en inventario" />
               </div>
@@ -334,7 +336,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         </Panel>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 18, marginBottom: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 16, marginBottom: 16 }}>
         <Panel title="Actividad reciente" action="Ver agenda" onAction={() => navigate('/agenda')}>
           {actividades.length === 0 ? (
             <EmptyState text="Sin tareas pendientes para hoy." />
@@ -349,13 +351,13 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         </Panel>
 
         <Panel title="Accesos rapidos">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             {quickLinksVisibles.map(link => (
               <button key={link.path} onClick={() => navigate(link.path)} style={{
                 border: '1px solid #e7ece7',
                 background: '#fff',
                 borderRadius: 13,
-                padding: '14px 14px',
+                padding: '12px 12px',
                 display: 'grid',
                 gridTemplateColumns: '40px 1fr 16px',
                 gap: 10,
@@ -458,8 +460,8 @@ const linkRow = {
 
 function Panel({ title, action, onAction, children }) {
   return (
-    <section style={{ ...panelStyle, padding: 22 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+    <section style={{ ...panelStyle, padding: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <h2 style={{ margin: 0, fontSize: 18, letterSpacing: -0.4 }}>{title}</h2>
         {action && (
           <button type="button" onClick={onAction} style={{ border: '1px solid #e7ece7', background: '#fff', borderRadius: 9, padding: '8px 13px', fontSize: 12, cursor: 'pointer' }}>
@@ -474,14 +476,14 @@ function Panel({ title, action, onAction, children }) {
 
 function Kpi({ icon, title, value, sub, dark, badge }) {
   return (
-    <div style={{ ...panelStyle, minHeight: 116, padding: 22, display: 'grid', gridTemplateColumns: '66px 1fr', alignItems: 'center', gap: 18 }}>
-      <div style={{ ...iconPill, width: 60, height: 60, borderRadius: 18, background: dark ? '#050705' : '#edf6ec' }}>
-        <i className={`ti ${icon}`} style={{ fontSize: 31, color: dark ? '#fff' : '#176a25' }} aria-hidden="true"></i>
+    <div style={{ ...panelStyle, minHeight: 106, padding: 20, display: 'grid', gridTemplateColumns: '58px 1fr', alignItems: 'center', gap: 16 }}>
+      <div style={{ ...iconPill, width: 54, height: 54, borderRadius: 17, background: dark ? '#050705' : '#edf6ec' }}>
+        <i className={`ti ${icon}`} style={{ fontSize: 29, color: dark ? '#fff' : '#176a25' }} aria-hidden="true"></i>
       </div>
       <div>
         <div style={{ textTransform: 'uppercase', color: '#5f665f', fontSize: 12, letterSpacing: 0.3 }}>{title}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
-          <strong style={{ fontSize: 31, lineHeight: 1 }}>{value}</strong>
+          <strong style={{ fontSize: 29, lineHeight: 1 }}>{value}</strong>
           {badge && <span style={{ background: '#e2f2dc', color: '#16621f', borderRadius: 8, padding: '4px 9px', fontSize: 12 }}>{badge}</span>}
         </div>
         <div style={{ color: '#5f665f', fontSize: 13, marginTop: 6 }}>{sub}</div>
@@ -492,9 +494,9 @@ function Kpi({ icon, title, value, sub, dark, badge }) {
 
 function Money({ title, value }) {
   return (
-    <div style={{ borderRight: '1px solid #ecefec', paddingRight: 18 }}>
+    <div style={{ borderRight: '1px solid #ecefec', paddingRight: 14 }}>
       <div style={{ color: '#333b34', fontSize: 13, marginBottom: 8 }}>{title}</div>
-      <div style={{ fontSize: 24, fontWeight: 850, letterSpacing: -0.5 }}>{fmtGs(value)}</div>
+      <div style={{ fontSize: 22, fontWeight: 850, letterSpacing: -0.5 }}>{fmtGs(value)}</div>
       <div style={{ color: '#6d746e', fontSize: 12, marginTop: 5 }}>{value > 0 ? 'calculado automaticamente' : 'Sin datos aun'}</div>
     </div>
   )
@@ -502,22 +504,50 @@ function Money({ title, value }) {
 
 function CostBreakdown({ data, total }) {
   const items = data.length > 0 ? data : [{ label: 'Sin costos registrados', value: 0, color: '#d8ddd8' }]
+  const radio = 44
+  const circunferencia = 2 * Math.PI * radio
+  let acumulado = 0
   return (
-    <div style={{ borderTop:'1px solid #ecefec', marginTop:18, paddingTop:16 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+    <div style={{ minHeight: 150 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
         <div style={{ fontSize:13, fontWeight:800 }}>Distribucion de costos</div>
         <div style={{ fontSize:12, color:'#69706a' }}>{total > 0 ? fmtGs(total) : 'Sin datos'}</div>
       </div>
-      <div style={{ height:10, borderRadius:20, overflow:'hidden', background:'#edf0ed', display:'flex', marginBottom:10 }}>
-        {total > 0 ? items.map(item => (
-          <div key={item.label} style={{ width:`${Math.max(4, (item.value / total) * 100)}%`, background:item.color }} />
-        )) : <div style={{ width:'100%', background:'#d8ddd8' }} />}
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'104px 1fr', gap:12, alignItems:'center' }}>
+        <div style={{ position:'relative', width:104, height:104 }}>
+          <svg viewBox="0 0 120 120" style={{ width:'100%', height:'100%', transform:'rotate(-90deg)' }}>
+            <circle cx="60" cy="60" r={radio} fill="none" stroke="#edf0ed" strokeWidth="16" />
+            {total > 0 && items.map(item => {
+              const dash = (item.value / total) * circunferencia
+              const dasharray = `${dash} ${circunferencia - dash}`
+              const dashoffset = -acumulado
+              acumulado += dash
+              return (
+                <circle
+                  key={item.label}
+                  cx="60"
+                  cy="60"
+                  r={radio}
+                  fill="none"
+                  stroke={item.color}
+                  strokeWidth="16"
+                  strokeDasharray={dasharray}
+                  strokeDashoffset={dashoffset}
+                  strokeLinecap="round"
+                />
+              )
+            })}
+          </svg>
+          <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center' }}>
+            <strong style={{ fontSize:17, lineHeight:1 }}>{total > 0 ? '100%' : '0%'}</strong>
+            <span style={{ fontSize:10, color:'#69706a', marginTop:3 }}>costos</span>
+          </div>
+        </div>
+        <div style={{ display:'grid', gap:7 }}>
         {items.map(item => {
           const pct = total > 0 ? Math.round((item.value / total) * 100) : 0
           return (
-            <div key={item.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, border:'1px solid #edf0ed', borderRadius:11, padding:'8px 10px' }}>
+            <div key={item.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, border:'1px solid #edf0ed', borderRadius:10, padding:'7px 9px' }}>
               <span style={{ display:'flex', alignItems:'center', gap:7, minWidth:0 }}>
                 <span style={{ width:9, height:9, borderRadius:'50%', background:item.color, flexShrink:0 }} />
                 <span style={{ fontSize:12, color:'#333b34', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.label}</span>
@@ -526,6 +556,7 @@ function CostBreakdown({ data, total }) {
             </div>
           )
         })}
+        </div>
       </div>
     </div>
   )
@@ -545,7 +576,7 @@ function MiniChart({ data, hasData }) {
   }).join(' ')
 
   return (
-    <div style={{ height: 178, position: 'relative' }}>
+    <div style={{ height: 140, position: 'relative' }}>
       <svg viewBox="0 0 520 165" style={{ width: '100%', height: '100%' }} preserveAspectRatio="none">
         {[35, 70, 105, 140].map(y => <line key={y} x1="0" x2="520" y1={y} y2={y} stroke="#e6ebe6" strokeDasharray="4 4" />)}
         <polyline points={points} fill="none" stroke="#176a25" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity={hasData ? 1 : 0.25} />
@@ -566,8 +597,8 @@ function MiniChart({ data, hasData }) {
 function CropRow({ crop, icon }) {
   const pct = Math.min(100, Math.max(18, crop.plantaciones * 18))
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '58px 1fr', gap: 14, alignItems: 'center' }}>
-      <div style={{ fontSize: 40, textAlign: 'center' }}>{icon}</div>
+    <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr', gap: 12, alignItems: 'center' }}>
+      <div style={{ fontSize: 34, textAlign: 'center' }}>{icon}</div>
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
           <strong style={{ fontSize: 14 }}>{crop.nombre}</strong>
@@ -576,7 +607,7 @@ function CropRow({ crop, icon }) {
         <div style={{ color: '#69706a', fontSize: 12, marginTop: 3 }}>
           {crop.plantaciones} plantacion{crop.plantaciones === 1 ? '' : 'es'}{crop.plantas > 0 ? ` · ${fmtNumber(crop.plantas)} plantas` : ''}
         </div>
-        <div style={{ height: 5, background: '#e1e7e0', borderRadius: 8, marginTop: 9, overflow: 'hidden' }}>
+        <div style={{ height: 5, background: '#e1e7e0', borderRadius: 8, marginTop: 7, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${pct}%`, background: '#19732a', borderRadius: 8 }} />
         </div>
       </div>
@@ -599,10 +630,10 @@ function Activity({ icon, title, date }) {
 
 function SideTotal({ icon, value, label }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr', gap: 12, alignItems: 'center' }}>
-      <span style={{ ...iconPill, width: 48, height: 48, borderRadius: 16 }}><i className={`ti ${icon}`} style={{ fontSize: 25, color: '#176a25' }} aria-hidden="true"></i></span>
+    <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 11, alignItems: 'center' }}>
+      <span style={{ ...iconPill, width: 44, height: 44, borderRadius: 15 }}><i className={`ti ${icon}`} style={{ fontSize: 23, color: '#176a25' }} aria-hidden="true"></i></span>
       <div>
-        <strong style={{ fontSize: 28, lineHeight: 1 }}>{value}</strong>
+        <strong style={{ fontSize: 26, lineHeight: 1 }}>{value}</strong>
         <div style={{ fontSize: 12, color: '#5f665f', marginTop: 4 }}>{label}</div>
       </div>
     </div>
@@ -625,7 +656,7 @@ function BottomStat({ icon, value, label, dark }) {
 
 function EmptyState({ text }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 185, color: '#69706a', fontSize: 14 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 140, color: '#69706a', fontSize: 14 }}>
       {text}
     </div>
   )
