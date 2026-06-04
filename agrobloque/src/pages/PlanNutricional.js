@@ -12,19 +12,39 @@ const normalizar = (valor = '') => String(valor)
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
 
-const recomendacionBase = (objetivo, cultivo = '') => {
+const numero = (valor) => {
+  const parsed = Number(String(valor || '').replace(',', '.'))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const contiene = (texto, terminos) => {
+  const base = normalizar(texto)
+  return terminos.some(t => base.includes(normalizar(t)))
+}
+
+const recomendarPorObjetivoYCultivo = (objetivo, cultivo = '') => {
   const o = String(objetivo || '').toLowerCase()
   const c = normalizar(cultivo)
+  const esCucurbitacea = contiene(c, ['pepino', 'zucchini', 'zapallito', 'calabacin', 'calabaza'])
+  const esSolanaceaFuerte = contiene(c, ['morron', 'pimiento', 'locote'])
+  const esTomate = contiene(c, ['tomate'])
+  const esBerenjena = contiene(c, ['berenjena'])
+
   if (o.includes('cargado')) return [
-    ...(c.includes('pepino') || c.includes('zucchini') || c.includes('zapallito') ? [
+    ...(esCucurbitacea ? [
       { producto: 'Nitrato de potasio', cantidad: '260', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Sostiene llenado sin empujar demasiado la conductividad.' },
       { producto: 'Nitrato de calcio', cantidad: '180', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Mantiene crecimiento y firmeza cuidando exceso de sales.' },
       { producto: 'Sulfato de magnesio', cantidad: '90', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Apoya fotosintesis en cultivo de cosecha continua.' },
-    ] : c.includes('morron') || c.includes('pimiento') || c.includes('locote') ? [
+    ] : esSolanaceaFuerte ? [
       { producto: 'Nitrato de potasio', cantidad: '340', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Favorece calibre y llenado de frutos pesados.' },
       { producto: 'Nitrato de calcio', cantidad: '300', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Refuerza firmeza y calidad de pared del fruto.' },
       { producto: 'Sulfato de magnesio', cantidad: '120', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Sostiene fotosintesis durante alta carga.' },
       { producto: 'Calcio boro', cantidad: '70', unidad: 'cc', nutrientes: 'Calcio + boro', motivo: 'Apoya cuaje y calidad cuando hay carga de frutos.' },
+    ] : esTomate ? [
+      { producto: 'Nitrato de calcio', cantidad: '330', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Refuerza firmeza y previene problemas asociados a baja disponibilidad de calcio.' },
+      { producto: 'Nitrato de potasio', cantidad: '310', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Acompana llenado y calibre de frutos.' },
+      { producto: 'Sulfato de magnesio', cantidad: '110', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Sostiene fotosintesis en etapa de carga.' },
+      { producto: 'Calcio boro', cantidad: '55', unidad: 'cc', nutrientes: 'Calcio + boro', motivo: 'Apoya cuaje y calidad de fruto.' },
     ] : [
       { producto: 'Nitrato de potasio', cantidad: '320', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Favorece llenado, calibre y calidad de fruto.' },
       { producto: 'Nitrato de calcio', cantidad: '280', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Ayuda firmeza de fruto y reduce problemas asociados a falta de calcio.' },
@@ -33,22 +53,115 @@ const recomendacionBase = (objetivo, cultivo = '') => {
     ]),
   ]
   if (o.includes('produccion')) return [
-    { producto: 'Nitrato de calcio', cantidad: '350', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Aporta calcio para firmeza y crecimiento activo.' },
-    { producto: 'NPK 15-15-15', cantidad: '280', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Mantiene aporte general de nitrogeno, fosforo y potasio.' },
-    { producto: 'Sulfato de magnesio', cantidad: '120', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Ayuda a clorofila y actividad fotosintetica.' },
+    ...(esCucurbitacea ? [
+      { producto: 'Nitrato de potasio', cantidad: '220', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Sostiene cosecha continua con EC moderada.' },
+      { producto: 'Nitrato de calcio', cantidad: '170', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Mantiene vigor y calidad sin exceso de sales.' },
+      { producto: 'Sulfato de magnesio', cantidad: '80', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Apoya hojas activas y fotosintesis.' },
+    ] : esSolanaceaFuerte ? [
+      { producto: 'Nitrato de potasio', cantidad: '300', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Sostiene produccion y calibre en morron.' },
+      { producto: 'Nitrato de calcio', cantidad: '270', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Aporta calcio para firmeza de pared y cuaje.' },
+      { producto: 'Sulfato de magnesio', cantidad: '105', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Mantiene fotosintesis durante cosecha.' },
+    ] : esTomate ? [
+      { producto: 'Nitrato de calcio', cantidad: '300', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Prioriza firmeza y calidad del tomate.' },
+      { producto: 'Nitrato de potasio', cantidad: '280', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Sostiene produccion y llenado.' },
+      { producto: 'Sulfato de magnesio', cantidad: '95', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Ayuda a mantener hoja activa.' },
+    ] : [
+      { producto: 'Nitrato de calcio', cantidad: esBerenjena ? '260' : '240', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Aporta calcio para firmeza y crecimiento activo.' },
+      { producto: 'NPK 15-15-15', cantidad: esBerenjena ? '240' : '220', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Mantiene aporte general de nitrogeno, fosforo y potasio.' },
+      { producto: 'Sulfato de magnesio', cantidad: '90', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Ayuda a clorofila y actividad fotosintetica.' },
+    ]),
   ]
   if (o.includes('floracion')) return [
-    { producto: 'NPK alto en fosforo', cantidad: '250', unidad: 'g', nutrientes: 'Fosforo + potasio', motivo: 'Apoya floracion y raiz.' },
-    { producto: 'Calcio boro', cantidad: '100', unidad: 'cc', nutrientes: 'Calcio + boro', motivo: 'Ayuda cuaje y calidad de flor.' },
+    ...(esCucurbitacea ? [
+      { producto: 'NPK alto en fosforo', cantidad: '180', unidad: 'g', nutrientes: 'Fosforo + potasio', motivo: 'Apoya floracion sin subir demasiado la EC.' },
+      { producto: 'Calcio boro', cantidad: '55', unidad: 'cc', nutrientes: 'Calcio + boro', motivo: 'Acompana flor y cuaje.' },
+    ] : [
+      { producto: 'NPK alto en fosforo', cantidad: esTomate || esSolanaceaFuerte ? '230' : '210', unidad: 'g', nutrientes: 'Fosforo + potasio', motivo: 'Apoya floracion, raiz y cuaje.' },
+      { producto: 'Calcio boro', cantidad: esTomate || esSolanaceaFuerte ? '85' : '70', unidad: 'cc', nutrientes: 'Calcio + boro', motivo: 'Ayuda cuaje y calidad de flor.' },
+      { producto: 'Sulfato de magnesio', cantidad: '70', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Mantiene fotosintesis durante floracion.' },
+    ]),
+  ]
+  if (o.includes('crecimiento')) return [
+    ...(esCucurbitacea ? [
+      { producto: 'Nitrato de calcio', cantidad: '150', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Crecimiento vegetativo moderado sin exceso de sales.' },
+      { producto: 'NPK 20-20-20', cantidad: '170', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Base para raiz y hoja joven.' },
+      { producto: 'Sulfato de magnesio', cantidad: '70', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Apoya color y fotosintesis.' },
+    ] : [
+      { producto: 'Nitrato de calcio', cantidad: esTomate || esSolanaceaFuerte ? '220' : '190', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Sostiene crecimiento vegetativo y estructura.' },
+      { producto: 'NPK 20-20-20', cantidad: esTomate || esSolanaceaFuerte ? '210' : '180', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Acompana raiz, hoja y arranque.' },
+      { producto: 'Sulfato de magnesio', cantidad: '80', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Apoya fotosintesis.' },
+    ]),
   ]
   if (o.includes('recuperacion')) return [
-    { producto: 'Aminoacidos', cantidad: '120', unidad: 'cc', nutrientes: 'Bioestimulante', motivo: 'Apoyo ante estres o recuperacion.' },
-    { producto: 'Extracto de algas', cantidad: '80', unidad: 'cc', nutrientes: 'Bioestimulante', motivo: 'Estimula recuperacion general.' },
+    { producto: 'Aminoacidos', cantidad: esCucurbitacea ? '90' : '110', unidad: 'cc', nutrientes: 'Bioestimulante', motivo: 'Apoyo ante estres o recuperacion sin forzar la EC.' },
+    { producto: 'Extracto de algas', cantidad: esCucurbitacea ? '65' : '80', unidad: 'cc', nutrientes: 'Bioestimulante', motivo: 'Estimula recuperacion general.' },
+    { producto: 'Sulfato de magnesio', cantidad: esCucurbitacea ? '45' : '60', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Apoyo suave para reactivar hoja.' },
   ]
   return [
-    { producto: 'NPK 15-15-15', cantidad: '250', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Base nutricional general.' },
-    { producto: 'Sulfato de magnesio', cantidad: '100', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Complemento de magnesio.' },
+    { producto: 'NPK 15-15-15', cantidad: esCucurbitacea ? '150' : '190', unidad: 'g', nutrientes: 'NPK balanceado', motivo: 'Base nutricional de mantenimiento.' },
+    { producto: 'Nitrato de calcio', cantidad: esCucurbitacea ? '110' : '150', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Mantiene estructura y calidad.' },
+    { producto: 'Sulfato de magnesio', cantidad: esCucurbitacea ? '55' : '70', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Complemento de magnesio.' },
   ]
+}
+
+const ajustarCantidad = (item, factor) => {
+  const cantidad = numero(item.cantidad)
+  if (!cantidad) return item
+  const ajustada = Math.max(1, Math.round(cantidad * factor))
+  return { ...item, cantidad: String(ajustada) }
+}
+
+const productosDelContexto = (contexto = {}) => {
+  const recientes = [
+    ...(contexto.fertilizaciones_recientes || []).flatMap(f => f.productos || []),
+    ...(contexto.plan_semanal_activo || []).flatMap(p => (p.soluciones || []).flatMap(s => s.productos || [])),
+    ...(contexto.planes_nutricionales_recientes || []).flatMap(p => p.productos || []),
+  ]
+  return recientes.map(p => p.producto || p.nombre || '').filter(Boolean).join(' ')
+}
+
+const recomendacionBase = (objetivo, cultivo = '', contexto = {}, ecAguaValor = '', ecObjetivoValor = '') => {
+  let productos = recomendarPorObjetivoYCultivo(objetivo, cultivo)
+  const notas = []
+  const abonos = (contexto?.abonos_base || []).map(a => a.producto || '').join(' ')
+  const recientes = productosDelContexto(contexto)
+  const ecAgua = numero(ecAguaValor)
+  const ecObjetivo = numero(ecObjetivoValor)
+
+  if (abonos && contiene(abonos, ['gallinaza', 'compost', 'estiercol', 'organico'])) {
+    productos = productos.map(item => contiene(item.producto, ['NPK', '20-20-20', '15-15-15']) ? ajustarCantidad(item, 0.85) : item)
+    notas.push('Se ajusto el NPK porque el bloque ya tiene abono organico de base.')
+  }
+
+  if (abonos && contiene(abonos, ['15-15-15', '20-20-20', 'npk', 'triple'])) {
+    productos = productos.map(item => contiene(item.producto, ['NPK', '20-20-20', '15-15-15']) ? ajustarCantidad(item, 0.75) : item)
+    notas.push('Se bajo el aporte balanceado porque figura NPK como abono de base.')
+  }
+
+  if (recientes && contiene(recientes, ['nitrato de calcio', 'calcio boro', 'calcio'])) {
+    productos = productos.map(item => contiene(item.producto, ['nitrato de calcio', 'calcio boro']) ? ajustarCantidad(item, 0.9) : item)
+    notas.push('Se considero calcio aplicado recientemente en el bloque.')
+  }
+
+  if (recientes && contiene(recientes, ['nitrato de potasio', 'sulfato de potasio', 'potasio'])) {
+    productos = productos.map(item => contiene(item.producto, ['nitrato de potasio', 'sulfato de potasio']) ? ajustarCantidad(item, 0.9) : item)
+    notas.push('Se considero potasio aplicado recientemente en el bloque.')
+  }
+
+  if (ecAgua >= 1.2 || (ecObjetivo && ecAgua && ecObjetivo <= ecAgua + 0.5)) {
+    productos = productos.map(item => ajustarCantidad(item, 0.8))
+    notas.push('Se redujeron dosis por EC de agua alta o margen bajo hasta la EC objetivo.')
+  } else if (ecAgua > 0 && ecAgua < 0.45 && ecObjetivo >= 2) {
+    productos = productos.map(item => ajustarCantidad(item, 1.08))
+    notas.push('El agua base es baja en EC; se permite una receta un poco mas completa, siempre verificando EC final.')
+  }
+
+  const ecFinal = ecObjetivo || (ecAgua ? ecAgua + (contiene(objetivo, ['recuperacion', 'mantenimiento']) ? 0.75 : 1.05) : 0)
+  return {
+    productos,
+    ec_final: ecFinal ? String(ecFinal.toFixed(2)) : '',
+    notas: notas.join(' '),
+  }
 }
 
 const guiaObjetivo = (objetivo) => {
@@ -166,15 +279,16 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   }
 
   const generarAsistenteBase = (mensajeExtra = '') => {
-    const productosBase = aplicarProductosRecomendados(recomendacionBase(form.objetivo, cultivoActivo))
+    const base = recomendacionBase(form.objetivo, cultivoActivo, null, form.ec_agua, form.ec_objetivo)
+    const productosBase = aplicarProductosRecomendados(base.productos)
     const ecAgua = Number(String(form.ec_agua).replace(',', '.')) || 0
     const ecObjetivo = Number(String(form.ec_objetivo).replace(',', '.')) || 0
-    const ecEstimada = ecObjetivo || (ecAgua ? ecAgua + 1.1 : 0)
+    const ecEstimada = base.ec_final || (ecObjetivo || (ecAgua ? ecAgua + 1.1 : 0))
     setForm(f => ({
       ...f,
       productos: productosBase,
-      ec_final: ecEstimada ? String(ecEstimada.toFixed(2)) : '',
-      notas: `${guiaObjetivo(f.objetivo)} Incluye productos recomendables aunque no esten cargados o disponibles en inventario. Revisar conductividad antes de aplicar.${mensajeExtra ? ` ${mensajeExtra}` : ''}`,
+      ec_final: typeof ecEstimada === 'number' ? String(ecEstimada.toFixed(2)) : ecEstimada,
+      notas: `${guiaObjetivo(f.objetivo)} ${base.notas || ''} Incluye productos recomendables aunque no esten cargados o disponibles en inventario. Revisar conductividad antes de aplicar.${mensajeExtra ? ` ${mensajeExtra}` : ''}`.trim(),
     }))
     setModo('asistente')
   }
@@ -275,9 +389,12 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     const ecAgua = Number(String(form.ec_agua).replace(',', '.')) || 0
     const ecObjetivo = Number(String(form.ec_objetivo).replace(',', '.')) || 0
     const ecEstimada = ecObjetivo || (ecAgua ? ecAgua + 1.1 : 0)
+    let baseTecnica = null
 
     try {
       const contextoBloque = await cargarContextoBloqueIA()
+      const cultivoContextual = contextoBloque?.cultivo_activo || cultivoActivo
+      baseTecnica = recomendacionBase(form.objetivo, cultivoContextual, contextoBloque, form.ec_agua, form.ec_objetivo)
       const respuesta = await fetch('/api/plan-nutricional-ia', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -292,8 +409,9 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
           ec_agua: form.ec_agua,
           ec_objetivo: form.ec_objetivo,
           contexto_bloque: contextoBloque,
-          perfil_cultivo: cultivoActivo ? `Cultivo seleccionado: ${cultivoActivo}. Ajustar la recomendacion a este cultivo, no usar receta generica.` : '',
-          productos_ideales_base: recomendacionBase(form.objetivo, contextoBloque?.cultivo_activo || cultivoActivo),
+          perfil_cultivo: cultivoContextual ? `Cultivo seleccionado: ${cultivoContextual}. Ajustar la recomendacion a este cultivo, no usar receta generica.` : '',
+          base_tecnica_calculada: baseTecnica,
+          productos_ideales_base: baseTecnica.productos,
           productos_disponibles: productos.map(p => ({
             nombre: p.nombre,
             unidad: p.unidad,
@@ -312,18 +430,28 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
       const data = await respuesta.json()
       if (!respuesta.ok) throw new Error(data?.error || 'La IA no respondio correctamente.')
 
-      const productosIA = aplicarProductosRecomendados(data.productos?.length ? data.productos : recomendacionBase(form.objetivo, contextoBloque?.cultivo_activo || cultivoActivo))
+      const productosIA = aplicarProductosRecomendados(data.productos?.length ? data.productos : baseTecnica.productos)
       setForm(f => ({
         ...f,
         productos: productosIA,
-        ec_final: data.ec_final || (ecEstimada ? String(ecEstimada.toFixed(2)) : ''),
-        notas: data.notas || `${guiaObjetivo(f.objetivo)} Recomendacion generada con IA. Revisar conductividad antes de aplicar.`,
+        ec_final: data.ec_final || baseTecnica.ec_final || (ecEstimada ? String(ecEstimada.toFixed(2)) : ''),
+        notas: data.notas || `${guiaObjetivo(f.objetivo)} ${baseTecnica.notas || ''} Recomendacion generada con IA y base tecnica contextual. Revisar conductividad antes de aplicar.`.trim(),
       }))
       setModo('asistente')
     } catch (error) {
       const mensaje = error.message || 'No se pudo usar la IA.'
       setAiError(mensaje)
-      generarAsistenteBase(`IA no disponible: ${mensaje}`)
+      if (baseTecnica) {
+        setForm(f => ({
+          ...f,
+          productos: aplicarProductosRecomendados(baseTecnica.productos),
+          ec_final: baseTecnica.ec_final || (ecEstimada ? String(ecEstimada.toFixed(2)) : ''),
+          notas: `${guiaObjetivo(f.objetivo)} ${baseTecnica.notas || ''} IA no disponible: ${mensaje}. Se uso la base tecnica contextual del bloque.`.trim(),
+        }))
+        setModo('asistente')
+      } else {
+        generarAsistenteBase(`IA no disponible: ${mensaje}`)
+      }
     } finally {
       setAiLoading(false)
     }
