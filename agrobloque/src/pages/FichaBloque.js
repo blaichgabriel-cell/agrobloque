@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
@@ -9,6 +9,12 @@ const diasDesde = (fecha) => {
 }
 const fmtGs = (n) => Math.round(Number(n)||0).toLocaleString('es-PY')
 const fmtKg = (n) => { const num=Number(n)||0; return num%1===0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY',{minimumFractionDigits:1,maximumFractionDigits:2}) }
+const fmtAbonoPlantacion = (abono) => {
+  if (!abono?.cantidad) return 'â€”'
+  const unidad = abono.unidad || 'kg'
+  const alcance = (abono.alcance || 'total') === 'por_tablon' ? 'por tablon' : 'total'
+  return `${abono.cantidad} ${unidad} ${alcance}`
+}
 
 const CAUSAS_MUERTE = ['Enfermedad','Dumping off','Esclerotinia','Insectos','Hormigas','Gusanos','Clima','Riego','Otra']
 const UNIDADES = ['kg','g','cc','ml','L','unidad']
@@ -44,7 +50,7 @@ export default function FichaBloque() {
   const [abonos, setAbonos] = useState([])
   const [abonosPlantacion, setAbonosPlantacion] = useState([])
 
-  // Fertilización
+  // FertilizaciÃ³n
   const [fertilizaciones, setFertilizaciones] = useState([])
   const [planSemanal, setPlanSemanal] = useState(null)
   const [aplicacionesPlan, setAplicacionesPlan] = useState([])
@@ -144,7 +150,7 @@ export default function FichaBloque() {
       }
     }
 
-    // Fertilizaciones del bloque (todas, independiente de plantación)
+    // Fertilizaciones del bloque (todas, independiente de plantaciÃ³n)
     const { data: ferts } = await supabase.from('fertilizaciones')
       .select('*')
       .eq('bloque_id', id)
@@ -202,7 +208,11 @@ export default function FichaBloque() {
     const cultivo = (cultivosData || []).find(c => c.nombre === plantacionActiva?.cultivos?.nombre)
     const abIds = abonosPlantacion.map(a => a.abono_id)
     const abCants = {}
-    abonosPlantacion.forEach(a => { abCants[a.abono_id] = a.cantidad || '' })
+    abonosPlantacion.forEach(a => {
+      abCants[a.abono_id] = a.cantidad || ''
+      abCants[`${a.abono_id}_unidad`] = a.unidad || 'kg'
+      abCants[`${a.abono_id}_alcance`] = a.alcance || 'total'
+    })
     setForm({
       cultivo_id: cultivo?.id || '',
       variedad_texto: plantacionActiva?.notas?.replace('Variedad: ','') || '',
@@ -235,7 +245,9 @@ export default function FichaBloque() {
       await supabase.from('plantacion_abonos').insert(
         form.abonos_ids.map(ab => ({
           plantacion_id: nueva.id, abono_id: ab,
-          cantidad: form.abonos_cantidades[ab] || null
+          cantidad: form.abonos_cantidades[ab] || null,
+          unidad: form.abonos_cantidades[`${ab}_unidad`] || 'kg',
+          alcance: form.abonos_cantidades[`${ab}_alcance`] || 'total'
         }))
       )
     }
@@ -258,7 +270,9 @@ export default function FichaBloque() {
       await supabase.from('plantacion_abonos').insert(
         form.abonos_ids.map(ab => ({
           plantacion_id: plantacionActiva.id, abono_id: ab,
-          cantidad: form.abonos_cantidades[ab] || null
+          cantidad: form.abonos_cantidades[ab] || null,
+          unidad: form.abonos_cantidades[`${ab}_unidad`] || 'kg',
+          alcance: form.abonos_cantidades[`${ab}_alcance`] || 'total'
         }))
       )
     }
@@ -301,7 +315,7 @@ export default function FichaBloque() {
   }
 
   const eliminarHistorial = (plantacionId) => {
-    setConfirmar({ titulo:'¿Eliminar ciclo?', mensaje:'Se eliminará este ciclo del historial. No se puede deshacer.', fn: async () => {
+    setConfirmar({ titulo:'Â¿Eliminar ciclo?', mensaje:'Se eliminarÃ¡ este ciclo del historial. No se puede deshacer.', fn: async () => {
       await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionId)
       await supabase.from('plantaciones').delete().eq('id', plantacionId)
       setConfirmar(null); setHistorialDetalle(null); fetchData()
@@ -342,7 +356,7 @@ export default function FichaBloque() {
     fetchData()
   }
 
-  // ─── FERTILIZACIÓN ────────────────────────────────────────────────
+  // â”€â”€â”€ FERTILIZACIÃ“N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const abrirNuevaFertilizacion = () => {
     setFormFert({
@@ -534,7 +548,7 @@ export default function FichaBloque() {
     fetchData()
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const getVariedad = (p) => {
     if (!p?.notas) return null
@@ -556,7 +570,7 @@ export default function FichaBloque() {
     </div>
   )
 
-  // Vista detalle de fertilización
+  // Vista detalle de fertilizaciÃ³n
   if (fertDetalle) {
     const esMasReciente = fertilizaciones.length > 0 && fertilizaciones[0].id === fertDetalle.id
     const esAnterior = fertilizaciones.length > 1 && fertilizaciones[1].id === fertDetalle.id
@@ -564,8 +578,8 @@ export default function FichaBloque() {
       <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
         {confirmarElimFert && (
           <ModalConfirm
-            titulo="¿Eliminar fertilización?"
-            mensaje="Se eliminará este registro. No se puede deshacer."
+            titulo="Â¿Eliminar fertilizaciÃ³n?"
+            mensaje="Se eliminarÃ¡ este registro. No se puede deshacer."
             onConfirm={() => eliminarFertilizacion(confirmarElimFert)}
             onCancel={() => setConfirmarElimFert(null)}
           />
@@ -573,7 +587,7 @@ export default function FichaBloque() {
         <div style={{ padding:'24px 20px 16px' }}>
           <button onClick={() => setFertDetalle(null)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
             <i className="ti ti-arrow-left" style={{ fontSize:18, color:'#212121' }} aria-hidden="true"></i>
-            <span style={{ fontSize:13, color:'#212121', fontWeight:500 }}>Fertilización</span>
+            <span style={{ fontSize:13, color:'#212121', fontWeight:500 }}>FertilizaciÃ³n</span>
           </button>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
             <div style={{ fontSize:22, fontWeight:700, color:'#0a0a0a' }}>{fertDetalle.fecha}</div>
@@ -586,11 +600,11 @@ export default function FichaBloque() {
           {(fertDetalle.soluciones || []).map((sol, si) => (
             <div key={si} style={{ background:'#fff', borderRadius:20, padding:'16px', marginBottom:10 }}>
               <div style={{ fontSize:12, fontWeight:700, color:'#1a5c2e', marginBottom:10, textTransform:'uppercase', letterSpacing:1 }}>
-                Solución {sol.nombre}
+                SoluciÃ³n {sol.nombre}
               </div>
               {(sol.productos || []).map((prod, pi) => (
                 <div key={pi} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f2f1ef' }}>
-                  <div style={{ fontSize:13, color:'#0a0a0a' }}>{prod.nombre || '—'}</div>
+                  <div style={{ fontSize:13, color:'#0a0a0a' }}>{prod.nombre || 'â€”'}</div>
                   <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a' }}>{prod.cantidad} {prod.unidad}</div>
                 </div>
               ))}
@@ -611,7 +625,7 @@ export default function FichaBloque() {
     )
   }
 
-  // Vista detalle de ciclo histórico
+  // Vista detalle de ciclo histÃ³rico
   if (historialDetalle) {
     return (
       <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
@@ -622,18 +636,18 @@ export default function FichaBloque() {
             <span style={{ fontSize:13, color:'#212121', fontWeight:500 }}>Historial</span>
           </button>
           <div style={{ fontSize:22, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>
-            {historialDetalle.cultivos?.nombre}{getVariedad(historialDetalle) ? ` · ${getVariedad(historialDetalle)}` : ''}
+            {historialDetalle.cultivos?.nombre}{getVariedad(historialDetalle) ? ` Â· ${getVariedad(historialDetalle)}` : ''}
           </div>
-          <div style={{ fontSize:12, color:'#9a9a9a' }}>Bloque {bloque.codigo} · {historialDetalle.fecha_siembra || 'Sin fecha'}</div>
+          <div style={{ fontSize:12, color:'#9a9a9a' }}>Bloque {bloque.codigo} Â· {historialDetalle.fecha_siembra || 'Sin fecha'}</div>
         </div>
         <div style={{ padding:'0 14px 100px' }}>
           <div style={{ background:'#fff', borderRadius:20, padding:'16px', marginBottom:10 }}>
             <div style={{ fontSize:12, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Datos del ciclo</div>
             {[
-              ['Cultivo', historialDetalle.cultivos?.nombre || '—'],
-              ['Variedad', getVariedad(historialDetalle) || '—'],
-              ['Fecha siembra', historialDetalle.fecha_siembra || '—'],
-              ['Plantas', historialDetalle.densidad_plantas_m2 ? `${Number(historialDetalle.densidad_plantas_m2).toLocaleString('es-PY')}` : '—'],
+              ['Cultivo', historialDetalle.cultivos?.nombre || 'â€”'],
+              ['Variedad', getVariedad(historialDetalle) || 'â€”'],
+              ['Fecha siembra', historialDetalle.fecha_siembra || 'â€”'],
+              ['Plantas', historialDetalle.densidad_plantas_m2 ? `${Number(historialDetalle.densidad_plantas_m2).toLocaleString('es-PY')}` : 'â€”'],
             ].map(([k,v]) => (
               <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f2f1ef' }}>
                 <div style={{ fontSize:12, color:'#9a9a9a' }}>{k}</div>
@@ -667,13 +681,13 @@ export default function FichaBloque() {
             <div style={{ fontSize:26, fontWeight:800, color:'#0a0a0a', letterSpacing:-.5 }}>Bloque {bloque.codigo}</div>
             {plantacionActiva && (
               <div style={{ fontSize:13, color:'#555', marginTop:2 }}>
-                {plantacionActiva.cultivos?.nombre}{getVariedad(plantacionActiva) ? ` · ${getVariedad(plantacionActiva)}` : ''}
+                {plantacionActiva.cultivos?.nombre}{getVariedad(plantacionActiva) ? ` Â· ${getVariedad(plantacionActiva)}` : ''}
               </div>
             )}
           </div>
           {!plantacionActiva && (
             <button onClick={abrirNuevaPlantacion} style={{ padding:'8px 14px', borderRadius:12, background:'#212121', border:'none', fontSize:12, fontWeight:600, color:'#fff', cursor:'pointer' }}>
-              + Nueva plantación
+              + Nueva plantaciÃ³n
             </button>
           )}
         </div>
@@ -681,8 +695,8 @@ export default function FichaBloque() {
         {/* Tabs */}
         <div style={{ display:'flex', gap:5, overflowX:'auto', paddingBottom:4 }}>
           {[
-            ['plantacion','Plantación'],
-            ['fertilizacion',`Fertilización (${fertilizaciones.length})`],
+            ['plantacion','PlantaciÃ³n'],
+            ['fertilizacion',`FertilizaciÃ³n (${fertilizaciones.length})`],
             ['cosechas',`Cosechas (${cosechasCiclo.length})`],
             ['incidencias',`Incidencias (${incidencias.length})`],
             ['fotos',`Fotos (${fotos.length})`],
@@ -700,22 +714,22 @@ export default function FichaBloque() {
 
       <div style={{ padding:'12px 14px 100px' }}>
 
-        {/* PLANTACIÓN ACTUAL */}
+        {/* PLANTACIÃ“N ACTUAL */}
         {seccion === 'plantacion' && (
           <>
             {plantacionActiva ? (
               <>
                 <div style={{ background:'#fff', borderRadius:20, padding:'16px', marginBottom:10 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Datos de la plantación</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Datos de la plantaciÃ³n</div>
                     <button onClick={abrirEditarPlantacion} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }}>Editar</button>
                   </div>
                   {[
-                    ['Cultivo', plantacionActiva.cultivos?.nombre || '—'],
-                    ['Variedad', getVariedad(plantacionActiva) || '—'],
-                    ['Fecha siembra', plantacionActiva.fecha_siembra || '—'],
-                    ['Días en campo', diasDesde(plantacionActiva.fecha_siembra) !== null ? `${diasDesde(plantacionActiva.fecha_siembra)} días` : '—'],
-                    ['Cantidad de plantas', plantacionActiva.densidad_plantas_m2 ? `${Number(plantacionActiva.densidad_plantas_m2).toLocaleString('es-PY')} plantas` : '—'],
+                    ['Cultivo', plantacionActiva.cultivos?.nombre || 'â€”'],
+                    ['Variedad', getVariedad(plantacionActiva) || 'â€”'],
+                    ['Fecha siembra', plantacionActiva.fecha_siembra || 'â€”'],
+                    ['DÃ­as en campo', diasDesde(plantacionActiva.fecha_siembra) !== null ? `${diasDesde(plantacionActiva.fecha_siembra)} dÃ­as` : 'â€”'],
+                    ['Cantidad de plantas', plantacionActiva.densidad_plantas_m2 ? `${Number(plantacionActiva.densidad_plantas_m2).toLocaleString('es-PY')} plantas` : 'â€”'],
                   ].map(([k,v]) => (
                     <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f2f1ef' }}>
                       <div style={{ fontSize:12, color:'#9a9a9a' }}>{k}</div>
@@ -728,7 +742,7 @@ export default function FichaBloque() {
                       {abonosPlantacion.map(a => (
                         <div key={a.id} style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
                           <span style={{ fontSize:12, color:'#0a0a0a' }}>{a.abonos?.nombre}</span>
-                          <span style={{ fontSize:12, color:'#9a9a9a' }}>{a.cantidad || '—'}</span>
+                          <span style={{ fontSize:12, color:'#9a9a9a' }}>{fmtAbonoPlantacion(a)}</span>
                         </div>
                       ))}
                     </div>
@@ -743,7 +757,7 @@ export default function FichaBloque() {
                   </div>
                   <div style={{ background:'#fff', borderRadius:16, padding:'14px' }}>
                     <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:4 }}>KG POR PLANTA</div>
-                    <div style={{ fontSize:22, fontWeight:800, color:'#212121' }}>{kgPorPlanta || '—'}</div>
+                    <div style={{ fontSize:22, fontWeight:800, color:'#212121' }}>{kgPorPlanta || 'â€”'}</div>
                     <div style={{ fontSize:10, color:'#9a9a9a', marginTop:2 }}>kg/planta</div>
                   </div>
                   {totalMuertes > 0 && (
@@ -757,7 +771,7 @@ export default function FichaBloque() {
                 <div style={{ display:'flex', gap:8 }}>
                   <button onClick={abrirNuevaPlantacion}
                     style={{ flex:1, padding:'12px', borderRadius:14, border:'1px dashed #888', background:'transparent', fontSize:12, fontWeight:600, color:'#555', cursor:'pointer' }}>
-                    Nueva plantación
+                    Nueva plantaciÃ³n
                   </button>
                   <button onClick={() => setShowMuerte(true)}
                     style={{ flex:1, padding:'12px', borderRadius:14, border:'1px solid #ffcccc', background:'transparent', fontSize:12, fontWeight:600, color:'#c84040', cursor:'pointer' }}>
@@ -777,16 +791,16 @@ export default function FichaBloque() {
               </>
             ) : (
               <div style={{ textAlign:'center', padding:'40px 20px', color:'#9a9a9a', fontSize:13, background:'#fff', borderRadius:20 }}>
-                Sin plantación activa.<br/>
+                Sin plantaciÃ³n activa.<br/>
                 <button onClick={abrirNuevaPlantacion} style={{ marginTop:12, padding:'10px 20px', borderRadius:12, background:'#212121', border:'none', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>
-                  + Nueva plantación
+                  + Nueva plantaciÃ³n
                 </button>
               </div>
             )}
           </>
         )}
 
-        {/* FERTILIZACIÓN */}
+        {/* FERTILIZACIÃ“N */}
         {seccion === 'fertilizacion' && (
           <>
             <div style={{ background: planSemanal ? '#eef6ea' : '#fff', borderRadius:20, padding:'16px', marginBottom:10, border: planSemanal ? '1px solid #cde6c8' : '1px dashed #d6d6d6' }}>
@@ -795,7 +809,7 @@ export default function FichaBloque() {
                   <div style={{ fontSize:11, fontWeight:800, color: planSemanal ? '#1a5c2e' : '#8b928b', textTransform:'uppercase', marginBottom:4 }}>Plan semanal</div>
                   <div style={{ fontSize:15, fontWeight:800, color:'#0a0a0a' }}>{planSemanal ? planSemanal.nombre : 'Sin plan activo'}</div>
                   <div style={{ fontSize:12, color:'#687068', marginTop:3 }}>
-                    {planSemanal ? `${planSemanal.litros_preparados || '—'} L preparados · ${aplicacionesPlan.length} aplicaciones` : 'Solo para los bloques que usan receta semanal.'}
+                    {planSemanal ? `${planSemanal.litros_preparados || 'â€”'} L preparados Â· ${aplicacionesPlan.length} aplicaciones` : 'Solo para los bloques que usan receta semanal.'}
                   </div>
                 </div>
                 <button onClick={abrirPlanSemanal}
@@ -808,7 +822,7 @@ export default function FichaBloque() {
                   <div style={{ display:'grid', gap:6, marginBottom:10 }}>
                     {(planSemanal.soluciones || []).slice(0, 3).map((sol, si) => (
                       <div key={si} style={{ fontSize:12, color:'#263026' }}>
-                        <strong>Sol. {sol.nombre}:</strong> {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x => x.trim()).join(' · ') || 'Sin productos'}
+                        <strong>Sol. {sol.nombre}:</strong> {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x => x.trim()).join(' Â· ') || 'Sin productos'}
                       </div>
                     ))}
                   </div>
@@ -827,8 +841,8 @@ export default function FichaBloque() {
                       <div style={{ fontSize:11, fontWeight:800, color:'#8b928b', textTransform:'uppercase', marginBottom:6 }}>Ultimas aplicaciones</div>
                       {aplicacionesPlan.slice(0, 5).map(app => (
                         <div key={app.id} style={{ display:'flex', justifyContent:'space-between', gap:10, padding:'7px 0', borderTop:'1px solid rgba(0,0,0,0.06)' }}>
-                          <span style={{ fontSize:12, color:'#202820' }}>{app.fecha}{app.responsable ? ` · ${app.responsable}` : ''}</span>
-                          <strong style={{ fontSize:12 }}>{app.litros_aplicados || '—'} L</strong>
+                          <span style={{ fontSize:12, color:'#202820' }}>{app.fecha}{app.responsable ? ` Â· ${app.responsable}` : ''}</span>
+                          <strong style={{ fontSize:12 }}>{app.litros_aplicados || 'â€”'} L</strong>
                         </div>
                       ))}
                     </div>
@@ -839,7 +853,7 @@ export default function FichaBloque() {
 
             <button onClick={abrirNuevaFertilizacion}
               style={{ width:'100%', padding:13, borderRadius:14, border:'none', background:'#1a5c2e', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', marginBottom:16 }}>
-              + Nueva fertilización
+              + Nueva fertilizaciÃ³n
             </button>
 
             {fertilizaciones.length === 0 ? (
@@ -848,10 +862,10 @@ export default function FichaBloque() {
               </div>
             ) : (
               <>
-                {/* Fertilización actual */}
+                {/* FertilizaciÃ³n actual */}
                 {fertilizaciones[0] && (
                   <>
-                    <div style={{ fontSize:11, fontWeight:700, color:'#1a5c2e', marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>Fertilización actual</div>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#1a5c2e', marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>FertilizaciÃ³n actual</div>
                     <div onClick={() => setFertDetalle(fertilizaciones[0])}
                       style={{ background:'#1a5c2e', borderRadius:20, padding:'16px', marginBottom:16, cursor:'pointer' }}>
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
@@ -862,7 +876,7 @@ export default function FichaBloque() {
                         <div key={si} style={{ marginBottom:6 }}>
                           <div style={{ fontSize:10, color:'rgba(255,255,255,0.6)', fontWeight:700, marginBottom:3 }}>SOL. {sol.nombre}</div>
                           <div style={{ fontSize:12, color:'rgba(255,255,255,0.85)' }}>
-                            {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join(' · ')}
+                            {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join(' Â· ')}
                           </div>
                         </div>
                       ))}
@@ -873,10 +887,10 @@ export default function FichaBloque() {
                   </>
                 )}
 
-                {/* Fertilización anterior */}
+                {/* FertilizaciÃ³n anterior */}
                 {fertilizaciones[1] && (
                   <>
-                    <div style={{ fontSize:11, fontWeight:700, color:'#9a9a9a', marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>Fertilización anterior</div>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#9a9a9a', marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>FertilizaciÃ³n anterior</div>
                     <div onClick={() => setFertDetalle(fertilizaciones[1])}
                       style={{ background:'#fff', borderRadius:20, padding:'16px', marginBottom:16, cursor:'pointer' }}>
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
@@ -887,7 +901,7 @@ export default function FichaBloque() {
                         <div key={si} style={{ marginBottom:6 }}>
                           <div style={{ fontSize:10, color:'#1a5c2e', fontWeight:700, marginBottom:3 }}>SOL. {sol.nombre}</div>
                           <div style={{ fontSize:12, color:'#555' }}>
-                            {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join(' · ')}
+                            {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join(' Â· ')}
                           </div>
                         </div>
                       ))}
@@ -905,7 +919,7 @@ export default function FichaBloque() {
                         <div style={{ flex:1 }}>
                           <div style={{ fontSize:13, fontWeight:600, color:'#0a0a0a' }}>{fert.fecha}</div>
                           <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>
-                            {(fert.soluciones || []).length} solución{(fert.soluciones || []).length !== 1 ? 'es' : ''} · {(fert.soluciones || []).reduce((s,sol) => s + (sol.productos||[]).length, 0)} productos
+                            {(fert.soluciones || []).length} soluciÃ³n{(fert.soluciones || []).length !== 1 ? 'es' : ''} Â· {(fert.soluciones || []).reduce((s,sol) => s + (sol.productos||[]).length, 0)} productos
                           </div>
                         </div>
                         <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
@@ -961,7 +975,7 @@ export default function FichaBloque() {
               <div key={i} style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:8 }}>
                 <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
                   <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:6, background: inc.tipo==='fumigacion' ? '#fff3e8' : '#eaf4fb', color: inc.tipo==='fumigacion' ? '#e07b00' : '#2980b9' }}>
-                    {inc.tipo === 'fumigacion' ? 'Fumigación' : inc.tipo === 'fertiriego' ? 'Fertiriego' : 'Foliar'}
+                    {inc.tipo === 'fumigacion' ? 'FumigaciÃ³n' : inc.tipo === 'fertiriego' ? 'Fertiriego' : 'Foliar'}
                   </div>
                   <div style={{ fontSize:11, color:'#9a9a9a' }}>{inc.fecha}</div>
                 </div>
@@ -979,7 +993,7 @@ export default function FichaBloque() {
                 {muertes.map(m => (
                   <div key={m.id} style={{ background:'#fff0f0', borderRadius:16, padding:'12px 14px', marginBottom:8 }}>
                     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:'#c84040' }}>{m.cantidad} plantas · {m.causa}</div>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#c84040' }}>{m.cantidad} plantas Â· {m.causa}</div>
                       <div style={{ fontSize:11, color:'#9a9a9a' }}>{m.fecha}</div>
                     </div>
                     {m.descripcion && <div style={{ fontSize:12, color:'#9a9a9a' }}>{m.descripcion}</div>}
@@ -1028,10 +1042,10 @@ export default function FichaBloque() {
                 style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:14, fontWeight:600, color:'#0a0a0a' }}>
-                    {p.cultivos?.nombre}{getVariedad(p) ? ` · ${getVariedad(p)}` : ''}
+                    {p.cultivos?.nombre}{getVariedad(p) ? ` Â· ${getVariedad(p)}` : ''}
                   </div>
                   <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>
-                    Siembra: {p.fecha_siembra || '—'}
+                    Siembra: {p.fecha_siembra || 'â€”'}
                   </div>
                 </div>
                 <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
@@ -1041,15 +1055,15 @@ export default function FichaBloque() {
         )}
       </div>
 
-      {/* Modal nueva/editar plantación */}
+      {/* Modal nueva/editar plantaciÃ³n */}
       {(showNuevaPlantacion || showEditarPlantacion) && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && (setShowNuevaPlantacion(false)||setShowEditarPlantacion(false))}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{showEditarPlantacion ? 'Editar plantación' : 'Nueva plantación'}</div>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{showEditarPlantacion ? 'Editar plantaciÃ³n' : 'Nueva plantaciÃ³n'}</div>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Cultivo *</div>
             <select style={inpStyle} value={form.cultivo_id} onChange={e => setForm(f => ({...f, cultivo_id:e.target.value}))}>
-              <option value="">Seleccioná cultivo...</option>
+              <option value="">SeleccionÃ¡ cultivo...</option>
               {cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
 
@@ -1073,7 +1087,7 @@ export default function FichaBloque() {
                   <span style={{ fontSize:13, color: form.abonos_ids.includes(a.id) ? '#fff' : '#0a0a0a' }}>{a.nombre}</span>
                 </div>
                 {form.abonos_ids.includes(a.id) && (
-                  <div style={{ display:'flex', gap:6, paddingLeft:4 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr 1fr', gap:6, paddingLeft:4 }}>
                     <input style={{ flex:2, padding:'8px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }}
                       type="text" placeholder="Cantidad (ej: 50)"
                       value={form.abonos_cantidades[a.id] || ''}
@@ -1082,7 +1096,14 @@ export default function FichaBloque() {
                       value={(form.abonos_cantidades[a.id+'_unidad']) || 'kg'}
                       onChange={e => setForm(f => ({...f, abonos_cantidades:{...f.abonos_cantidades, [a.id+'_unidad']:e.target.value}}))}>
                       <option value="kg">kg</option>
-                      <option value="gramos">gramos</option>
+                      <option value="g">g</option>
+                      <option value="ton">ton</option>
+                    </select>
+                    <select style={{ padding:'8px 6px', borderRadius:10, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }}
+                      value={(form.abonos_cantidades[a.id+'_alcance']) || 'total'}
+                      onChange={e => setForm(f => ({...f, abonos_cantidades:{...f.abonos_cantidades, [a.id+'_alcance']:e.target.value}}))}>
+                      <option value="total">Total</option>
+                      <option value="por_tablon">Por tablon</option>
                     </select>
                   </div>
                 )}
@@ -1091,7 +1112,7 @@ export default function FichaBloque() {
 
             <button style={{ width:'100%', padding:14, borderRadius:14, background: saving ? '#888' : '#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer', marginTop:12 }}
               onClick={showEditarPlantacion ? guardarEditarPlantacion : guardarNuevaPlantacion} disabled={saving}>
-              {saving ? 'Guardando...' : showEditarPlantacion ? 'Guardar cambios' : 'Guardar plantación'}
+              {saving ? 'Guardando...' : showEditarPlantacion ? 'Guardar cambios' : 'Guardar plantaciÃ³n'}
             </button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }}
               onClick={() => { setShowNuevaPlantacion(false); setShowEditarPlantacion(false) }}>
@@ -1120,7 +1141,7 @@ export default function FichaBloque() {
               ))}
             </div>
 
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Descripción (opcional)</div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>DescripciÃ³n (opcional)</div>
             <textarea style={{ ...inpStyle, minHeight:60, resize:'vertical' }} value={formMuerte.descripcion} onChange={e => setFormMuerte(f => ({...f, descripcion:e.target.value}))} placeholder="Detalles adicionales..."/>
 
             <button style={{ width:'100%', padding:14, borderRadius:14, background:'#c84040', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarMuerte} disabled={saving}>{saving ? 'Guardando...' : 'Registrar'}</button>
@@ -1129,7 +1150,7 @@ export default function FichaBloque() {
         </div>
       )}
 
-      {/* Modal nueva fertilización */}
+      {/* Modal nueva fertilizaciÃ³n */}
       {showPlanSemanal && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}
           onClick={e => e.target===e.currentTarget && setShowPlanSemanal(false)}>
@@ -1163,7 +1184,7 @@ export default function FichaBloque() {
                     <select style={{ ...inpStyle, marginBottom:0 }} value={prod.unidad} onChange={e => actualizarProductoPlan(si, pi, 'unidad', e.target.value)}>
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
-                    <button onClick={() => eliminarProductoPlan(si, pi)} style={{ border:'none', background:'transparent', color:'#c84040', cursor:'pointer' }}>×</button>
+                    <button onClick={() => eliminarProductoPlan(si, pi)} style={{ border:'none', background:'transparent', color:'#c84040', cursor:'pointer' }}>Ã—</button>
                   </div>
                 ))}
                 <button onClick={() => agregarProductoPlan(si)} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #b8c9b5', background:'transparent', fontSize:12, color:'#1a5c2e', cursor:'pointer' }}>+ Producto</button>
@@ -1203,7 +1224,7 @@ export default function FichaBloque() {
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}
           onClick={e => e.target===e.currentTarget && setShowNuevaFertilizacion(false)}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'92vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Nueva fertilización</div>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Nueva fertilizaciÃ³n</div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Bloque {bloque.codigo}</div>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha *</div>
@@ -1274,7 +1295,7 @@ export default function FichaBloque() {
 
             <button onClick={agregarSolucion}
               style={{ width:'100%', padding:11, borderRadius:12, border:'1px dashed #1a5c2e', background:'transparent', fontSize:12, fontWeight:600, color:'#1a5c2e', cursor:'pointer', marginBottom:12 }}>
-              + Agregar solución
+              + Agregar soluciÃ³n
             </button>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas (opcional)</div>
@@ -1287,7 +1308,7 @@ export default function FichaBloque() {
             <button
               style={{ width:'100%', padding:14, borderRadius:14, background: savingFert ? '#888' : '#1a5c2e', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer', marginTop:4 }}
               onClick={guardarFertilizacion} disabled={savingFert}>
-              {savingFert ? 'Guardando...' : 'Guardar fertilización'}
+              {savingFert ? 'Guardando...' : 'Guardar fertilizaciÃ³n'}
             </button>
             <button
               style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }}
