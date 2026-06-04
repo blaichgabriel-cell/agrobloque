@@ -402,7 +402,7 @@ export default function App() {
     if (!guestPath) return
     supabase.rpc('guest_get_permissions')
       .then(({ data }) => {
-        if (Array.isArray(data?.permisos)) {
+        if (Array.isArray(data?.permisos) && data.permisos.length > 0) {
           setGuestRole(normalizeRole({ rol:'lectura', permisos:data.permisos }))
         }
       })

@@ -40,6 +40,7 @@ module.exports = async function handler(req, res) {
       campo: body.campo || '',
       bloque: body.bloque || null,
       objetivo: body.objetivo || 'Produccion',
+      perfil_cultivo: body.perfil_cultivo || '',
       tanque_litros: safeNumber(body.tanque_litros) || 200,
       ec_agua: safeNumber(body.ec_agua),
       ec_objetivo: safeNumber(body.ec_objetivo),
@@ -50,22 +51,23 @@ module.exports = async function handler(req, res) {
     };
 
     const prompt = `
-Sos un asistente tecnico para fertirriego hortÃ­cola familiar-profesional.
+Sos un asistente tecnico para fertirriego horticola familiar-profesional.
 Tu tarea es proponer un plan nutricional editable y prudente.
 
 Reglas:
 - No inventes datos que no fueron enviados.
-- SeparÃ¡ producto ideal de disponibilidad en inventario.
-- PodÃ©s recomendar productos aunque no estÃ©n en inventario si son agronÃ³micamente importantes.
-- TenÃ© en cuenta objetivo, cultivo, tanque, EC de agua, EC objetivo, historial reciente y productos disponibles.
+- Separa producto ideal de disponibilidad en inventario.
+- Podes recomendar productos aunque no esten en inventario si son agronomicamente importantes.
+- Tene en cuenta objetivo, cultivo, tanque, EC de agua, EC objetivo, historial reciente y productos disponibles.
 - Si se envio contexto_bloque, usalo como dato principal: cultivo activo, dias en campo, abonos de base, fertilizaciones recientes, plan semanal activo, fumigaciones y registros nutricionales del mismo bloque.
+- Si se envio perfil_cultivo, respetalo. La recomendacion debe cambiar si cambia el cultivo.
 - No devuelvas una receta generica igual para todos los cultivos. Diferencia tomate, morron, pepino, zucchini, berenjena u otros segun demanda nutricional, objetivo y contexto enviado.
 - Si el bloque ya tuvo abono de base o fertilizaciones recientes con mucho NPK/calcio/potasio/magnesio, ajusta cantidades o explica en notas por que mantienes/refuerzas.
 - En tomate y morron cargado, suele pesar mucho calcio + potasio + magnesio y control de EC; en pepino/zucchini cuidar exceso de sales y sostener potasio/nitrogeno moderado segun vigor.
-- Para cargado de frutos priorizÃ¡ llenado/calibre/firmeza: potasio, calcio, magnesio y control de EC.
-- Si faltan datos, dejÃ¡ advertencias en "notas".
-- No des indicaciones peligrosas ni definitivas; todo debe quedar editable y con revisiÃ³n de EC.
-- RespondÃ© SOLO JSON vÃ¡lido, sin markdown.
+- Para cargado de frutos prioriza llenado/calibre/firmeza: potasio, calcio, magnesio y control de EC.
+- Si faltan datos, deja advertencias en "notas".
+- No des indicaciones peligrosas ni definitivas; todo debe quedar editable y con revision de EC.
+- Responde SOLO JSON valido, sin markdown.
 
 Formato exacto:
 {

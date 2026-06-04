@@ -12,13 +12,25 @@ const normalizar = (valor = '') => String(valor)
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
 
-const recomendacionBase = (objetivo) => {
+const recomendacionBase = (objetivo, cultivo = '') => {
   const o = String(objetivo || '').toLowerCase()
+  const c = normalizar(cultivo)
   if (o.includes('cargado')) return [
-    { producto: 'Nitrato de potasio', cantidad: '320', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Favorece llenado, calibre y calidad de fruto.' },
-    { producto: 'Nitrato de calcio', cantidad: '280', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Ayuda firmeza de fruto y reduce problemas asociados a falta de calcio.' },
-    { producto: 'Sulfato de magnesio', cantidad: '100', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Sostiene fotosintesis durante alta demanda de frutos.' },
-    { producto: 'Quelato de micronutrientes', cantidad: '40', unidad: 'g', nutrientes: 'Micronutrientes', motivo: 'Apoyo general cuando la planta esta cargando frutos.' },
+    ...(c.includes('pepino') || c.includes('zucchini') || c.includes('zapallito') ? [
+      { producto: 'Nitrato de potasio', cantidad: '260', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Sostiene llenado sin empujar demasiado la conductividad.' },
+      { producto: 'Nitrato de calcio', cantidad: '180', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Mantiene crecimiento y firmeza cuidando exceso de sales.' },
+      { producto: 'Sulfato de magnesio', cantidad: '90', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Apoya fotosintesis en cultivo de cosecha continua.' },
+    ] : c.includes('morron') || c.includes('pimiento') || c.includes('locote') ? [
+      { producto: 'Nitrato de potasio', cantidad: '340', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Favorece calibre y llenado de frutos pesados.' },
+      { producto: 'Nitrato de calcio', cantidad: '300', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Refuerza firmeza y calidad de pared del fruto.' },
+      { producto: 'Sulfato de magnesio', cantidad: '120', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Sostiene fotosintesis durante alta carga.' },
+      { producto: 'Calcio boro', cantidad: '70', unidad: 'cc', nutrientes: 'Calcio + boro', motivo: 'Apoya cuaje y calidad cuando hay carga de frutos.' },
+    ] : [
+      { producto: 'Nitrato de potasio', cantidad: '320', unidad: 'g', nutrientes: 'Potasio + nitrogeno', motivo: 'Favorece llenado, calibre y calidad de fruto.' },
+      { producto: 'Nitrato de calcio', cantidad: '280', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Ayuda firmeza de fruto y reduce problemas asociados a falta de calcio.' },
+      { producto: 'Sulfato de magnesio', cantidad: '100', unidad: 'g', nutrientes: 'Magnesio + azufre', motivo: 'Sostiene fotosintesis durante alta demanda de frutos.' },
+      { producto: 'Quelato de micronutrientes', cantidad: '40', unidad: 'g', nutrientes: 'Micronutrientes', motivo: 'Apoyo general cuando la planta esta cargando frutos.' },
+    ]),
   ]
   if (o.includes('produccion')) return [
     { producto: 'Nitrato de calcio', cantidad: '350', unidad: 'g', nutrientes: 'Calcio + nitrogeno', motivo: 'Aporta calcio para firmeza y crecimiento activo.' },
@@ -109,6 +121,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   }, [])
 
   const bloqueActivo = useMemo(() => bloques.find(b => b.id === form.bloque_id), [bloques, form.bloque_id])
+  const cultivoActivo = bloqueActivo?.plantaciones?.find(p => p.activa)?.cultivos?.nombre || ''
   const registrosConEc = registros.filter(r => Number(r.ec_final) > 0)
   const promedioEcFinal = registrosConEc.length
     ? registrosConEc.reduce((s, r) => s + (Number(r.ec_final) || 0), 0) / registrosConEc.length
@@ -153,7 +166,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   }
 
   const generarAsistenteBase = (mensajeExtra = '') => {
-    const productosBase = aplicarProductosRecomendados(recomendacionBase(form.objetivo))
+    const productosBase = aplicarProductosRecomendados(recomendacionBase(form.objetivo, cultivoActivo))
     const ecAgua = Number(String(form.ec_agua).replace(',', '.')) || 0
     const ecObjetivo = Number(String(form.ec_objetivo).replace(',', '.')) || 0
     const ecEstimada = ecObjetivo || (ecAgua ? ecAgua + 1.1 : 0)
@@ -272,14 +285,15 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
           campo: campoActivo?.nombre || '',
           bloque: bloqueActivo ? {
             codigo: bloqueActivo.codigo,
-            cultivo: bloqueActivo.plantaciones?.find(p => p.activa)?.cultivos?.nombre || '',
+            cultivo: cultivoActivo,
           } : null,
           objetivo: form.objetivo,
           tanque_litros: form.tanque_litros,
           ec_agua: form.ec_agua,
           ec_objetivo: form.ec_objetivo,
           contexto_bloque: contextoBloque,
-          productos_ideales_base: recomendacionBase(form.objetivo),
+          perfil_cultivo: cultivoActivo ? `Cultivo seleccionado: ${cultivoActivo}. Ajustar la recomendacion a este cultivo, no usar receta generica.` : '',
+          productos_ideales_base: recomendacionBase(form.objetivo, contextoBloque?.cultivo_activo || cultivoActivo),
           productos_disponibles: productos.map(p => ({
             nombre: p.nombre,
             unidad: p.unidad,
@@ -298,7 +312,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
       const data = await respuesta.json()
       if (!respuesta.ok) throw new Error(data?.error || 'La IA no respondio correctamente.')
 
-      const productosIA = aplicarProductosRecomendados(data.productos?.length ? data.productos : recomendacionBase(form.objetivo))
+      const productosIA = aplicarProductosRecomendados(data.productos?.length ? data.productos : recomendacionBase(form.objetivo, contextoBloque?.cultivo_activo || cultivoActivo))
       setForm(f => ({
         ...f,
         productos: productosIA,

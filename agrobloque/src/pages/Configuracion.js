@@ -242,7 +242,7 @@ export default function Configuracion() {
     }
   }
 
-  // â”€â”€â”€ PERFIL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- PERFIL 
 
   const guardarNombre = async () => {
     setLoading(true); setError(''); setSuccess('')
@@ -264,19 +264,19 @@ export default function Configuracion() {
     try {
       const { error } = await supabase.auth.updateUser({ email: form.email.trim() })
       if (error) throw error
-      setSuccess('RevisÃ¡ tu nuevo email para confirmar el cambio')
+      setSuccess('Revisa tu nuevo email para confirmar el cambio')
     } catch (e) { setError('Error: ' + e.message) }
     setLoading(false)
   }
 
   const guardarContrasena = async () => {
-    if (!form.nueva || form.nueva.length < 6) { setError('La contraseÃ±a debe tener al menos 6 caracteres'); return }
-    if (form.nueva !== form.repetir) { setError('Las contraseÃ±as no coinciden'); return }
+    if (!form.nueva || form.nueva.length < 6) { setError('La contrasena debe tener al menos 6 caracteres'); return }
+    if (form.nueva !== form.repetir) { setError('Las contrasenas no coinciden'); return }
     setLoading(true); setError(''); setSuccess('')
     try {
       const { error } = await supabase.auth.updateUser({ password: form.nueva })
       if (error) throw error
-      setSuccess('ContraseÃ±a actualizada correctamente')
+      setSuccess('Contrasena actualizada correctamente')
       setForm({})
     } catch (e) { setError('Error: ' + e.message) }
     setLoading(false)
@@ -297,7 +297,7 @@ export default function Configuracion() {
     e.target.value = ''
   }
 
-  // â”€â”€â”€ OTROS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- OTROS 
 
   const guardarCultivo = async () => {
     if (!form.nombre) return; setLoading(true); setError('')
@@ -505,11 +505,11 @@ export default function Configuracion() {
 
       <div style={{ padding:'24px 20px 16px' }}>
         <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Sistema</div>
-        <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:20 }}>ConfiguraciÃ³n</div>
+        <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:20 }}>Configuracion</div>
         {error && !modal && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
         {success && !modal && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{success}</div>}
 
-        {/* Tarjeta de perfil rÃ¡pida */}
+        {/* Tarjeta de perfil rapida */}
         <div style={{ background:'#212121', borderRadius:20, padding:'16px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:14 }}>
           <div style={{ position:'relative', flexShrink:0 }}>
             {perfil.foto ? (
@@ -552,7 +552,7 @@ export default function Configuracion() {
           </div>
         ))}
         <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginTop:8, cursor:'pointer' }} onClick={() => forceLocalSignOut()}>
-          <div style={{ fontSize:14, fontWeight:600, color:'#c84040', textAlign:'center' }}>Cerrar sesiÃ³n</div>
+          <div style={{ fontSize:14, fontWeight:600, color:'#c84040', textAlign:'center' }}>Cerrar sesion</div>
         </div>
       </div>
 
@@ -629,7 +629,7 @@ export default function Configuracion() {
                     <div>
                       <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>{inv.nombre}</div>
                       <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>
-                        {inv.campos?.nombre || 'Todos los campos'} Â· {inv.activo ? 'Activo' : 'Desactivado'}{inv.expires_at ? ` Â· vence ${String(inv.expires_at).slice(0,10)}` : ''}
+                        {inv.campos?.nombre || 'Todos los campos'}  -  {inv.activo ? 'Activo' : 'Desactivado'}{inv.expires_at ? `  -  vence ${String(inv.expires_at).slice(0,10)}` : ''}
                       </div>
                     </div>
                     {inv.activo && (
@@ -643,7 +643,7 @@ export default function Configuracion() {
               </div>
             </>}
 
-            {/* â”€â”€ CUENTA â”€â”€ */}
+            {/* -- CUENTA -- */}
             {modal === 'roles' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:8 }}>Usuarios y permisos</div>
               <div style={{ fontSize:12, color:'#8b928b', marginBottom:16 }}>Registro interno de roles. Para dar acceso real, el usuario tambien debe existir en Supabase Authentication.</div>
@@ -715,7 +715,7 @@ export default function Configuracion() {
                     <i className="ti ti-camera" style={{ fontSize:13, color:'#fff' }} aria-hidden="true"></i>
                   </button>
                 </div>
-                <span style={{ fontSize:11, color:'#9a9a9a' }}>TocÃ¡ la cÃ¡mara para cambiar la foto</span>
+                <span style={{ fontSize:11, color:'#9a9a9a' }}>Toca la camara para cambiar la foto</span>
               </div>
 
               {/* Nombre */}
@@ -729,29 +729,29 @@ export default function Configuracion() {
               <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
                 <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Email</div>
                 <input style={{ ...inp, marginBottom:8 }} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/>
-                <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:10 }}>Si cambiÃ¡s el email, recibirÃ¡s un link de confirmaciÃ³n</div>
+                <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:10 }}>Si cambias el email, recibiras un link de confirmacion</div>
                 <button style={saveBtn('#1a5c2e')} onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
               </div>
 
-              {/* ContraseÃ±a */}
+              {/* Contrasena */}
               <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>ContraseÃ±a</div>
-                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contraseÃ±a"/>
-                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contraseÃ±a"/>
-                <button style={saveBtn('#c84040')} onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contraseÃ±a'}</button>
+                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Contrasena</div>
+                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contrasena"/>
+                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contrasena"/>
+                <button style={saveBtn('#c84040')} onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contrasena'}</button>
               </div>
 
               <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
-            {/* â”€â”€ CAMPOS â”€â”€ */}
+            {/* -- CAMPOS -- */}
             {modal === 'campos' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Campos</div>
               {campos.map(c => (<div key={c.id} style={listItem}><div style={{ fontSize:13, fontWeight:500 }}>{c.nombre}</div></div>))}
               <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
-            {/* â”€â”€ CULTIVOS â”€â”€ */}
+            {/* -- CULTIVOS -- */}
             {modal === 'cultivos' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Cultivos</div>
               {cultivos.map(c => (
@@ -770,12 +770,12 @@ export default function Configuracion() {
             {modal === 'editarCultivo' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
               <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
-              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: MorrÃ³n"/>
+              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morron"/>
               <button style={saveBtn()} onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
               <button style={cancelBtn} onClick={() => abrir('cultivos')}>Volver</button>
             </>}
 
-            {/* â”€â”€ OPERARIOS â”€â”€ */}
+            {/* -- OPERARIOS -- */}
             {modal === 'operarios' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Operarios</div>
               {campos.map(campo => (
@@ -804,7 +804,7 @@ export default function Configuracion() {
               <button style={cancelBtn} onClick={() => abrir('operarios')}>Volver</button>
             </>}
 
-            {/* â”€â”€ ABONOS â”€â”€ */}
+            {/* -- ABONOS -- */}
             {modal === 'abonos' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Abonos de base</div>
               {abonos.map(a => (
@@ -828,10 +828,10 @@ export default function Configuracion() {
               <button style={cancelBtn} onClick={() => abrir('abonos')}>Volver</button>
             </>}
 
-            {/* â”€â”€ BLOQUES â”€â”€ */}
+            {/* -- BLOQUES -- */}
             {modal === 'bloques' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:6 }}>Tipo de bloques</div>
-              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>TocÃ¡ un bloque para cambiar si es invernadero o campo abierto</div>
+              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Toca un bloque para cambiar si es invernadero o campo abierto</div>
               {campos.map(campo => (
                 <div key={campo.id}>
                   <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', padding:'10px 0 6px' }}>{campo.nombre}</div>
@@ -839,7 +839,7 @@ export default function Configuracion() {
                     {bloques.filter(b => b.campo_id === campo.id).map(b => (
                       <div key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })}
                         style={{ padding:'6px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', border:'1px solid #e8e6e2', background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
-                        {b.codigo} Â· {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
+                        {b.codigo}  -  {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
                       </div>
                     ))}
                   </div>
@@ -850,7 +850,7 @@ export default function Configuracion() {
 
             {modal === 'editarBloque' && <>
               <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:6 }}>Bloque {form.codigo}</div>
-              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>SeleccionÃ¡ el tipo de este bloque</div>
+              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Selecciona el tipo de este bloque</div>
               <div style={{ display:'flex', gap:8, marginBottom:20 }}>
                 {['invernadero','campo_abierto'].map(t => (
                   <button key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ flex:1, padding:14, borderRadius:14, border:'1px solid #e8e6e2', fontSize:13, fontWeight:600, cursor:'pointer', background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
