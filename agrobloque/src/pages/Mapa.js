@@ -185,7 +185,7 @@ export default function Mapa({ campoActivo }) {
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Tipo</div>
             <select value={formBloque.tipo} onChange={e => setFormBloque(f => ({ ...f, tipo:e.target.value }))} style={inputBloque}>
               <option value="invernadero">Invernadero</option>
-              <option value="campo">Campo abierto</option>
+              <option value="campo_abierto">Campo abierto</option>
             </select>
 
             <div style={{ background:'#fff', borderRadius:14, padding:'12px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
