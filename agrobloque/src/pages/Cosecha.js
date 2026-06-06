@@ -7,6 +7,13 @@ const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 const parsearKg = (v) => { const n = parseFloat(String(v || '').replace(',','.')); return isNaN(n) ? 0 : n }
 const fmtKg = (n) => { const num = Number(n)||0; return num % 1 === 0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY', {minimumFractionDigits:1, maximumFractionDigits:2}) }
+const fechaLocal = () => {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
@@ -127,9 +134,11 @@ export default function Cosecha() {
   const [bloques, setBloques] = useState([])
   const [compradores, setCompradores] = useState([])
   const [modal, setModal] = useState(false)
+  const [modoMultiple, setModoMultiple] = useState(false)
+  const [filasCosecha, setFilasCosecha] = useState([])
   const [detalle, setDetalle] = useState(null)
   const [confirmar, setConfirmar] = useState(null)
-  const [form, setForm] = useState({ bloque_id:'', fecha:'', kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
+  const [form, setForm] = useState({ bloque_id:'', fecha:fechaLocal(), kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
   const [saving, setSaving] = useState(false)
   const [campoFiltro, setCampoFiltro] = useState(null)
   const [error, setError] = useState('')
@@ -161,10 +170,15 @@ export default function Cosecha() {
     setCompradores(data || [])
   }
 
-  const limpiarForm = () => setForm({ bloque_id:'', fecha:'', kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
+  const crearFilaCosecha = () => ({ bloque_id:'', kg_total:'', precio_kg:'', calidad:'primera', notas:'' })
+  const limpiarForm = () => {
+    setForm({ bloque_id:'', fecha:fechaLocal(), kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
+    setFilasCosecha([crearFilaCosecha(), crearFilaCosecha()])
+  }
 
   const abrirNuevaCosecha = () => {
     limpiarForm()
+    setModoMultiple(false)
     setModal(true)
   }
 
@@ -182,10 +196,61 @@ export default function Cosecha() {
       notas: cosecha.notas || ''
     })
     setDetalle(null)
+    setModoMultiple(false)
     setModal(true)
   }
 
+  const actualizarFilaCosecha = (idx, campo, valor) => {
+    setFilasCosecha(prev => prev.map((fila, i) => i === idx ? { ...fila, [campo]: valor } : fila))
+  }
+
+  const agregarFilaCosecha = () => setFilasCosecha(prev => [...prev, crearFilaCosecha()])
+  const quitarFilaCosecha = (idx) => setFilasCosecha(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)
+
+  const guardarMultiple = async () => {
+    const filasValidas = filasCosecha
+      .map(fila => ({
+        bloque_id: fila.bloque_id,
+        fecha: form.fecha,
+        kg_total: parsearKg(fila.kg_total),
+        precio_kg: parsearGs(fila.precio_kg),
+        calidad: fila.calidad || 'primera',
+        comprador_id: form.comprador_id || null,
+        notas: fila.notas || form.notas || null,
+      }))
+      .filter(fila => fila.bloque_id && fila.fecha && fila.kg_total > 0)
+
+    if (!form.fecha || filasValidas.length === 0) {
+      setError('Cargá fecha y al menos una cosecha con bloque y kilos.')
+      return
+    }
+
+    setSaving(true); setError('')
+    try {
+      const { error } = await supabase.from('cosechas').insert(filasValidas)
+      if (error) throw error
+      await registrarAuditoria({
+        accion: 'Registro lote de cosechas',
+        modulo: 'Cosecha',
+        tabla: 'cosechas',
+        registroId: '',
+        detalle: `${filasValidas.length} cosechas - ${filasValidas.reduce((s, f) => s + f.kg_total, 0)} kg`,
+      })
+      await fetchCosechas()
+      setModal(false)
+      setModoMultiple(false)
+      limpiarForm()
+    } catch (e) {
+      setError('Error al guardar lote: ' + e.message)
+    }
+    setSaving(false)
+  }
+
   const guardar = async () => {
+    if (modoMultiple && !form.id) {
+      await guardarMultiple()
+      return
+    }
     if (!form.bloque_id || !form.fecha || !form.kg_total) return
     setSaving(true); setError('')
     try {
@@ -230,6 +295,8 @@ export default function Cosecha() {
   const ingresoCosecha = parsearKg(form.kg_total) * parsearGs(form.precio_kg)
   const bloqueSeleccionado = bloques.find(b => b.id === form.bloque_id)
   const cultivoSeleccionado = getCultivoBloque(bloqueSeleccionado, form.fecha)
+  const totalKgMultiple = filasCosecha.reduce((sum, fila) => sum + parsearKg(fila.kg_total), 0)
+  const totalGsMultiple = filasCosecha.reduce((sum, fila) => sum + (parsearKg(fila.kg_total) * parsearGs(fila.precio_kg)), 0)
 
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
 
@@ -316,11 +383,24 @@ export default function Cosecha() {
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar cosecha' : 'Registrar cosecha'}</div>
             {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
 
+            {!form.id && (
+              <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:14 }}>
+                <button type="button" onClick={() => setModoMultiple(false)} style={{ flex:1, padding:9, borderRadius:10, border:'none', cursor:'pointer', background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:800 }}>
+                  Una cosecha
+                </button>
+                <button type="button" onClick={() => setModoMultiple(true)} style={{ flex:1, padding:9, borderRadius:10, border:'none', cursor:'pointer', background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:800 }}>
+                  Varias juntas
+                </button>
+              </div>
+            )}
+
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Campo</div>
             <select style={inp} value={campoFiltro||''} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({...f, bloque_id:''})) }}>
               {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
 
+            {(!modoMultiple || form.id) && (
+              <>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloque *</div>
             <select style={inp} value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
               <option value="">Seleccioná bloque...</option>
@@ -332,10 +412,14 @@ export default function Cosecha() {
                 Producto/cultivo: {cultivoSeleccionado || 'Sin plantacion activa registrada'}
               </div>
             )}
+              </>
+            )}
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha *</div>
             <input style={inp} type="date" value={form.fecha} onChange={e => setForm(f => ({...f, fecha:e.target.value}))}/>
 
+            {(!modoMultiple || form.id) ? (
+              <>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Kg cosechados * (admite decimales, ej: 1.5)</div>
             <input style={inp} type="text" inputMode="decimal" value={form.kg_total}
               onChange={e => setForm(f => ({...f, kg_total: e.target.value}))}
@@ -370,8 +454,58 @@ export default function Cosecha() {
                 <span style={{ fontSize:14, fontWeight:700, color:'#212121' }}>Gs. {fmtGs(ingresoCosecha)}</span>
               </div>
             )}
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:8 }}>Cosechas del lote</div>
+                <div style={{ display:'grid', gap:10, marginBottom:12 }}>
+                  {filasCosecha.map((fila, idx) => {
+                    const bloqueFila = bloques.find(b => b.id === fila.bloque_id)
+                    const cultivoFila = getCultivoBloque(bloqueFila, form.fecha)
+                    return (
+                      <div key={idx} style={{ background:'#fff', border:'1px solid #e4e6e2', borderRadius:16, padding:12 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                          <strong style={{ fontSize:13 }}>Cosecha {idx + 1}</strong>
+                          {filasCosecha.length > 1 && (
+                            <button type="button" onClick={() => quitarFilaCosecha(idx)} style={{ border:'1px solid #ffcccc', background:'#fff', color:'#c84040', borderRadius:10, padding:'5px 9px', fontSize:11, cursor:'pointer' }}>Quitar</button>
+                          )}
+                        </div>
+                        <select style={inp} value={fila.bloque_id} onChange={e => actualizarFilaCosecha(idx, 'bloque_id', e.target.value)}>
+                          <option value="">Bloque...</option>
+                          {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
+                        </select>
+                        {fila.bloque_id && (
+                          <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:10, padding:'7px 10px', fontSize:11, fontWeight:700, margin:'-4px 0 10px' }}>
+                            {cultivoFila || 'Sin plantacion activa registrada'}
+                          </div>
+                        )}
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                          <input style={inp} type="text" inputMode="decimal" value={fila.kg_total} onChange={e => actualizarFilaCosecha(idx, 'kg_total', e.target.value)} placeholder="Kg"/>
+                          <input style={inp} type="text" inputMode="numeric" value={fila.precio_kg} onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); actualizarFilaCosecha(idx, 'precio_kg', r ? parseInt(r,10).toLocaleString('es-PY') : '') }} placeholder="Gs/kg"/>
+                        </div>
+                        <select style={inp} value={fila.calidad} onChange={e => actualizarFilaCosecha(idx, 'calidad', e.target.value)}>
+                          <option value="primera">1ra calidad</option>
+                          <option value="segunda">2da calidad</option>
+                          <option value="mixta">Mixta</option>
+                        </select>
+                        <input style={{ ...inp, marginBottom:0 }} value={fila.notas} onChange={e => actualizarFilaCosecha(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
+                      </div>
+                    )
+                  })}
+                </div>
+                <button type="button" onClick={agregarFilaCosecha} style={{ width:'100%', padding:12, borderRadius:14, border:'1px dashed #bfc6bf', background:'#fff', fontSize:13, fontWeight:800, color:'#176a25', cursor:'pointer', marginBottom:12 }}>
+                  + Agregar otra cosecha
+                </button>
+                {(totalKgMultiple > 0 || totalGsMultiple > 0) && (
+                  <div style={{ background:'#eeeeee', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between', gap:12 }}>
+                    <span style={{ fontSize:12, color:'#212121' }}>{fmtKg(totalKgMultiple)} kg en total</span>
+                    <span style={{ fontSize:14, fontWeight:700, color:'#212121' }}>{totalGsMultiple > 0 ? `Gs. ${fmtGs(totalGsMultiple)}` : ''}</span>
+                  </div>
+                )}
+              </>
+            )}
 
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar cosecha'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : modoMultiple ? 'Guardar lote de cosechas' : 'Guardar cosecha'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </div>
