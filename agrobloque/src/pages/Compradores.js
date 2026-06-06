@@ -20,6 +20,7 @@ function ModalConfirm({ nombre, onConfirm, onCancel }) {
 }
 
 export default function Compradores() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [compradores, setCompradores] = useState([])
   const [historial, setHistorial] = useState({})
   const [modal, setModal] = useState(false)
@@ -87,7 +88,7 @@ export default function Compradores() {
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       {confirmar && <ModalConfirm nombre={confirmar.nombre} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
-      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:4 }}>
           <div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Ventas</div>
@@ -99,17 +100,19 @@ export default function Compradores() {
         </div>
       </div>
 
-      <div style={{ padding:'8px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         {compradores.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>
             Sin compradores registrados.<br/>
             <span style={{ fontSize:11 }}>Agregá compradores para asignarlos en cada cosecha.</span>
           </div>
-        ) : compradores.map(c => {
+        ) : (
+          <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+            {compradores.map(c => {
           const stats = getStats(c.id)
           const isOpen = expandido === c.id
           return (
-            <div key={c.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8 }}>
+            <div key={c.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
               <div style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }} onClick={() => setExpandido(isOpen ? null : c.id)}>
                 <div style={{ width:40, height:40, borderRadius:12, background:'#eeeeee', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   <i className="ti ti-building-store" style={{ fontSize:18, color:'#212121' }} aria-hidden="true"></i>
@@ -173,6 +176,8 @@ export default function Compradores() {
             </div>
           )
         })}
+          </div>
+        )}
         <NotasPanel modulo="compradores" titulo="Blog de notas de compradores" />
       </div>
 

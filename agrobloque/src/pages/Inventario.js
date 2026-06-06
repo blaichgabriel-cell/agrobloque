@@ -61,6 +61,7 @@ function ModalConfirm({ mensaje, onConfirm, onCancel }) {
 }
 
 export default function Inventario() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [productos, setProductos] = useState([])
   const [categorias, setCategorias] = useState([])
   const [categoriaActiva, setCategoriaActiva] = useState(null)
@@ -254,7 +255,7 @@ export default function Inventario() {
       {/* Vista categorías */}
       {!categoriaActiva && (
         <>
-          <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+          <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
               <div>
                 <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Depósito</div>
@@ -281,14 +282,15 @@ export default function Inventario() {
             )}
           </div>
 
-          <div style={{ padding:'8px 14px 100px' }}>
+          <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
+            <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(3, minmax(240px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
             {CATEGORIAS.map(cat => {
               const prods = getProductosCat(cat.key)
               if (prods.length === 0) return null
               const badge = getBadge(cat.key)
               return (
                 <div key={cat.key} onClick={() => setCategoriaActiva(cat.key)}
-                  style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
+                  style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, display:'flex', alignItems:'center', gap:12, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                   <div style={{ width:44, height:44, borderRadius:14, background:cat.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     <i className={`ti ${cat.icon}`} style={{ fontSize:20, color:cat.color }} aria-hidden="true"></i>
                   </div>
@@ -301,6 +303,7 @@ export default function Inventario() {
                 </div>
               )
             })}
+            </div>
           </div>
         </>
       )}
@@ -308,7 +311,7 @@ export default function Inventario() {
       {/* Vista productos de categoría */}
       {categoriaActiva && catActInfo && (
         <>
-          <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+          <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
             <button onClick={() => setCategoriaActiva(null)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
               <i className="ti ti-arrow-left" style={{ fontSize:18, color:'#212121' }} aria-hidden="true"></i>
               <span style={{ fontSize:13, color:'#212121', fontWeight:500 }}>Inventario</span>
@@ -327,13 +330,15 @@ export default function Inventario() {
             </div>
           </div>
 
-          <div style={{ padding:'8px 14px 100px' }}>
+          <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
             {productosCat.length === 0 ? (
               <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin productos en esta categoría</div>
-            ) : productosCat.map(p => {
+            ) : (
+              <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(320px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+              {productosCat.map(p => {
               const stockVisible = formatearStock(p.stock_actual, p.unidad)
               return (
-              <div key={p.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8 }}>
+              <div key={p.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                 <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{p.nombre}</div>
@@ -368,12 +373,14 @@ export default function Inventario() {
                 </div>
               </div>
               )
-            })}
+              })}
+              </div>
+            )}
           </div>
         </>
       )}
 
-      <div style={{ padding:'0 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '0 36px 100px' : '0 14px 100px' }}>
         <NotasPanel modulo="inventario" titulo="Blog de notas de inventario" />
       </div>
 

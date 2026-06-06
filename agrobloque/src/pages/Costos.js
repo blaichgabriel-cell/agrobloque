@@ -17,6 +17,7 @@ const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 
 export default function Costos({ campoActivo, isGuest = false }) {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [campos, setCampos] = useState([])
   const [campoSel, setCampoSel] = useState(null)
   const [bloques, setBloques] = useState([])
@@ -139,7 +140,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Gastos</div>
@@ -170,14 +171,15 @@ export default function Costos({ campoActivo, isGuest = false }) {
         </div>
       </div>
 
-      <div style={{ padding:'8px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         <div style={{ background:'#212121', borderRadius:20, padding:'18px 20px', marginBottom:10 }}>
           <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:6 }}>Total costos · {periodo === 'mes' ? 'este mes' : 'historico'}</div>
           <div style={{ fontSize:36, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>Gs. {fmtGs(totalGeneral)}</div>
           <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', marginTop:4 }}>{campoSel?.nombre}</div>
         </div>
 
-        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10 }}>
+        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? '0.9fr 1.1fr' : '1fr', gap: isDesktop ? 12 : 0 }}>
+        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
           <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:12, textTransform:'uppercase' }}>Calculados automaticamente</div>
           {[
             { icon:'ti-spray', color:'#e07b00', bg:'#fff3e8', label:'Agroquimicos', sub:'Desde fumigaciones registradas', val: costosAuto.agroquimicos },
@@ -198,7 +200,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
           ))}
         </div>
 
-        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10 }}>
+        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
             <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', textTransform:'uppercase' }}>Costos manuales</div>
             <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Gs. {fmtGs(totalManuales)}</div>
@@ -230,6 +232,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
               </div>
             )
           })}
+        </div>
         </div>
         <NotasPanel modulo="costos" titulo="Blog de notas de costos" />
       </div>

@@ -26,6 +26,7 @@ const getCampoGuardado = () => {
 }
 
 export default function Asistencia() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [campoActivo, setCampoActivo] = useState(null)
   const [campos, setCampos] = useState([])
   const [operarios, setOperarios] = useState([])
@@ -245,7 +246,7 @@ export default function Asistencia() {
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Control semanal</div>
         <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:16 }}>Asistencia y pagos</div>
         {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
@@ -263,9 +264,9 @@ export default function Asistencia() {
         </div>
       </div>
 
-      <div style={{ padding:'12px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
         {operarios.map(op => (
-          <div key={op.id} style={{ background:'#fff', borderRadius:20, marginBottom:10, overflow:'hidden' }}>
+          <div key={op.id} style={{ background:'#fff', borderRadius:20, marginBottom:10, overflow:'hidden', boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderBottom:'1px solid #f2f1ef' }}>
               <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{op.nombre}</div>
               <div style={{ fontSize:14, fontWeight:700, color:'#212121' }}>Gs. {fmtGs(getTotalSemana(op.id))}</div>

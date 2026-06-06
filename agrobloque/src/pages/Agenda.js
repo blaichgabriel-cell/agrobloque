@@ -26,6 +26,7 @@ function ModalConfirm({ onConfirm, onCancel }) {
 }
 
 export default function Agenda() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [tareas, setTareas] = useState([])
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
@@ -91,7 +92,7 @@ export default function Agenda() {
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
-      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:20 }}>
           <div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Planificación</div>
@@ -108,14 +109,16 @@ export default function Agenda() {
         </div>
       </div>
 
-      <div style={{ padding:'12px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
         {tareasFiltradas.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>No hay tareas {filtro === 'pendientes' ? 'pendientes' : ''}</div>
-        ) : tareasFiltradas.map(t => {
+        ) : (
+          <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+            {tareasFiltradas.map(t => {
           const tipo = TIPOS[t.tipo] || TIPOS.otro
           const badge = getBadge(t)
           return (
-            <div key={t.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, opacity: t.completada ? 0.6 : 1 }}>
+            <div key={t.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, opacity: t.completada ? 0.6 : 1, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
               <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
                 <div style={{ width:34, height:34, borderRadius:10, background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   <i className={`ti ${tipo.icon}`} style={{ fontSize:16, color:tipo.color }} aria-hidden="true"></i>
@@ -142,6 +145,8 @@ export default function Agenda() {
             </div>
           )
         })}
+          </div>
+        )}
         <NotasPanel modulo="agenda" titulo="Blog de notas de agenda" />
       </div>
 

@@ -30,6 +30,7 @@ const formInicial = {
 }
 
 export default function Contabilidad() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [movimientos, setMovimientos] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -184,7 +185,7 @@ export default function Contabilidad() {
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ padding:'24px 20px 16px' }}>
+      <div style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
             <div style={headerIcon}><i className="ti ti-calculator" style={{ fontSize:26, color:'#176a25' }} aria-hidden="true"></i></div>
@@ -219,7 +220,7 @@ export default function Contabilidad() {
         </div>
       </div>
 
-      <div style={{ padding:'8px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         <section style={card}>
           <div style={sectionHead}>
             <div>

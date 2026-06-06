@@ -10,6 +10,7 @@ const CULTIVO_COLORES = {
 }
 
 export default function Mapa({ campoActivo }) {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [bloques, setBloques] = useState([])
   const [plantaciones, setPlantaciones] = useState({})
   const [loading, setLoading] = useState(true)
@@ -66,7 +67,7 @@ export default function Mapa({ campoActivo }) {
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ background:'#f2f1ef', padding:'24px 20px 0' }}>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 0' : '24px 20px 0' }}>
         <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Campo activo</div>
         <div style={{ fontSize:22, fontWeight:700, color:'#212121', letterSpacing:-.5, marginBottom:14 }}>{campoActivo?.nombre}</div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:8 }}>
@@ -78,19 +79,19 @@ export default function Mapa({ campoActivo }) {
         </div>
       </div>
 
-      <div style={{ padding:'8px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '18px 36px 100px' : '8px 14px 100px' }}>
         {loading ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Cargando bloques...</div>
         ) : bloquesFiltrados.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin bloques para mostrar</div>
         ) : (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(4, minmax(180px, 1fr))' : '1fr 1fr', gap: isDesktop ? 14 : 8 }}>
             {bloquesFiltrados.map(b => {
               const cultivo = getCultivo(b)
               const color = getColor(b)
               return (
                 <div key={b.id} onClick={() => navigate(`/bloque/${b.id}`)}
-                  style={{ background: color || '#fff', borderRadius:20, padding:'14px 12px', cursor:'pointer', minHeight:90, display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+                  style={{ background: color || '#fff', borderRadius:20, padding: isDesktop ? '18px 18px' : '14px 12px', cursor:'pointer', minHeight: isDesktop ? 120 : 90, display:'flex', flexDirection:'column', justifyContent:'space-between', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.06)' : 'none' }}>
                   <div style={{ fontSize:10, fontWeight:600, color: cultivo ? 'rgba(255,255,255,0.55)' : '#c0c0c0', textTransform:'uppercase' }}>
                     {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
                   </div>

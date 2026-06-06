@@ -56,8 +56,8 @@ export default function Auditoria() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f2f1ef', padding:'24px 14px 100px' }}>
-      <div style={{ maxWidth:900, margin:'0 auto' }}>
+    <div style={{ minHeight:'100vh', background:'#f2f1ef', padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
+      <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 900, margin:'0 auto' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:'#8b928b' }}>Registro interno</div>
@@ -90,7 +90,7 @@ export default function Auditoria() {
         ) : visibles.length === 0 ? (
           <div style={{ textAlign:'center', padding:38, color:'#8b928b', background:'#fff', borderRadius:20 }}>Todavia no hay movimientos registrados.</div>
         ) : visibles.map(log => (
-          <div key={log.id} style={{ background:'#fff', borderRadius:18, padding:'14px 16px', marginBottom:8, border:'1px solid #e8ece8' }}>
+          <div key={log.id} style={{ background:'#fff', borderRadius:18, padding:'14px 16px', marginBottom:8, border:'1px solid #e8ece8', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
             <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:6 }}>
               <strong style={{ fontSize:15 }}>{log.accion}</strong>
               <span style={{ fontSize:11, color:'#8b928b' }}>{String(log.created_at || '').slice(0, 16).replace('T', ' ')}</span>

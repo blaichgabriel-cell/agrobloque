@@ -7,6 +7,7 @@ const fmtGs = (n) => n > 0 ? `Gs. ${Math.round(n).toLocaleString('es-PY')}` : '‚
 const fmtKg = (n) => { const num = Number(n)||0; return num % 1 === 0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY', {minimumFractionDigits:1, maximumFractionDigits:2}) }
 
 export default function Reportes({ campoActivo, isGuest = false }) {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [campos, setCampos] = useState([])
   const [campoSel, setCampoSel] = useState(null)
   const [periodo, setPeriodo] = useState('mes')
@@ -283,7 +284,7 @@ export default function Reportes({ campoActivo, isGuest = false }) {
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>An√°lisis</div>
@@ -350,7 +351,7 @@ export default function Reportes({ campoActivo, isGuest = false }) {
         </div>
       </div>
 
-      <div style={{ padding:'8px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         {loading ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Calculando...</div>
         ) : <>

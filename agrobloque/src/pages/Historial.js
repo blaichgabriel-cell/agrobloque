@@ -198,8 +198,8 @@ export default function Historial({ campoActivo }) {
   const resumen = tiposLista().map(t => ({ ...t, total:eventos.filter(e => e.tipo === t.key).length }))
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f2f1ef', padding:'24px 14px 100px' }}>
-      <div style={{ maxWidth:980, margin:'0 auto' }}>
+    <div style={{ minHeight:'100vh', background:'#f2f1ef', padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
+      <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 980, margin:'0 auto' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:'#8b928b' }}>Trazabilidad</div>

@@ -263,7 +263,7 @@ export default function Fumigaciones() {
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
-      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Control fitosanitario</div>
@@ -282,7 +282,7 @@ export default function Fumigaciones() {
         </div>
       </div>
 
-      <div style={{ padding:'12px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
         {fechasOrdenadas.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin registros</div>
         ) : fechasOrdenadas.map(fecha => (
@@ -304,7 +304,7 @@ export default function Fumigaciones() {
               const tanques = f.tanques_cantidad && f.tanque_litros ? `${fmtCantidad(f.tanques_cantidad)} tanque${Number(f.tanques_cantidad) === 1 ? '' : 's'} x ${fmtCantidad(f.tanque_litros)} L` : ''
 
               return (
-                <div key={f.id} onClick={() => setDetalle(f)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, cursor:'pointer' }}>
+                <div key={f.id} onClick={() => setDetalle(f)} style={{ background:'#fff', borderRadius:20, padding: isDesktop ? '16px 18px' : '14px 16px', marginBottom: isDesktop ? 10 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                     <div style={{ width:38, height:38, borderRadius:11, background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                       <i className={`ti ${tipo.icon}`} style={{ fontSize:18, color:tipo.color }} aria-hidden="true"></i>

@@ -283,7 +283,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
         scrollBehavior: 'auto',
       }}>
         <div style={{
-          maxWidth: dashboardDesktop ? 'none' : (isDesktop ? 900 : 480),
+          maxWidth: dashboardDesktop ? 'none' : (isDesktop ? 1280 : 480),
           width: '100%',
           margin: dashboardDesktop ? 0 : '0 auto',
           minHeight: '100vh',

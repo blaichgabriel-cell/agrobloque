@@ -47,6 +47,7 @@ function ViveroIcon({ size = 24, color = '#2f741f' }) {
 }
 
 export default function Vivero() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [campos, setCampos] = useState([])
   const [lotes, setLotes] = useState([])
   const [tratamientos, setTratamientos] = useState([])
@@ -206,7 +207,7 @@ export default function Vivero() {
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ padding:'24px 20px 16px' }}>
+      <div style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <div style={{ width:44, height:44, borderRadius:15, background:'#eef6ea', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
@@ -224,7 +225,7 @@ export default function Vivero() {
 
         {error && <div style={{ background:'#fff3e8', color:'#a35f00', fontSize:12, padding:'9px 12px', borderRadius:12, marginBottom:12 }}>{error}</div>}
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(4, minmax(0, 1fr))' : '1fr 1fr', gap: isDesktop ? 12 : 8 }}>
           <Stat dark label="Lotes activos" value={resumen.activos} sub={`${lotes.length} totales`} />
           <Stat label="Germinacion" value={`${resumen.germinacion}%`} sub={`${resumen.germinadas} de ${resumen.semillas}`} />
           <Stat label="Perdidas" value={resumen.perdidas} sub="plantines" />
@@ -232,11 +233,13 @@ export default function Vivero() {
         </div>
       </div>
 
-      <div style={{ padding:'8px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         {lotes.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin lotes de vivero registrados</div>
-        ) : lotes.map(lote => (
-          <div key={lote.id} onClick={() => setDetalle(lote)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, cursor:'pointer' }}>
+        ) : (
+          <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+            {lotes.map(lote => (
+          <div key={lote.id} onClick={() => setDetalle(lote)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
             <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}>
               <div>
                 <div style={{ fontSize:16, fontWeight:800, color:'#0a0a0a' }}>{lote.cultivo}</div>
@@ -254,6 +257,8 @@ export default function Vivero() {
             </div>
           </div>
         ))}
+          </div>
+        )}
 
         <NotasPanel modulo="vivero" titulo="Blog de notas del vivero" />
       </div>

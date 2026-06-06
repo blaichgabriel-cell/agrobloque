@@ -121,6 +121,7 @@ function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
 }
 
 export default function Cosecha() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [cosechas, setCosechas] = useState([])
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
@@ -237,7 +238,7 @@ export default function Cosecha() {
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
       {detalle && <ModalDetalle cosecha={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditarCosecha(detalle)} onDelete={() => eliminar(detalle.id)} />}
 
-      <div style={{ background:'#f2f1ef', padding:'24px 20px 16px' }}>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Producción</div>
@@ -248,7 +249,7 @@ export default function Cosecha() {
           </button>
         </div>
         {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: isDesktop ? 14 : 8 }}>
           <div style={{ background:'#212121', borderRadius:16, padding:'14px 16px' }}>
             <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:4 }}>Total cosechado</div>
             <div style={{ fontSize:28, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>{fmtKg(totalKg)}</div>
@@ -264,14 +265,15 @@ export default function Cosecha() {
         </div>
       </div>
 
-      <div style={{ padding:'8px 14px 100px' }}>
+      <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
+        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
         {cosechas.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin registros de cosecha</div>
         ) : cosechas.map(c => {
           const ingreso = (Number(c.kg_total)||0) * (Number(c.precio_kg)||0)
           const cultivo = getCultivoCosecha(c)
           return (
-            <div key={c.id} onClick={() => setDetalle(c)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, cursor:'pointer' }}>
+            <div key={c.id} onClick={() => setDetalle(c)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
               <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
                 <div>
                   <div style={{ fontSize:15, fontWeight:700, color:'#0a0a0a' }}>Bloque {c.bloques?.codigo}</div>
@@ -304,6 +306,7 @@ export default function Cosecha() {
             </div>
           )
         })}
+        </div>
         <NotasPanel modulo="cosecha" titulo="Blog de notas de cosecha" />
       </div>
 
