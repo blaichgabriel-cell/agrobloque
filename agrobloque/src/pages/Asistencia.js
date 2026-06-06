@@ -6,16 +6,26 @@ const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado']
 const DIAS_CORTO = ['L','M','M','J','V','S']
 
+const fechaLocal = (date = new Date()) => {
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const getLunes = (offset = 0) => {
   const hoy = new Date()
+  hoy.setHours(12, 0, 0, 0)
   const dia = hoy.getDay()
   const diff = dia === 0 ? -6 : 1 - dia
   const lunes = new Date(hoy)
   lunes.setDate(hoy.getDate() + diff + offset * 7)
+  lunes.setHours(12, 0, 0, 0)
   return lunes
 }
 
-const formatFecha = (d) => d.toISOString().split('T')[0]
+const formatFecha = (d) => fechaLocal(d)
 const formatLabel = (d) => d.toLocaleDateString('es-PY', { day:'numeric', month:'short' })
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
@@ -224,7 +234,7 @@ export default function Asistencia() {
     try {
       await supabase.from('adelantos').insert({
         operario_id: modalAdelanto.id,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: fechaLocal(),
         monto, descripcion: formAdelanto.descripcion || null
       })
       setModalAdelanto(null)
