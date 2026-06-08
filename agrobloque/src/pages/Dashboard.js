@@ -7,6 +7,14 @@ import { filterTabsByRole } from '../lib/permissions'
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
 const fmtNum = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
+const COSTO_MANUAL_LABELS = {
+  insumos: { label: 'Insumos', color: '#2563eb' },
+  combustible: { label: 'Combustible', color: '#d9841f' },
+  herramientas: { label: 'Herramientas', color: '#6f7770' },
+  electricidad: { label: 'Electricidad', color: '#0284c7' },
+  gastos_administrativos: { label: 'Administracion', color: '#8e44ad' },
+  otro: { label: 'Otros gastos', color: '#64748b' },
+}
 
 function LogoHS({ size = 56 }) {
   return (
@@ -222,13 +230,13 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       bloqueIds.length > 0
         ? supabase.from('cosechas').select('id, fecha, kg_total, precio_kg, bloques(codigo), cultivos(nombre)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
         : Promise.resolve({ data: [] }),
-      supabase.from('costos').select('id, concepto, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
+      supabase.from('costos').select('id, tipo, descripcion, concepto, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
       isGuest
         ? Promise.resolve({ data: [] })
         : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde),
       supabase
         .from('fumigaciones')
-        .select('id, fecha, tipo, operario, bloques(codigo), fumigacion_productos(dosis, productos(precio_unitario))')
+        .select('id, fecha, tipo, operario, bloques(codigo), fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
         .eq('campo_id', campo.id)
         .gte('fecha', mesDesde)
         .order('fecha', { ascending: false }),
@@ -240,15 +248,17 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       .reduce((s, a) => s + (Number(a.monto) || 0), 0)
     const agroquimicos = (fumigaciones || []).reduce((total, f) => {
       return total + (f.fumigacion_productos || []).reduce((s, fp) => {
-        return s + (Number(fp.productos?.precio_unitario) || 0) * (parseFloat(fp.dosis) || 0)
+        return s + (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
       }, 0)
     }, 0)
     const totalCostos = manual + jornales + agroquimicos
     const costosCategorias = [
       { label: 'Jornales', value: jornales, color: '#176a25' },
-      { label: 'Costos manuales', value: manual, color: '#2f6fea' },
       { label: 'Agroquimicos', value: agroquimicos, color: '#d9841f' },
-    ].filter(c => c.value > 0)
+      ...agruparCostosManualesDashboard(costosManuales || []),
+    ]
+      .filter(c => c.value > 0)
+      .sort((a, b) => b.value - a.value)
 
     setStats({
       bloques: bloques?.length || 0,
@@ -446,6 +456,17 @@ function agruparProduccionMovil(plantas) {
     .slice(0, 3)
 }
 
+function agruparCostosManualesDashboard(costos) {
+  const grupos = {}
+  ;(costos || []).forEach(costo => {
+    const key = costo.tipo || 'otro'
+    const meta = COSTO_MANUAL_LABELS[key] || COSTO_MANUAL_LABELS.otro
+    if (!grupos[key]) grupos[key] = { label: meta.label, value: 0, color: meta.color }
+    grupos[key].value += Number(costo.monto) || 0
+  })
+  return Object.values(grupos)
+}
+
 function construirActividadesMovil({ tareas, cosechas, costos, fumigaciones }) {
   const lista = [
     ...(tareas || []).map(t => ({
@@ -477,7 +498,7 @@ function construirActividadesMovil({ tareas, cosechas, costos, fumigaciones }) {
     })),
     ...(costos || []).map(c => ({
       id: `costo-${c.id}`,
-      title: c.concepto || 'Gasto registrado',
+      title: c.descripcion || c.concepto || 'Gasto registrado',
       sub: fmtGs(c.monto),
       badge: 'Costo',
       iconBg: '#fff3e3',
@@ -603,6 +624,10 @@ function CostosMini({ data, onClick }) {
   const total = data.costos || 0
   const principal = data.costosCategorias[0]
   const pctPrincipal = total > 0 && principal ? Math.round((principal.value / total) * 100) : 0
+  const categorias = data.costosCategorias.length ? data.costosCategorias : [{ label:'Sin datos', value:0, color:'#9aa19a' }]
+  const visibles = categorias.slice(0, 3)
+  const restantes = categorias.slice(3)
+  const otros = restantes.reduce((s, c) => s + (Number(c.value) || 0), 0)
   return (
     <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, padding:14, minHeight:146, textAlign:'left', width:'100%' }}>
       <h2 style={{ ...sectionTitle, fontSize:16 }}>Costos del mes</h2>
@@ -620,13 +645,20 @@ function CostosMini({ data, onClick }) {
           <span style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', fontSize:11, fontWeight:900 }}>{pctPrincipal || 0}%</span>
         </div>
         <div style={{ display:'grid', gap:7 }}>
-          {(data.costosCategorias.length ? data.costosCategorias : [{ label:'Sin datos', value:0, color:'#9aa19a' }]).slice(0, 3).map(c => (
+          {visibles.map(c => (
             <div key={c.label} style={{ background:'#f5f6f3', borderRadius:8, padding:'5px 7px', display:'grid', gridTemplateColumns:'7px minmax(0, 1fr) auto', alignItems:'center', gap:6, minWidth:0 }}>
               <span style={{ width:7, height:7, borderRadius:'50%', background:c.color, flexShrink:0 }} />
               <span style={{ fontSize:8.5, fontWeight:800, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.label}</span>
               <span style={{ fontSize:8.5, fontWeight:900 }}>{total > 0 ? Math.round((c.value / total) * 100) : 0}%</span>
             </div>
           ))}
+          {otros > 0 && (
+            <div style={{ background:'#f5f6f3', borderRadius:8, padding:'5px 7px', display:'grid', gridTemplateColumns:'7px minmax(0, 1fr) auto', alignItems:'center', gap:6, minWidth:0 }}>
+              <span style={{ width:7, height:7, borderRadius:'50%', background:'#8a948b', flexShrink:0 }} />
+              <span style={{ fontSize:8.5, fontWeight:800, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Otros</span>
+              <span style={{ fontSize:8.5, fontWeight:900 }}>{Math.round((otros / total) * 100)}%</span>
+            </div>
+          )}
         </div>
       </div>
     </button>

@@ -7,6 +7,14 @@ const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 
 const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
 const fmtNumber = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
+const COSTO_MANUAL_LABELS = {
+  insumos: { label: 'Insumos', color: '#2563eb' },
+  combustible: { label: 'Combustible', color: '#d9841f' },
+  herramientas: { label: 'Herramientas', color: '#6f7770' },
+  electricidad: { label: 'Electricidad', color: '#0284c7' },
+  gastos_administrativos: { label: 'Administracion', color: '#8e44ad' },
+  otro: { label: 'Otros gastos', color: '#64748b' },
+}
 
 const quickLinks = [
   { path: '/mapa', icon: 'ti-map', title: 'Mapa', sub: 'Ver bloques' },
@@ -193,7 +201,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde)
 
     const [{ data: costosManuales }, { data: asistencia }, { data: fumigaciones }, { data: planesNutricionales }] = await Promise.all([
-      supabase.from('costos').select('id, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
+      supabase.from('costos').select('id, tipo, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
       asistenciaQuery,
       supabase
         .from('fumigaciones')
@@ -223,9 +231,11 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
     const costos = costosManual + jornales + agroquimicos
     const breakdown = [
       { label: 'Jornales', value: jornales, color: '#176a25' },
-      { label: 'Insumos y fumigaciones', value: agroquimicos, color: '#d88918' },
-      { label: 'Costos manuales', value: costosManual, color: '#2563eb' },
-    ].filter(item => item.value > 0)
+      { label: 'Agroquimicos', value: agroquimicos, color: '#d88918' },
+      ...agruparCostosManualesDashboard(costosManuales || []),
+    ]
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value)
     const costosGrafico = [
       ...(costosManuales || []).map(c => ({ fecha: c.fecha, monto: Number(c.monto) || 0 })),
       ...(asistencia || [])
@@ -437,6 +447,17 @@ function agruparProduccion(plantas) {
   return Object.values(mapa)
     .map(c => ({ ...c, bloques: c.bloques.size }))
     .sort((a, b) => b.plantaciones - a.plantaciones)
+}
+
+function agruparCostosManualesDashboard(costos) {
+  const grupos = {}
+  ;(costos || []).forEach(costo => {
+    const key = costo.tipo || 'otro'
+    const meta = COSTO_MANUAL_LABELS[key] || COSTO_MANUAL_LABELS.otro
+    if (!grupos[key]) grupos[key] = { label: meta.label, value: 0, color: meta.color }
+    grupos[key].value += Number(costo.monto) || 0
+  })
+  return Object.values(grupos)
 }
 
 function construirGrafico(cosechas, costos) {
