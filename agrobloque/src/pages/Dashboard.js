@@ -5,6 +5,8 @@ import DesktopDashboard from './DesktopDashboard'
 import { filterTabsByRole } from '../lib/permissions'
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
+const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
+const fmtNum = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 
 function LogoHS({ size = 56 }) {
   return (
@@ -117,6 +119,13 @@ const accesos = [
   { icon: 'ti-calculator', label: 'Contabilidad', sub: 'Balance', path: '/contabilidad' },
 ]
 
+const operacionesFrecuentes = [
+  { icon: 'vivero-icon', label: 'Vivero', path: '/vivero' },
+  { icon: 'ti-spray', label: 'Fumigar', path: '/fumigaciones' },
+  { icon: 'ti-cut', label: 'Cosecha', path: '/cosecha' },
+  { icon: 'ti-box', label: 'Inventario', path: '/inventario' },
+]
+
 const fondo = {
   minHeight: '100vh',
   background: `
@@ -156,6 +165,13 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
   const [campos, setCampos] = useState([])
   const [stats, setStats] = useState({ bloques: 0, activos: 0, cultivos: 0, operarios: 0 })
   const [alertas, setAlertas] = useState([])
+  const [mobileData, setMobileData] = useState({
+    productos: 0,
+    costos: 0,
+    costosCategorias: [],
+    produccion: [],
+    actividades: [],
+  })
   const [loading, setLoading] = useState(true)
   const viewportWidth = useViewportWidth()
   const navigate = useNavigate()
@@ -167,6 +183,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
   const cargarStats = async (campo) => {
     if (!campo?.id) return
     setLoading(true)
+    const mesDesde = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
 
     const { data: bloques } = await supabase
       .from('bloques')
@@ -175,14 +192,23 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
 
     const bloqueIds = (bloques || []).map(b => b.id)
     const plantacionesQuery = bloqueIds.length > 0
-      ? supabase.from('plantaciones').select('id').eq('activa', true).in('bloque_id', bloqueIds)
+      ? supabase.from('plantaciones').select('id, bloque_id, densidad_plantas_m2, cultivos(nombre)').eq('activa', true).in('bloque_id', bloqueIds)
       : Promise.resolve({ data: [] })
 
     const operariosQuery = isGuest
       ? Promise.resolve({ data: [] })
       : supabase.from('operarios').select('id').eq('campo_id', campo.id)
 
-    const [{ data: plantas }, { data: ops }, { data: tareas }] = await Promise.all([
+    const [
+      { data: plantas },
+      { data: ops },
+      { data: tareas },
+      { data: productos },
+      { data: cosechas },
+      { data: costosManuales },
+      { data: asistencia },
+      { data: fumigaciones },
+    ] = await Promise.all([
       plantacionesQuery,
       operariosQuery,
       supabase
@@ -192,7 +218,37 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
         .eq('completada', false)
         .lte('fecha_programada', hoy)
         .order('fecha_programada'),
+      supabase.from('productos').select('id').eq('activo', true),
+      bloqueIds.length > 0
+        ? supabase.from('cosechas').select('id, fecha, kg_total, precio_kg, bloques(codigo), cultivos(nombre)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
+        : Promise.resolve({ data: [] }),
+      supabase.from('costos').select('id, concepto, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }).limit(5),
+      isGuest
+        ? Promise.resolve({ data: [] })
+        : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde),
+      supabase
+        .from('fumigaciones')
+        .select('id, fecha, tipo, operario, bloques(codigo), fumigacion_productos(dosis, productos(precio_unitario))')
+        .eq('campo_id', campo.id)
+        .gte('fecha', mesDesde)
+        .order('fecha', { ascending: false })
+        .limit(5),
     ])
+
+    const manual = (costosManuales || []).reduce((s, c) => s + (Number(c.monto) || 0), 0)
+    const jornales = (asistencia || [])
+      .filter(a => a.operarios?.campo_id === campo.id)
+      .reduce((s, a) => s + (Number(a.monto) || 0), 0)
+    const agroquimicos = (fumigaciones || []).reduce((total, f) => {
+      return total + (f.fumigacion_productos || []).reduce((s, fp) => {
+        return s + (Number(fp.productos?.precio_unitario) || 0) * (parseFloat(fp.dosis) || 0)
+      }, 0)
+    }, 0)
+    const totalCostos = manual + jornales + agroquimicos
+    const costosCategorias = [
+      { label: 'Jornal', value: jornales, color: '#176a25' },
+      { label: 'Insumo', value: manual + agroquimicos, color: '#2f6fea' },
+    ].filter(c => c.value > 0)
 
     setStats({
       bloques: bloques?.length || 0,
@@ -201,6 +257,13 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       operarios: ops?.length || 0,
     })
     setAlertas(tareas || [])
+    setMobileData({
+      productos: productos?.length || 0,
+      costos: totalCostos,
+      costosCategorias,
+      produccion: agruparProduccionMovil(plantas || []),
+      actividades: construirActividadesMovil({ tareas: tareas || [], cosechas: cosechas || [], costos: costosManuales || [], fumigaciones: fumigaciones || [] }),
+    })
     setLoading(false)
   }
 
@@ -242,37 +305,37 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
     return <DesktopDashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} />
   }
 
-  const accesosVisibles = filterTabsByRole(accesos, role, isGuest)
+  const operacionesVisibles = filterTabsByRole(operacionesFrecuentes, role, isGuest)
 
   return (
-    <div style={fondo}>
-      <div style={{ padding: compacto ? '16px 14px 88px' : '24px 20px 100px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: compacto ? 16 : 26 }}>
+    <div style={{ minHeight: '100vh', background: '#d7dcd4', color: '#111611' }}>
+      <div style={{ background: '#0e130f', padding: '18px 14px 26px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: compacto ? 12 : 16 }}>
-            <LogoHS size={compacto ? 46 : 58} />
+            <LogoHS size={46} />
             <div>
-              <div style={{ fontSize: compacto ? 11 : 13, color: 'rgba(255,255,255,0.56)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 3 }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 3 }}>
                 Horticultura
               </div>
-              <div style={{ fontSize: compacto ? 21 : 24, color: '#fff', fontWeight: 850, letterSpacing: -0.7, lineHeight: 1.05 }}>
+              <div style={{ fontSize: 20, color: '#fff', fontWeight: 850, letterSpacing: -0.7, lineHeight: 1.05 }}>
                 El Sembrador
               </div>
             </div>
           </div>
 
           <button onClick={() => navigate('/agenda')} style={{
-            width: compacto ? 38 : 48,
-            height: compacto ? 38 : 48,
-            borderRadius: 18,
+            width: 38,
+            height: 38,
+            borderRadius: 13,
             border: 'none',
-            background: 'transparent',
+            background: '#181e19',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
             cursor: 'pointer',
           }} aria-label="Abrir agenda">
-            <i className="ti ti-bell" style={{ fontSize: compacto ? 25 : 31, color: '#fff' }} aria-hidden="true"></i>
+            <i className="ti ti-bell" style={{ fontSize: 23, color: '#fff' }} aria-hidden="true"></i>
             <span style={{
               position: 'absolute',
               top: 7,
@@ -285,29 +348,19 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
           </button>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${Math.max(campos.length, 1)}, minmax(0, 1fr))`,
-          gap: compacto ? 6 : 8,
-          padding: compacto ? 5 : 8,
-          borderRadius: compacto ? 22 : 28,
-          marginBottom: compacto ? 12 : 18,
-          background: 'linear-gradient(145deg, rgba(255,255,255,0.13), rgba(255,255,255,0.06))',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(campos.length, 1)}, minmax(0, 1fr))`, gap: 6, padding: 5, borderRadius: 14, background: '#181e19' }}>
           {campos.length === 0 ? (
             <div style={{ padding: 14, color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>Sin campos</div>
           ) : campos.map(campo => {
             const activo = campoActivo?.id === campo.id
             return (
               <button key={campo.id} onClick={() => seleccionarCampo(campo)} style={{
-                minHeight: compacto ? 42 : 54,
-                borderRadius: compacto ? 17 : 22,
+                minHeight: 36,
+                borderRadius: 11,
                 border: 'none',
                 background: activo ? '#050706' : 'rgba(255,255,255,0.03)',
                 color: activo ? '#fff' : 'rgba(255,255,255,0.72)',
-                fontSize: compacto ? 13 : 16,
+                fontSize: 13,
                 fontWeight: activo ? 800 : 500,
                 cursor: 'pointer',
                 boxShadow: activo ? '0 14px 24px rgba(0,0,0,0.32)' : 'none',
@@ -317,129 +370,283 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
             )
           })}
         </div>
+      </div>
 
-        <div style={{
-          borderRadius: compacto ? 20 : 24,
-          border: '1px solid rgba(255,255,255,0.22)',
-          background: `
-            radial-gradient(circle at 78% 20%, rgba(140,116,70,0.30), transparent 35%),
-            linear-gradient(135deg, #080b0a 0%, #171a18 52%, #231f16 100%)
-          `,
-          padding: compacto ? '18px 16px 18px' : '26px 24px 24px',
-          marginBottom: compacto ? 12 : 18,
-          boxShadow: '0 24px 60px rgba(0,0,0,0.42)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          <WatermarkHS compact={compacto} />
-          <div style={{
-            position: 'absolute',
-            right: 22,
-            bottom: 28,
-            width: compacto ? 126 : 150,
-            height: compacto ? 70 : 82,
-            borderTop: '3px solid rgba(255,255,255,0.08)',
-            borderRadius: '70% 0 0 0',
-            transform: 'rotate(-16deg)',
-            pointerEvents: 'none',
-          }} />
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
+      <main style={{ padding: '14px 14px 84px', marginTop: -12 }}>
+        <section style={mobileCard}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <div>
-              <div style={{ fontSize: compacto ? 12 : 15, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: compacto ? 10 : 16 }}>
-                Bloques activos
+              <div style={mobileEyebrow}>Estado general</div>
+              <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+                <strong style={{ fontSize:38, lineHeight:1, letterSpacing:-1.8 }}>{loading ? '-' : stats.activos}</strong>
+                <span style={{ fontSize:15, fontWeight:800 }}>bloques activos</span>
               </div>
-              <div style={{ fontSize: muyChico ? 46 : compacto ? 52 : 66, lineHeight: 0.9, fontWeight: 900, letterSpacing: -4, color: '#fff' }}>
-                {loading ? '-' : stats.activos}
-              </div>
-              <div style={{ fontSize: compacto ? 15 : 19, color: '#fff', marginTop: compacto ? 9 : 14 }}>
-                de {stats.bloques} totales
-              </div>
+              <div style={mobileMuted}>de {stats.bloques} totales</div>
             </div>
-            <div style={{
-              width: compacto ? 44 : 58,
-              height: compacto ? 44 : 58,
-              borderRadius: compacto ? 15 : 17,
-              border: '1px solid rgba(255,255,255,0.22)',
-              background: 'rgba(255,255,255,0.06)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <i className="ti ti-chart-bar" style={{ color: '#7bc043', fontSize: compacto ? 25 : 32 }} aria-hidden="true"></i>
+            <div style={{ background:'#edf5ec', borderRadius:14, padding:'10px 12px', minWidth:80 }}>
+              <div style={mobileEyebrow}>Alertas</div>
+              <strong style={{ display:'block', fontSize:24, color:'#176a25', lineHeight:1.1 }}>{alertas.length}</strong>
+              <span style={{ fontSize:10, color:'#68716a' }}>{alertas.length ? 'pendientes' : 'sin alertas'}</span>
             </div>
           </div>
+        </section>
 
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.18)', margin: compacto ? '20px 0 16px' : '34px 0 22px' }} />
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '33.333%', top: '8%', bottom: '8%', width: 1, background: 'rgba(255,255,255,0.20)' }} />
-            <span style={{ position: 'absolute', left: '66.666%', top: '8%', bottom: '8%', width: 1, background: 'rgba(255,255,255,0.20)' }} />
-            <MiniStat icon="ti-plant" label="Cultivos" value={stats.cultivos} compact={compacto} />
-            {isGuest ? (
-              <MiniStat icon="ti-eye" label="Invitado" value="Ver" compact={compacto} />
-            ) : (
-              <MiniStat icon="ti-users" label="Operarios" value={stats.operarios} compact={compacto} />
-            )}
-            <MiniStat icon="ti-alert-triangle" label="Alertas" value={alertas.length} compact={compacto} />
-          </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:10, marginTop:12 }}>
+          <MetricCard title="Cultivos" value={stats.cultivos} sub="plantaciones" />
+          <MetricCard title={isGuest ? 'Acceso' : 'Operarios'} value={isGuest ? 'Ver' : stats.operarios} sub={isGuest ? 'invitado' : 'activos'} />
+          <MetricCard title="Stock" value={mobileData.productos} sub="productos" />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: compacto ? 7 : 12 }}>
-          {accesosVisibles.map(item => (
-            <button key={item.path} onClick={() => navigate(item.path)} style={{
-              ...cardBlanca,
-              minHeight: compacto ? 58 : 98,
-              borderRadius: compacto ? 16 : 22,
-              padding: compacto ? '8px 8px' : '18px 14px',
-              display: 'grid',
-              gridTemplateColumns: compacto ? '31px minmax(0, 1fr) 10px' : '54px minmax(0, 1fr) 18px',
-              alignItems: 'center',
-              gap: compacto ? 7 : 12,
-              cursor: 'pointer',
-              textAlign: 'left',
-              boxSizing: 'border-box',
-              minWidth: 0,
-            }}>
-              <span style={{
-                width: compacto ? 31 : 54,
-                height: compacto ? 31 : 54,
-                borderRadius: compacto ? 12 : 18,
-                background: item.green ? '#eef6ea' : '#f1f1f0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <DashboardIcon
-                  icon={item.icon}
-                  size={compacto ? 18 : 29}
-                  color={item.green ? '#2f741f' : '#080908'}
-                />
-              </span>
-              <span style={{ minWidth: 0 }}>
-                <span style={{
-                  display: 'block',
-                  color: '#050505',
-                  fontSize: compacto ? (item.label.length > 12 ? 10.5 : 12.5) : 18,
-                  fontWeight: 850,
-                  letterSpacing: -0.2,
-                  lineHeight: 1.1,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>
-                  {item.label}
-                </span>
-                <span style={{ display: 'block', color: '#4f5358', fontSize: compacto ? 10.5 : 14, marginTop: compacto ? 2 : 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {item.sub}
-                </span>
-              </span>
-              <i className="ti ti-chevron-right" style={{ color: '#151515', fontSize: compacto ? 17 : 22, justifySelf: 'end' }} aria-hidden="true"></i>
-            </button>
+        <section style={{ ...mobileCard, marginTop:12, padding:14 }}>
+          <div style={sectionHeader}>
+            <h2 style={sectionTitle}>Operacion de hoy</h2>
+            <button onClick={() => navigate('/agenda')} style={textButton}>Ver agenda</button>
+          </div>
+          <div style={{ display:'grid', gap:8 }}>
+            {mobileData.actividades.length === 0 ? (
+              <div style={{ color:'#737b74', fontSize:12, padding:'16px 0', textAlign:'center' }}>Sin movimientos recientes ni tareas pendientes.</div>
+            ) : mobileData.actividades.slice(0, 2).map(item => (
+              <ActivityRow key={item.id} item={item} onClick={() => navigate(item.path)} />
+            ))}
+          </div>
+        </section>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:12 }}>
+          <CostosMini data={mobileData} />
+          <ProduccionMini produccion={mobileData.produccion} />
+        </div>
+
+        <section style={{ ...mobileCard, marginTop:12, padding:14 }}>
+          <h2 style={{ ...sectionTitle, marginBottom:10 }}>Operaciones frecuentes</h2>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4, minmax(0, 1fr))', gap:8 }}>
+            {operacionesVisibles.map(item => (
+              <button key={item.path} onClick={() => navigate(item.path)} style={operationButton}>
+                <DashboardIcon icon={item.icon} size={17} color="#176a25" />
+                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function agruparProduccionMovil(plantas) {
+  const mapa = {}
+  plantas.forEach(p => {
+    const nombre = p.cultivos?.nombre || 'Sin cultivo'
+    if (!mapa[nombre]) mapa[nombre] = { nombre, plantaciones: 0, bloques: new Set() }
+    mapa[nombre].plantaciones += 1
+    if (p.bloque_id) mapa[nombre].bloques.add(p.bloque_id)
+  })
+  return Object.values(mapa)
+    .map(c => ({ ...c, bloques: c.bloques.size }))
+    .sort((a, b) => b.plantaciones - a.plantaciones)
+    .slice(0, 3)
+}
+
+function construirActividadesMovil({ tareas, cosechas, costos, fumigaciones }) {
+  const lista = [
+    ...(tareas || []).map(t => ({
+      id: `tarea-${t.id}`,
+      title: t.descripcion || 'Tarea pendiente',
+      sub: `${t.bloques?.codigo ? `Bloque ${t.bloques.codigo} · ` : ''}${t.fecha_programada || ''}`,
+      badge: 'Agenda',
+      iconBg: '#eef7ee',
+      path: '/agenda',
+      fecha: t.fecha_programada || '',
+    })),
+    ...(cosechas || []).map(c => ({
+      id: `cosecha-${c.id}`,
+      title: `Cosecha ${c.bloques?.codigo || ''}`.trim(),
+      sub: `${fmtNum(c.kg_total)} kg · ${fmtGs((Number(c.kg_total) || 0) * (Number(c.precio_kg) || 0))}`,
+      badge: 'Venta',
+      iconBg: '#fff3e3',
+      path: '/cosecha',
+      fecha: c.fecha || '',
+    })),
+    ...(fumigaciones || []).map(f => ({
+      id: `fumigacion-${f.id}`,
+      title: f.tipo || 'Fumigacion',
+      sub: `${f.bloques?.map?.(b => b.codigo).filter(Boolean).join(', ') || 'Bloques'}${f.operario ? ` · ${f.operario}` : ''}`,
+      badge: 'Hecha',
+      iconBg: '#eef7ee',
+      path: '/fumigaciones',
+      fecha: f.fecha || '',
+    })),
+    ...(costos || []).map(c => ({
+      id: `costo-${c.id}`,
+      title: c.concepto || 'Gasto registrado',
+      sub: fmtGs(c.monto),
+      badge: 'Costo',
+      iconBg: '#fff3e3',
+      path: '/costos',
+      fecha: c.fecha || '',
+    })),
+  ]
+
+  return lista
+    .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))
+    .slice(0, 4)
+}
+
+const mobileCard = {
+  background: '#fff',
+  border: '1px solid rgba(255,255,255,0.78)',
+  borderRadius: 20,
+  boxShadow: '0 12px 26px rgba(30,38,31,0.08)',
+  padding: 16,
+}
+
+const mobileEyebrow = {
+  color: '#68716a',
+  fontSize: 10,
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+  marginBottom: 6,
+}
+
+const mobileMuted = {
+  color: '#737b74',
+  fontSize: 11,
+  marginTop: 4,
+}
+
+const sectionHeader = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 10,
+}
+
+const sectionTitle = {
+  margin: 0,
+  fontSize: 18,
+  lineHeight: 1.1,
+  letterSpacing: -0.4,
+  fontWeight: 850,
+}
+
+const textButton = {
+  border: 'none',
+  background: 'transparent',
+  color: '#176a25',
+  fontSize: 11,
+  fontWeight: 800,
+  cursor: 'pointer',
+  padding: 0,
+}
+
+const operationButton = {
+  border: 'none',
+  background: '#eef7ee',
+  borderRadius: 10,
+  minHeight: 34,
+  padding: '5px 6px',
+  display: 'grid',
+  placeItems: 'center',
+  gap: 2,
+  color: '#111611',
+  fontSize: 9.5,
+  fontWeight: 850,
+  cursor: 'pointer',
+  minWidth: 0,
+}
+
+function MetricCard({ title, value, sub }) {
+  return (
+    <div style={{ ...mobileCard, minHeight: 78, padding: '13px 14px', boxSizing: 'border-box' }}>
+      <div style={mobileEyebrow}>{title}</div>
+      <strong style={{ display:'block', fontSize:27, lineHeight:1, letterSpacing:-0.8 }}>{value}</strong>
+      <div style={mobileMuted}>{sub}</div>
+    </div>
+  )
+}
+
+function ActivityRow({ item, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      border: 'none',
+      background: '#fafbf8',
+      borderRadius: 14,
+      minHeight: 48,
+      padding: '8px 10px',
+      display: 'grid',
+      gridTemplateColumns: '30px minmax(0, 1fr) 46px',
+      gap: 10,
+      alignItems: 'center',
+      textAlign: 'left',
+      cursor: 'pointer',
+    }}>
+      <span style={{ width:28, height:28, borderRadius:10, background:item.iconBg, display:'block' }} />
+      <span style={{ minWidth:0 }}>
+        <strong style={{ display:'block', fontSize:13, lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.title}</strong>
+        <span style={{ display:'block', color:'#737b74', fontSize:10.5, marginTop:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.sub}</span>
+      </span>
+      <span style={{ justifySelf:'end', background:'#e8f5e5', color:'#176a25', borderRadius:8, padding:'4px 7px', fontSize:9, fontWeight:800 }}>
+        {item.badge}
+      </span>
+    </button>
+  )
+}
+
+function CostosMini({ data }) {
+  const total = data.costos || 0
+  const principal = data.costosCategorias[0]
+  const pctPrincipal = total > 0 && principal ? Math.round((principal.value / total) * 100) : 0
+  return (
+    <section style={{ ...mobileCard, padding:14, minHeight:146 }}>
+      <h2 style={{ ...sectionTitle, fontSize:16 }}>Costos del mes</h2>
+      <strong style={{ display:'block', fontSize:18, marginTop:4 }}>{fmtGs(total)}</strong>
+      <div style={{ display:'grid', gridTemplateColumns:'66px 1fr', gap:8, alignItems:'center', marginTop:12 }}>
+        <div style={{ width:58, height:58, borderRadius:'50%', border:'10px solid #e3e8e1', position:'relative', boxSizing:'border-box' }}>
+          <div style={{
+            position:'absolute',
+            inset:-10,
+            borderRadius:'50%',
+            border:'10px solid #176a25',
+            clipPath: pctPrincipal > 0 ? 'polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 0 100%, 0 50%)' : 'none',
+            opacity: pctPrincipal > 0 ? 1 : 0,
+          }} />
+          <span style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', fontSize:11, fontWeight:900 }}>{pctPrincipal || 0}%</span>
+        </div>
+        <div style={{ display:'grid', gap:7 }}>
+          {(data.costosCategorias.length ? data.costosCategorias : [{ label:'Sin datos', value:0, color:'#9aa19a' }]).slice(0, 2).map(c => (
+            <div key={c.label} style={{ background:'#f5f6f3', borderRadius:8, padding:'5px 7px', display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+              <span style={{ width:7, height:7, borderRadius:'50%', background:c.color, flexShrink:0 }} />
+              <span style={{ fontSize:8.5, fontWeight:800, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.label}</span>
+            </div>
           ))}
         </div>
       </div>
-    </div>
+    </section>
+  )
+}
+
+function ProduccionMini({ produccion }) {
+  const max = Math.max(...(produccion || []).map(p => p.plantaciones), 1)
+  return (
+    <section style={{ ...mobileCard, padding:14, minHeight:146 }}>
+      <h2 style={{ ...sectionTitle, fontSize:16, marginBottom:14 }}>Produccion</h2>
+      <div style={{ display:'grid', gap:11 }}>
+        {(produccion.length ? produccion : [{ nombre:'Sin cultivo', plantaciones:0, bloques:0 }]).slice(0, 3).map((p, i) => {
+          const colors = ['#176a25', '#c7352d', '#cb7a35']
+          const width = p.plantaciones > 0 ? Math.max(20, (p.plantaciones / max) * 100) : 0
+          return (
+            <div key={p.nombre}>
+              <div style={{ display:'flex', justifyContent:'space-between', gap:6, fontSize:10.5, marginBottom:5 }}>
+                <strong style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.nombre}</strong>
+                <span style={{ color:'#737b74', flexShrink:0 }}>{p.bloques} bl.</span>
+              </div>
+              <div style={{ height:6, borderRadius:8, background:'#dde5dc', overflow:'hidden' }}>
+                <div style={{ width:`${width}%`, height:'100%', background:colors[i] || '#176a25', borderRadius:8 }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
