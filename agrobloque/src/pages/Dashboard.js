@@ -48,6 +48,16 @@ const crearGradienteCostos = (categorias, total) => {
   return `conic-gradient(${partes.join(', ')})`
 }
 
+const COSTO_VERDES = ['#176a25', '#2a8c3a', '#4f9e2f', '#86b85b', '#0f5c22']
+const COSTO_NARANJAS = ['#d9841f', '#b96818', '#ee9b35', '#a65f1c']
+
+const sumarCategoria = (grupos, key, label, value, color) => {
+  const monto = Number(value) || 0
+  if (monto <= 0) return
+  if (!grupos[key]) grupos[key] = { label, value: 0, color }
+  grupos[key].value += monto
+}
+
 function LogoHS({ size = 56 }) {
   return (
     <div style={{
@@ -255,10 +265,10 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       supabase.from('costos').select('id, tipo, descripcion, concepto, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
       isGuest
         ? Promise.resolve({ data: [] })
-        : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde),
+        : supabase.from('asistencia').select('monto, fecha, operarios(campo_id, nombre)').gte('fecha', mesDesde),
       supabase
         .from('fumigaciones')
-        .select('id, fecha, tipo, operario, bloques(codigo), fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
+        .select('id, fecha, tipo, operario, bloques(codigo), fumigacion_productos(dosis, descuento_stock, productos(nombre, precio_unitario))')
         .eq('campo_id', campo.id)
         .gte('fecha', mesDesde)
         .order('fecha', { ascending: false }),
@@ -274,9 +284,11 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       }, 0)
     }, 0)
     const totalCostos = manual + jornales + agroquimicos
+    const jornalesDetalle = agruparJornalesDashboard(asistencia || [], campo.id)
+    const agroquimicosDetalle = agruparAgroquimicosDashboard(fumigaciones || [])
     const costosCategoriasBase = [
-      { label: 'Jornales', value: jornales, color: '#176a25' },
-      { label: 'Agroquimicos', value: agroquimicos, color: '#d9841f' },
+      ...(jornalesDetalle.length ? jornalesDetalle : [{ label: 'Jornales', value: jornales, color: '#176a25' }]),
+      ...(agroquimicosDetalle.length ? agroquimicosDetalle : [{ label: 'Agroquimicos', value: agroquimicos, color: '#d9841f' }]),
       ...agruparCostosManualesDashboard(costosManuales || []),
     ]
     const costosCategorias = completarCategoriasCostos(totalCostos, costosCategoriasBase)
@@ -484,8 +496,43 @@ function agruparCostosManualesDashboard(costos) {
       ? normalizarTipoCosto(costo.tipo)
       : 'otro'
     const meta = COSTO_MANUAL_LABELS[key] || COSTO_MANUAL_LABELS.otro
-    if (!grupos[key]) grupos[key] = { label: meta.label, value: 0, color: meta.color }
-    grupos[key].value += Number(costo.monto) || 0
+    const label = costo.descripcion || costo.concepto || meta.label
+    sumarCategoria(grupos, `manual-${label}-${key}`, label, costo.monto, meta.color)
+  })
+  return Object.values(grupos)
+}
+
+function agruparJornalesDashboard(asistencia, campoId) {
+  const grupos = {}
+  ;(asistencia || [])
+    .filter(a => a.operarios?.campo_id === campoId)
+    .forEach((registro, index) => {
+      const nombre = registro.operarios?.nombre || 'Jornal'
+      sumarCategoria(
+        grupos,
+        `jornal-${nombre}`,
+        nombre,
+        registro.monto,
+        COSTO_VERDES[index % COSTO_VERDES.length]
+      )
+    })
+  return Object.values(grupos)
+}
+
+function agruparAgroquimicosDashboard(fumigaciones) {
+  const grupos = {}
+  ;(fumigaciones || []).forEach((fumi, indexFumi) => {
+    ;(fumi.fumigacion_productos || []).forEach((fp, indexProducto) => {
+      const nombre = fp.productos?.nombre || 'Agroquimico'
+      const monto = (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
+      sumarCategoria(
+        grupos,
+        `agro-${nombre}`,
+        nombre,
+        monto,
+        COSTO_NARANJAS[(indexFumi + indexProducto) % COSTO_NARANJAS.length]
+      )
+    })
   })
   return Object.values(grupos)
 }
