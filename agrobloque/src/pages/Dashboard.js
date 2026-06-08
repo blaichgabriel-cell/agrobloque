@@ -651,42 +651,18 @@ function ActivityRow({ item, onClick }) {
 
 function CostosMini({ data, onClick }) {
   const total = data.costos || 0
-  const categorias = data.costosCategorias.length ? data.costosCategorias : [{ label:'Sin datos', value:0, color:'#9aa19a' }]
-  const segmentos = categorias.filter(c => Number(c.value) > 0)
-  const totalCategorias = segmentos.reduce((s, c) => s + (Number(c.value) || 0), 0)
-  const totalPorcentajes = totalCategorias || total
-  const donutBackground = crearGradienteCostos(segmentos, totalPorcentajes)
-  const visibles = categorias.slice(0, 3)
-  const restantes = categorias.slice(3)
-  const otros = restantes.reduce((s, c) => s + (Number(c.value) || 0), 0)
-  const pct = (value) => totalPorcentajes > 0 ? Math.round((Number(value || 0) / totalPorcentajes) * 100) : 0
   return (
-    <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, padding:14, minHeight:146, textAlign:'left', width:'100%' }}>
+    <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, padding:14, minHeight:146, textAlign:'left', width:'100%', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
       <h2 style={{ ...sectionTitle, fontSize:16 }}>Costos del mes</h2>
-      <strong style={{ display:'block', fontSize:18, marginTop:4 }}>{fmtGs(total)}</strong>
-      <div style={{ display:'grid', gridTemplateColumns:'62px minmax(0, 1fr)', gap:9, alignItems:'center', marginTop:12 }}>
-        <div style={{ width:62, height:62, borderRadius:'50%', background:donutBackground, display:'grid', placeItems:'center', boxShadow:'inset 0 0 0 1px rgba(0,0,0,0.04)' }}>
-          <div style={{ width:40, height:40, borderRadius:'50%', background:'#fff', display:'grid', placeItems:'center' }}>
-            <span style={{ fontSize:11, fontWeight:900 }}>{totalPorcentajes > 0 ? '100%' : '0%'}</span>
-          </div>
-        </div>
-        <div style={{ display:'grid', gap:7 }}>
-          {visibles.map(c => (
-            <div key={c.label} style={{ background:'#f5f6f3', borderRadius:8, padding:'5px 7px', display:'grid', gridTemplateColumns:'7px minmax(0, 1fr) auto', alignItems:'center', gap:6, minWidth:0 }}>
-              <span style={{ width:7, height:7, borderRadius:'50%', background:c.color, flexShrink:0 }} />
-              <span style={{ fontSize:8.5, fontWeight:800, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.label}</span>
-              <span style={{ fontSize:8.5, fontWeight:900 }}>{pct(c.value)}%</span>
-            </div>
-          ))}
-          {otros > 0 && (
-            <div style={{ background:'#f5f6f3', borderRadius:8, padding:'5px 7px', display:'grid', gridTemplateColumns:'7px minmax(0, 1fr) auto', alignItems:'center', gap:6, minWidth:0 }}>
-              <span style={{ width:7, height:7, borderRadius:'50%', background:'#8a948b', flexShrink:0 }} />
-              <span style={{ fontSize:8.5, fontWeight:800, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Otros</span>
-              <span style={{ fontSize:8.5, fontWeight:900 }}>{pct(otros)}%</span>
-            </div>
-          )}
+      <div>
+        <strong style={{ display:'block', fontSize:23, lineHeight:1.05, marginTop:4, letterSpacing:-0.7 }}>{fmtGs(total)}</strong>
+        <div style={{ color:'#737b74', fontSize:11, lineHeight:1.25, marginTop:8 }}>
+          Tocá para ver jornales, insumos y gastos cargados.
         </div>
       </div>
+      <span style={{ alignSelf:'flex-start', marginTop:12, background:'#eef7ee', color:'#176a25', borderRadius:10, padding:'7px 10px', fontSize:10.5, fontWeight:850 }}>
+        Ver detalle
+      </span>
     </button>
   )
 }
