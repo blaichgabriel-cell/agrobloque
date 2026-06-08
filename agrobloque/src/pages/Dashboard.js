@@ -373,7 +373,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       </div>
 
       <main style={{ padding: '14px 14px 84px', marginTop: -12 }}>
-        <section style={mobileCard}>
+        <button onClick={() => navigate('/mapa')} style={{ ...buttonReset, ...mobileCard, width:'100%', textAlign:'left' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <div>
               <div style={mobileEyebrow}>Estado general</div>
@@ -383,18 +383,18 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
               </div>
               <div style={mobileMuted}>de {stats.bloques} totales</div>
             </div>
-            <div style={{ background:'#edf5ec', borderRadius:14, padding:'10px 12px', minWidth:80 }}>
+            <div onClick={(e) => { e.stopPropagation(); navigate('/alertas') }} style={{ background:'#edf5ec', borderRadius:14, padding:'10px 12px', minWidth:80 }}>
               <div style={mobileEyebrow}>Alertas</div>
               <strong style={{ display:'block', fontSize:24, color:'#176a25', lineHeight:1.1 }}>{alertas.length}</strong>
               <span style={{ fontSize:10, color:'#68716a' }}>{alertas.length ? 'pendientes' : 'sin alertas'}</span>
             </div>
           </div>
-        </section>
+        </button>
 
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:10, marginTop:12 }}>
-          <MetricCard title="Cultivos" value={stats.cultivos} sub="plantaciones" />
-          <MetricCard title={isGuest ? 'Acceso' : 'Operarios'} value={isGuest ? 'Ver' : stats.operarios} sub={isGuest ? 'invitado' : 'activos'} />
-          <MetricCard title="Stock" value={mobileData.productos} sub="productos" />
+          <MetricCard title="Cultivos" value={stats.cultivos} sub="plantaciones" onClick={() => navigate('/mapa')} />
+          <MetricCard title={isGuest ? 'Acceso' : 'Operarios'} value={isGuest ? 'Ver' : stats.operarios} sub={isGuest ? 'invitado' : 'activos'} onClick={() => navigate(isGuest ? '/mapa' : '/asistencia')} />
+          <MetricCard title="Stock" value={mobileData.productos} sub="productos" onClick={() => navigate('/inventario')} />
         </div>
 
         <section style={{ ...mobileCard, marginTop:12, padding:14 }}>
@@ -412,8 +412,8 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
         </section>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:12 }}>
-          <CostosMini data={mobileData} />
-          <ProduccionMini produccion={mobileData.produccion} />
+          <CostosMini data={mobileData} onClick={() => navigate('/costos')} />
+          <ProduccionMini produccion={mobileData.produccion} onClick={() => navigate('/mapa')} />
         </div>
 
         <section style={{ ...mobileCard, marginTop:12, padding:14 }}>
@@ -554,13 +554,21 @@ const operationButton = {
   minWidth: 0,
 }
 
-function MetricCard({ title, value, sub }) {
+const buttonReset = {
+  border: 'none',
+  font: 'inherit',
+  color: 'inherit',
+  cursor: 'pointer',
+  boxSizing: 'border-box',
+}
+
+function MetricCard({ title, value, sub, onClick }) {
   return (
-    <div style={{ ...mobileCard, minHeight: 78, padding: '13px 14px', boxSizing: 'border-box' }}>
+    <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, minHeight: 78, padding: '13px 14px', boxSizing: 'border-box', textAlign:'left' }}>
       <div style={mobileEyebrow}>{title}</div>
       <strong style={{ display:'block', fontSize:27, lineHeight:1, letterSpacing:-0.8 }}>{value}</strong>
       <div style={mobileMuted}>{sub}</div>
-    </div>
+    </button>
   )
 }
 
@@ -591,12 +599,12 @@ function ActivityRow({ item, onClick }) {
   )
 }
 
-function CostosMini({ data }) {
+function CostosMini({ data, onClick }) {
   const total = data.costos || 0
   const principal = data.costosCategorias[0]
   const pctPrincipal = total > 0 && principal ? Math.round((principal.value / total) * 100) : 0
   return (
-    <section style={{ ...mobileCard, padding:14, minHeight:146 }}>
+    <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, padding:14, minHeight:146, textAlign:'left', width:'100%' }}>
       <h2 style={{ ...sectionTitle, fontSize:16 }}>Costos del mes</h2>
       <strong style={{ display:'block', fontSize:18, marginTop:4 }}>{fmtGs(total)}</strong>
       <div style={{ display:'grid', gridTemplateColumns:'66px 1fr', gap:8, alignItems:'center', marginTop:12 }}>
@@ -620,14 +628,14 @@ function CostosMini({ data }) {
           ))}
         </div>
       </div>
-    </section>
+    </button>
   )
 }
 
-function ProduccionMini({ produccion }) {
+function ProduccionMini({ produccion, onClick }) {
   const max = Math.max(...(produccion || []).map(p => p.plantaciones), 1)
   return (
-    <section style={{ ...mobileCard, padding:14, minHeight:146 }}>
+    <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, padding:14, minHeight:146, textAlign:'left', width:'100%' }}>
       <h2 style={{ ...sectionTitle, fontSize:16, marginBottom:14 }}>Produccion</h2>
       <div style={{ display:'grid', gap:11 }}>
         {(produccion.length ? produccion : [{ nombre:'Sin cultivo', plantaciones:0, bloques:0 }]).slice(0, 3).map((p, i) => {
@@ -646,7 +654,7 @@ function ProduccionMini({ produccion }) {
           )
         })}
       </div>
-    </section>
+    </button>
   )
 }
 
