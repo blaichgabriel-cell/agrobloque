@@ -222,7 +222,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       bloqueIds.length > 0
         ? supabase.from('cosechas').select('id, fecha, kg_total, precio_kg, bloques(codigo), cultivos(nombre)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
         : Promise.resolve({ data: [] }),
-      supabase.from('costos').select('id, concepto, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }).limit(5),
+      supabase.from('costos').select('id, concepto, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
       isGuest
         ? Promise.resolve({ data: [] })
         : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde),
@@ -231,8 +231,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
         .select('id, fecha, tipo, operario, bloques(codigo), fumigacion_productos(dosis, productos(precio_unitario))')
         .eq('campo_id', campo.id)
         .gte('fecha', mesDesde)
-        .order('fecha', { ascending: false })
-        .limit(5),
+        .order('fecha', { ascending: false }),
     ])
 
     const manual = (costosManuales || []).reduce((s, c) => s + (Number(c.monto) || 0), 0)
@@ -246,8 +245,9 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
     }, 0)
     const totalCostos = manual + jornales + agroquimicos
     const costosCategorias = [
-      { label: 'Jornal', value: jornales, color: '#176a25' },
-      { label: 'Insumo', value: manual + agroquimicos, color: '#2f6fea' },
+      { label: 'Jornales', value: jornales, color: '#176a25' },
+      { label: 'Costos manuales', value: manual, color: '#2f6fea' },
+      { label: 'Agroquimicos', value: agroquimicos, color: '#d9841f' },
     ].filter(c => c.value > 0)
 
     setStats({
@@ -620,10 +620,11 @@ function CostosMini({ data, onClick }) {
           <span style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', fontSize:11, fontWeight:900 }}>{pctPrincipal || 0}%</span>
         </div>
         <div style={{ display:'grid', gap:7 }}>
-          {(data.costosCategorias.length ? data.costosCategorias : [{ label:'Sin datos', value:0, color:'#9aa19a' }]).slice(0, 2).map(c => (
-            <div key={c.label} style={{ background:'#f5f6f3', borderRadius:8, padding:'5px 7px', display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+          {(data.costosCategorias.length ? data.costosCategorias : [{ label:'Sin datos', value:0, color:'#9aa19a' }]).slice(0, 3).map(c => (
+            <div key={c.label} style={{ background:'#f5f6f3', borderRadius:8, padding:'5px 7px', display:'grid', gridTemplateColumns:'7px minmax(0, 1fr) auto', alignItems:'center', gap:6, minWidth:0 }}>
               <span style={{ width:7, height:7, borderRadius:'50%', background:c.color, flexShrink:0 }} />
               <span style={{ fontSize:8.5, fontWeight:800, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.label}</span>
+              <span style={{ fontSize:8.5, fontWeight:900 }}>{total > 0 ? Math.round((c.value / total) * 100) : 0}%</span>
             </div>
           ))}
         </div>
