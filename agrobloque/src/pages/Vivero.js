@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
@@ -35,6 +36,13 @@ const tratamientoInicial = {
   notas: '',
 }
 
+const trasplanteInicial = {
+  bloque_id: '',
+  fecha_real_trasplante: hoy(),
+  cantidad_plantas: '',
+  finalizar_lote: true,
+}
+
 function ViveroIcon({ size = 24, color = '#2f741f' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -47,20 +55,25 @@ function ViveroIcon({ size = 24, color = '#2f741f' }) {
 }
 
 export default function Vivero() {
+  const navigate = useNavigate()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [campos, setCampos] = useState([])
+  const [bloques, setBloques] = useState([])
   const [lotes, setLotes] = useState([])
   const [tratamientos, setTratamientos] = useState([])
   const [modal, setModal] = useState(false)
   const [detalle, setDetalle] = useState(null)
   const [modalTratamiento, setModalTratamiento] = useState(false)
+  const [modalTrasplante, setModalTrasplante] = useState(false)
   const [form, setForm] = useState(formInicial)
   const [tratForm, setTratForm] = useState(tratamientoInicial)
+  const [trasForm, setTrasForm] = useState(trasplanteInicial)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     fetchCampos()
+    fetchBloques()
     fetchLotes()
   }, [])
 
@@ -96,6 +109,14 @@ export default function Vivero() {
 
     setError('')
     setLotes(data || [])
+  }
+
+  const fetchBloques = async () => {
+    const { data } = await supabase
+      .from('bloques')
+      .select('id, codigo, campo_id, tipo, campos(nombre)')
+      .order('codigo')
+    setBloques(data || [])
   }
 
   const fetchTratamientos = async (loteId) => {
@@ -205,6 +226,102 @@ export default function Vivero() {
     setSaving(false)
   }
 
+  const obtenerOCrearCultivo = async (nombreCultivo) => {
+    const nombre = (nombreCultivo || '').trim()
+    if (!nombre) throw new Error('Falta el cultivo del lote.')
+
+    const { data: existentes } = await supabase
+      .from('cultivos')
+      .select('id, nombre')
+      .ilike('nombre', nombre)
+      .limit(1)
+
+    if (existentes?.[0]?.id) return existentes[0].id
+
+    const { data: nuevo, error } = await supabase
+      .from('cultivos')
+      .insert({ nombre })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return nuevo.id
+  }
+
+  const abrirTrasplante = (lote) => {
+    const cantidadSugerida = num(lote.germinadas) || Math.max(num(lote.cantidad_semillas) - num(lote.perdidas), 0)
+    setDetalle(lote)
+    setTrasForm({
+      bloque_id: '',
+      fecha_real_trasplante: lote.fecha_real_trasplante || hoy(),
+      cantidad_plantas: cantidadSugerida || '',
+      finalizar_lote: true,
+    })
+    setError('')
+    setModalTrasplante(true)
+  }
+
+  const guardarTrasplante = async () => {
+    if (!detalle || !trasForm.bloque_id || !trasForm.fecha_real_trasplante) return
+    setSaving(true)
+    setError('')
+
+    try {
+      const bloque = bloques.find(b => b.id === trasForm.bloque_id)
+      const cultivoId = await obtenerOCrearCultivo(detalle.cultivo)
+
+      await supabase
+        .from('plantaciones')
+        .update({ activa: false })
+        .eq('bloque_id', trasForm.bloque_id)
+        .eq('activa', true)
+
+      const { data: plantacion, error: plantacionError } = await supabase
+        .from('plantaciones')
+        .insert({
+          bloque_id: trasForm.bloque_id,
+          cultivo_id: cultivoId,
+          notas: detalle.variedad ? `Variedad: ${detalle.variedad}` : null,
+          fecha_siembra: trasForm.fecha_real_trasplante,
+          densidad_plantas_m2: trasForm.cantidad_plantas || null,
+          activa: true,
+        })
+        .select('id')
+        .single()
+
+      if (plantacionError) throw plantacionError
+
+      const { error: loteError } = await supabase
+        .from('vivero_lotes')
+        .update({
+          fecha_real_trasplante: trasForm.fecha_real_trasplante,
+          estado: trasForm.finalizar_lote ? 'trasplantado' : 'listo',
+          bloque_id: trasForm.bloque_id,
+          plantacion_id: plantacion.id,
+          cantidad_trasplantada: num(trasForm.cantidad_plantas),
+        })
+        .eq('id', detalle.id)
+
+      if (loteError) throw loteError
+
+      await registrarAuditoria({
+        accion: 'Trasplanto lote de vivero',
+        modulo: 'Vivero',
+        tabla: 'plantaciones',
+        registroId: plantacion.id,
+        detalle: `${detalle.cultivo} -> bloque ${bloque?.codigo || ''}`,
+      })
+
+      setModalTrasplante(false)
+      setDetalle(null)
+      await fetchLotes()
+    } catch (err) {
+      setError(`No se pudo trasplantar el lote: ${err.message || 'revisa Supabase'}`)
+    }
+
+    setSaving(false)
+  }
+
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       <div style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
@@ -289,6 +406,16 @@ export default function Vivero() {
 
             {detalle.notas && <div style={{ background:'#f2f1ef', borderRadius:14, padding:12, fontSize:13, marginBottom:14 }}>{detalle.notas}</div>}
 
+            {detalle.bloque_id ? (
+              <button onClick={() => navigate(`/bloque/${detalle.bloque_id}`)} style={{ ...primaryBtn, marginBottom:12 }}>
+                Ver bloque trasplantado
+              </button>
+            ) : detalle.estado !== 'trasplantado' && (
+              <button onClick={() => abrirTrasplante(detalle)} style={{ ...primaryBtn, marginBottom:12, background:'#176a25' }}>
+                Trasplantar a bloque
+              </button>
+            )}
+
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
               <div style={{ fontSize:15, fontWeight:800 }}>Tratamientos</div>
               <button onClick={() => setModalTratamiento(true)} style={{ border:'none', borderRadius:12, background:'#1a5c2e', color:'#fff', padding:'8px 10px', fontSize:12, fontWeight:800 }}>+ Tratamiento</button>
@@ -354,6 +481,38 @@ export default function Vivero() {
             <Field label="Notas" textarea value={tratForm.notas} onChange={v => setTratForm(f => ({ ...f, notas:v }))} />
             <button onClick={guardarTratamiento} disabled={saving} style={primaryBtn}>{saving ? 'Guardando...' : 'Guardar tratamiento'}</button>
             <button onClick={() => setModalTratamiento(false)} style={secondaryBtn}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {modalTrasplante && detalle && (
+        <div style={overlay} onClick={e => e.target === e.currentTarget && setModalTrasplante(false)}>
+          <div style={sheet}>
+            <div style={{ fontSize:18, fontWeight:800, marginBottom:4 }}>Trasplantar a bloque</div>
+            <div style={{ fontSize:12, color:'#7d837d', marginBottom:16 }}>
+              {detalle.cultivo}{detalle.variedad ? ` - ${detalle.variedad}` : ''} · {detalle.campos?.nombre || 'Sin campo'}
+            </div>
+            {error && <div style={{ background:'#fff0f0', color:'#b02a2a', borderRadius:12, padding:10, fontSize:12, marginBottom:12 }}>{error}</div>}
+            <Select
+              label="Bloque destino *"
+              value={trasForm.bloque_id}
+              onChange={v => setTrasForm(f => ({ ...f, bloque_id:v }))}
+              options={bloques
+                .filter(b => !detalle.campo_id || b.campo_id === detalle.campo_id)
+                .map(b => [b.id, `${b.codigo} - ${b.campos?.nombre || 'Sin campo'}`])}
+            />
+            <Field label="Fecha real de trasplante *" type="date" value={trasForm.fecha_real_trasplante} onChange={v => setTrasForm(f => ({ ...f, fecha_real_trasplante:v }))} />
+            <Field label="Cantidad de plantas" type="number" value={trasForm.cantidad_plantas} onChange={v => setTrasForm(f => ({ ...f, cantidad_plantas:v }))} />
+            <label style={{ display:'flex', alignItems:'center', gap:10, background:'#fff', border:'1px solid #e3e5e1', borderRadius:12, padding:'11px 14px', marginBottom:12, fontSize:13, cursor:'pointer' }}>
+              <input
+                type="checkbox"
+                checked={!!trasForm.finalizar_lote}
+                onChange={e => setTrasForm(f => ({ ...f, finalizar_lote:e.target.checked }))}
+              />
+              Marcar lote como trasplantado
+            </label>
+            <button onClick={guardarTrasplante} disabled={saving} style={primaryBtn}>{saving ? 'Trasplantando...' : 'Crear plantacion en mapa'}</button>
+            <button onClick={() => setModalTrasplante(false)} style={secondaryBtn}>Cancelar</button>
           </div>
         </div>
       )}
