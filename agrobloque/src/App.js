@@ -46,16 +46,6 @@ export function LogoHS({ size = 48 }) {
       letterSpacing: -1,
     }}>
       HS
-      <span style={{
-        position: 'absolute',
-        top: Math.round(size * 0.17),
-        right: Math.round(size * 0.16),
-        width: Math.round(size * 0.25),
-        height: Math.round(size * 0.12),
-        background: '#7bc043',
-        borderRadius: '14px 14px 2px 14px',
-        transform: 'rotate(-10deg)',
-      }} />
     </div>
   )
 }
@@ -201,7 +191,6 @@ function DesktopSidebar({ isGuest = false, role }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
           <div style={{ width: 48, height: 48, borderRadius: 14, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', color: '#fff', fontWeight: 900, fontSize: 24, letterSpacing: -2, fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif" }}>
             HS
-            <span style={{ position: 'absolute', top: 8, right: 9, width: 14, height: 7, background: '#7bc043', borderRadius: '14px 14px 2px 14px', transform: 'rotate(-10deg)' }} />
           </div>
           <div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', letterSpacing: 1.1, textTransform: 'uppercase' }}>Horticultura</div>

@@ -122,7 +122,7 @@ export default function Fumigaciones() {
 
   const fetchFumigaciones = async () => {
     const { data } = await supabase.from('fumigaciones')
-      .select('*, campos(nombre), fumigacion_bloques(cultivo_snapshot, plantacion_id_snapshot, bloques(codigo, plantaciones(id, activa, cultivos(nombre)))), fumigacion_productos(*, productos(nombre, carencia_dias))')
+      .select('*, campos(nombre), fumigacion_bloques(bloque_id, cultivo_snapshot, plantacion_id_snapshot, bloques(codigo, plantaciones(id, activa, cultivos(nombre)))), fumigacion_productos(*, productos(nombre, unidad, carencia_dias))')
       .order('fecha', { ascending:false })
     setFumigaciones(data || [])
   }
@@ -150,83 +150,175 @@ export default function Fumigaciones() {
 
   const toggleBloque = (id) => setForm(f => ({ ...f, bloques_ids: f.bloques_ids.includes(id) ? f.bloques_ids.filter(x=>x!==id) : [...f.bloques_ids, id] }))
 
-  const guardar = async () => {
-    if (!form.fecha || form.bloques_ids.length === 0) return
-    setSaving(true)
-    const { data: fum } = await supabase.from('fumigaciones').insert({
-      campo_id: form.campo_id || null, tipo: form.tipo, fecha: form.fecha,
-      operario: form.operario || null,
-      tanques_cantidad: Number(form.tanques_cantidad) || null,
-      tanque_litros: Number(form.tanque_litros) || null,
-      notas: form.notas || null
-    }).select().single()
-    if (fum) {
-      await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
+  const cerrarModal = () => {
+    setModal(false)
+    setForm(formVacio())
+  }
+
+  const abrirNuevo = () => {
+    setDetalle(null)
+    setForm(formVacio())
+    setModal(true)
+  }
+
+  const parseProductoForm = (fp) => {
+    const match = String(fp.dosis || '').match(/^\s*([\d.,]+)\s*([a-zA-Z]+)?/)
+    return {
+      producto_id: fp.producto_id || '',
+      cantidad: fp.cantidad ?? match?.[1] ?? '',
+      unidad_uso: fp.unidad_uso || match?.[2] || unidadUsoDefault(fp.productos?.unidad),
+    }
+  }
+
+  const abrirEditar = async (fumigacion) => {
+    if (fumigacion.campo_id) await fetchBloques(fumigacion.campo_id)
+    setForm({
+      id: fumigacion.id,
+      tipo: fumigacion.tipo || 'fumigacion',
+      fecha: fumigacion.fecha || '',
+      campo_id: fumigacion.campo_id || '',
+      bloques_ids: (fumigacion.fumigacion_bloques || []).map(fb => fb.bloque_id).filter(Boolean),
+      operario: fumigacion.operario || '',
+      tanques_cantidad: fumigacion.tanques_cantidad || '',
+      tanque_litros: fumigacion.tanque_litros || '',
+      productos_form: (fumigacion.fumigacion_productos || []).length
+        ? fumigacion.fumigacion_productos.map(parseProductoForm)
+        : [{ producto_id:'', cantidad:'', unidad_uso:'g' }],
+      notas: fumigacion.notas || '',
+    })
+    setDetalle(null)
+    setModal(true)
+  }
+
+  const devolverStockFumigacion = async (id) => {
+    const { data: productosUsados } = await supabase
+      .from('fumigacion_productos')
+      .select('producto_id, descuento_stock, productos(stock_actual)')
+      .eq('fumigacion_id', id)
+
+    const devoluciones = (productosUsados || []).reduce((acc, item) => {
+      const descuento = Number(item.descuento_stock) || 0
+      if (!item.producto_id || descuento <= 0) return acc
+      if (!acc[item.producto_id]) {
+        acc[item.producto_id] = {
+          producto_id: item.producto_id,
+          stock_actual: Number(item.productos?.stock_actual) || 0,
+          devolver: 0,
+        }
+      }
+      acc[item.producto_id].devolver += descuento
+      return acc
+    }, {})
+
+    for (const item of Object.values(devoluciones)) {
+      await supabase
+        .from('productos')
+        .update({ stock_actual: item.stock_actual + item.devolver })
+        .eq('id', item.producto_id)
+    }
+  }
+
+  const guardarRelacionesFumigacion = async (fumigacionId) => {
+    if (form.bloques_ids.length > 0) {
       await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => {
         const bloque = bloques.find(x => x.id === b)
         return {
-          fumigacion_id: fum.id,
+          fumigacion_id: fumigacionId,
           bloque_id: b,
           cultivo_snapshot: getCultivoBloque(bloque) || null,
           plantacion_id_snapshot: getPlantacionActivaId(bloque),
         }
       }))
-      const prods = form.productos_form.filter(p => p.producto_id && p.cantidad)
-      if (prods.length > 0) {
-        await supabase.from('fumigacion_productos').insert(prods.map(p => {
-          const prod = productos.find(x => x.id === p.producto_id)
-          const descuento = convertirAStock(p.cantidad, p.unidad_uso, prod?.unidad)
-          return {
-            fumigacion_id: fum.id,
-            producto_id: p.producto_id,
-            dosis: `${p.cantidad} ${p.unidad_uso}`,
-            cantidad: Number(String(p.cantidad || '').replace(',', '.')) || null,
-            unidad_uso: p.unidad_uso || null,
-            descuento_stock: descuento === null ? null : descuento,
-          }
-        }))
-        for (const p of prods) {
-          const prod = productos.find(x => x.id === p.producto_id)
-          if (!prod) continue
-          const descuento = convertirAStock(p.cantidad, p.unidad_uso, prod.unidad)
-          if (!descuento || descuento <= 0) continue
-          await supabase.from('productos').update({ stock_actual: Math.max(0, Number(prod.stock_actual) - descuento) }).eq('id', p.producto_id)
-        }
-      }
     }
-    await fetchFumigaciones(); await fetchProductos()
-    setSaving(false); setModal(false)
-    setForm(formVacio())
+
+    const prods = form.productos_form.filter(p => p.producto_id && p.cantidad)
+    if (prods.length === 0) return
+
+    await supabase.from('fumigacion_productos').insert(prods.map(p => {
+      const prod = productos.find(x => x.id === p.producto_id)
+      const descuento = convertirAStock(p.cantidad, p.unidad_uso, prod?.unidad)
+      return {
+        fumigacion_id: fumigacionId,
+        producto_id: p.producto_id,
+        dosis: `${p.cantidad} ${p.unidad_uso}`,
+        cantidad: Number(String(p.cantidad || '').replace(',', '.')) || null,
+        unidad_uso: p.unidad_uso || null,
+        descuento_stock: descuento === null ? null : descuento,
+      }
+    }))
+
+    for (const p of prods) {
+      const { data: prodActual } = await supabase
+        .from('productos')
+        .select('stock_actual, unidad')
+        .eq('id', p.producto_id)
+        .single()
+      const prod = prodActual || productos.find(x => x.id === p.producto_id)
+      if (!prod) continue
+      const descuento = convertirAStock(p.cantidad, p.unidad_uso, prod.unidad)
+      if (!descuento || descuento <= 0) continue
+      await supabase
+        .from('productos')
+        .update({ stock_actual: Math.max(0, Number(prod.stock_actual) - descuento) })
+        .eq('id', p.producto_id)
+    }
+  }
+
+  const guardar = async () => {
+    if (!form.fecha || form.bloques_ids.length === 0) return
+    setSaving(true)
+    try {
+      const avisarError = (mensaje) => {
+        if (typeof window !== 'undefined') window.alert(mensaje)
+        else console.error(mensaje)
+      }
+      const payload = {
+        campo_id: form.campo_id || null,
+        tipo: form.tipo,
+        fecha: form.fecha,
+        operario: form.operario || null,
+        tanques_cantidad: Number(form.tanques_cantidad) || null,
+        tanque_litros: Number(form.tanque_litros) || null,
+        notas: form.notas || null,
+      }
+
+      if (form.id) {
+        const { data: fum, error } = await supabase
+          .from('fumigaciones')
+          .update(payload)
+          .eq('id', form.id)
+          .select()
+          .single()
+        if (error || !fum) {
+          avisarError(`No se pudo editar la fumigacion: ${error?.message || 'sin respuesta de Supabase'}`)
+          return
+        }
+        await devolverStockFumigacion(form.id)
+        await supabase.from('fumigacion_bloques').delete().eq('fumigacion_id', form.id)
+        await supabase.from('fumigacion_productos').delete().eq('fumigacion_id', form.id)
+        await guardarRelacionesFumigacion(fum.id)
+        await registrarAuditoria({ accion:'Edito fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
+      } else {
+        const { data: fum, error } = await supabase.from('fumigaciones').insert(payload).select().single()
+        if (error || !fum) {
+          avisarError(`No se pudo guardar la fumigacion: ${error?.message || 'sin respuesta de Supabase'}`)
+          return
+        }
+        await guardarRelacionesFumigacion(fum.id)
+        await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
+      }
+
+      await fetchFumigaciones()
+      await fetchProductos()
+      cerrarModal()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const eliminar = (id) => {
     setConfirmar({ fn: async () => {
-      const { data: productosUsados } = await supabase
-        .from('fumigacion_productos')
-        .select('producto_id, descuento_stock, productos(stock_actual)')
-        .eq('fumigacion_id', id)
-
-      const devoluciones = (productosUsados || []).reduce((acc, item) => {
-        const descuento = Number(item.descuento_stock) || 0
-        if (!item.producto_id || descuento <= 0) return acc
-        if (!acc[item.producto_id]) {
-          acc[item.producto_id] = {
-            producto_id: item.producto_id,
-            stock_actual: Number(item.productos?.stock_actual) || 0,
-            devolver: 0,
-          }
-        }
-        acc[item.producto_id].devolver += descuento
-        return acc
-      }, {})
-
-      for (const item of Object.values(devoluciones)) {
-        await supabase
-          .from('productos')
-          .update({ stock_actual: item.stock_actual + item.devolver })
-          .eq('id', item.producto_id)
-      }
-
+      await devolverStockFumigacion(id)
       await supabase.from('fumigaciones').delete().eq('id', id)
       await registrarAuditoria({ accion:'Elimino fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:id })
       setConfirmar(null); setDetalle(null); fetchFumigaciones(); fetchProductos()
@@ -270,7 +362,7 @@ export default function Fumigaciones() {
             <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Fumigaciones</div>
           </div>
           {!isGuest && (
-            <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+            <button onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
               <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
             </button>
           )}
@@ -404,6 +496,7 @@ export default function Fumigaciones() {
                     ))}
                   </div>
                 )}
+                {!isGuest && <button onClick={() => abrirEditar(detalle)} style={{ width:'100%', padding:12, borderRadius:14, border:'none', background:'#212121', fontSize:13, fontWeight:700, color:'#fff', cursor:'pointer', marginBottom:8 }}>Editar registro</button>}
                 {!isGuest && <button onClick={() => eliminar(detalle.id)} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginBottom:8 }}>Eliminar registro</button>}
                 <button onClick={() => setDetalle(null)} style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cerrar</button>
               </>
@@ -427,7 +520,7 @@ export default function Fumigaciones() {
           justifyContent:'center',
           padding: isDesktop ? '24px' : 0,
           overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
-        }} onClick={e => e.target===e.currentTarget && setModal(false)}>
+        }} onClick={e => e.target===e.currentTarget && cerrarModal()}>
           <div style={{
             background:'#f2f1ef',
             borderRadius: isDesktop ? 24 : '24px 24px 0 0',
@@ -438,7 +531,7 @@ export default function Fumigaciones() {
             overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
             boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
           }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Nuevo registro</div>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar registro' : 'Nuevo registro'}</div>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Tipo</div>
             <div style={{ display:'flex', gap:6, marginBottom:12 }}>
               {Object.entries(TIPOS).map(([k,v]) => (
@@ -509,8 +602,8 @@ export default function Fumigaciones() {
             <button onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{producto_id:'',cantidad:'',unidad_uso:'g'}]}))} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #e8e6e2', background:'transparent', fontSize:12, color:'#9a9a9a', cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas</div>
             <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, minHeight:60, resize:'vertical', boxSizing:'border-box' }} value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving?'Guardando...':'Guardar registro'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={()=>setModal(false)}>Cancelar</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar registro'}</button>
+            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={cerrarModal}>Cancelar</button>
           </div>
         </div>
       )}

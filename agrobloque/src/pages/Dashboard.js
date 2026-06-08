@@ -39,16 +39,6 @@ function LogoHS({ size = 56 }) {
         lineHeight: 1,
         fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif",
       }}>HS</span>
-      <span style={{
-        position: 'absolute',
-        top: 12,
-        right: 13,
-        width: 17,
-        height: 8,
-        background: '#7bc043',
-        borderRadius: '16px 16px 2px 16px',
-        transform: 'rotate(-8deg)',
-      }} />
     </div>
   )
 }
