@@ -16,6 +16,38 @@ const COSTO_MANUAL_LABELS = {
   otro: { label: 'Otros gastos', color: '#64748b' },
 }
 
+const normalizarTipoCosto = (valor = '') => String(valor || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9]+/g, '_')
+  .replace(/^_+|_+$/g, '')
+
+const completarCategoriasCostos = (totalCostos, categorias) => {
+  const base = (categorias || [])
+    .filter(c => Number(c.value) > 0)
+    .map(c => ({ ...c, value: Number(c.value) || 0 }))
+  const suma = base.reduce((s, c) => s + c.value, 0)
+  const diferencia = Math.max(0, (Number(totalCostos) || 0) - suma)
+  const completas = diferencia > 0
+    ? [...base, { label: 'Otros costos', value: diferencia, color: '#8a948b' }]
+    : base
+
+  return completas.sort((a, b) => b.value - a.value)
+}
+
+const crearGradienteCostos = (categorias, total) => {
+  if (!categorias.length || total <= 0) return '#e3e8e1'
+  let acumulado = 0
+  const partes = categorias.map(c => {
+    const inicio = (acumulado / total) * 100
+    acumulado += Number(c.value) || 0
+    const fin = (acumulado / total) * 100
+    return `${c.color} ${inicio}% ${fin}%`
+  })
+  return `conic-gradient(${partes.join(', ')})`
+}
+
 function LogoHS({ size = 56 }) {
   return (
     <div style={{
@@ -242,13 +274,12 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       }, 0)
     }, 0)
     const totalCostos = manual + jornales + agroquimicos
-    const costosCategorias = [
+    const costosCategoriasBase = [
       { label: 'Jornales', value: jornales, color: '#176a25' },
       { label: 'Agroquimicos', value: agroquimicos, color: '#d9841f' },
       ...agruparCostosManualesDashboard(costosManuales || []),
     ]
-      .filter(c => c.value > 0)
-      .sort((a, b) => b.value - a.value)
+    const costosCategorias = completarCategoriasCostos(totalCostos, costosCategoriasBase)
 
     setStats({
       bloques: bloques?.length || 0,
@@ -449,7 +480,9 @@ function agruparProduccionMovil(plantas) {
 function agruparCostosManualesDashboard(costos) {
   const grupos = {}
   ;(costos || []).forEach(costo => {
-    const key = costo.tipo || 'otro'
+    const key = COSTO_MANUAL_LABELS[normalizarTipoCosto(costo.tipo)]
+      ? normalizarTipoCosto(costo.tipo)
+      : 'otro'
     const meta = COSTO_MANUAL_LABELS[key] || COSTO_MANUAL_LABELS.otro
     if (!grupos[key]) grupos[key] = { label: meta.label, value: 0, color: meta.color }
     grupos[key].value += Number(costo.monto) || 0
@@ -612,41 +645,38 @@ function ActivityRow({ item, onClick }) {
 
 function CostosMini({ data, onClick }) {
   const total = data.costos || 0
-  const principal = data.costosCategorias[0]
-  const pctPrincipal = total > 0 && principal ? Math.round((principal.value / total) * 100) : 0
   const categorias = data.costosCategorias.length ? data.costosCategorias : [{ label:'Sin datos', value:0, color:'#9aa19a' }]
+  const segmentos = categorias.filter(c => Number(c.value) > 0)
+  const totalCategorias = segmentos.reduce((s, c) => s + (Number(c.value) || 0), 0)
+  const totalPorcentajes = totalCategorias || total
+  const donutBackground = crearGradienteCostos(segmentos, totalPorcentajes)
   const visibles = categorias.slice(0, 3)
   const restantes = categorias.slice(3)
   const otros = restantes.reduce((s, c) => s + (Number(c.value) || 0), 0)
+  const pct = (value) => totalPorcentajes > 0 ? Math.round((Number(value || 0) / totalPorcentajes) * 100) : 0
   return (
     <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, padding:14, minHeight:146, textAlign:'left', width:'100%' }}>
       <h2 style={{ ...sectionTitle, fontSize:16 }}>Costos del mes</h2>
       <strong style={{ display:'block', fontSize:18, marginTop:4 }}>{fmtGs(total)}</strong>
-      <div style={{ display:'grid', gridTemplateColumns:'66px 1fr', gap:8, alignItems:'center', marginTop:12 }}>
-        <div style={{ width:58, height:58, borderRadius:'50%', border:'10px solid #e3e8e1', position:'relative', boxSizing:'border-box' }}>
-          <div style={{
-            position:'absolute',
-            inset:-10,
-            borderRadius:'50%',
-            border:'10px solid #176a25',
-            clipPath: pctPrincipal > 0 ? 'polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 0 100%, 0 50%)' : 'none',
-            opacity: pctPrincipal > 0 ? 1 : 0,
-          }} />
-          <span style={{ position:'absolute', inset:0, display:'grid', placeItems:'center', fontSize:11, fontWeight:900 }}>{pctPrincipal || 0}%</span>
+      <div style={{ display:'grid', gridTemplateColumns:'62px minmax(0, 1fr)', gap:9, alignItems:'center', marginTop:12 }}>
+        <div style={{ width:62, height:62, borderRadius:'50%', background:donutBackground, display:'grid', placeItems:'center', boxShadow:'inset 0 0 0 1px rgba(0,0,0,0.04)' }}>
+          <div style={{ width:40, height:40, borderRadius:'50%', background:'#fff', display:'grid', placeItems:'center' }}>
+            <span style={{ fontSize:11, fontWeight:900 }}>{totalPorcentajes > 0 ? '100%' : '0%'}</span>
+          </div>
         </div>
         <div style={{ display:'grid', gap:7 }}>
           {visibles.map(c => (
             <div key={c.label} style={{ background:'#f5f6f3', borderRadius:8, padding:'5px 7px', display:'grid', gridTemplateColumns:'7px minmax(0, 1fr) auto', alignItems:'center', gap:6, minWidth:0 }}>
               <span style={{ width:7, height:7, borderRadius:'50%', background:c.color, flexShrink:0 }} />
               <span style={{ fontSize:8.5, fontWeight:800, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.label}</span>
-              <span style={{ fontSize:8.5, fontWeight:900 }}>{total > 0 ? Math.round((c.value / total) * 100) : 0}%</span>
+              <span style={{ fontSize:8.5, fontWeight:900 }}>{pct(c.value)}%</span>
             </div>
           ))}
           {otros > 0 && (
             <div style={{ background:'#f5f6f3', borderRadius:8, padding:'5px 7px', display:'grid', gridTemplateColumns:'7px minmax(0, 1fr) auto', alignItems:'center', gap:6, minWidth:0 }}>
               <span style={{ width:7, height:7, borderRadius:'50%', background:'#8a948b', flexShrink:0 }} />
               <span style={{ fontSize:8.5, fontWeight:800, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Otros</span>
-              <span style={{ fontSize:8.5, fontWeight:900 }}>{Math.round((otros / total) * 100)}%</span>
+              <span style={{ fontSize:8.5, fontWeight:900 }}>{pct(otros)}%</span>
             </div>
           )}
         </div>
