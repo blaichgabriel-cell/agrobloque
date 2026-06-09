@@ -41,6 +41,17 @@ const convertirAStock = (cantidad, unidadUso, unidadStock) => {
   return null
 }
 
+const multiplicadorTanques = (tanques) => {
+  const valor = Number(String(tanques || '').replace(',', '.')) || 0
+  return valor > 0 ? valor : 1
+}
+
+const calcularDescuentoStock = (productoForm, producto, tanques) => {
+  const dosisPorTanque = convertirAStock(productoForm.cantidad, productoForm.unidad_uso, producto?.unidad)
+  if (dosisPorTanque === null) return null
+  return dosisPorTanque * multiplicadorTanques(tanques)
+}
+
 const fmtCantidad = (n) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDigits: 3 })
 
 const formatearStock = (cantidad, unidad) => {
@@ -236,7 +247,7 @@ export default function Fumigaciones() {
 
     await supabase.from('fumigacion_productos').insert(prods.map(p => {
       const prod = productos.find(x => x.id === p.producto_id)
-      const descuento = convertirAStock(p.cantidad, p.unidad_uso, prod?.unidad)
+      const descuento = calcularDescuentoStock(p, prod, form.tanques_cantidad)
       return {
         fumigacion_id: fumigacionId,
         producto_id: p.producto_id,
@@ -255,7 +266,7 @@ export default function Fumigaciones() {
         .single()
       const prod = prodActual || productos.find(x => x.id === p.producto_id)
       if (!prod) continue
-      const descuento = convertirAStock(p.cantidad, p.unidad_uso, prod.unidad)
+      const descuento = calcularDescuentoStock(p, prod, form.tanques_cantidad)
       if (!descuento || descuento <= 0) continue
       await supabase
         .from('productos')
@@ -578,7 +589,7 @@ export default function Fumigaciones() {
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos <span style={{ color:'#212121' }}>(descuenta stock automaticamente)</span></div>
             {form.productos_form.map((pf,i)=>{
               const prod = productos.find(p=>p.id===pf.producto_id)
-              const descuento = prod ? convertirAStock(pf.cantidad, pf.unidad_uso, prod.unidad) : 0
+              const descuento = prod ? calcularDescuentoStock(pf, prod, form.tanques_cantidad) : 0
               return (
                 <div key={i} style={{ marginBottom:8 }}>
                   <div style={{ display:'grid', gridTemplateColumns:'1.5fr .75fr .75fr', gap:6 }}>
@@ -593,7 +604,7 @@ export default function Fumigaciones() {
                   </div>
                   {prod && <div style={{ fontSize:10, color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#212121', marginTop:3, paddingLeft:4 }}>
                     Stock: {formatearStock(prod.stock_actual, prod.unidad)}
-                    {descuento === null ? ' · medida incompatible con el stock' : descuento > 0 ? ` · descuenta ${fmtCantidad(descuento)} ${prod.unidad}` : ''}
+                    {descuento === null ? ' · medida incompatible con el stock' : descuento > 0 ? ` · descuenta ${formatearStock(descuento, prod.unidad)}` : ''}
                     {prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}
                   </div>}
                 </div>
