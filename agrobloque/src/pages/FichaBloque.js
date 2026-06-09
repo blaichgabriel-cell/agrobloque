@@ -93,6 +93,8 @@ export default function FichaBloque() {
 
   const [form, setForm] = useState({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', cantidad_plantas:'', abonos_ids:[], abonos_cantidades:{} })
   const [formMuerte, setFormMuerte] = useState({ cantidad:'', causa:'Enfermedad', descripcion:'' })
+  const [nuevoCultivoNombre, setNuevoCultivoNombre] = useState('')
+  const [cultivoRapidoError, setCultivoRapidoError] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -194,6 +196,8 @@ export default function FichaBloque() {
     setCultivos(cultivosData || [])
     setAbonos(abonosData || [])
     setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', cantidad_plantas:'', abonos_ids:[], abonos_cantidades:{} })
+    setNuevoCultivoNombre('')
+    setCultivoRapidoError('')
     setShowNuevaPlantacion(true)
   }
 
@@ -221,7 +225,39 @@ export default function FichaBloque() {
       abonos_ids: abIds,
       abonos_cantidades: abCants
     })
+    setNuevoCultivoNombre('')
+    setCultivoRapidoError('')
     setShowEditarPlantacion(true)
+  }
+
+  const agregarCultivoRapido = async () => {
+    const nombre = nuevoCultivoNombre.trim()
+    if (!nombre) return
+
+    const existente = cultivos.find(c => (c.nombre || '').trim().toLowerCase() === nombre.toLowerCase())
+    if (existente) {
+      setForm(f => ({ ...f, cultivo_id: existente.id }))
+      setNuevoCultivoNombre('')
+      setCultivoRapidoError('')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('cultivos')
+      .insert({ nombre })
+      .select('*')
+      .single()
+
+    if (error) {
+      setCultivoRapidoError(`No se pudo agregar el cultivo: ${error.message}`)
+      return
+    }
+
+    const lista = [...cultivos, data].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
+    setCultivos(lista)
+    setForm(f => ({ ...f, cultivo_id: data.id }))
+    setNuevoCultivoNombre('')
+    setCultivoRapidoError('')
   }
 
   const toggleAbono = (abonoId) => {
@@ -1066,6 +1102,27 @@ export default function FichaBloque() {
               <option value="">Selecciona cultivo...</option>
               {cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:8, marginTop:-2, marginBottom:10 }}>
+              <input
+                style={{ ...inpStyle, marginBottom:0 }}
+                type="text"
+                value={nuevoCultivoNombre}
+                onChange={e => setNuevoCultivoNombre(e.target.value)}
+                placeholder="Si no aparece, escribilo aca..."
+              />
+              <button
+                type="button"
+                onClick={agregarCultivoRapido}
+                style={{ padding:'0 14px', borderRadius:12, border:'none', background:'#176a25', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}
+              >
+                Agregar
+              </button>
+            </div>
+            {cultivoRapidoError && (
+              <div style={{ background:'#fff0f0', color:'#a52525', borderRadius:10, padding:'9px 11px', fontSize:12, marginBottom:10 }}>
+                {cultivoRapidoError}
+              </div>
+            )}
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Variedad</div>
             <input style={inpStyle} type="text" value={form.variedad_texto} onChange={e => setForm(f => ({...f, variedad_texto:e.target.value}))} placeholder="Ej: Rojo, Lamuyo..."/>
