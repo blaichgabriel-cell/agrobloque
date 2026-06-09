@@ -450,7 +450,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
         </section>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:12 }}>
-          <CostosMini data={mobileData} onClick={() => navigate('/costos')} />
+          <ResumenFinancieroMini onClick={() => navigate('/reportes')} />
           <ProduccionMini produccion={mobileData.produccion} onClick={() => navigate('/mapa')} />
         </div>
 
@@ -649,19 +649,18 @@ function ActivityRow({ item, onClick }) {
   )
 }
 
-function CostosMini({ data, onClick }) {
-  const total = data.costos || 0
+function ResumenFinancieroMini({ onClick }) {
   return (
     <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, padding:14, minHeight:146, textAlign:'left', width:'100%', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
-      <h2 style={{ ...sectionTitle, fontSize:16 }}>Costos del mes</h2>
+      <h2 style={{ ...sectionTitle, fontSize:16 }}>Resumen financiero</h2>
       <div>
-        <strong style={{ display:'block', fontSize:23, lineHeight:1.05, marginTop:4, letterSpacing:-0.7 }}>{fmtGs(total)}</strong>
+        <strong style={{ display:'block', fontSize:20, lineHeight:1.05, marginTop:4, letterSpacing:-0.5 }}>Ingresos, costos y margen</strong>
         <div style={{ color:'#737b74', fontSize:11, lineHeight:1.25, marginTop:8 }}>
           Tocá para ver jornales, insumos y gastos cargados.
         </div>
       </div>
       <span style={{ alignSelf:'flex-start', marginTop:12, background:'#eef7ee', color:'#176a25', borderRadius:10, padding:'7px 10px', fontSize:10.5, fontWeight:850 }}>
-        Ver detalle
+        Ver reporte
       </span>
     </button>
   )
