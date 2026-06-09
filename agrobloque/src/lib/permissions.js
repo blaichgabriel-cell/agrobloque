@@ -12,6 +12,7 @@ export const MODULES = [
   { key: 'plan_nutricional', label: 'Plan Nutricional', path: '/plan-nutricional' },
   { key: 'costos', label: 'Costos', path: '/costos' },
   { key: 'contabilidad', label: 'Contabilidad', path: '/contabilidad' },
+  { key: 'cuentas_pagar', label: 'Cuentas a pagar', path: '/cuentas-pagar', sensitive: true },
   { key: 'reportes', label: 'Reportes', path: '/reportes' },
   { key: 'compradores', label: 'Compradores', path: '/compradores' },
   { key: 'auditoria', label: 'Auditoria', path: '/auditoria', adminOnly: true },
@@ -27,7 +28,7 @@ export const ACTIONS = [
 
 const ALL_KEYS = MODULES.map(m => m.key)
 const OPERADOR_KEYS = ALL_KEYS.filter(key => !['configuracion', 'auditoria'].includes(key))
-const LECTURA_KEYS = ALL_KEYS.filter(key => !['asistencia', 'configuracion', 'auditoria'].includes(key))
+const LECTURA_KEYS = ALL_KEYS.filter(key => !['asistencia', 'cuentas_pagar', 'configuracion', 'auditoria'].includes(key))
 
 const DEFAULT_ACTIONS_BY_ROLE = {
   admin: ['view', 'create', 'edit', 'delete'],

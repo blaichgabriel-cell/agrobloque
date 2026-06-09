@@ -15,6 +15,7 @@ const moreTabs = [
   { path: '/plan-nutricional', icon: 'ti-leaf', label: 'Nutricion' },
   { path: '/costos', icon: 'ti-coin', label: 'Costos' },
   { path: '/contabilidad', icon: 'ti-calculator', label: 'Contab.' },
+  { path: '/cuentas-pagar', icon: 'ti-receipt-2', label: 'Deudas' },
   { path: '/reportes', icon: 'ti-chart-bar', label: 'Reportes' },
   { path: '/compradores', icon: 'ti-building-store', label: 'Compradores' },
   { path: '/auditoria', icon: 'ti-history', label: 'Audit.' },

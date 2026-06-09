@@ -17,6 +17,7 @@ const PERMISOS_MODULOS = [
   { key: 'plan_nutricional', label: 'Plan Nutricional' },
   { key: 'costos', label: 'Costos' },
   { key: 'contabilidad', label: 'Contabilidad' },
+  { key: 'cuentas_pagar', label: 'Cuentas a pagar' },
   { key: 'reportes', label: 'Reportes' },
   { key: 'compradores', label: 'Compradores' },
   { key: 'auditoria', label: 'Auditoria' },
@@ -356,6 +357,7 @@ export default function Configuracion() {
       'fertilizacion_plan_aplicaciones',
       'compradores', 'tareas', 'notas_modulo', 'vivero_lotes',
       'vivero_tratamientos', 'contabilidad_movimientos',
+      'proveedores_credito', 'proveedor_movimientos',
       'asistencia_notas_dia', 'plan_nutricional_registros',
       'guest_access_links', 'app_user_roles', 'audit_log',
     ]
@@ -493,6 +495,7 @@ export default function Configuracion() {
     { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#212121', bg:'#eeeeee', action: () => abrir('abonos') },
     { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#212121', bg:'#eeeeee', action: () => abrir('bloques') },
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
+    { icon:'ti-receipt-2', title:'Cuentas a pagar', sub:'Creditos con proveedores', color:'#176a25', bg:'#edf6ec', action: () => navigate('/cuentas-pagar') },
     { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:'#176a25', bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30', permisos: [] }) },
     { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:'#176a25', bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false }) },
     { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:'#212121', bg:'#eeeeee', action: () => navigate('/auditoria') },

@@ -14,6 +14,7 @@ import Fumigaciones from './pages/Fumigaciones'
 import PlanNutricional from './pages/PlanNutricional'
 import Costos from './pages/Costos'
 import Contabilidad from './pages/Contabilidad'
+import CuentasPagar from './pages/CuentasPagar'
 import Reportes from './pages/Reportes'
 import Compradores from './pages/Compradores'
 import Vivero from './pages/Vivero'
@@ -84,6 +85,7 @@ const allTabs = [
   { path:'/plan-nutricional', icon:'ti-leaf', label:'Plan Nutricional' },
   { path:'/costos', icon:'ti-coin', label:'Costos' },
   { path:'/contabilidad', icon:'ti-calculator', label:'Contabilidad' },
+  { path:'/cuentas-pagar', icon:'ti-receipt-2', label:'Cuentas a pagar' },
   { path:'/reportes', icon:'ti-chart-bar', label:'Reportes' },
   { path:'/compradores', icon:'ti-building-store', label:'Compradores' },
   { path:'/auditoria', icon:'ti-history', label:'Auditoria' },
@@ -293,6 +295,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
             <Route path="/plan-nutricional" element={<ProtectedRoute role={role} moduleKey="plan_nutricional"><PlanNutricional campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/costos" element={<ProtectedRoute role={role} moduleKey="costos"><Costos campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/contabilidad" element={<ProtectedRoute role={role} moduleKey="contabilidad"><Contabilidad/></ProtectedRoute>}/>
+            <Route path="/cuentas-pagar" element={<ProtectedRoute role={role} moduleKey="cuentas_pagar"><CuentasPagar/></ProtectedRoute>}/>
             <Route path="/reportes" element={<ProtectedRoute role={role} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
             <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="auditoria"><Auditoria/></ProtectedRoute>}/>
