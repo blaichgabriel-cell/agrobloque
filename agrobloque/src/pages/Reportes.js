@@ -88,7 +88,21 @@ export default function Reportes({ campoActivo, isGuest = false }) {
       const { data: manuales } = await supabase.from('costos').select('monto').eq('campo_id', campoSel.id).gte('fecha', desde).lte('fecha', hasta)
       const costosManuales = (manuales || []).reduce((s, c) => s + Number(c.monto), 0)
 
-      const costos = jornales + costosManuales
+      const { data: fumigacionesCostos } = await supabase
+        .from('fumigaciones')
+        .select('fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
+        .eq('campo_id', campoSel.id)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
+      const agroquimicos = (fumigacionesCostos || []).reduce((total, f) => {
+        return total + (f.fumigacion_productos || []).reduce((s, fp) => {
+          const cantidad = Number(fp.descuento_stock ?? fp.dosis) || 0
+          const precio = Number(fp.productos?.precio_unitario) || 0
+          return s + cantidad * precio
+        }, 0)
+      }, 0)
+
+      const costos = jornales + costosManuales + agroquimicos
       setDatos({ ingresos, costos, ganancia: ingresos - costos, kg, registros: cosechasCampo.length })
 
       // Por cultivo
@@ -373,7 +387,7 @@ export default function Reportes({ campoActivo, isGuest = false }) {
             <div style={{ background:'#fff', borderRadius:20, padding:'14px' }}>
               <div style={{ fontSize:9, color:'#9a9a9a', textTransform:'uppercase', marginBottom:4 }}>Costos</div>
               <div style={{ fontSize:18, fontWeight:800, color:'#e07b00', letterSpacing:-.5 }}>{fmtGs(datos.costos)}</div>
-              <div style={{ fontSize:10, color:'#b0b0b0', marginTop:2 }}>{isGuest ? 'gastos registrados' : 'jornales + gastos'}</div>
+              <div style={{ fontSize:10, color:'#b0b0b0', marginTop:2 }}>{isGuest ? 'gastos registrados' : 'jornales + insumos + gastos'}</div>
             </div>
           </div>
 

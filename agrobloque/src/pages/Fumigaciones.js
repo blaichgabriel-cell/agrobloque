@@ -83,6 +83,12 @@ const getBloquesConCultivo = (fumigacion) => {
     .join(', ')
 }
 
+const normalizarOperarios = (texto = '') =>
+  String(texto)
+    .split(',')
+    .map(nombre => nombre.trim())
+    .filter(Boolean)
+
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
@@ -119,6 +125,7 @@ export default function Fumigaciones() {
     campo_id:'',
     bloques_ids:[],
     operario:'',
+    operarios_nombres:[],
     tanques_cantidad:'',
     tanque_litros:'',
     productos_form:[{ producto_id:'', cantidad:'', unidad_uso:'g' }],
@@ -161,6 +168,16 @@ export default function Fumigaciones() {
 
   const toggleBloque = (id) => setForm(f => ({ ...f, bloques_ids: f.bloques_ids.includes(id) ? f.bloques_ids.filter(x=>x!==id) : [...f.bloques_ids, id] }))
 
+  const toggleOperario = (nombre) => {
+    setForm(f => {
+      const actuales = new Set(f.operarios_nombres?.length ? f.operarios_nombres : normalizarOperarios(f.operario))
+      if (actuales.has(nombre)) actuales.delete(nombre)
+      else actuales.add(nombre)
+      const lista = Array.from(actuales)
+      return { ...f, operarios_nombres: lista, operario: lista.join(', ') }
+    })
+  }
+
   const cerrarModal = () => {
     setModal(false)
     setForm(formVacio())
@@ -190,6 +207,7 @@ export default function Fumigaciones() {
       campo_id: fumigacion.campo_id || '',
       bloques_ids: (fumigacion.fumigacion_bloques || []).map(fb => fb.bloque_id).filter(Boolean),
       operario: fumigacion.operario || '',
+      operarios_nombres: normalizarOperarios(fumigacion.operario || ''),
       tanques_cantidad: fumigacion.tanques_cantidad || '',
       tanque_litros: fumigacion.tanque_litros || '',
       productos_form: (fumigacion.fumigacion_productos || []).length
@@ -287,7 +305,7 @@ export default function Fumigaciones() {
         campo_id: form.campo_id || null,
         tipo: form.tipo,
         fecha: form.fecha,
-        operario: form.operario || null,
+        operario: (form.operarios_nombres?.length ? form.operarios_nombres.join(', ') : form.operario) || null,
         tanques_cantidad: Number(form.tanques_cantidad) || null,
         tanque_litros: Number(form.tanque_litros) || null,
         notas: form.notas || null,
@@ -559,17 +577,31 @@ export default function Fumigaciones() {
             {bloques.length > 0 && <>
               <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloques tratados *</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
-                {bloques.map(b=>(
-                  <div key={b.id} onClick={()=>toggleBloque(b.id)} style={{ padding:'5px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', background: form.bloques_ids.includes(b.id) ? '#212121' : '#fff', color: form.bloques_ids.includes(b.id) ? '#fff' : '#555', border:'1px solid #e8e6e2' }}>{b.codigo}</div>
-                ))}
+                {bloques.map(b=>{
+                  const cultivo = getCultivoBloque(b)
+                  const activo = form.bloques_ids.includes(b.id)
+                  return (
+                    <div key={b.id} onClick={()=>toggleBloque(b.id)} style={{ padding:'7px 12px', borderRadius:16, fontSize:11, fontWeight:600, cursor:'pointer', background: activo ? '#212121' : '#fff', color: activo ? '#fff' : '#555', border:'1px solid #e8e6e2', minWidth:78 }}>
+                      <div>{b.codigo}</div>
+                      <div style={{ fontSize:10, fontWeight:500, opacity: activo ? 0.78 : 0.7, marginTop:2 }}>{cultivo || 'Sin cultivo'}</div>
+                    </div>
+                  )
+                })}
               </div>
             </>}
             {operarios.length > 0 && <>
-              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Operario</div>
-              <select style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }} value={form.operario} onChange={e=>setForm(f=>({...f,operario:e.target.value}))}>
-                <option value="">Sin asignar</option>
-                {operarios.map(o=><option key={o.id} value={o.nombre}>{o.nombre}</option>)}
-              </select>
+              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Operarios</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:6 }}>
+                {operarios.map(o => {
+                  const activo = form.operarios_nombres?.includes(o.nombre) || normalizarOperarios(form.operario).includes(o.nombre)
+                  return (
+                    <button key={o.id} type="button" onClick={() => toggleOperario(o.nombre)} style={{ padding:'7px 12px', borderRadius:16, border:'1px solid #e8e6e2', background: activo ? '#212121' : '#fff', color: activo ? '#fff' : '#555', fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                      {o.nombre}
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:12 }}>Podes seleccionar uno o varios.</div>
             </>}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12 }}>
               <div>

@@ -237,6 +237,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   const [form, setForm] = useState({
     fecha: today(),
     bloque_id: '',
+    bloques_ids: [],
     objetivo: 'Produccion',
     tanque_litros: '200',
     ec_agua: '',
@@ -259,7 +260,13 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     }
   }, [])
 
-  const bloqueActivo = useMemo(() => bloques.find(b => b.id === form.bloque_id), [bloques, form.bloque_id])
+  const bloquePrincipalId = form.bloque_id || (form.bloques_ids || [])[0] || ''
+  const bloquesSeleccionados = useMemo(() => {
+    const ids = new Set(form.bloques_ids || [])
+    if (form.bloque_id) ids.add(form.bloque_id)
+    return bloques.filter(b => ids.has(b.id))
+  }, [bloques, form.bloque_id, form.bloques_ids])
+  const bloqueActivo = useMemo(() => bloques.find(b => b.id === bloquePrincipalId), [bloques, bloquePrincipalId])
   const cultivoActivo = bloqueActivo?.plantaciones?.find(p => p.activa)?.cultivos?.nombre || ''
   const registrosConEc = registros.filter(r => Number(r.ec_final) > 0)
   const promedioEcFinal = registrosConEc.length
@@ -320,38 +327,38 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   }
 
   const cargarContextoBloqueIA = async () => {
-    if (!form.bloque_id) return null
+    if (!bloquePrincipalId) return null
 
     const [{ data: plantaciones }, { data: ferts }, { data: planes }, { data: registrosBloque }, { data: fumBloques }] = await Promise.all([
       supabase
         .from('plantaciones')
         .select('id, activa, fecha_siembra, densidad_plantas_m2, notas, cultivos(nombre), plantacion_abonos(cantidad, unidad, alcance, abonos(nombre))')
-        .eq('bloque_id', form.bloque_id)
+        .eq('bloque_id', bloquePrincipalId)
         .order('created_at', { ascending: false })
         .limit(5),
       supabase
         .from('fertilizaciones')
         .select('fecha, notas, soluciones')
-        .eq('bloque_id', form.bloque_id)
+        .eq('bloque_id', bloquePrincipalId)
         .order('fecha', { ascending: false })
         .limit(8),
       supabase
         .from('fertilizacion_planes')
         .select('nombre, fecha_inicio, litros_preparados, soluciones, notas, activo')
-        .eq('bloque_id', form.bloque_id)
+        .eq('bloque_id', bloquePrincipalId)
         .eq('activo', true)
         .order('created_at', { ascending: false })
         .limit(2),
       supabase
         .from('plan_nutricional_registros')
         .select('fecha, objetivo, tanque_litros, ec_agua, ec_objetivo, ec_final, productos, notas')
-        .eq('bloque_id', form.bloque_id)
+        .eq('bloque_id', bloquePrincipalId)
         .order('fecha', { ascending: false })
         .limit(8),
       supabase
         .from('fumigacion_bloques')
         .select('fumigaciones(fecha, tipo, notas, fumigacion_productos(dosis, unidad, productos(nombre)))')
-        .eq('bloque_id', form.bloque_id)
+        .eq('bloque_id', bloquePrincipalId)
         .limit(8),
     ])
 
@@ -494,12 +501,42 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     }))
   }
 
+  const seleccionarBloquePrincipal = (bloque_id) => {
+    setForm(f => ({
+      ...f,
+      bloque_id,
+      bloques_ids: bloque_id
+        ? Array.from(new Set([bloque_id, ...(f.bloques_ids || [])]))
+        : (f.bloques_ids || []),
+    }))
+  }
+
+  const alternarBloqueDestino = (bloque_id) => {
+    setForm(f => {
+      const actuales = new Set(f.bloques_ids || [])
+      if (actuales.has(bloque_id)) {
+        actuales.delete(bloque_id)
+      } else {
+        actuales.add(bloque_id)
+      }
+      const lista = Array.from(actuales)
+      return {
+        ...f,
+        bloques_ids: lista,
+        bloque_id: f.bloque_id && actuales.has(f.bloque_id) ? f.bloque_id : (lista[0] || ''),
+      }
+    })
+  }
+
   const guardar = async () => {
     if (isGuest || !campoActivo?.id) return
     setSaving(true)
-    const payload = {
+    const bloquesDestino = (form.bloques_ids || []).length
+      ? form.bloques_ids
+      : (form.bloque_id ? [form.bloque_id] : [null])
+    const payloads = bloquesDestino.map(bloque_id => ({
       campo_id: campoActivo.id,
-      bloque_id: form.bloque_id || null,
+      bloque_id,
       fecha: form.fecha || today(),
       objetivo: form.objetivo,
       tanque_litros: Number(String(form.tanque_litros).replace(',', '.')) || null,
@@ -509,9 +546,9 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
       productos: form.productos || [],
       notas: form.notas || null,
       origen: modo === 'asistente' ? 'asistente' : 'manual',
-    }
-    await supabase.from('plan_nutricional_registros').insert(payload)
-    setForm({ fecha: today(), bloque_id: '', objetivo: 'Produccion', tanque_litros: '200', ec_agua: '', ec_objetivo: '', ec_final: '', productos: [], notas: '' })
+    }))
+    await supabase.from('plan_nutricional_registros').insert(payloads)
+    setForm({ fecha: today(), bloque_id: '', bloques_ids: [], objetivo: 'Produccion', tanque_litros: '200', ec_agua: '', ec_objetivo: '', ec_final: '', productos: [], notas: '' })
     setModo('manual')
     await cargarDatos()
     setSaving(false)
@@ -521,6 +558,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
     setForm({
       fecha: aplicarHoy ? today() : (registro.fecha || today()),
       bloque_id: registro.bloque_id || '',
+      bloques_ids: registro.bloque_id ? [registro.bloque_id] : [],
       objetivo: registro.objetivo || 'Produccion',
       tanque_litros: registro.tanque_litros ? String(registro.tanque_litros) : '200',
       ec_agua: registro.ec_agua ? String(registro.ec_agua) : '',
@@ -621,7 +659,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
           </div>
           <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr', gap:10 }}>
             <Input label="Fecha" type="date" value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
-            <Select label="Bloque" value={form.bloque_id} onChange={bloque_id => setForm(f => ({ ...f, bloque_id }))}>
+            <Select label="Bloque principal" value={form.bloque_id} onChange={seleccionarBloquePrincipal}>
               <option value="">Seleccionar bloque</option>
               {bloques.map(b => {
                 const cultivo = b.plantaciones?.find(p => p.activa)?.cultivos?.nombre
@@ -638,6 +676,34 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             <Input label="EC agua base" value={form.ec_agua} onChange={ec_agua => setForm(f => ({ ...f, ec_agua }))} />
             <Input label="EC objetivo" value={form.ec_objetivo} onChange={ec_objetivo => setForm(f => ({ ...f, ec_objetivo }))} />
             <Input label="EC final / estimada" value={form.ec_final} onChange={ec_final => setForm(f => ({ ...f, ec_final }))} />
+          </div>
+          <div style={{ marginTop:12, background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:14, padding:12 }}>
+            <div style={{ fontSize:12, color:'#4d544e', fontWeight:800, marginBottom:8 }}>
+              Bloques que reciben este plan ({bloquesSeleccionados.length})
+            </div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+              {bloques.map(b => {
+                const seleccionado = (form.bloques_ids || []).includes(b.id)
+                const cultivo = b.plantaciones?.find(p => p.activa)?.cultivos?.nombre
+                return (
+                  <button key={b.id} type="button" onClick={() => alternarBloqueDestino(b.id)} style={{
+                    border:'1px solid #dfe6df',
+                    background: seleccionado ? '#176a25' : '#fff',
+                    color: seleccionado ? '#fff' : '#263026',
+                    borderRadius:999,
+                    padding:'7px 10px',
+                    fontSize:11,
+                    fontWeight:800,
+                    cursor:'pointer',
+                  }}>
+                    {b.codigo}{cultivo ? ` - ${cultivo}` : ''}
+                  </button>
+                )
+              })}
+            </div>
+            <div style={{ fontSize:11, color:'#69706a', marginTop:8 }}>
+              La IA usa el bloque principal como referencia. Al guardar, se crea un registro para cada bloque seleccionado.
+            </div>
           </div>
           <div style={{ marginTop:12, background:estadoEc.bg, color:estadoEc.color, border:'1px solid rgba(0,0,0,0.06)', borderRadius:14, padding:12, fontSize:12, fontWeight:800 }}>
             {estadoEc.label}

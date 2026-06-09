@@ -46,9 +46,11 @@ export default function Asistencia() {
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [modalAdelanto, setModalAdelanto] = useState(null)
   const [modalHistorial, setModalHistorial] = useState(null)
+  const [modalEditarAdelanto, setModalEditarAdelanto] = useState(null)
   const [formAdelanto, setFormAdelanto] = useState({ monto:'', descripcion:'' })
+  const [formEditarAdelanto, setFormEditarAdelanto] = useState({ monto:'', descripcion:'' })
   const [notasDia, setNotasDia] = useState({})
-  const [diaNotaActivo, setDiaNotaActivo] = useState(0)
+  const [fechaNotaActiva, setFechaNotaActiva] = useState('')
   const [savingNota, setSavingNota] = useState(false)
   const [savingAdelanto, setSavingAdelanto] = useState(false)
   const [error, setError] = useState('')
@@ -58,9 +60,14 @@ export default function Asistencia() {
   const diasFechas = DIAS.map((_, i) => {
     const d = new Date(lunes); d.setDate(lunes.getDate() + i); return formatFecha(d)
   })
+  const fechaNotaActual = fechaNotaActiva || diasFechas[0]
+  const indiceNotaActivo = Math.max(0, diasFechas.indexOf(fechaNotaActual))
 
   useEffect(() => { fetchCampos() }, [])
   useEffect(() => { if (campoActivo) { fetchOperarios(); fetchRegistros(); fetchNotasDia() } }, [campoActivo, semanaOffset])
+  useEffect(() => {
+    setFechaNotaActiva(prev => diasFechas.includes(prev) ? prev : diasFechas[0])
+  }, [campoActivo?.id, semanaOffset])
 
   const fetchCampos = async () => {
     const { data } = await supabase.from('campos').select('*').order('nombre')
@@ -159,7 +166,7 @@ export default function Asistencia() {
 
   const guardarNotaDia = async () => {
     if (!campoActivo) return
-    const fecha = diasFechas[diaNotaActivo]
+    const fecha = fechaNotaActual
     const texto = (notasDia[fecha]?.trabajos || '').trim()
     setSavingNota(true)
     setError('')
@@ -167,7 +174,7 @@ export default function Asistencia() {
       const payload = {
         campo_id: campoActivo.id,
         fecha,
-        dia_semana: DIAS[diaNotaActivo],
+        dia_semana: DIAS[indiceNotaActivo],
         trabajos: texto,
         updated_at: new Date().toISOString(),
       }
@@ -214,11 +221,11 @@ export default function Asistencia() {
   }
 
   const actualizarNotaDia = (texto) => {
-    const fecha = diasFechas[diaNotaActivo]
+    const fecha = fechaNotaActual
     setNotasDia(prev => ({
       ...prev,
       [fecha]: {
-        ...(prev[fecha] || { campo_id: campoActivo?.id, fecha, dia_semana: DIAS[diaNotaActivo] }),
+        ...(prev[fecha] || { campo_id: campoActivo?.id, fecha, dia_semana: DIAS[indiceNotaActivo] }),
         trabajos: texto,
       },
     }))
@@ -247,6 +254,36 @@ export default function Asistencia() {
   const eliminarAdelanto = async (id) => {
     await supabase.from('adelantos').delete().eq('id', id)
     fetchAdelantos(operarios)
+  }
+
+  const abrirEditarAdelanto = (adelanto) => {
+    setModalEditarAdelanto(adelanto)
+    setFormEditarAdelanto({
+      monto: fmtGs(adelanto.monto),
+      descripcion: (adelanto.descripcion || '').replace('[PAGADO]', '').trim(),
+    })
+  }
+
+  const guardarEdicionAdelanto = async () => {
+    if (!modalEditarAdelanto) return
+    const monto = parsearGs(formEditarAdelanto.monto)
+    if (!monto) return
+    setSavingAdelanto(true)
+    try {
+      const estabaPagado = (modalEditarAdelanto.descripcion || '').includes('[PAGADO]')
+      const descripcionBase = (formEditarAdelanto.descripcion || '').trim()
+      const descripcion = `${descripcionBase}${estabaPagado ? ' [PAGADO]' : ''}`.trim() || null
+      await supabase
+        .from('adelantos')
+        .update({ monto, descripcion })
+        .eq('id', modalEditarAdelanto.id)
+      setModalEditarAdelanto(null)
+      setFormEditarAdelanto({ monto:'', descripcion:'' })
+      fetchAdelantos(operarios)
+    } catch (e) {
+      setError('Error al editar adelanto')
+    }
+    setSavingAdelanto(false)
   }
 
   const marcarPagado = async (adelanto) => {
@@ -322,10 +359,10 @@ export default function Asistencia() {
           <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:6, marginBottom:10 }}>
             {DIAS.map((dia, i) => {
               const fecha = diasFechas[i]
-              const activo = diaNotaActivo === i
+              const activo = fechaNotaActual === fecha
               const tieneNota = Boolean((notasDia[fecha]?.trabajos || '').trim())
               return (
-                <button key={dia} onClick={() => setDiaNotaActivo(i)} style={{
+                <button key={dia} onClick={() => setFechaNotaActiva(fecha)} style={{
                   border:'1px solid #e8e6e2',
                   background: activo ? '#212121' : tieneNota ? '#edf6ec' : '#f8f8f6',
                   color: activo ? '#fff' : tieneNota ? '#176a25' : '#687068',
@@ -341,7 +378,7 @@ export default function Asistencia() {
             })}
           </div>
           <textarea
-            value={notasDia[diasFechas[diaNotaActivo]]?.trabajos || ''}
+            value={notasDia[fechaNotaActual]?.trabajos || ''}
             onChange={e => actualizarNotaDia(e.target.value)}
             placeholder="Ej: limpieza de canteros, riego, cosecha parcial, preparación de sustrato..."
             style={{ width:'100%', minHeight:92, resize:'vertical', border:'1px solid #e8e6e2', borderRadius:14, background:'#f8f8f6', padding:12, fontSize:13, color:'#0a0a0a', lineHeight:1.45 }}
@@ -369,6 +406,7 @@ export default function Asistencia() {
                 </div>
                 {a.descripcion && <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:8 }}>{a.descripcion.replace('[PAGADO]','').trim()}</div>}
                 <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={() => abrirEditarAdelanto(a)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#0a0a0a', cursor:'pointer' }}>Editar</button>
                   {!a.descripcion?.includes('[PAGADO]') && (
                     <button onClick={() => marcarPagado(a)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #c8ddc8', background:'transparent', fontSize:11, color:'#1E5631', cursor:'pointer' }}>✓ Marcar pagado</button>
                   )}
@@ -377,6 +415,26 @@ export default function Asistencia() {
               </div>
             ))}
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModalHistorial(null)}>Cerrar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar adelanto */}
+      {modalEditarAdelanto && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:110, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalEditarAdelanto(null)}>
+          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Editar adelanto</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>{modalHistorial?.nombre || ''}</div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Monto (Gs.)</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
+              type="text" inputMode="numeric" value={formEditarAdelanto.monto}
+              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setFormEditarAdelanto(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
+              placeholder="Ej: 50.000"/>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Descripcion (opcional)</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, boxSizing:'border-box' }}
+              type="text" value={formEditarAdelanto.descripcion} onChange={e => setFormEditarAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarEdicionAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar cambios'}</button>
+            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModalEditarAdelanto(null)}>Cancelar</button>
           </div>
         </div>
       )}
