@@ -125,7 +125,10 @@ export default function Asistencia() {
 
   const fetchAdelantos = async (ops) => {
     const ids = ops.map(o => o.id)
-    if (!ids.length) return
+    if (!ids.length) {
+      setAdelantos([])
+      return
+    }
     const { data } = await supabase.from('adelantos').select('*').in('operario_id', ids).order('fecha', { ascending: false })
     setAdelantos(data || [])
   }
@@ -231,8 +234,10 @@ export default function Asistencia() {
     }))
   }
 
+  const esAdelantoPagado = (adelanto) => (adelanto.descripcion || '').includes('[PAGADO]')
   const getAdelantosOperario = (operario_id) => adelantos.filter(a => a.operario_id === operario_id)
-  const getTotalAdelantos = (operario_id) => getAdelantosOperario(operario_id).reduce((s, a) => s + Number(a.monto), 0)
+  const getAdelantosPendientesOperario = (operario_id) => getAdelantosOperario(operario_id).filter(a => !esAdelantoPagado(a))
+  const getTotalAdelantos = (operario_id) => getAdelantosPendientesOperario(operario_id).reduce((s, a) => s + Number(a.monto), 0)
 
   const guardarAdelanto = async () => {
     const monto = parsearGs(formAdelanto.monto)
@@ -287,7 +292,9 @@ export default function Asistencia() {
   }
 
   const marcarPagado = async (adelanto) => {
-    await supabase.from('adelantos').update({ descripcion: (adelanto.descripcion || '') + ' [PAGADO]' }).eq('id', adelanto.id)
+    if (esAdelantoPagado(adelanto)) return
+    const descripcion = `${(adelanto.descripcion || '').replace('[PAGADO]', '').trim()} [PAGADO]`.trim()
+    await supabase.from('adelantos').update({ descripcion }).eq('id', adelanto.id)
     fetchAdelantos(operarios)
   }
 
@@ -334,7 +341,7 @@ export default function Asistencia() {
             </div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderTop:'1px solid #f2f1ef' }}>
               <button onClick={() => setModalHistorial(op)} style={{ fontSize:11, color:'#9a9a9a', background:'none', border:'none', cursor:'pointer' }}>
-                Adelantos: <span style={{ color: getTotalAdelantos(op.id) > 0 ? '#c84040' : '#9a9a9a', fontWeight:600 }}>Gs. {fmtGs(getTotalAdelantos(op.id))}</span> →
+                Adelantos pendientes: <span style={{ color: getTotalAdelantos(op.id) > 0 ? '#c84040' : '#9a9a9a', fontWeight:600 }}>Gs. {fmtGs(getTotalAdelantos(op.id))}</span> →
               </button>
               <button onClick={() => setModalAdelanto(op)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, fontWeight:500, color:'#0a0a0a', cursor:'pointer' }}>+ Adelanto</button>
             </div>
@@ -392,7 +399,7 @@ export default function Asistencia() {
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalHistorial(null)}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'80vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Adelantos — {modalHistorial.nombre}</div>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Total: Gs. {fmtGs(getTotalAdelantos(modalHistorial.id))}</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Pendiente: Gs. {fmtGs(getTotalAdelantos(modalHistorial.id))}</div>
             {getAdelantosOperario(modalHistorial.id).length === 0 ? (
               <div style={{ textAlign:'center', color:'#9a9a9a', fontSize:13, padding:'20px 0' }}>Sin adelantos registrados</div>
             ) : getAdelantosOperario(modalHistorial.id).map(a => (
