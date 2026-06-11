@@ -14,7 +14,10 @@ const tiposMovimiento = [
 
 const hoy = () => new Date().toISOString().slice(0, 10)
 const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
-const parseGs = (v) => Number(String(v || '').replace(/[^\d.-]/g, '')) || 0
+const parseGs = (v) => {
+  const limpio = String(v || '').replace(/[^\d-]/g, '')
+  return Number(limpio) || 0
+}
 const signoMovimiento = (tipo) => tiposMovimiento.find(t => t.value === tipo)?.signo || 1
 
 const proveedorVacio = {
@@ -49,6 +52,8 @@ export default function CuentasPagar() {
   const [proveedorAbierto, setProveedorAbierto] = useState(null)
   const [filtro, setFiltro] = useState('todos')
   const [error, setError] = useState('')
+  const [modalError, setModalError] = useState('')
+  const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -103,6 +108,7 @@ export default function CuentasPagar() {
     setProveedorForm(proveedor || proveedorVacio)
     setModalProveedor(true)
     setError('')
+    setModalError('')
   }
 
   const abrirMovimiento = (movimiento = null, proveedorId = '') => {
@@ -112,14 +118,17 @@ export default function CuentasPagar() {
     )
     setModalMovimiento(true)
     setError('')
+    setModalError('')
   }
 
   const guardarProveedor = async () => {
     if (!proveedorForm.nombre.trim()) {
-      setError('Escribi el nombre del proveedor.')
+      setModalError('Escribi el nombre del proveedor.')
       return
     }
 
+    setSaving(true)
+    setModalError('')
     const payload = {
       nombre: proveedorForm.nombre.trim(),
       tipo: proveedorForm.tipo || 'Agropecuaria',
@@ -135,20 +144,27 @@ export default function CuentasPagar() {
       : supabase.from('proveedores_credito').insert(payload)
     const { error } = await query
 
-    if (error) setError('No se pudo guardar el proveedor.')
+    if (error) {
+      console.error('Error guardando proveedor', error)
+      setModalError(`No se pudo guardar el proveedor: ${error.message}`)
+    }
     else {
       setModalProveedor(false)
       setProveedorForm(proveedorVacio)
       await cargarDatos()
     }
+    setSaving(false)
   }
 
   const guardarMovimiento = async () => {
-    if (!movimientoForm.proveedor_id || !movimientoForm.concepto.trim() || parseGs(movimientoForm.monto) <= 0) {
-      setError('Completa proveedor, concepto y monto.')
+    const monto = parseGs(movimientoForm.monto)
+    if (!movimientoForm.proveedor_id || !movimientoForm.concepto.trim() || monto <= 0) {
+      setModalError('Completa proveedor, concepto y monto. Si el monto tiene puntos, esta bien: ejemplo 1.000.000.')
       return
     }
 
+    setSaving(true)
+    setModalError('')
     const payload = {
       proveedor_id: movimientoForm.proveedor_id,
       fecha: movimientoForm.fecha || hoy(),
@@ -157,7 +173,7 @@ export default function CuentasPagar() {
       categoria: movimientoForm.categoria || null,
       medio_pago: movimientoForm.medio_pago || null,
       comprobante: movimientoForm.comprobante || null,
-      monto: parseGs(movimientoForm.monto),
+      monto,
       notas: movimientoForm.notas || null,
     }
 
@@ -166,12 +182,16 @@ export default function CuentasPagar() {
       : supabase.from('proveedor_movimientos').insert(payload)
     const { error } = await query
 
-    if (error) setError('No se pudo guardar el movimiento.')
+    if (error) {
+      console.error('Error guardando movimiento de proveedor', error)
+      setModalError(`No se pudo guardar el movimiento: ${error.message}`)
+    }
     else {
       setModalMovimiento(false)
       setMovimientoForm(movimientoVacio)
       await cargarDatos()
     }
+    setSaving(false)
   }
 
   const eliminarProveedor = async (proveedor) => {
@@ -340,6 +360,7 @@ export default function CuentasPagar() {
 
       {modalProveedor && (
         <Modal onClose={() => setModalProveedor(false)} title={proveedorForm.id ? 'Editar proveedor' : 'Nuevo proveedor'}>
+          {modalError && <div style={modalErrorBox}>{modalError}</div>}
           <input style={input} placeholder="Nombre de la agropecuaria/proveedor" value={proveedorForm.nombre || ''} onChange={e => setProveedorForm(f => ({ ...f, nombre:e.target.value }))} />
           <select style={input} value={proveedorForm.tipo || 'Agropecuaria'} onChange={e => setProveedorForm(f => ({ ...f, tipo:e.target.value }))}>
             {tiposProveedor.map(t => <option key={t}>{t}</option>)}
@@ -352,12 +373,13 @@ export default function CuentasPagar() {
             <input type="checkbox" checked={proveedorForm.activo !== false} onChange={e => setProveedorForm(f => ({ ...f, activo:e.target.checked }))} />
             Proveedor activo
           </label>
-          <button onClick={guardarProveedor} style={{ ...greenBtn, width:'100%' }}>Guardar proveedor</button>
+          <button onClick={guardarProveedor} disabled={saving} style={{ ...greenBtn, width:'100%', opacity:saving ? 0.65 : 1 }}>{saving ? 'Guardando...' : 'Guardar proveedor'}</button>
         </Modal>
       )}
 
       {modalMovimiento && (
         <Modal onClose={() => setModalMovimiento(false)} title={movimientoForm.id ? 'Editar movimiento' : 'Nuevo movimiento'}>
+          {modalError && <div style={modalErrorBox}>{modalError}</div>}
           <select style={input} value={movimientoForm.proveedor_id || ''} onChange={e => setMovimientoForm(f => ({ ...f, proveedor_id:e.target.value }))}>
             <option value="">Elegir proveedor</option>
             {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
@@ -382,7 +404,7 @@ export default function CuentasPagar() {
             <input style={input} placeholder="Factura/comprobante" value={movimientoForm.comprobante || ''} onChange={e => setMovimientoForm(f => ({ ...f, comprobante:e.target.value }))} />
           </div>
           <textarea style={{ ...input, minHeight:80 }} placeholder="Notas" value={movimientoForm.notas || ''} onChange={e => setMovimientoForm(f => ({ ...f, notas:e.target.value }))} />
-          <button onClick={guardarMovimiento} style={{ ...greenBtn, width:'100%' }}>Guardar movimiento</button>
+          <button onClick={guardarMovimiento} disabled={saving} style={{ ...greenBtn, width:'100%', opacity:saving ? 0.65 : 1 }}>{saving ? 'Guardando...' : 'Guardar movimiento'}</button>
         </Modal>
       )}
     </div>
@@ -526,4 +548,14 @@ const errorBox = {
   padding:'12px 14px',
   fontSize:13,
   marginBottom:14,
+}
+
+const modalErrorBox = {
+  background:'#fff0f0',
+  color:'#b52828',
+  border:'1px solid #ffd6d6',
+  borderRadius:13,
+  padding:'10px 12px',
+  fontSize:13,
+  marginBottom:12,
 }
