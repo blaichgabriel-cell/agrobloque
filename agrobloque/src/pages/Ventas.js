@@ -102,6 +102,8 @@ export default function Ventas() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [campoFiltro, setCampoFiltro] = useState('')
+  const [modoMultiple, setModoMultiple] = useState(false)
+  const [lineasVenta, setLineasVenta] = useState([])
   const [form, setForm] = useState({
     fecha: fechaLocal(),
     comprador_id: '',
@@ -167,21 +169,26 @@ export default function Ventas() {
     return plantacion?.cultivos?.nombre || ''
   }
 
-  const limpiarForm = () => setForm({
-    fecha: fechaLocal(),
-    comprador_id: '',
-    producto: '',
-    bloque_id: '',
-    kg_total: '',
-    precio_kg: '',
-    estado_cobro: 'pagado',
-    monto_cobrado: '',
-    forma_pago: 'Efectivo',
-    notas: '',
-  })
+  const crearLineaVenta = () => ({ producto:'', bloque_id:'', kg_total:'', precio_kg:'', notas:'' })
+  const limpiarForm = () => {
+    setForm({
+      fecha: fechaLocal(),
+      comprador_id: '',
+      producto: '',
+      bloque_id: '',
+      kg_total: '',
+      precio_kg: '',
+      estado_cobro: 'pagado',
+      monto_cobrado: '',
+      forma_pago: 'Efectivo',
+      notas: '',
+    })
+    setLineasVenta([crearLineaVenta(), crearLineaVenta()])
+  }
 
   const abrirNueva = () => {
     limpiarForm()
+    setModoMultiple(false)
     setModal(true)
   }
 
@@ -199,11 +206,100 @@ export default function Ventas() {
       forma_pago: venta.forma_pago || 'Efectivo',
       notas: venta.notas || '',
     })
+    setModoMultiple(false)
     setDetalle(null)
     setModal(true)
   }
 
+  const actualizarLineaVenta = (idx, campo, valor) => {
+    setLineasVenta(prev => prev.map((linea, i) => i === idx ? { ...linea, [campo]: valor } : linea))
+  }
+
+  const agregarLineaVenta = () => setLineasVenta(prev => [...prev, crearLineaVenta()])
+  const quitarLineaVenta = (idx) => setLineasVenta(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)
+
+  const guardarMultiple = async () => {
+    if (!form.fecha || !form.comprador_id) {
+      setError('Carga fecha y comprador.')
+      return
+    }
+
+    const lineas = lineasVenta
+      .map(linea => {
+        const kg = parsearKg(linea.kg_total)
+        const precio = parsearGs(linea.precio_kg)
+        const total = kg * precio
+        return {
+          ...linea,
+          producto: String(linea.producto || '').trim(),
+          kg,
+          precio,
+          total,
+        }
+      })
+      .filter(linea => linea.producto && linea.kg > 0 && linea.precio > 0)
+
+    if (lineas.length === 0) {
+      setError('Carga al menos un producto con kilos y precio.')
+      return
+    }
+
+    const totalVenta = lineas.reduce((s, linea) => s + linea.total, 0)
+    const cobradoTotal = form.estado_cobro === 'pagado'
+      ? totalVenta
+      : form.estado_cobro === 'pendiente'
+        ? 0
+        : Math.min(parsearGs(form.monto_cobrado), totalVenta)
+
+    setSaving(true)
+    setError('')
+    try {
+      const payload = lineas.map(linea => {
+        const proporcion = totalVenta > 0 ? linea.total / totalVenta : 0
+        const montoCobrado = form.estado_cobro === 'parcial'
+          ? Math.round(cobradoTotal * proporcion)
+          : form.estado_cobro === 'pagado'
+            ? linea.total
+            : 0
+        return {
+          fecha: form.fecha,
+          comprador_id: form.comprador_id,
+          producto: linea.producto,
+          bloque_id: linea.bloque_id || null,
+          kg_total: linea.kg,
+          precio_kg: linea.precio,
+          total: linea.total,
+          estado_cobro: form.estado_cobro,
+          monto_cobrado: montoCobrado,
+          forma_pago: form.forma_pago || null,
+          notas: linea.notas || form.notas || null,
+        }
+      })
+
+      const { error } = await supabase.from('ventas').insert(payload)
+      if (error) throw error
+      await registrarAuditoria({
+        accion: 'Registro venta multiple',
+        modulo: 'Ventas',
+        tabla: 'ventas',
+        registroId: '',
+        detalle: `${payload.length} productos - Gs. ${totalVenta}`,
+      })
+      await fetchVentas()
+      setModal(false)
+      setModoMultiple(false)
+      limpiarForm()
+    } catch (e) {
+      setError('Error al guardar venta multiple: ' + e.message)
+    }
+    setSaving(false)
+  }
+
   const guardar = async () => {
+    if (modoMultiple && !form.id) {
+      await guardarMultiple()
+      return
+    }
     const kg = parsearKg(form.kg_total)
     const precio = parsearGs(form.precio_kg)
     const total = kg * precio
@@ -269,6 +365,7 @@ export default function Ventas() {
   const totalPendiente = Math.max(0, totalVendido - totalCobrado)
   const kgVendidos = ventas.reduce((s, v) => s + (Number(v.kg_total) || 0), 0)
   const ventaTotalForm = parsearKg(form.kg_total) * parsearGs(form.precio_kg)
+  const ventaTotalMultiple = lineasVenta.reduce((s, linea) => s + (parsearKg(linea.kg_total) * parsearGs(linea.precio_kg)), 0)
   const bloqueSeleccionado = bloques.find(b => b.id === form.bloque_id)
   const cultivoSugerido = getCultivoBloque(bloqueSeleccionado)
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
@@ -348,6 +445,17 @@ export default function Ventas() {
             <div style={{ fontSize:18, fontWeight:800, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar venta' : 'Registrar venta'}</div>
             {error && <div style={{ background:'#fff3e3', color:'#8a4d00', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
 
+            {!form.id && (
+              <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:14 }}>
+                <button type="button" onClick={() => setModoMultiple(false)} style={{ flex:1, padding:9, borderRadius:10, border:'none', cursor:'pointer', background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:800 }}>
+                  Un producto
+                </button>
+                <button type="button" onClick={() => setModoMultiple(true)} style={{ flex:1, padding:9, borderRadius:10, border:'none', cursor:'pointer', background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:800 }}>
+                  Varios productos
+                </button>
+              </div>
+            )}
+
             <label style={label}>Fecha *</label>
             <input style={inp} type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value }))} />
 
@@ -357,33 +465,81 @@ export default function Ventas() {
               {compradores.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
 
-            <label style={label}>Producto *</label>
-            <input style={inp} value={form.producto} onChange={e => setForm(f => ({ ...f, producto:e.target.value }))} placeholder="Ej: Tomate, pepino, morron" />
+            {(!modoMultiple || form.id) ? (
+              <>
+                <label style={label}>Producto *</label>
+                <input style={inp} value={form.producto} onChange={e => setForm(f => ({ ...f, producto:e.target.value }))} placeholder="Ej: Tomate, pepino, morron" />
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-              <div>
-                <label style={label}>Kilos *</label>
-                <input style={inp} type="text" inputMode="decimal" value={form.kg_total} onChange={e => setForm(f => ({ ...f, kg_total:e.target.value }))} placeholder="Ej: 150" />
-              </div>
-              <div>
-                <label style={label}>Precio por kg *</label>
-                <input style={inp} type="text" inputMode="numeric" value={form.precio_kg} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setForm(f => ({ ...f, precio_kg:r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 5.000" />
-              </div>
-            </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                  <div>
+                    <label style={label}>Kilos *</label>
+                    <input style={inp} type="text" inputMode="decimal" value={form.kg_total} onChange={e => setForm(f => ({ ...f, kg_total:e.target.value }))} placeholder="Ej: 150" />
+                  </div>
+                  <div>
+                    <label style={label}>Precio por kg *</label>
+                    <input style={inp} type="text" inputMode="numeric" value={form.precio_kg} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setForm(f => ({ ...f, precio_kg:r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 5.000" />
+                  </div>
+                </div>
 
-            <label style={label}>Campo/bloque origen (opcional)</label>
-            <select style={inp} value={campoFiltro} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({ ...f, bloque_id:'' })) }}>
-              {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
-            <select style={inp} value={form.bloque_id} onChange={e => {
-              const bloque = bloques.find(b => b.id === e.target.value)
-              const cultivo = getCultivoBloque(bloque)
-              setForm(f => ({ ...f, bloque_id:e.target.value, producto: f.producto || cultivo }))
-            }}>
-              <option value="">Venta sin bloque especifico</option>
-              {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
-            </select>
-            {cultivoSugerido && <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:12, padding:'9px 12px', fontSize:12, fontWeight:750, marginBottom:12 }}>Cultivo sugerido: {cultivoSugerido}</div>}
+                <label style={label}>Campo/bloque origen (opcional)</label>
+                <select style={inp} value={campoFiltro} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({ ...f, bloque_id:'' })) }}>
+                  {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+                <select style={inp} value={form.bloque_id} onChange={e => {
+                  const bloque = bloques.find(b => b.id === e.target.value)
+                  const cultivo = getCultivoBloque(bloque)
+                  setForm(f => ({ ...f, bloque_id:e.target.value, producto: f.producto || cultivo }))
+                }}>
+                  <option value="">Venta sin bloque especifico</option>
+                  {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
+                </select>
+                {cultivoSugerido && <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:12, padding:'9px 12px', fontSize:12, fontWeight:750, marginBottom:12 }}>Cultivo sugerido: {cultivoSugerido}</div>}
+              </>
+            ) : (
+              <>
+                <label style={label}>Campo para sugerir bloques</label>
+                <select style={inp} value={campoFiltro} onChange={e => setCampoFiltro(e.target.value)}>
+                  {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+                <div style={{ display:'grid', gap:10, marginBottom:12 }}>
+                  {lineasVenta.map((linea, idx) => {
+                    const bloqueLinea = bloques.find(b => b.id === linea.bloque_id)
+                    const cultivoLinea = getCultivoBloque(bloqueLinea)
+                    const totalLinea = parsearKg(linea.kg_total) * parsearGs(linea.precio_kg)
+                    return (
+                      <div key={idx} style={{ background:'#fff', border:'1px solid #e4e6e2', borderRadius:16, padding:12 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                          <strong style={{ fontSize:13 }}>Producto {idx + 1}</strong>
+                          {lineasVenta.length > 1 && (
+                            <button type="button" onClick={() => quitarLineaVenta(idx)} style={{ border:'1px solid #ffcccc', background:'#fff', color:'#c84040', borderRadius:10, padding:'5px 9px', fontSize:11, cursor:'pointer' }}>Quitar</button>
+                          )}
+                        </div>
+                        <input style={inp} value={linea.producto} onChange={e => actualizarLineaVenta(idx, 'producto', e.target.value)} placeholder="Producto"/>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                          <input style={inp} type="text" inputMode="decimal" value={linea.kg_total} onChange={e => actualizarLineaVenta(idx, 'kg_total', e.target.value)} placeholder="Kg"/>
+                          <input style={inp} type="text" inputMode="numeric" value={linea.precio_kg} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); actualizarLineaVenta(idx, 'precio_kg', r ? parseInt(r, 10).toLocaleString('es-PY') : '') }} placeholder="Gs/kg"/>
+                        </div>
+                        <select style={inp} value={linea.bloque_id} onChange={e => {
+                          const bloque = bloques.find(b => b.id === e.target.value)
+                          const cultivo = getCultivoBloque(bloque)
+                          actualizarLineaVenta(idx, 'bloque_id', e.target.value)
+                          if (!linea.producto && cultivo) actualizarLineaVenta(idx, 'producto', cultivo)
+                        }}>
+                          <option value="">Sin bloque especifico</option>
+                          {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
+                        </select>
+                        {cultivoLinea && <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:10, padding:'7px 10px', fontSize:11, fontWeight:750, margin:'-4px 0 10px' }}>{cultivoLinea}</div>}
+                        <input style={{ ...inp, marginBottom:0 }} value={linea.notas} onChange={e => actualizarLineaVenta(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
+                        {totalLinea > 0 && <div style={{ fontSize:11, color:'#687068', fontWeight:800, marginTop:8 }}>Subtotal: Gs. {fmtGs(totalLinea)}</div>}
+                      </div>
+                    )
+                  })}
+                </div>
+                <button type="button" onClick={agregarLineaVenta} style={{ width:'100%', padding:12, borderRadius:14, border:'1px dashed #bfc6bf', background:'#fff', fontSize:13, fontWeight:800, color:'#176a25', cursor:'pointer', marginBottom:12 }}>
+                  + Agregar otro producto
+                </button>
+              </>
+            )}
 
             <label style={label}>Estado de cobro</label>
             <div style={{ display:'flex', gap:8, marginBottom:12 }}>
@@ -405,14 +561,14 @@ export default function Ventas() {
             <label style={label}>Notas</label>
             <textarea style={{ ...inp, minHeight:64, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones..." />
 
-            {ventaTotalForm > 0 && (
+            {((!modoMultiple || form.id) ? ventaTotalForm : ventaTotalMultiple) > 0 && (
               <div style={{ background:'#eeeeee', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between' }}>
                 <span style={{ fontSize:12, color:'#212121' }}>Total venta</span>
-                <span style={{ fontSize:14, fontWeight:800, color:'#212121' }}>Gs. {fmtGs(ventaTotalForm)}</span>
+                <span style={{ fontSize:14, fontWeight:800, color:'#212121' }}>Gs. {fmtGs((!modoMultiple || form.id) ? ventaTotalForm : ventaTotalMultiple)}</span>
               </div>
             )}
 
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:800, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar venta'}</button>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:800, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : modoMultiple && !form.id ? 'Guardar venta con productos' : 'Guardar venta'}</button>
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#8b928b', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </div>
