@@ -400,6 +400,47 @@ export default function Ventas() {
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13, background:'#fff', borderRadius:20 }}>
             Sin ventas registradas.
           </div>
+        ) : isDesktop ? (
+          <div style={{ background:'#fff', border:'1px solid #e4e8e4', borderRadius:16, overflow:'hidden', boxShadow:'0 12px 28px rgba(31,36,31,0.05)' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 110px 120px 130px 108px', gap:12, padding:'11px 16px', background:'#fafbf8', borderBottom:'1px solid #edf0ed', color:'#687068', fontSize:11, fontWeight:850, textTransform:'uppercase' }}>
+              <span>Producto</span>
+              <span>Comprador / origen</span>
+              <span style={{ textAlign:'right' }}>Kg</span>
+              <span style={{ textAlign:'right' }}>Precio</span>
+              <span style={{ textAlign:'right' }}>Total</span>
+              <span style={{ textAlign:'right' }}>Acciones</span>
+            </div>
+            {ventas.map(v => {
+              const total = Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0)
+              const saldo = Math.max(0, total - (Number(v.monto_cobrado) || 0))
+              return (
+                <div key={v.id} onClick={() => setDetalle(v)} style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 110px 120px 130px 108px', gap:12, alignItems:'center', padding:'13px 16px', borderBottom:'1px solid #f0f2ef', cursor:'pointer' }}>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:14, fontWeight:850, color:'#0a0a0a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{v.producto}</div>
+                    <div style={{ display:'flex', gap:6, marginTop:5, flexWrap:'wrap' }}>
+                      <span style={{ padding:'2px 8px', borderRadius:20, fontSize:10, fontWeight:800, background: saldo > 0 ? '#fff3e3' : '#e8f5e5', color: saldo > 0 ? '#bd640b' : '#176a25' }}>{estadoLabel[v.estado_cobro] || 'Pagado'}</span>
+                      {saldo > 0 && <span style={{ padding:'2px 8px', borderRadius:20, fontSize:10, background:'#fff0f0', color:'#c84040' }}>Debe Gs. {fmtGs(saldo)}</span>}
+                    </div>
+                  </div>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:750, color:'#176a25', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{v.compradores?.nombre || 'Sin comprador'}</div>
+                    <div style={{ fontSize:11, color:'#8b928b', marginTop:3 }}>{v.bloques?.codigo ? `Bloque ${v.bloques.codigo} - ` : ''}{v.fecha}</div>
+                  </div>
+                  <div style={{ textAlign:'right', fontSize:13, fontWeight:800 }}>{fmtKg(v.kg_total)}</div>
+                  <div style={{ textAlign:'right', fontSize:13, color:'#4d544e' }}>Gs. {fmtGs(v.precio_kg)}</div>
+                  <div style={{ textAlign:'right', fontSize:15, fontWeight:900 }}>Gs. {fmtGs(total)}</div>
+                  <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
+                    <button onClick={(e) => { e.stopPropagation(); abrirEditar(v) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #e1e5e1', background:'#fff', color:'#333', cursor:'pointer' }} title="Editar">
+                      <i className="ti ti-pencil" style={{ fontSize:16 }} aria-hidden="true"></i>
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #ffcccc', background:'#fff', color:'#c84040', cursor:'pointer' }} title="Eliminar">
+                      <i className="ti ti-trash" style={{ fontSize:16 }} aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
             {ventas.map(v => {

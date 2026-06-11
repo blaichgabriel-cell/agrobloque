@@ -323,10 +323,55 @@ export default function Cosecha() {
       </div>
 
       <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
-        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
         {cosechas.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin registros de cosecha</div>
-        ) : cosechas.map(c => {
+        ) : isDesktop ? (
+          <div style={{ background:'#fff', border:'1px solid #e4e8e4', borderRadius:16, overflow:'hidden', boxShadow:'0 12px 28px rgba(31,36,31,0.05)' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'110px 1fr 120px 120px 120px 108px', gap:12, padding:'11px 16px', background:'#fafbf8', borderBottom:'1px solid #edf0ed', color:'#687068', fontSize:11, fontWeight:850, textTransform:'uppercase' }}>
+              <span>Bloque</span>
+              <span>Cultivo / campo</span>
+              <span>Fecha</span>
+              <span>Calidad</span>
+              <span style={{ textAlign:'right' }}>Kilos</span>
+              <span style={{ textAlign:'right' }}>Acciones</span>
+            </div>
+            {cosechas.map(c => {
+              const cultivo = getCultivoCosecha(c)
+              return (
+                <div key={c.id} onClick={() => setDetalle(c)} style={{ display:'grid', gridTemplateColumns:'110px 1fr 120px 120px 120px 108px', gap:12, alignItems:'center', padding:'13px 16px', borderBottom:'1px solid #f0f2ef', cursor:'pointer' }}>
+                  <div>
+                    <div style={{ fontSize:15, fontWeight:900, color:'#0a0a0a' }}>{c.bloques?.codigo || '-'}</div>
+                    <div style={{ fontSize:11, color:'#8b928b', marginTop:3 }}>Bloque</div>
+                  </div>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:14, fontWeight:850, color:'#176a25', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{cultivo}</div>
+                    <div style={{ fontSize:11, color:'#8b928b', marginTop:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{c.bloques?.campos?.nombre || '-'}</div>
+                  </div>
+                  <div style={{ fontSize:13, color:'#4d544e' }}>{c.fecha}</div>
+                  <div>
+                    <span style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:750, background: c.calidad==='primera' ? '#eeeeee' : '#fff3e8', color: c.calidad==='primera' ? '#212121' : '#c8700a' }}>
+                      {calidadLabel(c.calidad)}
+                    </span>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:17, fontWeight:900, color:'#0a0a0a' }}>{fmtKg(c.kg_total)} kg</div>
+                    <div style={{ fontSize:10, color:'#687068', marginTop:2 }}>Produccion</div>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
+                    <button onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #e1e5e1', background:'#fff', color:'#333', cursor:'pointer' }} title="Editar">
+                      <i className="ti ti-pencil" style={{ fontSize:16 }} aria-hidden="true"></i>
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #ffcccc', background:'#fff', color:'#c84040', cursor:'pointer' }} title="Eliminar">
+                      <i className="ti ti-trash" style={{ fontSize:16 }} aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:0 }}>
+          {cosechas.map(c => {
           const cultivo = getCultivoCosecha(c)
           return (
             <div key={c.id} onClick={() => setDetalle(c)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
@@ -360,7 +405,8 @@ export default function Cosecha() {
             </div>
           )
         })}
-        </div>
+          </div>
+        )}
         <NotasPanel modulo="cosecha" titulo="Blog de notas de cosecha" />
       </div>
 
