@@ -1,529 +1,857 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import NotasPanel from '../components/NotasPanel'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { filterTabsByRole } from '../lib/permissions'
 
-const tiposProveedor = ['Agropecuaria', 'Ferreteria', 'Transporte', 'Servicios', 'Otro']
-const categorias = ['Insumos', 'Fertilizantes', 'Agroquimicos', 'Semillas', 'Herramientas', 'Servicios', 'Combustible', 'Otros']
-const mediosPago = ['Efectivo', 'Transferencia', 'Cheque', 'Tarjeta', 'Otro']
-const tiposMovimiento = [
-  { value: 'compra_credito', label: 'Compra a credito', signo: 1 },
-  { value: 'pago', label: 'Pago realizado', signo: -1 },
-  { value: 'ajuste_suma', label: 'Ajuste que suma deuda', signo: 1 },
-  { value: 'ajuste_resta', label: 'Descuento o ajuste a favor', signo: -1 },
+const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
+
+const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
+const fmtNumber = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
+const COSTO_MANUAL_LABELS = {
+  insumos: { label: 'Insumos', color: '#2563eb' },
+  combustible: { label: 'Combustible', color: '#d9841f' },
+  herramientas: { label: 'Herramientas', color: '#6f7770' },
+  electricidad: { label: 'Electricidad', color: '#0284c7' },
+  gastos_administrativos: { label: 'Administracion', color: '#8e44ad' },
+  otro: { label: 'Otros gastos', color: '#64748b' },
+}
+
+const quickLinks = [
+  { path: '/mapa', icon: 'ti-map', title: 'Mapa', sub: 'Ver bloques' },
+  { path: '/cosecha', icon: 'ti-cut', title: 'Cosechas', sub: 'Produccion' },
+  { path: '/ventas', icon: 'ti-cash-register', title: 'Ventas', sub: 'Cobros' },
+  { path: '/agenda', icon: 'ti-calendar', title: 'Agenda', sub: 'Tareas' },
+  { path: '/asistencia', icon: 'ti-users', title: 'Asistencia', sub: 'Planilla' },
+  { path: '/inventario', icon: 'ti-box', title: 'Inventario', sub: 'Stock' },
+  { path: '/fumigaciones', icon: 'ti-spray', title: 'Fumigaciones', sub: 'Historial' },
+  { path: '/vivero', icon: 'vivero-icon', title: 'Vivero', sub: 'Plantines' },
+  { path: '/reportes', icon: 'ti-chart-bar', title: 'Reportes', sub: 'Analisis' },
+  { path: '/plan-nutricional', icon: 'ti-leaf', title: 'Plan Nutricional', sub: 'Fertirriego' },
+  { path: '/costos', icon: 'ti-coin', title: 'Costos', sub: 'Gastos' },
+  { path: '/contabilidad', icon: 'ti-calculator', title: 'Contabilidad', sub: 'Balance' },
+  { path: '/compradores', icon: 'ti-building-store', title: 'Compradores', sub: 'Clientes' },
+  { path: '/historial', icon: 'ti-timeline', title: 'Historial', sub: 'Trazabilidad' },
+  { path: '/configuracion', icon: 'ti-settings', title: 'Configuracion', sub: 'Ajustes' },
 ]
 
-const hoy = () => new Date().toISOString().slice(0, 10)
-const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
-const parseGs = (v) => Number(String(v || '').replace(/[^\d.-]/g, '')) || 0
-const signoMovimiento = (tipo) => tiposMovimiento.find(t => t.value === tipo)?.signo || 1
-
-const proveedorVacio = {
-  nombre: '',
-  tipo: 'Agropecuaria',
-  contacto: '',
-  telefono: '',
-  direccion: '',
-  notas: '',
-  activo: true,
+function ViveroIcon({ size = 22, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 21V10" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 12C8.2 12 5.4 9.7 4.5 6.2C8.2 6 11.1 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 12C15.8 12 18.6 9.7 19.5 6.2C15.8 6 12.9 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 21H17" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
 }
 
-const movimientoVacio = {
-  proveedor_id: '',
-  fecha: hoy(),
-  tipo: 'compra_credito',
-  concepto: '',
-  categoria: 'Insumos',
-  medio_pago: 'Transferencia',
-  comprobante: '',
-  monto: '',
-  notas: '',
+function DashboardIcon({ icon, size = 22, color = 'currentColor' }) {
+  if (['vivero-icon', 'agro-vivero', 'ti-leaf', 'ti-seeding', 'ti-plant-2'].includes(icon)) {
+    return <ViveroIcon size={size} color={color} />
+  }
+  return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
 }
 
-export default function CuentasPagar() {
-  const [proveedores, setProveedores] = useState([])
-  const [movimientos, setMovimientos] = useState([])
-  const [proveedorForm, setProveedorForm] = useState(proveedorVacio)
-  const [movimientoForm, setMovimientoForm] = useState(movimientoVacio)
-  const [modalProveedor, setModalProveedor] = useState(false)
-  const [modalMovimiento, setModalMovimiento] = useState(false)
-  const [proveedorAbierto, setProveedorAbierto] = useState(null)
-  const [filtro, setFiltro] = useState('todos')
-  const [error, setError] = useState('')
+const cropIcons = ['🍅', '🫑', '🥒', '🥬', '🍆', '🌱']
+
+const cropIconRules = [
+  { terms: ['tomate'], icon: '\uD83C\uDF45' },
+  { terms: ['pepino'], icon: '\uD83E\uDD52' },
+  { terms: ['zucchini', 'zapallito', 'calabacin', 'calabaza'], icon: '\uD83E\uDD52' },
+  { terms: ['morron', 'pimiento', 'locote'], icon: '\uD83E\uDED1' },
+  { terms: ['lechuga'], icon: '\uD83E\uDD6C' },
+  { terms: ['berenjena'], icon: '\uD83C\uDF46' },
+]
+
+const getCropIcon = (nombre = '') => {
+  const normalizado = nombre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  const fallbackIcon = cropIcons.length ? '\uD83C\uDF31' : '\uD83C\uDF31'
+  return cropIconRules.find(rule => rule.terms.some(term => normalizado.includes(term)))?.icon || fallbackIcon
+}
+
+const elegirCampoConDatos = (campos, bloques = [], guardado) => {
+  if (!campos || campos.length === 0) return null
+  const conteo = bloques.reduce((acc, b) => {
+    if (b.campo_id) acc[b.campo_id] = (acc[b.campo_id] || 0) + 1
+    return acc
+  }, {})
+  const campoGuardado = campos.find(c => c.id === guardado)
+  const campoConMasBloques = campos.reduce((mejor, campo) => {
+    return (conteo[campo.id] || 0) > (conteo[mejor.id] || 0) ? campo : mejor
+  }, campos[0])
+  const hayCampoConDatos = (conteo[campoConMasBloques.id] || 0) > 0
+
+  if (campoGuardado && (!hayCampoConDatos || (conteo[campoGuardado.id] || 0) > 0)) {
+    return campoGuardado
+  }
+
+  return campoConMasBloques
+}
+
+export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest = false, role }) {
+  const navigate = useNavigate()
+  const [campos, setCampos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    bloques: 0,
+    activos: 0,
+    cultivos: 0,
+    operarios: 0,
+    alertas: 0,
+    productos: 0,
+    plantacionesTotal: 0,
+    bloquesTotal: 0,
+  })
+  const [finanzas, setFinanzas] = useState({ ingresos: 0, cobrado: 0, pendiente: 0, costos: 0, margen: 0 })
+  const [costBreakdown, setCostBreakdown] = useState([])
+  const [produccion, setProduccion] = useState([])
+  const [actividades, setActividades] = useState([])
+  const [chart, setChart] = useState([])
 
-  useEffect(() => {
-    cargarDatos()
+  const hoy = useMemo(() => new Date().toISOString().split('T')[0], [])
+  const mesDesde = useMemo(() => {
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
   }, [])
 
-  const cargarDatos = async () => {
+  useEffect(() => {
+    const init = async () => {
+      const [{ data }, { data: bloques }] = await Promise.all([
+        supabase.from('campos').select('*').order('nombre'),
+        supabase.from('bloques').select('campo_id'),
+      ])
+      const lista = data || []
+      setCampos(lista)
+
+      if (lista.length > 0 && !campoActivo) {
+        const guardado = typeof window !== 'undefined'
+          ? window.localStorage.getItem(CAMPO_STORAGE_KEY)
+          : null
+        setCampoActivo(elegirCampoConDatos(lista, bloques || [], guardado))
+      }
+    }
+
+    init()
+  }, [])
+
+  useEffect(() => {
+    if (campoActivo) cargarDashboard(campoActivo)
+  }, [campoActivo])
+
+  const seleccionarCampo = (campo) => {
+    setCampoActivo(campo)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CAMPO_STORAGE_KEY, campo.id)
+    }
+  }
+
+  const cargarDashboard = async (campo) => {
     setLoading(true)
-    const [{ data: prov, error: eProv }, { data: mov, error: eMov }] = await Promise.all([
-      supabase.from('proveedores_credito').select('*').order('nombre'),
-      supabase.from('proveedor_movimientos').select('*, proveedores_credito(nombre)').order('fecha', { ascending: false }).order('created_at', { ascending: false }),
+
+    const operariosQuery = isGuest
+      ? Promise.resolve({ data: [] })
+      : supabase.from('operarios').select('id').eq('campo_id', campo.id)
+
+    const [
+      { data: bloquesCampo },
+      { data: bloquesTotal },
+      { data: operarios },
+      { data: tareas },
+      { data: productos },
+      { data: plantacionesTotal },
+    ] = await Promise.all([
+      supabase.from('bloques').select('id, codigo, activo').eq('campo_id', campo.id),
+      supabase.from('bloques').select('id'),
+      operariosQuery,
+      supabase
+        .from('tareas')
+        .select('id, descripcion, fecha_programada, tipo, completada')
+        .eq('campo_id', campo.id)
+        .gte('fecha_programada', mesDesde)
+        .order('fecha_programada', { ascending: false })
+        .limit(8),
+      supabase.from('productos').select('id').eq('activo', true),
+      supabase.from('plantaciones').select('id'),
     ])
 
-    if (eProv || eMov) {
-      setError('Falta ejecutar el SQL de cuentas a pagar en Supabase.')
-      setProveedores([])
-      setMovimientos([])
-    } else {
-      setError('')
-      setProveedores(prov || [])
-      setMovimientos(mov || [])
+    const bloques = bloquesCampo || []
+    const bloqueIds = bloques.map(b => b.id)
+
+    const { data: plantasActivas } = bloqueIds.length > 0
+      ? await supabase
+        .from('plantaciones')
+        .select('id, bloque_id, densidad_plantas_m2, cultivos(nombre)')
+        .eq('activa', true)
+        .in('bloque_id', bloqueIds)
+      : { data: [] }
+
+    const { data: cosechas } = bloqueIds.length > 0
+      ? await supabase
+        .from('cosechas')
+        .select('id, kg_total, fecha, bloque_id')
+        .gte('fecha', mesDesde)
+        .in('bloque_id', bloqueIds)
+      : { data: [] }
+
+    const { data: ventas } = bloqueIds.length > 0
+      ? await supabase
+        .from('ventas')
+        .select('id, producto, kg_total, precio_kg, total, monto_cobrado, estado_cobro, fecha, bloque_id, compradores(nombre)')
+        .gte('fecha', mesDesde)
+        .in('bloque_id', bloqueIds)
+      : { data: [] }
+
+    const asistenciaQuery = isGuest
+      ? Promise.resolve({ data: [] })
+      : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde)
+
+    const [{ data: costosManuales }, { data: asistencia }, { data: fumigaciones }, { data: planesNutricionales }] = await Promise.all([
+      supabase.from('costos').select('id, tipo, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
+      asistenciaQuery,
+      supabase
+        .from('fumigaciones')
+        .select('id, fecha, tipo, fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
+        .eq('campo_id', campo.id)
+        .gte('fecha', mesDesde),
+      supabase
+        .from('plan_nutricional_registros')
+        .select('id, fecha, objetivo, bloque_id, bloques(codigo)')
+        .eq('campo_id', campo.id)
+        .gte('fecha', mesDesde)
+        .order('fecha', { ascending: false })
+        .limit(5),
+    ])
+
+    const ingresos = (ventas || []).reduce((s, v) =>
+      s + (Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0)), 0)
+    const cobrado = (ventas || []).reduce((s, v) => s + (Number(v.monto_cobrado) || 0), 0)
+    const pendiente = Math.max(0, ingresos - cobrado)
+    const costosManual = (costosManuales || []).reduce((s, c) => s + (Number(c.monto) || 0), 0)
+    const jornales = (asistencia || [])
+      .filter(a => a.operarios?.campo_id === campo.id)
+      .reduce((s, a) => s + (Number(a.monto) || 0), 0)
+    const agroquimicos = (fumigaciones || []).reduce((total, f) => {
+      return total + (f.fumigacion_productos || []).reduce((s, fp) => {
+        return s + (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
+      }, 0)
+    }, 0)
+    const costos = costosManual + jornales + agroquimicos
+    const breakdown = [
+      { label: 'Jornales', value: jornales, color: '#176a25' },
+      { label: 'Agroquimicos', value: agroquimicos, color: '#d88918' },
+      ...agruparCostosManualesDashboard(costosManuales || []),
+    ]
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value)
+    const costosGrafico = [
+      ...(costosManuales || []).map(c => ({ fecha: c.fecha, monto: Number(c.monto) || 0 })),
+      ...(asistencia || [])
+        .filter(a => a.operarios?.campo_id === campo.id)
+        .map(a => ({ fecha: a.fecha, monto: Number(a.monto) || 0 })),
+      ...(fumigaciones || []).map(f => ({
+        fecha: f.fecha,
+        monto: (f.fumigacion_productos || []).reduce((s, fp) => {
+          return s + (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
+        }, 0),
+      })),
+    ]
+
+    const statsActuales = {
+      bloques: bloques.length,
+      activos: bloques.filter(b => b.activo).length,
+      cultivos: plantasActivas?.length || 0,
+      operarios: operarios?.length || 0,
+      alertas: (tareas || []).filter(t => !t.completada).length,
+      productos: productos?.length || 0,
+      plantacionesTotal: plantacionesTotal?.length || 0,
+      bloquesTotal: bloquesTotal?.length || 0,
     }
+
+    setStats(statsActuales)
+    setFinanzas({ ingresos, cobrado, pendiente, costos, margen: ingresos - costos })
+    setCostBreakdown(breakdown)
+    setProduccion(agruparProduccion(plantasActivas || []))
+    setActividades(construirActividadDashboard({
+      tareas: tareas || [],
+      cosechas: cosechas || [],
+      ventas: ventas || [],
+      fumigaciones: fumigaciones || [],
+      planesNutricionales: planesNutricionales || [],
+      costos: costosManuales || [],
+      resumen: {
+        stats: statsActuales,
+        finanzas: { ingresos, cobrado, pendiente, costos, margen: ingresos - costos },
+        produccion: agruparProduccion(plantasActivas || []),
+      },
+    }))
+    setChart(construirGrafico(ventas || [], costosGrafico))
     setLoading(false)
   }
 
-  const resumen = useMemo(() => {
-    const porProveedor = proveedores.map(p => {
-      const lista = movimientos.filter(m => m.proveedor_id === p.id)
-      const compras = lista.filter(m => signoMovimiento(m.tipo) > 0).reduce((s, m) => s + Number(m.monto || 0), 0)
-      const pagos = lista.filter(m => signoMovimiento(m.tipo) < 0).reduce((s, m) => s + Number(m.monto || 0), 0)
-      const saldo = lista.reduce((s, m) => s + Number(m.monto || 0) * signoMovimiento(m.tipo), 0)
-      return { ...p, compras, pagos, saldo, movimientos: lista }
-    })
-
-    return {
-      porProveedor,
-      deudaTotal: porProveedor.reduce((s, p) => s + Math.max(0, p.saldo), 0),
-      comprasTotal: porProveedor.reduce((s, p) => s + p.compras, 0),
-      pagosTotal: porProveedor.reduce((s, p) => s + p.pagos, 0),
-      conDeuda: porProveedor.filter(p => p.saldo > 0).length,
-    }
-  }, [proveedores, movimientos])
-
-  const proveedoresFiltrados = resumen.porProveedor.filter(p => {
-    if (filtro === 'deuda') return p.saldo > 0
-    if (filtro === 'sin_deuda') return p.saldo <= 0
-    if (filtro === 'inactivos') return !p.activo
-    return p.activo !== false
-  })
-
-  const abrirProveedor = (proveedor = null) => {
-    setProveedorForm(proveedor || proveedorVacio)
-    setModalProveedor(true)
-    setError('')
-  }
-
-  const abrirMovimiento = (movimiento = null, proveedorId = '') => {
-    setMovimientoForm(movimiento
-      ? { ...movimiento, monto: String(Math.round(Number(movimiento.monto || 0))) }
-      : { ...movimientoVacio, proveedor_id: proveedorId || proveedores[0]?.id || '' }
-    )
-    setModalMovimiento(true)
-    setError('')
-  }
-
-  const guardarProveedor = async () => {
-    if (!proveedorForm.nombre.trim()) {
-      setError('Escribi el nombre del proveedor.')
-      return
-    }
-
-    const payload = {
-      nombre: proveedorForm.nombre.trim(),
-      tipo: proveedorForm.tipo || 'Agropecuaria',
-      contacto: proveedorForm.contacto || null,
-      telefono: proveedorForm.telefono || null,
-      direccion: proveedorForm.direccion || null,
-      notas: proveedorForm.notas || null,
-      activo: proveedorForm.activo !== false,
-    }
-
-    const query = proveedorForm.id
-      ? supabase.from('proveedores_credito').update(payload).eq('id', proveedorForm.id)
-      : supabase.from('proveedores_credito').insert(payload)
-    const { error } = await query
-
-    if (error) setError('No se pudo guardar el proveedor.')
-    else {
-      setModalProveedor(false)
-      setProveedorForm(proveedorVacio)
-      await cargarDatos()
-    }
-  }
-
-  const guardarMovimiento = async () => {
-    if (!movimientoForm.proveedor_id || !movimientoForm.concepto.trim() || parseGs(movimientoForm.monto) <= 0) {
-      setError('Completa proveedor, concepto y monto.')
-      return
-    }
-
-    const payload = {
-      proveedor_id: movimientoForm.proveedor_id,
-      fecha: movimientoForm.fecha || hoy(),
-      tipo: movimientoForm.tipo || 'compra_credito',
-      concepto: movimientoForm.concepto.trim(),
-      categoria: movimientoForm.categoria || null,
-      medio_pago: movimientoForm.medio_pago || null,
-      comprobante: movimientoForm.comprobante || null,
-      monto: parseGs(movimientoForm.monto),
-      notas: movimientoForm.notas || null,
-    }
-
-    const query = movimientoForm.id
-      ? supabase.from('proveedor_movimientos').update(payload).eq('id', movimientoForm.id)
-      : supabase.from('proveedor_movimientos').insert(payload)
-    const { error } = await query
-
-    if (error) setError('No se pudo guardar el movimiento.')
-    else {
-      setModalMovimiento(false)
-      setMovimientoForm(movimientoVacio)
-      await cargarDatos()
-    }
-  }
-
-  const eliminarProveedor = async (proveedor) => {
-    if (!window.confirm(`Eliminar ${proveedor.nombre} y todos sus movimientos?`)) return
-    const { error } = await supabase.from('proveedores_credito').delete().eq('id', proveedor.id)
-    if (error) setError('No se pudo eliminar el proveedor.')
-    else cargarDatos()
-  }
-
-  const eliminarMovimiento = async (movimiento) => {
-    if (!window.confirm('Eliminar este movimiento?')) return
-    const { error } = await supabase.from('proveedor_movimientos').delete().eq('id', movimiento.id)
-    if (error) setError('No se pudo eliminar el movimiento.')
-    else cargarDatos()
-  }
-
-  const exportarCsv = () => {
-    const rows = [['Proveedor', 'Fecha', 'Tipo', 'Concepto', 'Categoria', 'Monto', 'Saldo proveedor']]
-    resumen.porProveedor.forEach(p => {
-      p.movimientos.forEach(m => rows.push([
-        p.nombre,
-        m.fecha,
-        tiposMovimiento.find(t => t.value === m.tipo)?.label || m.tipo,
-        m.concepto,
-        m.categoria || '',
-        Number(m.monto || 0) * signoMovimiento(m.tipo),
-        p.saldo,
-      ]))
-    })
-    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `cuentas-a-pagar-${hoy()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const imprimir = () => {
-    const html = `
-      <html><head><title>Cuentas a pagar</title><style>
-        body{font-family:Arial,sans-serif;padding:28px;color:#111}
-        h1{margin:0 0 8px}.muted{color:#666;margin-bottom:20px}
-        table{width:100%;border-collapse:collapse;margin-top:18px}
-        th,td{border-bottom:1px solid #ddd;text-align:left;padding:9px;font-size:13px}
-        th{background:#f1f3f1}.right{text-align:right;font-weight:700}
-      </style></head><body>
-        <h1>Cuentas a pagar</h1><div class="muted">Deuda total: ${fmtGs(resumen.deudaTotal)}</div>
-        <table><thead><tr><th>Proveedor</th><th>Tipo</th><th>Movimientos</th><th class="right">Saldo</th></tr></thead><tbody>
-        ${resumen.porProveedor.map(p => `<tr><td>${p.nombre}</td><td>${p.tipo || ''}</td><td>${p.movimientos.length}</td><td class="right">${fmtGs(p.saldo)}</td></tr>`).join('')}
-        </tbody></table>
-      </body></html>`
-    const w = window.open('', '_blank')
-    w.document.write(html)
-    w.document.close()
-    w.print()
-  }
+  const hayFinanzas = finanzas.ingresos > 0 || finanzas.costos > 0
+  const quickLinksVisibles = filterTabsByRole(quickLinks, role, isGuest)
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh', padding:'32px 18px 90px' }}>
-      <div style={{ maxWidth:1100, margin:'0 auto' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:14, marginBottom:18 }}>
-          <div>
-            <div style={{ color:'#8b928b', fontSize:12 }}>Credito con proveedores</div>
-            <h1 style={{ margin:'4px 0 0', fontSize:28, letterSpacing:-0.8 }}>Cuentas a pagar</h1>
-          </div>
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
-            <button onClick={exportarCsv} style={smallBtn}>CSV</button>
-            <button onClick={imprimir} style={smallBtn}>PDF</button>
-            <button onClick={() => abrirProveedor()} style={darkBtn}>+ Proveedor</button>
-            <button onClick={() => abrirMovimiento()} style={greenBtn}>+ Movimiento</button>
+    <div style={{ minHeight: '100vh', background: '#dfe3df', color: '#101511', padding: '30px 34px 36px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 32, letterSpacing: -1.2, lineHeight: 1.1 }}>Hola, Gabriel</h1>
+          <div style={{ color: '#656b66', fontSize: 15, marginTop: 8 }}>
+            Resumen general de {campoActivo?.nombre || 'El Sembrador'}
           </div>
         </div>
 
-        {error && <div style={errorBox}>{error}</div>}
-
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, minmax(140px, 1fr))', gap:12, marginBottom:16 }}>
-          <Stat dark title="Deuda total" value={fmtGs(resumen.deudaTotal)} sub={`${resumen.conDeuda} proveedores con deuda`} />
-          <Stat title="Compras a credito" value={fmtGs(resumen.comprasTotal)} sub="total registrado" />
-          <Stat title="Pagos realizados" value={fmtGs(resumen.pagosTotal)} sub="total abonado" />
-          <Stat title="Proveedores" value={proveedores.length} sub="registrados" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <select
+            value={campoActivo?.id || ''}
+            onChange={e => seleccionarCampo(campos.find(c => c.id === e.target.value))}
+            style={{
+              height: 46,
+              minWidth: 180,
+              border: '1px solid #dde2dd',
+              borderRadius: 12,
+              background: '#fff',
+              padding: '0 14px',
+              fontSize: 14,
+              color: '#121512',
+              boxShadow: '0 8px 24px rgba(20,30,20,0.05)',
+            }}
+          >
+            {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+          <button onClick={() => navigate('/agenda')} style={{
+            width: 44,
+            height: 44,
+            border: 'none',
+            background: 'transparent',
+            position: 'relative',
+            cursor: 'pointer',
+          }}>
+            <i className="ti ti-bell" style={{ fontSize: 27, color: '#1c221e' }} aria-hidden="true"></i>
+            <span style={{ position: 'absolute', top: 5, right: 7, width: 9, height: 9, borderRadius: '50%', background: '#2d8a2f' }} />
+          </button>
         </div>
+      </div>
 
-        <div style={{ ...card, padding:12, marginBottom:16 }}>
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-            {[
-              ['todos', 'Activos'],
-              ['deuda', 'Con deuda'],
-              ['sin_deuda', 'Sin deuda'],
-              ['inactivos', 'Inactivos'],
-            ].map(([key, label]) => (
-              <button key={key} onClick={() => setFiltro(key)} style={filtro === key ? activeChip : chip}>{label}</button>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(180px, 1fr))', gap: 16, marginBottom: 18 }}>
+        <Kpi icon="ti-plant" title="Bloques activos" value={loading ? '-' : stats.activos} sub={`de ${stats.bloques} totales`} dark />
+        <Kpi icon="ti-plant" title="Cultivos activos" value={stats.cultivos} sub="plantaciones activas" />
+        {isGuest ? (
+          <Kpi icon="ti-eye" title="Modo invitado" value="Ver" sub="solo lectura" />
+        ) : (
+          <Kpi icon="ti-users" title="Operarios activos" value={stats.operarios} sub="en el campo" />
+        )}
+        <Kpi icon="ti-alert-triangle" title="Alertas" value={stats.alertas} sub={stats.alertas === 0 ? 'sin alertas' : 'pendientes'} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 16, marginBottom: 16 }}>
+        <Panel title="Resumen financiero del mes" action="Ver costos" onAction={() => navigate('/costos')} wide>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
+            <Money title="Ventas del mes" value={finanzas.ingresos} />
+            <Money title="Cobrado" value={finanzas.cobrado} />
+            <Money title="Pendiente" value={finanzas.pendiente} />
+            <Money title="Gastos del mes" value={finanzas.costos} />
+          </div>
+          <div style={{ borderTop: '1px solid #ecefec', paddingTop: 14, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 270px', gap: 16, alignItems: 'stretch' }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 750, marginBottom: 8 }}>Ingresos vs. Costos</div>
+              <MiniChart data={chart} hasData={hayFinanzas} />
+            </div>
+            <CostBreakdown data={costBreakdown} total={finanzas.costos} />
+          </div>
+        </Panel>
+
+        <Panel title="Produccion por cultivo" action="Ver mapa" onAction={() => navigate('/mapa')}>
+          {produccion.length === 0 ? (
+            <EmptyState text="Sin plantaciones activas para mostrar." />
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 140px', gap: 18, alignItems: 'stretch' }}>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {produccion.slice(0, 3).map(c => <CropRow key={c.nombre} crop={c} icon={getCropIcon(c.nombre)} />)}
+              </div>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {produccion.slice(3, 6).map(c => <CropRow key={c.nombre} crop={c} icon={getCropIcon(c.nombre)} />)}
+              </div>
+              <div style={{ borderLeft: '1px solid #eef0ee', display: 'grid', alignContent: 'center', gap: 22, paddingLeft: 18 }}>
+                <SideTotal icon="ti-plant" value={stats.plantacionesTotal} label="Plantaciones registradas" />
+                <SideTotal icon="ti-box" value={stats.productos} label="Productos en inventario" />
+              </div>
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 16, marginBottom: 16 }}>
+        <Panel title="Actividad y agenda" action="Ver agenda" onAction={() => navigate('/agenda')}>
+          {actividades.length === 0 ? (
+            <EmptyState text="Sin movimientos recientes ni tareas pendientes." />
+          ) : (
+            <div>
+              {actividades.slice(0, 5).map(a => (
+                <Activity key={a.id} icon={a.icon} title={a.title} date={a.date} tag={a.tag} color={a.color} onClick={() => navigate(a.path)} />
+              ))}
+            </div>
+          )}
+          <button onClick={() => navigate('/historial')} style={linkRow}>Ver historial completo <i className="ti ti-chevron-right" /></button>
+        </Panel>
+
+        <Panel title="Accesos rapidos">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+            {quickLinksVisibles.map(link => (
+              <button key={link.path} onClick={() => navigate(link.path)} style={{
+                border: '1px solid #e7ece7',
+                background: '#fff',
+                borderRadius: 13,
+                padding: '12px 12px',
+                display: 'grid',
+                gridTemplateColumns: '40px 1fr 16px',
+                gap: 10,
+                alignItems: 'center',
+                textAlign: 'left',
+                cursor: 'pointer',
+              }}>
+                <span style={iconPill}><DashboardIcon icon={link.icon} size={22} color="#176a25" /></span>
+                <span>
+                  <span style={{ display: 'block', fontWeight: 800, fontSize: 14 }}>{link.title}</span>
+                  <span style={{ display: 'block', color: '#69706a', fontSize: 12, marginTop: 2 }}>{link.sub}</span>
+                </span>
+                <i className="ti ti-chevron-right" style={{ fontSize: 17, color: '#1c211d' }} aria-hidden="true"></i>
+              </button>
             ))}
           </div>
-        </div>
-
-        <div style={{ display:'grid', gap:12 }}>
-          {loading ? (
-            <div style={empty}>Cargando...</div>
-          ) : proveedoresFiltrados.length === 0 ? (
-            <div style={empty}>Sin proveedores para mostrar.</div>
-          ) : proveedoresFiltrados.map(p => (
-            <div key={p.id} style={card}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:14, alignItems:'center' }}>
-                <button onClick={() => setProveedorAbierto(proveedorAbierto === p.id ? null : p.id)} style={{ border:'none', background:'transparent', textAlign:'left', cursor:'pointer', padding:0 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <span style={iconPill}><i className="ti ti-building-store" style={{ fontSize:23, color:'#176a25' }} /></span>
-                    <span>
-                      <strong style={{ fontSize:17 }}>{p.nombre}</strong>
-                      <span style={{ display:'block', fontSize:12, color:'#7a817a', marginTop:3 }}>
-                        {p.tipo || 'Proveedor'}{p.telefono ? ` - ${p.telefono}` : ''}
-                      </span>
-                    </span>
-                  </div>
-                </button>
-                <div style={{ textAlign:'right' }}>
-                  <strong style={{ fontSize:22, color:p.saldo > 0 ? '#c84040' : '#176a25' }}>{fmtGs(p.saldo)}</strong>
-                  <div style={{ display:'flex', gap:7, justifyContent:'flex-end', marginTop:8, flexWrap:'wrap' }}>
-                    <button onClick={() => abrirMovimiento(null, p.id)} style={miniBtn}>Movimiento</button>
-                    <button onClick={() => abrirProveedor(p)} style={miniBtn}>Editar</button>
-                    <button onClick={() => eliminarProveedor(p)} style={dangerMiniBtn}>Eliminar</button>
-                  </div>
-                </div>
-              </div>
-
-              {proveedorAbierto === p.id && (
-                <div style={{ marginTop:14, borderTop:'1px solid #edf0ed', paddingTop:12 }}>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:10, marginBottom:12 }}>
-                    <MiniTotal label="Compras/deuda" value={fmtGs(p.compras)} />
-                    <MiniTotal label="Pagos/ajustes" value={fmtGs(p.pagos)} />
-                    <MiniTotal label="Movimientos" value={p.movimientos.length} />
-                  </div>
-                  {p.notas && <div style={{ fontSize:13, color:'#4d544e', marginBottom:10, whiteSpace:'pre-wrap' }}>{p.notas}</div>}
-                  <div style={{ display:'grid', gap:8 }}>
-                    {p.movimientos.length === 0 ? (
-                      <div style={{ color:'#8b928b', fontSize:13 }}>Sin movimientos.</div>
-                    ) : p.movimientos.map(m => (
-                      <div key={m.id} style={{ background:'#f7f8f6', borderRadius:14, padding:'10px 12px', display:'grid', gridTemplateColumns:'1fr auto', gap:10, alignItems:'center' }}>
-                        <div>
-                          <strong style={{ fontSize:14 }}>{m.concepto}</strong>
-                          <div style={{ fontSize:12, color:'#788078', marginTop:3 }}>
-                            {m.fecha} - {tiposMovimiento.find(t => t.value === m.tipo)?.label || m.tipo}{m.comprobante ? ` - ${m.comprobante}` : ''}
-                          </div>
-                        </div>
-                        <div style={{ textAlign:'right' }}>
-                          <strong style={{ color:signoMovimiento(m.tipo) > 0 ? '#c84040' : '#176a25' }}>
-                            {signoMovimiento(m.tipo) > 0 ? '+' : '-'} {fmtGs(m.monto)}
-                          </strong>
-                          <div style={{ display:'flex', gap:6, marginTop:7 }}>
-                            <button onClick={() => abrirMovimiento(m)} style={miniBtn}>Editar</button>
-                            <button onClick={() => eliminarMovimiento(m)} style={dangerMiniBtn}>Borrar</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <NotasPanel modulo="cuentas_pagar" titulo="Blog de notas de cuentas a pagar" />
+        </Panel>
       </div>
 
-      {modalProveedor && (
-        <Modal onClose={() => setModalProveedor(false)} title={proveedorForm.id ? 'Editar proveedor' : 'Nuevo proveedor'}>
-          <input style={input} placeholder="Nombre de la agropecuaria/proveedor" value={proveedorForm.nombre || ''} onChange={e => setProveedorForm(f => ({ ...f, nombre:e.target.value }))} />
-          <select style={input} value={proveedorForm.tipo || 'Agropecuaria'} onChange={e => setProveedorForm(f => ({ ...f, tipo:e.target.value }))}>
-            {tiposProveedor.map(t => <option key={t}>{t}</option>)}
-          </select>
-          <input style={input} placeholder="Contacto" value={proveedorForm.contacto || ''} onChange={e => setProveedorForm(f => ({ ...f, contacto:e.target.value }))} />
-          <input style={input} placeholder="Telefono" value={proveedorForm.telefono || ''} onChange={e => setProveedorForm(f => ({ ...f, telefono:e.target.value }))} />
-          <input style={input} placeholder="Direccion" value={proveedorForm.direccion || ''} onChange={e => setProveedorForm(f => ({ ...f, direccion:e.target.value }))} />
-          <textarea style={{ ...input, minHeight:80 }} placeholder="Notas internas" value={proveedorForm.notas || ''} onChange={e => setProveedorForm(f => ({ ...f, notas:e.target.value }))} />
-          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, marginBottom:12 }}>
-            <input type="checkbox" checked={proveedorForm.activo !== false} onChange={e => setProveedorForm(f => ({ ...f, activo:e.target.checked }))} />
-            Proveedor activo
-          </label>
-          <button onClick={guardarProveedor} style={{ ...greenBtn, width:'100%' }}>Guardar proveedor</button>
-        </Modal>
-      )}
-
-      {modalMovimiento && (
-        <Modal onClose={() => setModalMovimiento(false)} title={movimientoForm.id ? 'Editar movimiento' : 'Nuevo movimiento'}>
-          <select style={input} value={movimientoForm.proveedor_id || ''} onChange={e => setMovimientoForm(f => ({ ...f, proveedor_id:e.target.value }))}>
-            <option value="">Elegir proveedor</option>
-            {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <input type="date" style={input} value={movimientoForm.fecha || hoy()} onChange={e => setMovimientoForm(f => ({ ...f, fecha:e.target.value }))} />
-            <select style={input} value={movimientoForm.tipo || 'compra_credito'} onChange={e => setMovimientoForm(f => ({ ...f, tipo:e.target.value }))}>
-              {tiposMovimiento.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-          </div>
-          <input style={input} placeholder="Concepto: fertilizante, semillas, pago parcial..." value={movimientoForm.concepto || ''} onChange={e => setMovimientoForm(f => ({ ...f, concepto:e.target.value }))} />
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <select style={input} value={movimientoForm.categoria || 'Insumos'} onChange={e => setMovimientoForm(f => ({ ...f, categoria:e.target.value }))}>
-              {categorias.map(c => <option key={c}>{c}</option>)}
-            </select>
-            <input style={input} placeholder="Monto" value={movimientoForm.monto || ''} onChange={e => setMovimientoForm(f => ({ ...f, monto:e.target.value }))} />
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <select style={input} value={movimientoForm.medio_pago || 'Transferencia'} onChange={e => setMovimientoForm(f => ({ ...f, medio_pago:e.target.value }))}>
-              {mediosPago.map(m => <option key={m}>{m}</option>)}
-            </select>
-            <input style={input} placeholder="Factura/comprobante" value={movimientoForm.comprobante || ''} onChange={e => setMovimientoForm(f => ({ ...f, comprobante:e.target.value }))} />
-          </div>
-          <textarea style={{ ...input, minHeight:80 }} placeholder="Notas" value={movimientoForm.notas || ''} onChange={e => setMovimientoForm(f => ({ ...f, notas:e.target.value }))} />
-          <button onClick={guardarMovimiento} style={{ ...greenBtn, width:'100%' }}>Guardar movimiento</button>
-        </Modal>
-      )}
-    </div>
-  )
-}
-
-function Stat({ title, value, sub, dark }) {
-  return (
-    <div style={{ ...card, background:dark ? '#212121' : '#fff', color:dark ? '#fff' : '#101511' }}>
-      <div style={{ color:dark ? 'rgba(255,255,255,0.62)' : '#7b837b', fontSize:11, textTransform:'uppercase' }}>{title}</div>
-      <strong style={{ display:'block', fontSize:24, marginTop:7 }}>{value}</strong>
-      <div style={{ color:dark ? 'rgba(255,255,255,0.58)' : '#6c746d', fontSize:12, marginTop:5 }}>{sub}</div>
-    </div>
-  )
-}
-
-function MiniTotal({ label, value }) {
-  return (
-    <div style={{ background:'#f7f8f6', borderRadius:14, padding:12 }}>
-      <div style={{ color:'#7a817a', fontSize:11, textTransform:'uppercase' }}>{label}</div>
-      <strong style={{ fontSize:16, display:'block', marginTop:4 }}>{value}</strong>
-    </div>
-  )
-}
-
-function Modal({ title, children, onClose }) {
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:18 }}>
-      <div style={{ width:'100%', maxWidth:520, maxHeight:'90vh', overflowY:'auto', background:'#f2f1ef', borderRadius:24, padding:20, boxShadow:'0 24px 70px rgba(0,0,0,0.28)' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-          <h2 style={{ margin:0, fontSize:22 }}>{title}</h2>
-          <button onClick={onClose} style={{ border:'1px solid #e3e3de', background:'#fff', borderRadius:12, width:36, height:36, cursor:'pointer' }}>x</button>
-        </div>
-        {children}
+      <div style={{
+        ...panelStyle,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 0,
+        padding: 0,
+        overflow: 'hidden',
+      }}>
+        <BottomStat dark icon="ti-stack-2" value={stats.bloquesTotal} label="Bloques totales en la base" />
+        <BottomStat icon="ti-plant" value={stats.plantacionesTotal} label="Plantaciones registradas" />
+        <BottomStat icon="ti-box" value={stats.productos} label="Productos en inventario" />
+        {isGuest ? (
+          <BottomStat icon="ti-eye" value="Ver" label="Acceso invitado de solo lectura" />
+        ) : (
+          <BottomStat icon="ti-users" value={stats.operarios} label="Operarios activos en el campo" />
+        )}
       </div>
     </div>
   )
 }
 
-const card = {
-  background:'#fff',
-  border:'1px solid #e8ece8',
-  borderRadius:18,
-  padding:16,
-  boxShadow:'0 14px 34px rgba(24, 32, 24, 0.05)',
+function agruparProduccion(plantas) {
+  const mapa = {}
+  plantas.forEach(p => {
+    const nombre = p.cultivos?.nombre || 'Sin cultivo'
+    if (!mapa[nombre]) mapa[nombre] = { nombre, plantaciones: 0, bloques: new Set(), plantas: 0 }
+    mapa[nombre].plantaciones += 1
+    mapa[nombre].bloques.add(p.bloque_id)
+    mapa[nombre].plantas += Number(p.densidad_plantas_m2) || 0
+  })
+
+  return Object.values(mapa)
+    .map(c => ({ ...c, bloques: c.bloques.size }))
+    .sort((a, b) => b.plantaciones - a.plantaciones)
 }
 
-const empty = {
-  ...card,
-  color:'#8b928b',
-  textAlign:'center',
-  padding:26,
+function agruparCostosManualesDashboard(costos) {
+  const grupos = {}
+  ;(costos || []).forEach(costo => {
+    const key = costo.tipo || 'otro'
+    const meta = COSTO_MANUAL_LABELS[key] || COSTO_MANUAL_LABELS.otro
+    if (!grupos[key]) grupos[key] = { label: meta.label, value: 0, color: meta.color }
+    grupos[key].value += Number(costo.monto) || 0
+  })
+  return Object.values(grupos)
+}
+
+function construirGrafico(ventas, costos) {
+  const puntos = [1, 7, 14, 21, 28]
+  return puntos.map(dia => {
+    const ingresos = ventas
+      .filter(v => Number((v.fecha || '').slice(8, 10)) <= dia)
+      .reduce((s, v) => s + (Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0)), 0)
+    const gastos = costos
+      .filter(c => Number((c.fecha || '').slice(8, 10)) <= dia)
+      .reduce((s, c) => s + (Number(c.monto) || 0), 0)
+    return { dia, ingresos, gastos }
+  })
+}
+
+function fechaValor(fecha) {
+  const time = new Date(fecha || 0).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+function formatFechaCorta(fecha) {
+  if (!fecha) return 'Sin fecha'
+  const d = new Date(`${fecha}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return fecha
+  return d.toLocaleDateString('es-PY', { day: 'numeric', month: 'short' })
+}
+
+function construirActividadDashboard({ tareas, cosechas, ventas, fumigaciones, planesNutricionales, costos, resumen }) {
+  const agenda = (tareas || []).map(t => ({
+    id: `tarea-${t.id}`,
+    title: t.descripcion || (t.completada ? 'Tarea completada' : 'Tarea pendiente'),
+    date: `${t.completada ? 'Completada' : 'Agenda'} - ${formatFechaCorta(t.fecha_programada)}`,
+    tag: t.completada ? 'Hecha' : (t.tipo || 'Tarea'),
+    icon: 'ti-calendar',
+    color: t.completada ? '#176a25' : '#2563eb',
+    path: '/agenda',
+    order: fechaValor(t.fecha_programada),
+  }))
+
+  const cosecha = (cosechas || []).map(c => ({
+    id: `cosecha-${c.id}`,
+    title: `${fmtNumber(c.kg_total)} kg cosechados`,
+    date: `Cosecha - ${formatFechaCorta(c.fecha)}`,
+    tag: 'Produccion',
+    icon: 'ti-cut',
+    color: '#176a25',
+    path: '/cosecha',
+    order: fechaValor(c.fecha),
+  }))
+
+  const venta = (ventas || []).map(v => ({
+    id: `venta-${v.id}`,
+    title: `${v.producto || 'Venta'} - ${fmtGs(Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0))}`,
+    date: `${v.compradores?.nombre || 'Venta'} - ${formatFechaCorta(v.fecha)}`,
+    tag: v.estado_cobro === 'pagado' ? 'Cobrado' : 'Por cobrar',
+    icon: 'ti-cash-register',
+    color: v.estado_cobro === 'pagado' ? '#176a25' : '#bd640b',
+    path: '/ventas',
+    order: fechaValor(v.fecha) + 1,
+  }))
+
+  const fumigacion = (fumigaciones || []).map(f => ({
+    id: `fumigacion-${f.id}`,
+    title: f.tipo ? `Registro de ${f.tipo}` : 'Fumigacion registrada',
+    date: `Fumigacion - ${formatFechaCorta(f.fecha)}`,
+    tag: `${f.fumigacion_productos?.length || 0} productos`,
+    icon: 'ti-spray',
+    color: '#d88918',
+    path: '/fumigaciones',
+    order: fechaValor(f.fecha),
+  }))
+
+  const nutricion = (planesNutricionales || []).map(p => ({
+    id: `plan-${p.id}`,
+    title: `${p.objetivo || 'Plan nutricional'}${p.bloques?.codigo ? ` - ${p.bloques.codigo}` : ''}`,
+    date: `Nutricion - ${formatFechaCorta(p.fecha)}`,
+    tag: 'Plan',
+    icon: 'ti-leaf',
+    color: '#0f7a3a',
+    path: '/plan-nutricional',
+    order: fechaValor(p.fecha),
+  }))
+
+  const costosMes = (costos || []).map((c, index) => ({
+    id: `costo-${c.id || index}`,
+    title: `Gasto registrado ${fmtGs(c.monto || 0)}`,
+    date: `Costos - ${formatFechaCorta(c.fecha)}`,
+    tag: 'Costo',
+    icon: 'ti-coin',
+    color: '#d88918',
+    path: '/costos',
+    order: fechaValor(c.fecha),
+  }))
+
+  const actividad = [...agenda, ...cosecha, ...venta, ...fumigacion, ...nutricion, ...costosMes]
+    .sort((a, b) => b.order - a.order)
+    .slice(0, 5)
+
+  if (actividad.length > 0) return actividad
+
+  const stats = resumen?.stats || {}
+  const finanzas = resumen?.finanzas || {}
+  const topCultivo = (resumen?.produccion || [])[0]
+
+  return [
+    {
+      id: 'estado-cultivos',
+      title: `${fmtNumber(stats.cultivos || 0)} plantaciones activas`,
+      date: topCultivo ? `Cultivo principal: ${topCultivo.nombre}` : 'Estado actual del campo',
+      tag: `${fmtNumber(stats.activos || 0)} bloques`,
+      icon: 'ti-plant',
+      color: '#176a25',
+      path: '/mapa',
+      order: 4,
+    },
+    {
+      id: 'estado-inventario',
+      title: `${fmtNumber(stats.productos || 0)} productos en inventario`,
+      date: 'Stock disponible para operaciones',
+      tag: 'Inventario',
+      icon: 'ti-box',
+      color: '#2563eb',
+      path: '/inventario',
+      order: 3,
+    },
+    {
+      id: 'estado-costos',
+      title: `${fmtGs(finanzas.costos || 0)} en gastos del mes`,
+      date: finanzas.ingresos ? `Ingresos: ${fmtGs(finanzas.ingresos)}` : 'Resumen financiero mensual',
+      tag: 'Costos',
+      icon: 'ti-coin',
+      color: '#d88918',
+      path: '/costos',
+      order: 2,
+    },
+    {
+      id: 'estado-plan',
+      title: 'Plan nutricional listo para usar',
+      date: 'Asistente contextual por cultivo, EC y bloque',
+      tag: 'Nutricion',
+      icon: 'ti-leaf',
+      color: '#0f7a3a',
+      path: '/plan-nutricional',
+      order: 1,
+    },
+  ]
+}
+
+const panelStyle = {
+  background: '#fff',
+  border: '1px solid #e8ece8',
+  borderRadius: 18,
+  boxShadow: '0 16px 34px rgba(29, 38, 29, 0.06)',
 }
 
 const iconPill = {
-  width:46,
-  height:46,
-  borderRadius:14,
-  background:'#edf6ec',
-  display:'flex',
-  alignItems:'center',
-  justifyContent:'center',
+  width: 42,
+  height: 42,
+  borderRadius: 12,
+  background: '#edf6ec',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 }
 
-const input = {
-  width:'100%',
-  border:'1px solid #e2e5df',
-  borderRadius:13,
-  padding:'12px 13px',
-  background:'#fff',
-  fontSize:14,
-  marginBottom:10,
-  boxSizing:'border-box',
+const linkRow = {
+  marginTop: 12,
+  width: '100%',
+  border: 'none',
+  borderTop: '1px solid #eef0ee',
+  background: 'transparent',
+  padding: '15px 0 0',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  color: '#4d544e',
+  fontSize: 14,
+  cursor: 'pointer',
 }
 
-const smallBtn = {
-  border:'1px solid #e0e4df',
-  background:'#fff',
-  borderRadius:13,
-  padding:'10px 13px',
-  fontWeight:800,
-  cursor:'pointer',
+function Panel({ title, action, onAction, children }) {
+  return (
+    <section style={{ ...panelStyle, padding: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <h2 style={{ margin: 0, fontSize: 18, letterSpacing: -0.4 }}>{title}</h2>
+        {action && (
+          <button type="button" onClick={onAction} style={{ border: '1px solid #e7ece7', background: '#fff', borderRadius: 9, padding: '8px 13px', fontSize: 12, cursor: 'pointer' }}>
+            {action}
+          </button>
+        )}
+      </div>
+      {children}
+    </section>
+  )
 }
 
-const darkBtn = {
-  border:'none',
-  background:'#212121',
-  color:'#fff',
-  borderRadius:13,
-  padding:'11px 15px',
-  fontWeight:850,
-  cursor:'pointer',
+function Kpi({ icon, title, value, sub, dark, badge }) {
+  return (
+    <div style={{ ...panelStyle, minHeight: 106, padding: 20, display: 'grid', gridTemplateColumns: '58px 1fr', alignItems: 'center', gap: 16 }}>
+      <div style={{ ...iconPill, width: 54, height: 54, borderRadius: 17, background: dark ? '#050705' : '#edf6ec' }}>
+        <i className={`ti ${icon}`} style={{ fontSize: 29, color: dark ? '#fff' : '#176a25' }} aria-hidden="true"></i>
+      </div>
+      <div>
+        <div style={{ textTransform: 'uppercase', color: '#5f665f', fontSize: 12, letterSpacing: 0.3 }}>{title}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
+          <strong style={{ fontSize: 29, lineHeight: 1 }}>{value}</strong>
+          {badge && <span style={{ background: '#e2f2dc', color: '#16621f', borderRadius: 8, padding: '4px 9px', fontSize: 12 }}>{badge}</span>}
+        </div>
+        <div style={{ color: '#5f665f', fontSize: 13, marginTop: 6 }}>{sub}</div>
+      </div>
+    </div>
+  )
 }
 
-const greenBtn = {
-  border:'none',
-  background:'#176a25',
-  color:'#fff',
-  borderRadius:13,
-  padding:'11px 15px',
-  fontWeight:850,
-  cursor:'pointer',
+function Money({ title, value }) {
+  return (
+    <div style={{ borderRight: '1px solid #ecefec', paddingRight: 14 }}>
+      <div style={{ color: '#333b34', fontSize: 13, marginBottom: 8 }}>{title}</div>
+      <div style={{ fontSize: 22, fontWeight: 850, letterSpacing: -0.5 }}>{fmtGs(value)}</div>
+      <div style={{ color: '#6d746e', fontSize: 12, marginTop: 5 }}>{value > 0 ? 'calculado automaticamente' : 'Sin datos aun'}</div>
+    </div>
+  )
 }
 
-const miniBtn = {
-  border:'1px solid #dfe5df',
-  background:'#fff',
-  borderRadius:10,
-  padding:'7px 10px',
-  fontSize:12,
-  cursor:'pointer',
+function CostBreakdown({ data, total }) {
+  const items = data.length > 0 ? data : [{ label: 'Sin costos registrados', value: 0, color: '#d8ddd8' }]
+  const radio = 44
+  const circunferencia = 2 * Math.PI * radio
+  let acumulado = 0
+  return (
+    <div style={{ minHeight: 150 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+        <div style={{ fontSize:13, fontWeight:800 }}>Distribucion de costos</div>
+        <div style={{ fontSize:12, color:'#69706a' }}>{total > 0 ? fmtGs(total) : 'Sin datos'}</div>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'96px minmax(0, 1fr)', gap:10, alignItems:'center' }}>
+        <div style={{ position:'relative', width:96, height:96 }}>
+          <svg viewBox="0 0 120 120" style={{ width:'100%', height:'100%', transform:'rotate(-90deg)' }}>
+            <circle cx="60" cy="60" r={radio} fill="none" stroke="#edf0ed" strokeWidth="16" />
+            {total > 0 && items.map(item => {
+              const dash = (item.value / total) * circunferencia
+              const dasharray = `${dash} ${circunferencia - dash}`
+              const dashoffset = -acumulado
+              acumulado += dash
+              return (
+                <circle
+                  key={item.label}
+                  cx="60"
+                  cy="60"
+                  r={radio}
+                  fill="none"
+                  stroke={item.color}
+                  strokeWidth="16"
+                  strokeDasharray={dasharray}
+                  strokeDashoffset={dashoffset}
+                  strokeLinecap="round"
+                />
+              )
+            })}
+          </svg>
+          <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center' }}>
+            <strong style={{ fontSize:17, lineHeight:1 }}>{total > 0 ? '100%' : '0%'}</strong>
+            <span style={{ fontSize:10, color:'#69706a', marginTop:3 }}>costos</span>
+          </div>
+        </div>
+        <div style={{ display:'grid', gap:7, minWidth:0 }}>
+        {items.map(item => {
+          const pct = total > 0 ? Math.round((item.value / total) * 100) : 0
+          return (
+            <div key={item.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:7, border:'1px solid #edf0ed', borderRadius:10, padding:'7px 8px', minWidth:0, boxSizing:'border-box' }}>
+              <span style={{ display:'flex', alignItems:'center', gap:7, minWidth:0, flex:1 }}>
+                <span style={{ width:9, height:9, borderRadius:'50%', background:item.color, flexShrink:0 }} />
+                <span style={{ fontSize:12, color:'#333b34', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.label}</span>
+              </span>
+              <strong style={{ fontSize:12, minWidth:34, textAlign:'right', flexShrink:0 }}>{pct}%</strong>
+            </div>
+          )
+        })}
+        </div>
+      </div>
+    </div>
+  )
 }
 
-const dangerMiniBtn = {
-  ...miniBtn,
-  border:'1px solid #ffd0d0',
-  color:'#c84040',
+function MiniChart({ data, hasData }) {
+  const max = Math.max(...data.flatMap(d => [d.ingresos, d.gastos]), 1)
+  const points = data.map((d, i) => {
+    const x = 24 + i * 118
+    const y = 140 - (d.ingresos / max) * 105
+    return `${x},${y}`
+  }).join(' ')
+  const costPoints = data.map((d, i) => {
+    const x = 24 + i * 118
+    const y = 140 - (d.gastos / max) * 105
+    return `${x},${y}`
+  }).join(' ')
+
+  return (
+    <div style={{ height: 140, position: 'relative' }}>
+      <svg viewBox="0 0 520 165" style={{ width: '100%', height: '100%' }} preserveAspectRatio="none">
+        {[35, 70, 105, 140].map(y => <line key={y} x1="0" x2="520" y1={y} y2={y} stroke="#e6ebe6" strokeDasharray="4 4" />)}
+        <polyline points={points} fill="none" stroke="#176a25" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity={hasData ? 1 : 0.25} />
+        <polyline points={costPoints} fill="none" stroke="#6f7770" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity={hasData ? 1 : 0.25} />
+        {data.map((d, i) => <text key={d.dia} x={24 + i * 118} y="160" fontSize="11" fill="#69706a">{d.dia} Jun</text>)}
+      </svg>
+      {!hasData && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#4b524c', textAlign: 'center' }}>
+          <i className="ti ti-chart-bar" style={{ fontSize: 28, marginBottom: 8 }} aria-hidden="true"></i>
+          <strong>Sin datos aun</strong>
+          <span style={{ fontSize: 12, marginTop: 4 }}>Aun no hay informacion financiera registrada para este periodo.</span>
+        </div>
+      )}
+    </div>
+  )
 }
 
-const chip = {
-  border:'none',
-  background:'#eeefeb',
-  borderRadius:999,
-  padding:'8px 13px',
-  fontSize:12,
-  fontWeight:750,
-  cursor:'pointer',
-  color:'#727872',
+function CropRow({ crop, icon }) {
+  const pct = Math.min(100, Math.max(18, crop.plantaciones * 18))
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr', gap: 12, alignItems: 'center' }}>
+      <div style={{ fontSize: 34, textAlign: 'center' }}>{icon}</div>
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+          <strong style={{ fontSize: 14 }}>{crop.nombre}</strong>
+          <span style={{ color: '#4e554f', fontSize: 12 }}>{crop.bloques} bloque{crop.bloques === 1 ? '' : 's'}</span>
+        </div>
+        <div style={{ color: '#69706a', fontSize: 12, marginTop: 3 }}>
+          {crop.plantaciones} plantacion{crop.plantaciones === 1 ? '' : 'es'}{crop.plantas > 0 ? ` · ${fmtNumber(crop.plantas)} plantas` : ''}
+        </div>
+        <div style={{ height: 5, background: '#e1e7e0', borderRadius: 8, marginTop: 7, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: '#19732a', borderRadius: 8 }} />
+        </div>
+      </div>
+    </div>
+  )
 }
 
-const activeChip = {
-  ...chip,
-  background:'#212121',
-  color:'#fff',
+function Activity({ icon, title, date, tag, color = '#176a25', onClick }) {
+  return (
+    <button onClick={onClick} style={{ width: '100%', border: 'none', background: 'transparent', display: 'grid', gridTemplateColumns: '40px 1fr auto 16px', gap: 14, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eef0ee', textAlign: 'left', cursor: 'pointer' }}>
+      <span style={{ ...iconPill, background: `${color}14` }}><i className={`ti ${icon}`} style={{ color, fontSize: 21 }} aria-hidden="true"></i></span>
+      <div>
+        <strong style={{ fontSize: 14 }}>{title}</strong>
+        <div style={{ color: '#69706a', fontSize: 12, marginTop: 3 }}>{date}</div>
+      </div>
+      <span style={{ background: `${color}12`, color, borderRadius: 8, padding: '5px 9px', fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap' }}>{tag || 'Actividad'}</span>
+      <i className="ti ti-chevron-right" style={{ fontSize: 16, color: '#9aa09a' }} aria-hidden="true"></i>
+    </button>
+  )
 }
 
-const errorBox = {
-  background:'#fff0f0',
-  color:'#b52828',
-  borderRadius:14,
-  padding:'12px 14px',
-  fontSize:13,
-  marginBottom:14,
+function SideTotal({ icon, value, label }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 11, alignItems: 'center' }}>
+      <span style={{ ...iconPill, width: 44, height: 44, borderRadius: 15 }}><i className={`ti ${icon}`} style={{ fontSize: 23, color: '#176a25' }} aria-hidden="true"></i></span>
+      <div>
+        <strong style={{ fontSize: 26, lineHeight: 1 }}>{value}</strong>
+        <div style={{ fontSize: 12, color: '#5f665f', marginTop: 4 }}>{label}</div>
+      </div>
+    </div>
+  )
+}
+
+function BottomStat({ icon, value, label, dark }) {
+  return (
+    <div style={{ padding: '24px 26px', display: 'grid', gridTemplateColumns: '58px 1fr', gap: 18, alignItems: 'center', borderRight: '1px solid #edf0ed' }}>
+      <span style={{ ...iconPill, width: 58, height: 58, borderRadius: 17, background: dark ? '#050705' : '#edf6ec' }}>
+        <i className={`ti ${icon}`} style={{ fontSize: 28, color: dark ? '#fff' : '#176a25' }} aria-hidden="true"></i>
+      </span>
+      <div>
+        <strong style={{ fontSize: 27 }}>{value}</strong>
+        <div style={{ color: '#5f665f', fontSize: 13 }}>{label}</div>
+      </div>
+    </div>
+  )
+}
+
+function EmptyState({ text }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 140, color: '#69706a', fontSize: 14 }}>
+      {text}
+    </div>
+  )
 }

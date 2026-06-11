@@ -1,46 +1,21 @@
--- AgroBloque: modulo independiente de Contabilidad.
--- Ejecutar una sola vez en Supabase SQL Editor.
+alter table public.plantacion_abonos
+  add column if not exists unidad text not null default 'kg',
+  add column if not exists alcance text not null default 'total';
 
-create extension if not exists pgcrypto;
+alter table public.plantacion_abonos
+  drop constraint if exists plantacion_abonos_unidad_check,
+  add constraint plantacion_abonos_unidad_check
+    check (unidad in ('kg', 'g', 'ton'));
 
-create table if not exists public.contabilidad_movimientos (
-  id uuid primary key default gen_random_uuid(),
-  fecha date not null default current_date,
-  tipo text not null check (tipo in ('compra', 'venta')),
-  descripcion text not null,
-  categoria text,
-  contraparte text,
-  medio_pago text,
-  comprobante text,
-  monto numeric not null default 0 check (monto >= 0),
-  notas text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+alter table public.plantacion_abonos
+  drop constraint if exists plantacion_abonos_alcance_check,
+  add constraint plantacion_abonos_alcance_check
+    check (alcance in ('total', 'por_tablon'));
 
-create index if not exists contabilidad_movimientos_fecha_idx
-  on public.contabilidad_movimientos (fecha desc);
+update public.plantacion_abonos
+set unidad = 'kg'
+where unidad is null or unidad = '';
 
-create index if not exists contabilidad_movimientos_tipo_fecha_idx
-  on public.contabilidad_movimientos (tipo, fecha desc);
-
-alter table public.contabilidad_movimientos enable row level security;
-
-grant select, insert, update, delete on public.contabilidad_movimientos to authenticated;
-
-drop policy if exists contabilidad_movimientos_authenticated_select on public.contabilidad_movimientos;
-drop policy if exists contabilidad_movimientos_authenticated_insert on public.contabilidad_movimientos;
-drop policy if exists contabilidad_movimientos_authenticated_update on public.contabilidad_movimientos;
-drop policy if exists contabilidad_movimientos_authenticated_delete on public.contabilidad_movimientos;
-
-create policy contabilidad_movimientos_authenticated_select on public.contabilidad_movimientos
-  for select to authenticated using (true);
-
-create policy contabilidad_movimientos_authenticated_insert on public.contabilidad_movimientos
-  for insert to authenticated with check (true);
-
-create policy contabilidad_movimientos_authenticated_update on public.contabilidad_movimientos
-  for update to authenticated using (true) with check (true);
-
-create policy contabilidad_movimientos_authenticated_delete on public.contabilidad_movimientos
-  for delete to authenticated using (true);
+update public.plantacion_abonos
+set alcance = 'total'
+where alcance is null or alcance = '';

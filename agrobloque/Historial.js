@@ -1,515 +1,529 @@
-import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import React, { useEffect, useMemo, useState } from 'react'
 import NotasPanel from '../components/NotasPanel'
-import { registrarAuditoria } from '../lib/audit'
+import { supabase } from '../lib/supabase'
 
-const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
-const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
-const parsearKg = (v) => { const n = parseFloat(String(v || '').replace(',','.')); return isNaN(n) ? 0 : n }
-const fmtKg = (n) => { const num = Number(n)||0; return num % 1 === 0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY', {minimumFractionDigits:1, maximumFractionDigits:2}) }
-const fechaLocal = () => {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+const tiposProveedor = ['Agropecuaria', 'Ferreteria', 'Transporte', 'Servicios', 'Otro']
+const categorias = ['Insumos', 'Fertilizantes', 'Agroquimicos', 'Semillas', 'Herramientas', 'Servicios', 'Combustible', 'Otros']
+const mediosPago = ['Efectivo', 'Transferencia', 'Cheque', 'Tarjeta', 'Otro']
+const tiposMovimiento = [
+  { value: 'compra_credito', label: 'Compra a credito', signo: 1 },
+  { value: 'pago', label: 'Pago realizado', signo: -1 },
+  { value: 'ajuste_suma', label: 'Ajuste que suma deuda', signo: 1 },
+  { value: 'ajuste_resta', label: 'Descuento o ajuste a favor', signo: -1 },
+]
+
+const hoy = () => new Date().toISOString().slice(0, 10)
+const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
+const parseGs = (v) => Number(String(v || '').replace(/[^\d.-]/g, '')) || 0
+const signoMovimiento = (tipo) => tiposMovimiento.find(t => t.value === tipo)?.signo || 1
+
+const proveedorVacio = {
+  nombre: '',
+  tipo: 'Agropecuaria',
+  contacto: '',
+  telefono: '',
+  direccion: '',
+  notas: '',
+  activo: true,
 }
 
-function ModalConfirm({ onConfirm, onCancel }) {
-  return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#fff', borderRadius:20, padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:'#0a0a0a', marginBottom:8, textAlign:'center' }}>¿Eliminar registro?</div>
-        <div style={{ fontSize:13, color:'#9a9a9a', textAlign:'center', marginBottom:20 }}>Esta acción no se puede deshacer.</div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={onCancel} style={{ flex:1, padding:12, borderRadius:12, border:'1px solid #e8e6e2', background:'transparent', fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:12, border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
-        </div>
-      </div>
-    </div>
-  )
+const movimientoVacio = {
+  proveedor_id: '',
+  fecha: hoy(),
+  tipo: 'compra_credito',
+  concepto: '',
+  categoria: 'Insumos',
+  medio_pago: 'Transferencia',
+  comprobante: '',
+  monto: '',
+  notas: '',
 }
 
-const fechaPlantacion = (p) => p?.fecha_siembra || (p?.created_at || '').slice(0, 10)
-
-const elegirPlantacionParaCosecha = (plantaciones = [], fechaCosecha = '') => {
-  const lista = Array.isArray(plantaciones) ? plantaciones : []
-  if (lista.length === 0) return null
-
-  const anteriores = fechaCosecha
-    ? lista.filter(p => {
-      const fecha = fechaPlantacion(p)
-      return fecha && fecha <= fechaCosecha
-    })
-    : []
-
-  const candidatas = anteriores.length > 0
-    ? anteriores
-    : lista.filter(p => p.activa) || lista
-
-  return [...(candidatas.length > 0 ? candidatas : lista)]
-    .sort((a, b) => fechaPlantacion(b).localeCompare(fechaPlantacion(a)))[0]
-}
-
-const getCultivoCosecha = (cosecha) => {
-  const plantacion = elegirPlantacionParaCosecha(cosecha?.bloques?.plantaciones, cosecha?.fecha)
-  return plantacion?.cultivos?.nombre || 'Sin cultivo'
-}
-
-const getCultivoBloque = (bloque, fecha) => {
-  const plantacion = elegirPlantacionParaCosecha(bloque?.plantaciones, fecha)
-  return plantacion?.cultivos?.nombre || ''
-}
-
-const calidadLabel = (calidad) => calidad === 'primera'
-  ? '1ra calidad'
-  : calidad === 'segunda'
-    ? '2da calidad'
-    : 'Mixta'
-
-function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
-  const ingreso = (Number(cosecha.kg_total) || 0) * (Number(cosecha.precio_kg) || 0)
-  const cultivo = getCultivoCosecha(cosecha)
-  const item = { display:'flex', justifyContent:'space-between', gap:16, padding:'11px 0', borderBottom:'1px solid #eeeeee' }
-  const label = { fontSize:12, color:'#8d938d' }
-  const value = { fontSize:13, fontWeight:700, color:'#111' }
-
-  return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:150, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && onClose()}>
-      <div style={{ background:'#fff', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'22px 20px 34px', maxHeight:'88vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
-          <div>
-            <div style={{ fontSize:12, color:'#8d938d', marginBottom:4 }}>Detalle de cosecha</div>
-            <div style={{ fontSize:22, fontWeight:800, color:'#0a0a0a' }}>{cultivo}</div>
-            <div style={{ fontSize:12, color:'#8d938d', marginTop:4 }}>Bloque {cosecha.bloques?.codigo} · {cosecha.fecha}</div>
-          </div>
-          <button onClick={onClose} style={{ width:36, height:36, borderRadius:12, border:'1px solid #ececec', background:'#fff', cursor:'pointer' }}>
-            <i className="ti ti-x" style={{ fontSize:18 }} aria-hidden="true"></i>
-          </button>
-        </div>
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
-          <div style={{ background:'#212121', borderRadius:16, padding:'14px 15px' }}>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:4 }}>Kilos</div>
-            <div style={{ fontSize:24, color:'#fff', fontWeight:850 }}>{fmtKg(cosecha.kg_total)} kg</div>
-          </div>
-          <div style={{ background:'#f2f1ef', borderRadius:16, padding:'14px 15px' }}>
-            <div style={{ fontSize:10, color:'#8d938d', marginBottom:4 }}>Ingreso</div>
-            <div style={{ fontSize:18, color:'#212121', fontWeight:850 }}>{ingreso > 0 ? `Gs. ${fmtGs(ingreso)}` : '-'}</div>
-          </div>
-        </div>
-
-        <div style={{ background:'#fafafa', borderRadius:16, padding:'4px 14px', marginBottom:14 }}>
-          <div style={item}><span style={label}>Producto/cultivo</span><span style={value}>{cultivo}</span></div>
-          <div style={item}><span style={label}>Campo</span><span style={value}>{cosecha.bloques?.campos?.nombre || '-'}</span></div>
-          <div style={item}><span style={label}>Bloque</span><span style={value}>{cosecha.bloques?.codigo || '-'}</span></div>
-          <div style={item}><span style={label}>Precio por kg</span><span style={value}>{cosecha.precio_kg > 0 ? `Gs. ${fmtGs(cosecha.precio_kg)}` : '-'}</span></div>
-          <div style={item}><span style={label}>Calidad</span><span style={value}>{calidadLabel(cosecha.calidad)}</span></div>
-          <div style={{ ...item, borderBottom:'none' }}><span style={label}>Comprador</span><span style={value}>{cosecha.compradores?.nombre || '-'}</span></div>
-        </div>
-
-        {cosecha.notas && (
-          <div style={{ background:'#f2f1ef', borderRadius:14, padding:'12px 14px', fontSize:13, color:'#4d544e', marginBottom:14 }}>
-            {cosecha.notas}
-          </div>
-        )}
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-          <button onClick={onEdit} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #d9ddd8', background:'#fff', color:'#212121', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-            Editar cosecha
-          </button>
-          <button onClick={onDelete} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-            Eliminar
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default function Cosecha() {
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
-  const [cosechas, setCosechas] = useState([])
-  const [campos, setCampos] = useState([])
-  const [bloques, setBloques] = useState([])
-  const [compradores, setCompradores] = useState([])
-  const [modal, setModal] = useState(false)
-  const [modoMultiple, setModoMultiple] = useState(false)
-  const [filasCosecha, setFilasCosecha] = useState([])
-  const [detalle, setDetalle] = useState(null)
-  const [confirmar, setConfirmar] = useState(null)
-  const [form, setForm] = useState({ bloque_id:'', fecha:fechaLocal(), kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
-  const [saving, setSaving] = useState(false)
-  const [campoFiltro, setCampoFiltro] = useState(null)
+export default function CuentasPagar() {
+  const [proveedores, setProveedores] = useState([])
+  const [movimientos, setMovimientos] = useState([])
+  const [proveedorForm, setProveedorForm] = useState(proveedorVacio)
+  const [movimientoForm, setMovimientoForm] = useState(movimientoVacio)
+  const [modalProveedor, setModalProveedor] = useState(false)
+  const [modalMovimiento, setModalMovimiento] = useState(false)
+  const [proveedorAbierto, setProveedorAbierto] = useState(null)
+  const [filtro, setFiltro] = useState('todos')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchCampos(); fetchCosechas(); fetchCompradores() }, [])
-  useEffect(() => { if (campoFiltro) fetchBloques(campoFiltro) }, [campoFiltro])
+  useEffect(() => {
+    cargarDatos()
+  }, [])
 
-  const fetchCampos = async () => {
-    const { data } = await supabase.from('campos').select('*').order('nombre')
-    setCampos(data || [])
-    if (data?.length > 0) setCampoFiltro(data[0].id)
-  }
-  const fetchCosechas = async () => {
-    const { data, error } = await supabase.from('cosechas')
-      .select('*, bloques(codigo, campos(nombre), plantaciones(cultivos(nombre), activa, created_at, fecha_siembra)), compradores(nombre)')
-      .order('fecha', { ascending: false })
-    if (error) setError('Error al cargar cosechas')
-    else setCosechas(data || [])
-  }
-  const fetchBloques = async (campo_id) => {
-    const { data } = await supabase.from('bloques')
-      .select('*, plantaciones(cultivos(nombre), activa, created_at, fecha_siembra)')
-      .eq('campo_id', campo_id)
-      .order('codigo')
-    setBloques(data || [])
-  }
-  const fetchCompradores = async () => {
-    const { data } = await supabase.from('compradores').select('*').order('nombre')
-    setCompradores(data || [])
+  const cargarDatos = async () => {
+    setLoading(true)
+    const [{ data: prov, error: eProv }, { data: mov, error: eMov }] = await Promise.all([
+      supabase.from('proveedores_credito').select('*').order('nombre'),
+      supabase.from('proveedor_movimientos').select('*, proveedores_credito(nombre)').order('fecha', { ascending: false }).order('created_at', { ascending: false }),
+    ])
+
+    if (eProv || eMov) {
+      setError('Falta ejecutar el SQL de cuentas a pagar en Supabase.')
+      setProveedores([])
+      setMovimientos([])
+    } else {
+      setError('')
+      setProveedores(prov || [])
+      setMovimientos(mov || [])
+    }
+    setLoading(false)
   }
 
-  const crearFilaCosecha = () => ({ bloque_id:'', kg_total:'', precio_kg:'', calidad:'primera', notas:'' })
-  const limpiarForm = () => {
-    setForm({ bloque_id:'', fecha:fechaLocal(), kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
-    setFilasCosecha([crearFilaCosecha(), crearFilaCosecha()])
-  }
-
-  const abrirNuevaCosecha = () => {
-    limpiarForm()
-    setModoMultiple(false)
-    setModal(true)
-  }
-
-  const abrirEditarCosecha = (cosecha) => {
-    const campoId = campos.find(c => c.nombre === cosecha.bloques?.campos?.nombre)?.id || campoFiltro || ''
-    if (campoId) setCampoFiltro(campoId)
-    setForm({
-      id: cosecha.id,
-      bloque_id: cosecha.bloque_id || '',
-      fecha: cosecha.fecha || '',
-      kg_total: cosecha.kg_total || '',
-      precio_kg: cosecha.precio_kg ? Number(cosecha.precio_kg).toLocaleString('es-PY') : '',
-      calidad: cosecha.calidad || 'primera',
-      comprador_id: cosecha.comprador_id || '',
-      notas: cosecha.notas || ''
+  const resumen = useMemo(() => {
+    const porProveedor = proveedores.map(p => {
+      const lista = movimientos.filter(m => m.proveedor_id === p.id)
+      const compras = lista.filter(m => signoMovimiento(m.tipo) > 0).reduce((s, m) => s + Number(m.monto || 0), 0)
+      const pagos = lista.filter(m => signoMovimiento(m.tipo) < 0).reduce((s, m) => s + Number(m.monto || 0), 0)
+      const saldo = lista.reduce((s, m) => s + Number(m.monto || 0) * signoMovimiento(m.tipo), 0)
+      return { ...p, compras, pagos, saldo, movimientos: lista }
     })
-    setDetalle(null)
-    setModoMultiple(false)
-    setModal(true)
+
+    return {
+      porProveedor,
+      deudaTotal: porProveedor.reduce((s, p) => s + Math.max(0, p.saldo), 0),
+      comprasTotal: porProveedor.reduce((s, p) => s + p.compras, 0),
+      pagosTotal: porProveedor.reduce((s, p) => s + p.pagos, 0),
+      conDeuda: porProveedor.filter(p => p.saldo > 0).length,
+    }
+  }, [proveedores, movimientos])
+
+  const proveedoresFiltrados = resumen.porProveedor.filter(p => {
+    if (filtro === 'deuda') return p.saldo > 0
+    if (filtro === 'sin_deuda') return p.saldo <= 0
+    if (filtro === 'inactivos') return !p.activo
+    return p.activo !== false
+  })
+
+  const abrirProveedor = (proveedor = null) => {
+    setProveedorForm(proveedor || proveedorVacio)
+    setModalProveedor(true)
+    setError('')
   }
 
-  const actualizarFilaCosecha = (idx, campo, valor) => {
-    setFilasCosecha(prev => prev.map((fila, i) => i === idx ? { ...fila, [campo]: valor } : fila))
+  const abrirMovimiento = (movimiento = null, proveedorId = '') => {
+    setMovimientoForm(movimiento
+      ? { ...movimiento, monto: String(Math.round(Number(movimiento.monto || 0))) }
+      : { ...movimientoVacio, proveedor_id: proveedorId || proveedores[0]?.id || '' }
+    )
+    setModalMovimiento(true)
+    setError('')
   }
 
-  const agregarFilaCosecha = () => setFilasCosecha(prev => [...prev, crearFilaCosecha()])
-  const quitarFilaCosecha = (idx) => setFilasCosecha(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)
-
-  const guardarMultiple = async () => {
-    const filasValidas = filasCosecha
-      .map(fila => ({
-        bloque_id: fila.bloque_id,
-        fecha: form.fecha,
-        kg_total: parsearKg(fila.kg_total),
-        precio_kg: parsearGs(fila.precio_kg),
-        calidad: fila.calidad || 'primera',
-        comprador_id: form.comprador_id || null,
-        notas: fila.notas || form.notas || null,
-      }))
-      .filter(fila => fila.bloque_id && fila.fecha && fila.kg_total > 0)
-
-    if (!form.fecha || filasValidas.length === 0) {
-      setError('Cargá fecha y al menos una cosecha con bloque y kilos.')
+  const guardarProveedor = async () => {
+    if (!proveedorForm.nombre.trim()) {
+      setError('Escribi el nombre del proveedor.')
       return
     }
 
-    setSaving(true); setError('')
-    try {
-      const { error } = await supabase.from('cosechas').insert(filasValidas)
-      if (error) throw error
-      await registrarAuditoria({
-        accion: 'Registro lote de cosechas',
-        modulo: 'Cosecha',
-        tabla: 'cosechas',
-        registroId: '',
-        detalle: `${filasValidas.length} cosechas - ${filasValidas.reduce((s, f) => s + f.kg_total, 0)} kg`,
-      })
-      await fetchCosechas()
-      setModal(false)
-      setModoMultiple(false)
-      limpiarForm()
-    } catch (e) {
-      setError('Error al guardar lote: ' + e.message)
+    const payload = {
+      nombre: proveedorForm.nombre.trim(),
+      tipo: proveedorForm.tipo || 'Agropecuaria',
+      contacto: proveedorForm.contacto || null,
+      telefono: proveedorForm.telefono || null,
+      direccion: proveedorForm.direccion || null,
+      notas: proveedorForm.notas || null,
+      activo: proveedorForm.activo !== false,
     }
-    setSaving(false)
+
+    const query = proveedorForm.id
+      ? supabase.from('proveedores_credito').update(payload).eq('id', proveedorForm.id)
+      : supabase.from('proveedores_credito').insert(payload)
+    const { error } = await query
+
+    if (error) setError('No se pudo guardar el proveedor.')
+    else {
+      setModalProveedor(false)
+      setProveedorForm(proveedorVacio)
+      await cargarDatos()
+    }
   }
 
-  const guardar = async () => {
-    if (modoMultiple && !form.id) {
-      await guardarMultiple()
+  const guardarMovimiento = async () => {
+    if (!movimientoForm.proveedor_id || !movimientoForm.concepto.trim() || parseGs(movimientoForm.monto) <= 0) {
+      setError('Completa proveedor, concepto y monto.')
       return
     }
-    if (!form.bloque_id || !form.fecha || !form.kg_total) return
-    setSaving(true); setError('')
-    try {
-      const payload = {
-        bloque_id: form.bloque_id, fecha: form.fecha,
-        kg_total: parsearKg(form.kg_total),
-        precio_kg: parsearGs(form.precio_kg),
-        calidad: form.calidad,
-        comprador_id: form.comprador_id || null,
-        notas: form.notas || null
-      }
 
-      const { error } = form.id
-        ? await supabase.from('cosechas').update(payload).eq('id', form.id)
-        : await supabase.from('cosechas').insert(payload)
-      if (error) throw error
-      await registrarAuditoria({
-        accion: form.id ? 'Edito cosecha' : 'Registro cosecha',
-        modulo: 'Cosecha',
-        tabla: 'cosechas',
-        registroId: form.id || '',
-        detalle: `${payload.kg_total} kg - Gs. ${payload.precio_kg}/kg`,
-      })
-      await fetchCosechas(); setModal(false)
-      limpiarForm()
-    } catch (e) {
-      setError('Error al guardar: ' + e.message)
+    const payload = {
+      proveedor_id: movimientoForm.proveedor_id,
+      fecha: movimientoForm.fecha || hoy(),
+      tipo: movimientoForm.tipo || 'compra_credito',
+      concepto: movimientoForm.concepto.trim(),
+      categoria: movimientoForm.categoria || null,
+      medio_pago: movimientoForm.medio_pago || null,
+      comprobante: movimientoForm.comprobante || null,
+      monto: parseGs(movimientoForm.monto),
+      notas: movimientoForm.notas || null,
     }
-    setSaving(false)
+
+    const query = movimientoForm.id
+      ? supabase.from('proveedor_movimientos').update(payload).eq('id', movimientoForm.id)
+      : supabase.from('proveedor_movimientos').insert(payload)
+    const { error } = await query
+
+    if (error) setError('No se pudo guardar el movimiento.')
+    else {
+      setModalMovimiento(false)
+      setMovimientoForm(movimientoVacio)
+      await cargarDatos()
+    }
   }
 
-  const eliminar = (id) => {
-    setConfirmar({ fn: async () => {
-      await supabase.from('cosechas').delete().eq('id', id)
-      await registrarAuditoria({ accion:'Elimino cosecha', modulo:'Cosecha', tabla:'cosechas', registroId:id })
-      setConfirmar(null); setDetalle(null); fetchCosechas()
-    }})
+  const eliminarProveedor = async (proveedor) => {
+    if (!window.confirm(`Eliminar ${proveedor.nombre} y todos sus movimientos?`)) return
+    const { error } = await supabase.from('proveedores_credito').delete().eq('id', proveedor.id)
+    if (error) setError('No se pudo eliminar el proveedor.')
+    else cargarDatos()
   }
 
-  const totalKg = cosechas.reduce((sum, c) => sum + (Number(c.kg_total) || 0), 0)
-  const totalIngresos = cosechas.reduce((sum, c) => sum + ((Number(c.kg_total)||0) * (Number(c.precio_kg)||0)), 0)
-  const ingresoCosecha = parsearKg(form.kg_total) * parsearGs(form.precio_kg)
-  const bloqueSeleccionado = bloques.find(b => b.id === form.bloque_id)
-  const cultivoSeleccionado = getCultivoBloque(bloqueSeleccionado, form.fecha)
-  const totalKgMultiple = filasCosecha.reduce((sum, fila) => sum + parsearKg(fila.kg_total), 0)
-  const totalGsMultiple = filasCosecha.reduce((sum, fila) => sum + (parsearKg(fila.kg_total) * parsearGs(fila.precio_kg)), 0)
+  const eliminarMovimiento = async (movimiento) => {
+    if (!window.confirm('Eliminar este movimiento?')) return
+    const { error } = await supabase.from('proveedor_movimientos').delete().eq('id', movimiento.id)
+    if (error) setError('No se pudo eliminar el movimiento.')
+    else cargarDatos()
+  }
 
-  const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
+  const exportarCsv = () => {
+    const rows = [['Proveedor', 'Fecha', 'Tipo', 'Concepto', 'Categoria', 'Monto', 'Saldo proveedor']]
+    resumen.porProveedor.forEach(p => {
+      p.movimientos.forEach(m => rows.push([
+        p.nombre,
+        m.fecha,
+        tiposMovimiento.find(t => t.value === m.tipo)?.label || m.tipo,
+        m.concepto,
+        m.categoria || '',
+        Number(m.monto || 0) * signoMovimiento(m.tipo),
+        p.saldo,
+      ]))
+    })
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `cuentas-a-pagar-${hoy()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const imprimir = () => {
+    const html = `
+      <html><head><title>Cuentas a pagar</title><style>
+        body{font-family:Arial,sans-serif;padding:28px;color:#111}
+        h1{margin:0 0 8px}.muted{color:#666;margin-bottom:20px}
+        table{width:100%;border-collapse:collapse;margin-top:18px}
+        th,td{border-bottom:1px solid #ddd;text-align:left;padding:9px;font-size:13px}
+        th{background:#f1f3f1}.right{text-align:right;font-weight:700}
+      </style></head><body>
+        <h1>Cuentas a pagar</h1><div class="muted">Deuda total: ${fmtGs(resumen.deudaTotal)}</div>
+        <table><thead><tr><th>Proveedor</th><th>Tipo</th><th>Movimientos</th><th class="right">Saldo</th></tr></thead><tbody>
+        ${resumen.porProveedor.map(p => `<tr><td>${p.nombre}</td><td>${p.tipo || ''}</td><td>${p.movimientos.length}</td><td class="right">${fmtGs(p.saldo)}</td></tr>`).join('')}
+        </tbody></table>
+      </body></html>`
+    const w = window.open('', '_blank')
+    w.document.write(html)
+    w.document.close()
+    w.print()
+  }
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-      {detalle && <ModalDetalle cosecha={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditarCosecha(detalle)} onDelete={() => eliminar(detalle.id)} />}
-
-      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+    <div style={{ background:'#f2f1ef', minHeight:'100vh', padding:'32px 18px 90px' }}>
+      <div style={{ maxWidth:1100, margin:'0 auto' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:14, marginBottom:18 }}>
           <div>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Producción</div>
-            <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Cosecha</div>
+            <div style={{ color:'#8b928b', fontSize:12 }}>Credito con proveedores</div>
+            <h1 style={{ margin:'4px 0 0', fontSize:28, letterSpacing:-0.8 }}>Cuentas a pagar</h1>
           </div>
-          <button onClick={abrirNuevaCosecha} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-          </button>
-        </div>
-        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: isDesktop ? 14 : 8 }}>
-          <div style={{ background:'#212121', borderRadius:16, padding:'14px 16px' }}>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:4 }}>Total cosechado</div>
-            <div style={{ fontSize:28, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>{fmtKg(totalKg)}</div>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.5)', marginTop:3 }}>kg · {cosechas.length} registros</div>
-          </div>
-          <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
-            <div style={{ fontSize:9, color:'#9a9a9a', textTransform:'uppercase', marginBottom:4 }}>Ingresos totales</div>
-            <div style={{ fontSize:18, fontWeight:800, color:'#212121', letterSpacing:-.5, lineHeight:1 }}>
-              {totalIngresos > 0 ? `Gs. ${fmtGs(totalIngresos)}` : '—'}
-            </div>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginTop:3 }}>calculado automáticamente</div>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
+            <button onClick={exportarCsv} style={smallBtn}>CSV</button>
+            <button onClick={imprimir} style={smallBtn}>PDF</button>
+            <button onClick={() => abrirProveedor()} style={darkBtn}>+ Proveedor</button>
+            <button onClick={() => abrirMovimiento()} style={greenBtn}>+ Movimiento</button>
           </div>
         </div>
-      </div>
 
-      <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
-        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
-        {cosechas.length === 0 ? (
-          <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin registros de cosecha</div>
-        ) : cosechas.map(c => {
-          const ingreso = (Number(c.kg_total)||0) * (Number(c.precio_kg)||0)
-          const cultivo = getCultivoCosecha(c)
-          return (
-            <div key={c.id} onClick={() => setDetalle(c)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
-              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
-                <div>
-                  <div style={{ fontSize:15, fontWeight:700, color:'#0a0a0a' }}>Bloque {c.bloques?.codigo}</div>
-                  <div style={{ fontSize:12, fontWeight:700, color:'#176a25', marginTop:2 }}>{cultivo}</div>
-                  <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>{c.bloques?.campos?.nombre} · {c.fecha}</div>
-                </div>
-                <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:20, fontWeight:800, color:'#0a0a0a' }}>{fmtKg(c.kg_total)} kg</div>
-                  {c.precio_kg > 0 && <div style={{ fontSize:11, color:'#212121', fontWeight:600 }}>Gs. {fmtGs(ingreso)}</div>}
-                </div>
-              </div>
-              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-                <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:700, background:'#e8f5e5', color:'#176a25' }}>
-                  {cultivo}
-                </div>
-                <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:600, background: c.calidad==='primera' ? '#eeeeee' : '#fff3e8', color: c.calidad==='primera' ? '#212121' : '#c8700a' }}>
-                  {calidadLabel(c.calidad)}
-                </div>
-                {c.precio_kg > 0 && <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, background:'#f2f1ef', color:'#555' }}>Gs. {fmtGs(c.precio_kg)}/kg</div>}
-                {c.compradores?.nombre && <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, background:'#e6f1fb', color:'#185fa5' }}>{c.compradores.nombre}</div>}
-              </div>
-              {c.notas && <div style={{ fontSize:11, color:'#9a9a9a', padding:'7px 10px', background:'#f2f1ef', borderRadius:8, marginBottom:8 }}>{c.notas}</div>}
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:11, color:'#777' }}>Tocar para ver detalle</span>
-                <div style={{ display:'flex', gap:6 }}>
-                  <button onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }}>Editar</button>
-                  <button onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
-                </div>
-              </div>
-            </div>
-          )
-        })}
+        {error && <div style={errorBox}>{error}</div>}
+
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, minmax(140px, 1fr))', gap:12, marginBottom:16 }}>
+          <Stat dark title="Deuda total" value={fmtGs(resumen.deudaTotal)} sub={`${resumen.conDeuda} proveedores con deuda`} />
+          <Stat title="Compras a credito" value={fmtGs(resumen.comprasTotal)} sub="total registrado" />
+          <Stat title="Pagos realizados" value={fmtGs(resumen.pagosTotal)} sub="total abonado" />
+          <Stat title="Proveedores" value={proveedores.length} sub="registrados" />
         </div>
-        <NotasPanel modulo="cosecha" titulo="Blog de notas de cosecha" />
-      </div>
 
-      {modal && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(false)}>
-          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar cosecha' : 'Registrar cosecha'}</div>
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
+        <div style={{ ...card, padding:12, marginBottom:16 }}>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+            {[
+              ['todos', 'Activos'],
+              ['deuda', 'Con deuda'],
+              ['sin_deuda', 'Sin deuda'],
+              ['inactivos', 'Inactivos'],
+            ].map(([key, label]) => (
+              <button key={key} onClick={() => setFiltro(key)} style={filtro === key ? activeChip : chip}>{label}</button>
+            ))}
+          </div>
+        </div>
 
-            {!form.id && (
-              <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:14 }}>
-                <button type="button" onClick={() => setModoMultiple(false)} style={{ flex:1, padding:9, borderRadius:10, border:'none', cursor:'pointer', background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:800 }}>
-                  Una cosecha
-                </button>
-                <button type="button" onClick={() => setModoMultiple(true)} style={{ flex:1, padding:9, borderRadius:10, border:'none', cursor:'pointer', background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:800 }}>
-                  Varias juntas
-                </button>
-              </div>
-            )}
-
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Campo</div>
-            <select style={inp} value={campoFiltro||''} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({...f, bloque_id:''})) }}>
-              {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
-
-            {(!modoMultiple || form.id) && (
-              <>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloque *</div>
-            <select style={inp} value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
-              <option value="">Seleccioná bloque...</option>
-              {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
-            </select>
-
-            {form.bloque_id && (
-              <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:12, padding:'9px 12px', fontSize:12, fontWeight:700, marginBottom:12 }}>
-                Producto/cultivo: {cultivoSeleccionado || 'Sin plantacion activa registrada'}
-              </div>
-            )}
-              </>
-            )}
-
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha *</div>
-            <input style={inp} type="date" value={form.fecha} onChange={e => setForm(f => ({...f, fecha:e.target.value}))}/>
-
-            {(!modoMultiple || form.id) ? (
-              <>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Kg cosechados * (admite decimales, ej: 1.5)</div>
-            <input style={inp} type="text" inputMode="decimal" value={form.kg_total}
-              onChange={e => setForm(f => ({...f, kg_total: e.target.value}))}
-              placeholder="Ej: 150 o 1.5"/>
-
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Precio por kg (Gs.)</div>
-            <input style={inp} type="text" inputMode="numeric" value={form.precio_kg}
-              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setForm(f=>({...f,precio_kg:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
-              placeholder="Ej: 5.000"/>
-
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Calidad</div>
-            <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-              {['primera','segunda','mixta'].map(q => (
-                <button key={q} onClick={() => setForm(f => ({...f, calidad:q}))} style={{ flex:1, padding:'9px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.calidad===q ? '#212121' : '#fff', color: form.calidad===q ? '#fff' : '#555' }}>
-                  {q === 'primera' ? '1ra' : q === 'segunda' ? '2da' : 'Mixta'}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Comprador (opcional)</div>
-            <select style={inp} value={form.comprador_id} onChange={e => setForm(f => ({...f, comprador_id:e.target.value}))}>
-              <option value="">Sin comprador asignado</option>
-              {compradores.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
-
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas (opcional)</div>
-            <textarea style={{ ...inp, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
-
-            {form.kg_total && form.precio_kg && ingresoCosecha > 0 && (
-              <div style={{ background:'#eeeeee', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:12, color:'#212121' }}>Ingreso estimado</span>
-                <span style={{ fontSize:14, fontWeight:700, color:'#212121' }}>Gs. {fmtGs(ingresoCosecha)}</span>
-              </div>
-            )}
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:8 }}>Cosechas del lote</div>
-                <div style={{ display:'grid', gap:10, marginBottom:12 }}>
-                  {filasCosecha.map((fila, idx) => {
-                    const bloqueFila = bloques.find(b => b.id === fila.bloque_id)
-                    const cultivoFila = getCultivoBloque(bloqueFila, form.fecha)
-                    return (
-                      <div key={idx} style={{ background:'#fff', border:'1px solid #e4e6e2', borderRadius:16, padding:12 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                          <strong style={{ fontSize:13 }}>Cosecha {idx + 1}</strong>
-                          {filasCosecha.length > 1 && (
-                            <button type="button" onClick={() => quitarFilaCosecha(idx)} style={{ border:'1px solid #ffcccc', background:'#fff', color:'#c84040', borderRadius:10, padding:'5px 9px', fontSize:11, cursor:'pointer' }}>Quitar</button>
-                          )}
-                        </div>
-                        <select style={inp} value={fila.bloque_id} onChange={e => actualizarFilaCosecha(idx, 'bloque_id', e.target.value)}>
-                          <option value="">Bloque...</option>
-                          {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
-                        </select>
-                        {fila.bloque_id && (
-                          <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:10, padding:'7px 10px', fontSize:11, fontWeight:700, margin:'-4px 0 10px' }}>
-                            {cultivoFila || 'Sin plantacion activa registrada'}
-                          </div>
-                        )}
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                          <input style={inp} type="text" inputMode="decimal" value={fila.kg_total} onChange={e => actualizarFilaCosecha(idx, 'kg_total', e.target.value)} placeholder="Kg"/>
-                          <input style={inp} type="text" inputMode="numeric" value={fila.precio_kg} onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); actualizarFilaCosecha(idx, 'precio_kg', r ? parseInt(r,10).toLocaleString('es-PY') : '') }} placeholder="Gs/kg"/>
-                        </div>
-                        <select style={inp} value={fila.calidad} onChange={e => actualizarFilaCosecha(idx, 'calidad', e.target.value)}>
-                          <option value="primera">1ra calidad</option>
-                          <option value="segunda">2da calidad</option>
-                          <option value="mixta">Mixta</option>
-                        </select>
-                        <input style={{ ...inp, marginBottom:0 }} value={fila.notas} onChange={e => actualizarFilaCosecha(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
-                      </div>
-                    )
-                  })}
-                </div>
-                <button type="button" onClick={agregarFilaCosecha} style={{ width:'100%', padding:12, borderRadius:14, border:'1px dashed #bfc6bf', background:'#fff', fontSize:13, fontWeight:800, color:'#176a25', cursor:'pointer', marginBottom:12 }}>
-                  + Agregar otra cosecha
-                </button>
-                {(totalKgMultiple > 0 || totalGsMultiple > 0) && (
-                  <div style={{ background:'#eeeeee', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between', gap:12 }}>
-                    <span style={{ fontSize:12, color:'#212121' }}>{fmtKg(totalKgMultiple)} kg en total</span>
-                    <span style={{ fontSize:14, fontWeight:700, color:'#212121' }}>{totalGsMultiple > 0 ? `Gs. ${fmtGs(totalGsMultiple)}` : ''}</span>
+        <div style={{ display:'grid', gap:12 }}>
+          {loading ? (
+            <div style={empty}>Cargando...</div>
+          ) : proveedoresFiltrados.length === 0 ? (
+            <div style={empty}>Sin proveedores para mostrar.</div>
+          ) : proveedoresFiltrados.map(p => (
+            <div key={p.id} style={card}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:14, alignItems:'center' }}>
+                <button onClick={() => setProveedorAbierto(proveedorAbierto === p.id ? null : p.id)} style={{ border:'none', background:'transparent', textAlign:'left', cursor:'pointer', padding:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <span style={iconPill}><i className="ti ti-building-store" style={{ fontSize:23, color:'#176a25' }} /></span>
+                    <span>
+                      <strong style={{ fontSize:17 }}>{p.nombre}</strong>
+                      <span style={{ display:'block', fontSize:12, color:'#7a817a', marginTop:3 }}>
+                        {p.tipo || 'Proveedor'}{p.telefono ? ` - ${p.telefono}` : ''}
+                      </span>
+                    </span>
                   </div>
-                )}
-              </>
-            )}
+                </button>
+                <div style={{ textAlign:'right' }}>
+                  <strong style={{ fontSize:22, color:p.saldo > 0 ? '#c84040' : '#176a25' }}>{fmtGs(p.saldo)}</strong>
+                  <div style={{ display:'flex', gap:7, justifyContent:'flex-end', marginTop:8, flexWrap:'wrap' }}>
+                    <button onClick={() => abrirMovimiento(null, p.id)} style={miniBtn}>Movimiento</button>
+                    <button onClick={() => abrirProveedor(p)} style={miniBtn}>Editar</button>
+                    <button onClick={() => eliminarProveedor(p)} style={dangerMiniBtn}>Eliminar</button>
+                  </div>
+                </div>
+              </div>
 
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : modoMultiple ? 'Guardar lote de cosechas' : 'Guardar cosecha'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
-          </div>
+              {proveedorAbierto === p.id && (
+                <div style={{ marginTop:14, borderTop:'1px solid #edf0ed', paddingTop:12 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:10, marginBottom:12 }}>
+                    <MiniTotal label="Compras/deuda" value={fmtGs(p.compras)} />
+                    <MiniTotal label="Pagos/ajustes" value={fmtGs(p.pagos)} />
+                    <MiniTotal label="Movimientos" value={p.movimientos.length} />
+                  </div>
+                  {p.notas && <div style={{ fontSize:13, color:'#4d544e', marginBottom:10, whiteSpace:'pre-wrap' }}>{p.notas}</div>}
+                  <div style={{ display:'grid', gap:8 }}>
+                    {p.movimientos.length === 0 ? (
+                      <div style={{ color:'#8b928b', fontSize:13 }}>Sin movimientos.</div>
+                    ) : p.movimientos.map(m => (
+                      <div key={m.id} style={{ background:'#f7f8f6', borderRadius:14, padding:'10px 12px', display:'grid', gridTemplateColumns:'1fr auto', gap:10, alignItems:'center' }}>
+                        <div>
+                          <strong style={{ fontSize:14 }}>{m.concepto}</strong>
+                          <div style={{ fontSize:12, color:'#788078', marginTop:3 }}>
+                            {m.fecha} - {tiposMovimiento.find(t => t.value === m.tipo)?.label || m.tipo}{m.comprobante ? ` - ${m.comprobante}` : ''}
+                          </div>
+                        </div>
+                        <div style={{ textAlign:'right' }}>
+                          <strong style={{ color:signoMovimiento(m.tipo) > 0 ? '#c84040' : '#176a25' }}>
+                            {signoMovimiento(m.tipo) > 0 ? '+' : '-'} {fmtGs(m.monto)}
+                          </strong>
+                          <div style={{ display:'flex', gap:6, marginTop:7 }}>
+                            <button onClick={() => abrirMovimiento(m)} style={miniBtn}>Editar</button>
+                            <button onClick={() => eliminarMovimiento(m)} style={dangerMiniBtn}>Borrar</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
+
+        <NotasPanel modulo="cuentas_pagar" titulo="Blog de notas de cuentas a pagar" />
+      </div>
+
+      {modalProveedor && (
+        <Modal onClose={() => setModalProveedor(false)} title={proveedorForm.id ? 'Editar proveedor' : 'Nuevo proveedor'}>
+          <input style={input} placeholder="Nombre de la agropecuaria/proveedor" value={proveedorForm.nombre || ''} onChange={e => setProveedorForm(f => ({ ...f, nombre:e.target.value }))} />
+          <select style={input} value={proveedorForm.tipo || 'Agropecuaria'} onChange={e => setProveedorForm(f => ({ ...f, tipo:e.target.value }))}>
+            {tiposProveedor.map(t => <option key={t}>{t}</option>)}
+          </select>
+          <input style={input} placeholder="Contacto" value={proveedorForm.contacto || ''} onChange={e => setProveedorForm(f => ({ ...f, contacto:e.target.value }))} />
+          <input style={input} placeholder="Telefono" value={proveedorForm.telefono || ''} onChange={e => setProveedorForm(f => ({ ...f, telefono:e.target.value }))} />
+          <input style={input} placeholder="Direccion" value={proveedorForm.direccion || ''} onChange={e => setProveedorForm(f => ({ ...f, direccion:e.target.value }))} />
+          <textarea style={{ ...input, minHeight:80 }} placeholder="Notas internas" value={proveedorForm.notas || ''} onChange={e => setProveedorForm(f => ({ ...f, notas:e.target.value }))} />
+          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, marginBottom:12 }}>
+            <input type="checkbox" checked={proveedorForm.activo !== false} onChange={e => setProveedorForm(f => ({ ...f, activo:e.target.checked }))} />
+            Proveedor activo
+          </label>
+          <button onClick={guardarProveedor} style={{ ...greenBtn, width:'100%' }}>Guardar proveedor</button>
+        </Modal>
+      )}
+
+      {modalMovimiento && (
+        <Modal onClose={() => setModalMovimiento(false)} title={movimientoForm.id ? 'Editar movimiento' : 'Nuevo movimiento'}>
+          <select style={input} value={movimientoForm.proveedor_id || ''} onChange={e => setMovimientoForm(f => ({ ...f, proveedor_id:e.target.value }))}>
+            <option value="">Elegir proveedor</option>
+            {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <input type="date" style={input} value={movimientoForm.fecha || hoy()} onChange={e => setMovimientoForm(f => ({ ...f, fecha:e.target.value }))} />
+            <select style={input} value={movimientoForm.tipo || 'compra_credito'} onChange={e => setMovimientoForm(f => ({ ...f, tipo:e.target.value }))}>
+              {tiposMovimiento.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+          <input style={input} placeholder="Concepto: fertilizante, semillas, pago parcial..." value={movimientoForm.concepto || ''} onChange={e => setMovimientoForm(f => ({ ...f, concepto:e.target.value }))} />
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <select style={input} value={movimientoForm.categoria || 'Insumos'} onChange={e => setMovimientoForm(f => ({ ...f, categoria:e.target.value }))}>
+              {categorias.map(c => <option key={c}>{c}</option>)}
+            </select>
+            <input style={input} placeholder="Monto" value={movimientoForm.monto || ''} onChange={e => setMovimientoForm(f => ({ ...f, monto:e.target.value }))} />
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <select style={input} value={movimientoForm.medio_pago || 'Transferencia'} onChange={e => setMovimientoForm(f => ({ ...f, medio_pago:e.target.value }))}>
+              {mediosPago.map(m => <option key={m}>{m}</option>)}
+            </select>
+            <input style={input} placeholder="Factura/comprobante" value={movimientoForm.comprobante || ''} onChange={e => setMovimientoForm(f => ({ ...f, comprobante:e.target.value }))} />
+          </div>
+          <textarea style={{ ...input, minHeight:80 }} placeholder="Notas" value={movimientoForm.notas || ''} onChange={e => setMovimientoForm(f => ({ ...f, notas:e.target.value }))} />
+          <button onClick={guardarMovimiento} style={{ ...greenBtn, width:'100%' }}>Guardar movimiento</button>
+        </Modal>
       )}
     </div>
   )
+}
+
+function Stat({ title, value, sub, dark }) {
+  return (
+    <div style={{ ...card, background:dark ? '#212121' : '#fff', color:dark ? '#fff' : '#101511' }}>
+      <div style={{ color:dark ? 'rgba(255,255,255,0.62)' : '#7b837b', fontSize:11, textTransform:'uppercase' }}>{title}</div>
+      <strong style={{ display:'block', fontSize:24, marginTop:7 }}>{value}</strong>
+      <div style={{ color:dark ? 'rgba(255,255,255,0.58)' : '#6c746d', fontSize:12, marginTop:5 }}>{sub}</div>
+    </div>
+  )
+}
+
+function MiniTotal({ label, value }) {
+  return (
+    <div style={{ background:'#f7f8f6', borderRadius:14, padding:12 }}>
+      <div style={{ color:'#7a817a', fontSize:11, textTransform:'uppercase' }}>{label}</div>
+      <strong style={{ fontSize:16, display:'block', marginTop:4 }}>{value}</strong>
+    </div>
+  )
+}
+
+function Modal({ title, children, onClose }) {
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:18 }}>
+      <div style={{ width:'100%', maxWidth:520, maxHeight:'90vh', overflowY:'auto', background:'#f2f1ef', borderRadius:24, padding:20, boxShadow:'0 24px 70px rgba(0,0,0,0.28)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+          <h2 style={{ margin:0, fontSize:22 }}>{title}</h2>
+          <button onClick={onClose} style={{ border:'1px solid #e3e3de', background:'#fff', borderRadius:12, width:36, height:36, cursor:'pointer' }}>x</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+const card = {
+  background:'#fff',
+  border:'1px solid #e8ece8',
+  borderRadius:18,
+  padding:16,
+  boxShadow:'0 14px 34px rgba(24, 32, 24, 0.05)',
+}
+
+const empty = {
+  ...card,
+  color:'#8b928b',
+  textAlign:'center',
+  padding:26,
+}
+
+const iconPill = {
+  width:46,
+  height:46,
+  borderRadius:14,
+  background:'#edf6ec',
+  display:'flex',
+  alignItems:'center',
+  justifyContent:'center',
+}
+
+const input = {
+  width:'100%',
+  border:'1px solid #e2e5df',
+  borderRadius:13,
+  padding:'12px 13px',
+  background:'#fff',
+  fontSize:14,
+  marginBottom:10,
+  boxSizing:'border-box',
+}
+
+const smallBtn = {
+  border:'1px solid #e0e4df',
+  background:'#fff',
+  borderRadius:13,
+  padding:'10px 13px',
+  fontWeight:800,
+  cursor:'pointer',
+}
+
+const darkBtn = {
+  border:'none',
+  background:'#212121',
+  color:'#fff',
+  borderRadius:13,
+  padding:'11px 15px',
+  fontWeight:850,
+  cursor:'pointer',
+}
+
+const greenBtn = {
+  border:'none',
+  background:'#176a25',
+  color:'#fff',
+  borderRadius:13,
+  padding:'11px 15px',
+  fontWeight:850,
+  cursor:'pointer',
+}
+
+const miniBtn = {
+  border:'1px solid #dfe5df',
+  background:'#fff',
+  borderRadius:10,
+  padding:'7px 10px',
+  fontSize:12,
+  cursor:'pointer',
+}
+
+const dangerMiniBtn = {
+  ...miniBtn,
+  border:'1px solid #ffd0d0',
+  color:'#c84040',
+}
+
+const chip = {
+  border:'none',
+  background:'#eeefeb',
+  borderRadius:999,
+  padding:'8px 13px',
+  fontSize:12,
+  fontWeight:750,
+  cursor:'pointer',
+  color:'#727872',
+}
+
+const activeChip = {
+  ...chip,
+  background:'#212121',
+  color:'#fff',
+}
+
+const errorBox = {
+  background:'#fff0f0',
+  color:'#b52828',
+  borderRadius:14,
+  padding:'12px 14px',
+  fontSize:13,
+  marginBottom:14,
 }

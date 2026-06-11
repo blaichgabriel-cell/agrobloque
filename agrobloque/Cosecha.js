@@ -1,130 +1,108 @@
-﻿const OPENAI_API_URL = 'https://api.openai.com/v1/responses';
+import React, { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
+import { descargarCsv, imprimirHtml } from '../lib/exporters'
 
-const jsonHeaders = {
-  'Content-Type': 'application/json',
-};
+export default function Auditoria() {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [filtro, setFiltro] = useState({ modulo:'', accion:'', texto:'' })
 
-const safeNumber = (value) => {
-  const parsed = Number(String(value || '').replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : null;
-};
+  useEffect(() => { cargar() }, [])
 
-const parseJsonFromText = (text) => {
-  if (!text) throw new Error('Respuesta vacia de la IA.');
-  const cleaned = text
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/```$/i, '')
-    .trim();
-  return JSON.parse(cleaned);
-};
-
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.writeHead(405, jsonHeaders);
-    res.end(JSON.stringify({ error: 'Metodo no permitido.' }));
-    return;
+  const cargar = async () => {
+    setLoading(true); setError('')
+    const { data, error } = await supabase
+      .from('audit_log')
+      .select('*')
+      .order('created_at', { ascending:false })
+      .limit(120)
+    if (error) setError('Falta ejecutar el SQL profesional en Supabase.')
+    setLogs(data || [])
+    setLoading(false)
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    res.writeHead(500, jsonHeaders);
-    res.end(JSON.stringify({ error: 'Falta configurar OPENAI_API_KEY en Vercel.' }));
-    return;
+  const visibles = logs.filter(log => {
+    const texto = `${log.accion || ''} ${log.modulo || ''} ${log.tabla || ''} ${log.detalle || ''} ${log.usuario_email || ''}`.toLowerCase()
+    return (!filtro.modulo || log.modulo === filtro.modulo) &&
+      (!filtro.accion || String(log.accion || '').toLowerCase().includes(filtro.accion.toLowerCase())) &&
+      (!filtro.texto || texto.includes(filtro.texto.toLowerCase()))
+  })
+
+  const modulos = [...new Set(logs.map(l => l.modulo).filter(Boolean))].sort()
+
+  const exportarCsv = () => {
+    descargarCsv('auditoria-agrobloque', ['Fecha', 'Usuario', 'Accion', 'Modulo', 'Tabla', 'Registro', 'Detalle'], visibles.map(log => ({
+      Fecha: String(log.created_at || '').slice(0, 16).replace('T', ' '),
+      Usuario: log.usuario_email || '',
+      Accion: log.accion || '',
+      Modulo: log.modulo || '',
+      Tabla: log.tabla || '',
+      Registro: log.registro_id || '',
+      Detalle: log.detalle || '',
+    })))
   }
 
-  try {
-    const body = req.body || {};
-    const modelo = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
-    const contexto = {
-      campo: body.campo || '',
-      bloque: body.bloque || null,
-      objetivo: body.objetivo || 'Produccion',
-      perfil_cultivo: body.perfil_cultivo || '',
-      tanque_litros: safeNumber(body.tanque_litros) || 200,
-      ec_agua: safeNumber(body.ec_agua),
-      ec_objetivo: safeNumber(body.ec_objetivo),
-      contexto_bloque: body.contexto_bloque || null,
-      base_tecnica_calculada: body.base_tecnica_calculada || null,
-      productos_disponibles: Array.isArray(body.productos_disponibles) ? body.productos_disponibles.slice(0, 80) : [],
-      productos_ideales_base: Array.isArray(body.productos_ideales_base) ? body.productos_ideales_base : [],
-      registros_recientes: Array.isArray(body.registros_recientes) ? body.registros_recientes.slice(0, 8) : [],
-    };
+  const exportarPdf = () => {
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]))
+    imprimirHtml('Auditoria AgroBloque', `
+      <h1>Auditoria AgroBloque</h1>
+      <div class="muted">${visibles.length} movimientos filtrados</div>
+      <table>
+        <tr><th>Fecha</th><th>Usuario</th><th>Accion</th><th>Modulo</th><th>Detalle</th></tr>
+        ${visibles.map(log => `<tr><td>${esc(String(log.created_at || '').slice(0, 16).replace('T', ' '))}</td><td>${esc(log.usuario_email || '')}</td><td>${esc(log.accion || '')}</td><td>${esc(log.modulo || '')}</td><td>${esc(log.detalle || '')}</td></tr>`).join('')}
+      </table>
+    `)
+  }
 
-    const prompt = `
-Sos un asistente tecnico para fertirriego horticola familiar-profesional.
-Tu tarea es proponer un plan nutricional editable y prudente.
+  return (
+    <div style={{ minHeight:'100vh', background:'#f2f1ef', padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
+      <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 900, margin:'0 auto' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:16 }}>
+          <div>
+            <div style={{ fontSize:12, color:'#8b928b' }}>Registro interno</div>
+            <h1 style={{ margin:0, fontSize:24, letterSpacing:-0.6 }}>Auditoria</h1>
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={exportarCsv} style={{ height:42, borderRadius:14, border:'1px solid #e8ece8', background:'#fff', padding:'0 12px', fontWeight:800, cursor:'pointer' }}>CSV</button>
+            <button onClick={exportarPdf} style={{ height:42, borderRadius:14, border:'none', background:'#176a25', color:'#fff', padding:'0 12px', fontWeight:800, cursor:'pointer' }}>PDF</button>
+            <button onClick={cargar} style={{ width:42, height:42, borderRadius:14, border:'none', background:'#212121', color:'#fff', cursor:'pointer' }}>
+              <i className="ti ti-refresh" style={{ fontSize:20 }} aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
 
-Reglas:
-- No inventes datos que no fueron enviados.
-- Separa producto ideal de disponibilidad en inventario.
-- Podes recomendar productos aunque no esten en inventario si son agronomicamente importantes.
-- Tene en cuenta objetivo, cultivo, tanque, EC de agua, EC objetivo, historial reciente y productos disponibles.
-- Si se envio base_tecnica_calculada, usala como punto de partida obligatorio. No la ignores.
-- Si se envio contexto_bloque, usalo como dato principal: cultivo activo, dias en campo, abonos de base, fertilizaciones recientes, plan semanal activo, fumigaciones y registros nutricionales del mismo bloque.
-- Si se envio perfil_cultivo, respetalo. La recomendacion debe cambiar si cambia el cultivo.
-- No devuelvas una receta generica igual para todos los cultivos. Diferencia tomate, morron, pepino, zucchini, berenjena u otros segun demanda nutricional, objetivo y contexto enviado.
-- Si el bloque ya tuvo abono de base o fertilizaciones recientes con mucho NPK/calcio/potasio/magnesio, ajusta cantidades o explica en notas por que mantienes/refuerzas.
-- En tomate y morron cargado, suele pesar mucho calcio + potasio + magnesio y control de EC; en pepino/zucchini cuidar exceso de sales y sostener potasio/nitrogeno moderado segun vigor.
-- Para cargado de frutos prioriza llenado/calibre/firmeza: potasio, calcio, magnesio y control de EC.
-- En notas explica brevemente que datos usaste: cultivo, objetivo, EC, abono de base e historial si existen.
-- Si el inventario no tiene un producto ideal importante, mantenelo igual como producto recomendado ideal; no lo reemplaces por algo peor solo porque hay stock.
-- Si faltan datos, deja advertencias en "notas".
-- No des indicaciones peligrosas ni definitivas; todo debe quedar editable y con revision de EC.
-- Responde SOLO JSON valido, sin markdown.
+        <div style={{ background:'#fff', border:'1px solid #e8ece8', borderRadius:18, padding:12, marginBottom:12, display:'grid', gridTemplateColumns:'1fr 1fr 1.3fr', gap:8 }}>
+          <select value={filtro.modulo} onChange={e => setFiltro(f => ({ ...f, modulo:e.target.value }))}
+            style={{ border:'1px solid #e8ece8', borderRadius:12, padding:'10px 12px', fontSize:13, background:'#fff' }}>
+            <option value="">Todos los modulos</option>
+            {modulos.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <input value={filtro.accion} onChange={e => setFiltro(f => ({ ...f, accion:e.target.value }))} placeholder="Accion"
+            style={{ border:'1px solid #e8ece8', borderRadius:12, padding:'10px 12px', fontSize:13 }} />
+          <input value={filtro.texto} onChange={e => setFiltro(f => ({ ...f, texto:e.target.value }))} placeholder="Buscar usuario, detalle o tabla"
+            style={{ border:'1px solid #e8ece8', borderRadius:12, padding:'10px 12px', fontSize:13 }} />
+        </div>
 
-Formato exacto:
-{
-  "ec_final": "numero o vacio",
-  "notas": "texto breve y util",
-  "productos": [
-    {
-      "producto": "nombre ideal recomendado",
-      "cantidad": "numero",
-      "unidad": "g, cc, ml o kg",
-      "nutrientes": "aporte principal",
-      "motivo": "por que se recomienda"
-    }
-  ]
+        {error && <div style={{ background:'#fff0f0', color:'#c84040', padding:'10px 12px', borderRadius:14, fontSize:13, marginBottom:12 }}>{error}</div>}
+        {loading ? (
+          <div style={{ textAlign:'center', padding:38, color:'#8b928b' }}>Cargando auditoria...</div>
+        ) : visibles.length === 0 ? (
+          <div style={{ textAlign:'center', padding:38, color:'#8b928b', background:'#fff', borderRadius:20 }}>Todavia no hay movimientos registrados.</div>
+        ) : visibles.map(log => (
+          <div key={log.id} style={{ background:'#fff', borderRadius:18, padding:'14px 16px', marginBottom:8, border:'1px solid #e8ece8', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:6 }}>
+              <strong style={{ fontSize:15 }}>{log.accion}</strong>
+              <span style={{ fontSize:11, color:'#8b928b' }}>{String(log.created_at || '').slice(0, 16).replace('T', ' ')}</span>
+            </div>
+            <div style={{ fontSize:12, color:'#687068' }}>
+              {log.modulo}{log.tabla ? ` - ${log.tabla}` : ''}{log.registro_id ? ` - ${log.registro_id}` : ''}
+            </div>
+            {log.detalle && <div style={{ fontSize:13, marginTop:8, color:'#202820' }}>{log.detalle}</div>}
+            {log.usuario_email && <div style={{ fontSize:11, marginTop:8, color:'#8b928b' }}>{log.usuario_email}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
-
-Contexto:
-${JSON.stringify(contexto, null, 2)}
-`;
-
-    const openaiResponse = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelo,
-        input: prompt,
-        temperature: 0.1,
-        max_output_tokens: 1400,
-      }),
-    });
-
-    const data = await openaiResponse.json();
-    if (!openaiResponse.ok) {
-      throw new Error(data?.error?.message || 'No se pudo generar la recomendacion.');
-    }
-
-    const outputText = data.output_text ||
-      data.output?.flatMap(item => item.content || [])
-        .map(part => part.text || '')
-        .join('\n');
-
-    const parsed = parseJsonFromText(outputText);
-    res.writeHead(200, jsonHeaders);
-    res.end(JSON.stringify({
-      ec_final: parsed.ec_final || '',
-      notas: parsed.notas || '',
-      productos: Array.isArray(parsed.productos) ? parsed.productos : [],
-    }));
-  } catch (error) {
-    res.writeHead(500, jsonHeaders);
-    res.end(JSON.stringify({ error: error.message || 'Error generando recomendacion IA.' }));
-  }
-};

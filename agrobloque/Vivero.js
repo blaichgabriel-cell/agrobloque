@@ -1,435 +1,219 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 
-const ABONO_BASE_CATEGORIA = 'Abono de base'
-const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
-const fmtNumero = (n, decimales = 3) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDigits: decimales })
-
-const normalizarUnidad = (unidad = '') => {
-  const u = String(unidad).trim().toLowerCase()
-  if (['kg', 'kilo', 'kilos'].includes(u)) return 'kg'
-  if (['g', 'gr', 'gramo', 'gramos'].includes(u)) return 'g'
-  if (['l', 'lt', 'lts', 'litro', 'litros'].includes(u)) return 'L'
-  if (['cc', 'ml'].includes(u)) return 'cc'
-  if (['unidad', 'unidades', 'u'].includes(u)) return 'unidades'
-  return u || 'unidades'
+const CULTIVO_COLORES = {
+  'Morrón':'#c8793a','Tomate':'#c0392b','Pepino':'#27ae60',
+  'Berenjena':'#8e44ad','Zapalito':'#f39c12','Zucchini':'#16a085',
+  'Lechuga':'#2ecc71','Lechuga repollo':'#1abc9c','Tomate Cherry':'#e74c3c',
 }
 
-const formatearStock = (cantidad, unidad) => {
-  const valor = Number(cantidad) || 0
-  const u = normalizarUnidad(unidad)
-
-  if (u === 'kg' && valor > 0 && valor < 1) {
-    return { cantidad: fmtNumero(valor * 1000, 0), unidad: 'g' }
-  }
-  if (u === 'L' && valor > 0 && valor < 1) {
-    return { cantidad: fmtNumero(valor * 1000, 0), unidad: 'cc' }
-  }
-  return { cantidad: fmtNumero(valor), unidad: u }
-}
-
-const formatearCantidadConUnidad = (cantidad, unidad) => {
-  const stock = formatearStock(cantidad, unidad)
-  return `${stock.cantidad} ${stock.unidad}`
-}
-
-const CATEGORIAS = [
-  { key:'Fungicida',     label:'Fungicidas',      icon:'ti-shield',    color:'#e07b00', bg:'#fff3e8' },
-  { key:'Insecticida',   label:'Insecticidas',    icon:'ti-bug',       color:'#c84040', bg:'#fff0f0' },
-  { key:'Fertilizante',  label:'Fertilizantes',   icon:'ti-droplet',   color:'#2980b9', bg:'#eaf4fb' },
-  { key:'Foliar',        label:'Foliares',         icon:'ti-leaf',      color:'#2d8a4e', bg:'#edf7ed' },
-  { key:'Hidrosoluble',  label:'Hidrosolubles',    icon:'ti-flask',     color:'#212121', bg:'#eeeeee' },
-  { key:'Abono de base', label:'Abonos de base',  icon:'ti-garden-cart',color:'#212121',bg:'#eeeeee' },
-  { key:'Otro',          label:'Otros',            icon:'ti-package',   color:'#555',   bg:'#f2f1ef' },
-]
-
-function ModalConfirm({ mensaje, onConfirm, onCancel }) {
-  return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#fff', borderRadius:20, padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:'#0a0a0a', marginBottom:8, textAlign:'center' }}>¿Eliminar producto?</div>
-        <div style={{ fontSize:13, color:'#9a9a9a', textAlign:'center', marginBottom:20 }}>{mensaje}</div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={onCancel} style={{ flex:1, padding:12, borderRadius:12, border:'1px solid #e8e6e2', background:'transparent', fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:12, border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default function Inventario() {
+export default function Mapa({ campoActivo }) {
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
-  const [productos, setProductos] = useState([])
-  const [categorias, setCategorias] = useState([])
-  const [categoriaActiva, setCategoriaActiva] = useState(null)
-  const [modal, setModal] = useState(null)
-  const [confirmar, setConfirmar] = useState(null)
-  const [form, setForm] = useState({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' })
-  const [saving, setSaving] = useState(false)
-  const [sincronizandoAbonos, setSincronizandoAbonos] = useState(false)
+  const [bloques, setBloques] = useState([])
+  const [plantaciones, setPlantaciones] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [filtro, setFiltro] = useState('todos')
+  const [modalBloque, setModalBloque] = useState(false)
+  const [formBloque, setFormBloque] = useState({ letra:'A', numero:'', tipo:'invernadero' })
+  const [savingBloque, setSavingBloque] = useState(false)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
-  useEffect(() => { fetchProductos(); fetchCategorias() }, [])
+  useEffect(() => {
+    if (!campoActivo) return
+    fetchData()
+  }, [campoActivo])
 
-  const asegurarCategoriaProducto = async () => {
-    const { data: existente } = await supabase
-      .from('categorias_producto')
-      .select('id')
-      .eq('nombre', ABONO_BASE_CATEGORIA)
-      .maybeSingle()
+  const fetchData = async () => {
+    setLoading(true)
+    const { data: bloquesData, error } = await supabase
+      .from('bloques')
+      .select('id, codigo, activo, tipo')
+      .eq('campo_id', campoActivo.id)
+      .order('codigo')
 
-    if (existente?.id) return existente.id
+    if (error || !bloquesData) { setLoading(false); return }
+    setBloques(bloquesData)
 
-    const { data: creada } = await supabase
-      .from('categorias_producto')
-      .insert({ nombre: ABONO_BASE_CATEGORIA })
-      .select('id')
-      .single()
+    const ids = bloquesData.map(b => b.id)
+    if (ids.length === 0) { setLoading(false); return }
 
-    return creada?.id || null
+    const { data: plantData } = await supabase
+      .from('plantaciones')
+      .select('id, bloque_id, fecha_siembra, activa, cultivos(nombre)')
+      .in('bloque_id', ids)
+      .eq('activa', true)
+
+    const mapa = {}
+    ;(plantData || []).forEach(p => { mapa[p.bloque_id] = p })
+    setPlantaciones(mapa)
+    setLoading(false)
   }
 
-  const sincronizarAbonoBase = async (nombre, categoriaNombre, nombreAnterior = '') => {
-    if (categoriaNombre !== ABONO_BASE_CATEGORIA) return
-    const nombreLimpio = String(nombre || '').trim()
-    if (!nombreLimpio) return
+  const limpiarBloque = () => setFormBloque({ letra:'A', numero:'', tipo:'invernadero' })
 
-    const nombres = [nombreLimpio, nombreAnterior].filter(Boolean)
-    const { data: existentes } = await supabase
-      .from('abonos')
-      .select('id, nombre')
-      .in('nombre', nombres)
+  const guardarBloque = async () => {
+    if (!campoActivo?.id || !formBloque.numero) return
+    const letra = String(formBloque.letra || '').trim().toUpperCase()
+    const numero = String(formBloque.numero || '').replace(/[^0-9]/g, '')
+    const codigo = `${letra}-${numero}`
 
-    const abono = (existentes || []).find(a =>
-      normalizarNombre(a.nombre) === normalizarNombre(nombreAnterior) ||
-      normalizarNombre(a.nombre) === normalizarNombre(nombreLimpio)
-    )
-
-    if (abono) {
-      await supabase.from('abonos').update({ nombre: nombreLimpio }).eq('id', abono.id)
-    } else {
-      await supabase.from('abonos').insert({ nombre: nombreLimpio })
+    if (!letra || !numero) {
+      setError('Completá letra y número del bloque.')
+      return
     }
-  }
+    if (bloques.some(b => String(b.codigo).toUpperCase() === codigo)) {
+      setError(`El bloque ${codigo} ya existe en este campo.`)
+      return
+    }
 
-  const sincronizarAbonosBase = async () => {
-    const { data: abonosData } = await supabase.from('abonos').select('nombre').order('nombre')
-    if (!abonosData || abonosData.length === 0) return
-
-    const categoriaId = await asegurarCategoriaProducto()
-    if (!categoriaId) return
-
-    const { data: productosData } = await supabase
-      .from('productos')
-      .select('nombre')
-      .eq('categoria_id', categoriaId)
-
-    const nombresExistentes = new Set((productosData || []).map(p => normalizarNombre(p.nombre)))
-    const faltantes = abonosData
-      .map(a => String(a.nombre || '').trim())
-      .filter(nombre => nombre && !nombresExistentes.has(normalizarNombre(nombre)))
-
-    if (faltantes.length === 0) return
-
-    await supabase.from('productos').insert(faltantes.map(nombre => ({
-      nombre,
-      categoria_id: categoriaId,
-      unidad: 'kg',
-      stock_actual: 0,
-      stock_minimo: 0,
-      carencia_dias: 0,
-      activo: true,
-    })))
-  }
-
-  const sincronizarAbonosManual = async () => {
-    setSincronizandoAbonos(true)
+    setSavingBloque(true)
     setError('')
     try {
-      await sincronizarAbonosBase()
-      await Promise.all([fetchProductos(), fetchCategorias()])
-      setCategoriaActiva(ABONO_BASE_CATEGORIA)
-    } catch (e) {
-      setError('Error al sincronizar abonos: ' + e.message)
-    }
-    setSincronizandoAbonos(false)
-  }
-
-  const fetchProductos = async () => {
-    const { data } = await supabase.from('productos').select('*, categorias_producto(nombre)').eq('activo', true).order('nombre')
-    setProductos(data || [])
-  }
-
-  const fetchCategorias = async () => {
-    const { data } = await supabase.from('categorias_producto').select('*')
-    setCategorias(data || [])
-  }
-
-  const getCatNombre = (p) => p.categorias_producto?.nombre || 'Otro'
-
-  const getProductosCat = (catKey) => productos.filter(p => getCatNombre(p) === catKey)
-
-  const getBajoStock = (catKey) => getProductosCat(catKey).filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
-
-  const getSinStock = (catKey) => getProductosCat(catKey).filter(p => p.stock_actual <= 0).length
-
-  const getBadge = (catKey) => {
-    const sin = getSinStock(catKey)
-    const bajo = getBajoStock(catKey)
-    if (sin > 0) return { label: `✗ Sin stock`, bg:'#fff0f0', color:'#c84040' }
-    if (bajo > 0) return { label: `⚠ Stock bajo`, bg:'#fff3e8', color:'#c8700a' }
-    return { label: '✓ OK', bg:'#eeeeee', color:'#555' }
-  }
-
-  const guardar = async () => {
-    if (!form.nombre) return
-    setSaving(true); setError('')
-    try {
-      // Buscar o crear categoría
-      let categoria_id = null
-      if (form.categoria_nombre) {
-        const cat = categorias.find(c => c.nombre === form.categoria_nombre)
-        if (cat) {
-          categoria_id = cat.id
-        } else {
-          const { data: newCat } = await supabase.from('categorias_producto').insert({ nombre: form.categoria_nombre }).select().single()
-          if (newCat) { categoria_id = newCat.id; await fetchCategorias() }
-        }
-      }
-      const payload = {
-        nombre: form.nombre, categoria_id,
-        principio_activo: form.principio_activo || null, unidad: form.unidad,
-        stock_actual: Number(form.stock_actual) || 0,
-        stock_minimo: Number(form.stock_minimo) || 0,
-        carencia_dias: Number(form.carencia_dias) || 0,
-        notas: form.notas || null
-      }
-      const anterior = form.id ? productos.find(p => p.id === form.id)?.nombre : ''
-      if (form.id) await supabase.from('productos').update(payload).eq('id', form.id)
-      else await supabase.from('productos').insert(payload)
-      await sincronizarAbonoBase(form.nombre, form.categoria_nombre, anterior)
+      const { data, error } = await supabase
+        .from('bloques')
+        .insert({ campo_id: campoActivo.id, codigo, tipo: formBloque.tipo, activo: true })
+        .select('id')
+        .single()
+      if (error) throw error
       await registrarAuditoria({
-        accion: form.id ? 'Edito producto' : 'Registro producto',
-        modulo: 'Inventario',
-        tabla: 'productos',
-        registroId: form.id || '',
-        detalle: `${payload.nombre} - stock ${payload.stock_actual}`,
+        accion: 'Registro bloque',
+        modulo: 'Mapa',
+        tabla: 'bloques',
+        registroId: data?.id || '',
+        detalle: `Bloque ${codigo}`,
       })
-      await fetchProductos(); setSaving(false); setModal(null)
-      setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' })
-    } catch (e) { setError('Error: ' + e.message); setSaving(false) }
+      limpiarBloque()
+      setModalBloque(false)
+      await fetchData()
+    } catch (e) {
+      setError(`No se pudo crear el bloque: ${e.message}`)
+    }
+    setSavingBloque(false)
   }
 
-  const ajustarStock = async (id, delta) => {
-    const p = productos.find(x => x.id === id)
-    if (!p) return
-    await supabase.from('productos').update({ stock_actual: Math.max(0, Number(p.stock_actual) + delta) }).eq('id', id)
-    await registrarAuditoria({ accion:'Ajusto stock', modulo:'Inventario', tabla:'productos', registroId:id, detalle:`${p.nombre}: ${delta > 0 ? '+' : ''}${delta}` })
-    fetchProductos()
+  const getCultivo = (b) => plantaciones[b.id]?.cultivos?.nombre || null
+  const getColor = (b) => {
+    const c = getCultivo(b)
+    return c ? (CULTIVO_COLORES[c] || '#555') : null
   }
 
-  const eliminar = (id, nombre) => {
-    setConfirmar({ mensaje: `"${nombre}" será eliminado.`, fn: async () => {
-      await supabase.from('productos').update({ activo: false }).eq('id', id)
-      await registrarAuditoria({ accion:'Desactivo producto', modulo:'Inventario', tabla:'productos', registroId:id, detalle:nombre })
-      setConfirmar(null); fetchProductos()
-    }})
-  }
+  const cultivos = [...new Set(bloques.map(b => getCultivo(b)).filter(Boolean))]
+  const bloquesFiltrados = filtro === 'todos' ? bloques
+    : filtro === 'vacio' ? bloques.filter(b => !getCultivo(b))
+    : bloques.filter(b => getCultivo(b) === filtro)
 
-  const getStockColor = (p) => p.stock_actual <= 0 ? '#c84040' : p.stock_actual <= p.stock_minimo ? '#e07b00' : '#212121'
-  const getStockBg = (p) => p.stock_actual <= 0 ? '#fff0f0' : p.stock_actual <= p.stock_minimo ? '#fff3e8' : '#eeeeee'
-  const getStockPct = (p) => p.stock_minimo > 0 ? Math.min(100, Math.round((p.stock_actual / (p.stock_minimo * 3)) * 100)) : p.stock_actual > 0 ? 100 : 0
-
-  const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
-  const catActInfo = CATEGORIAS.find(c => c.key === categoriaActiva)
-  const productosCat = categoriaActiva ? getProductosCat(categoriaActiva) : []
-  const bajoStockTotal = productos.filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
+  if (!campoActivo) return (
+    <div style={{ background:'#f2f1ef', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ fontSize:13, color:'#9a9a9a' }}>Seleccioná un campo desde el inicio</div>
+    </div>
+  )
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      {confirmar && <ModalConfirm mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-
-      {/* Vista categorías */}
-      {!categoriaActiva && (
-        <>
-          <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
-              <div>
-                <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Depósito</div>
-                <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Inventario</div>
-              </div>
-              <div style={{ display:'flex', gap:8 }}>
-                <button onClick={sincronizarAbonosManual} disabled={sincronizandoAbonos}
-                  title="Sincronizar abonos de base"
-                  style={{ width:40, height:40, borderRadius:14, background: sincronizandoAbonos ? '#888' : '#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor: sincronizandoAbonos ? 'default' : 'pointer' }}>
-                  <i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} style={{ color:'#212121', fontSize:20 }} aria-hidden="true"></i>
-                </button>
-                <button onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
-                  style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                  <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-                </button>
-              </div>
-            </div>
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
-            {bajoStockTotal > 0 && (
-              <div style={{ background:'#fff3e8', borderRadius:14, padding:'10px 14px', display:'flex', alignItems:'center', gap:8 }}>
-                <i className="ti ti-alert-triangle" style={{ color:'#e07b00', fontSize:16 }} aria-hidden="true"></i>
-                <div style={{ fontSize:12, fontWeight:500, color:'#c8700a' }}>{bajoStockTotal} producto{bajoStockTotal>1?'s':''} con stock bajo</div>
-              </div>
-            )}
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 0' : '24px 20px 0' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, marginBottom:14 }}>
+          <div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Campo activo</div>
+            <div style={{ fontSize:22, fontWeight:700, color:'#212121', letterSpacing:-.5 }}>{campoActivo?.nombre}</div>
           </div>
+          <button onClick={() => { setError(''); setModalBloque(true) }} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 }}>
+            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+          </button>
+        </div>
+        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
+        <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:8 }}>
+          {[['todos','Todos'], ...cultivos.map(c => [c,c]), ['vacio','Sin cultivo']].map(([k,v]) => (
+            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#212121' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
-            <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(3, minmax(240px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
-            {CATEGORIAS.map(cat => {
-              const prods = getProductosCat(cat.key)
-              if (prods.length === 0) return null
-              const badge = getBadge(cat.key)
+      <div style={{ padding: isDesktop ? '18px 36px 100px' : '8px 14px 100px' }}>
+        {loading ? (
+          <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Cargando bloques...</div>
+        ) : bloquesFiltrados.length === 0 ? (
+          <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin bloques para mostrar</div>
+        ) : (
+          <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(4, minmax(180px, 1fr))' : '1fr 1fr', gap: isDesktop ? 14 : 8 }}>
+            {bloquesFiltrados.map(b => {
+              const cultivo = getCultivo(b)
+              const color = getColor(b)
               return (
-                <div key={cat.key} onClick={() => setCategoriaActiva(cat.key)}
-                  style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, display:'flex', alignItems:'center', gap:12, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
-                  <div style={{ width:44, height:44, borderRadius:14, background:cat.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <i className={`ti ${cat.icon}`} style={{ fontSize:20, color:cat.color }} aria-hidden="true"></i>
+                <div key={b.id} onClick={() => navigate(`/bloque/${b.id}`)}
+                  style={{ background: color || '#fff', borderRadius:20, padding: isDesktop ? '18px 18px' : '14px 12px', cursor:'pointer', minHeight: isDesktop ? 120 : 90, display:'flex', flexDirection:'column', justifyContent:'space-between', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.06)' : 'none' }}>
+                  <div style={{ fontSize:10, fontWeight:600, color: cultivo ? 'rgba(255,255,255,0.55)' : '#c0c0c0', textTransform:'uppercase' }}>
+                    {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
                   </div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{cat.label}</div>
-                    <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>{prods.length} producto{prods.length>1?'s':''}</div>
+                  <div>
+                    <div style={{ fontSize:22, fontWeight:800, color: cultivo ? '#fff' : '#0a0a0a', letterSpacing:-.5 }}>{b.codigo}</div>
+                    <div style={{ fontSize:10, color: cultivo ? 'rgba(255,255,255,0.75)' : '#c0c0c0', marginTop:2 }}>
+                      {cultivo || 'Sin cultivo'}
+                    </div>
                   </div>
-                  <div style={{ fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:20, background:badge.bg, color:badge.color }}>{badge.label}</div>
-                  <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
                 </div>
               )
             })}
-            </div>
           </div>
-        </>
-      )}
-
-      {/* Vista productos de categoría */}
-      {categoriaActiva && catActInfo && (
-        <>
-          <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-            <button onClick={() => setCategoriaActiva(null)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
-              <i className="ti ti-arrow-left" style={{ fontSize:18, color:'#212121' }} aria-hidden="true"></i>
-              <span style={{ fontSize:13, color:'#212121', fontWeight:500 }}>Inventario</span>
-            </button>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <div style={{ width:40, height:40, borderRadius:12, background:catActInfo.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <i className={`ti ${catActInfo.icon}`} style={{ fontSize:20, color:catActInfo.color }} aria-hidden="true"></i>
-                </div>
-                <div style={{ fontSize:22, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>{catActInfo.label}</div>
-              </div>
-              <button onClick={() => { setForm({ nombre:'', categoria_nombre:categoriaActiva, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
-                style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-              </button>
-            </div>
-          </div>
-
-          <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
-            {productosCat.length === 0 ? (
-              <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin productos en esta categoría</div>
-            ) : (
-              <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(320px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
-              {productosCat.map(p => {
-              const stockVisible = formatearStock(p.stock_actual, p.unidad)
-              return (
-              <div key={p.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
-                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{p.nombre}</div>
-                    <div style={{ fontSize:10, color:'#9a9a9a', marginTop:2 }}>{p.principio_activo || '—'}</div>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:22, fontWeight:800, color: getStockColor(p) }}>{stockVisible.cantidad}</div>
-                    <div style={{ fontSize:9, color:'#9a9a9a' }}>{stockVisible.unidad}</div>
-                  </div>
-                </div>
-
-                <div style={{ background:'#f2f1ef', borderRadius:20, height:6, overflow:'hidden', marginBottom:6 }}>
-                  <div style={{ height:'100%', background: getStockColor(p), borderRadius:20, width:`${getStockPct(p)}%`, transition:'width .3s' }}></div>
-                </div>
-
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
-                  <div style={{ background: getStockBg(p), borderRadius:8, padding:'3px 10px', fontSize:10, fontWeight:600, color: getStockColor(p) }}>
-                    {p.stock_actual <= 0 ? 'Sin stock' : p.stock_actual <= p.stock_minimo ? `Bajo - min ${formatearCantidadConUnidad(p.stock_minimo, p.unidad)}` : `OK - min ${formatearCantidadConUnidad(p.stock_minimo, p.unidad)}`}
-                  </div>
-                  {p.carencia_dias > 0 && (
-                    <div style={{ background:'#fff3e8', borderRadius:8, padding:'3px 10px', fontSize:10, fontWeight:600, color:'#c8700a' }}>
-                      {p.carencia_dias}d carencia
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <button onClick={() => ajustarStock(p.id, -1)} style={{ width:32, height:32, borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>−</button>
-                  <button onClick={() => ajustarStock(p.id, 1)} style={{ width:32, height:32, borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>+</button>
-                  <button onClick={() => { setForm({...p, categoria_nombre: getCatNombre(p)}); setModal('form') }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer', marginLeft:4 }}>Editar</button>
-                  <button onClick={() => eliminar(p.id, p.nombre)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
-                </div>
-              </div>
-              )
-              })}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      <div style={{ padding: isDesktop ? '0 36px 100px' : '0 14px 100px' }}>
-        <NotasPanel modulo="inventario" titulo="Blog de notas de inventario" />
+        )}
+        <NotasPanel modulo="mapa" titulo="Blog de notas de mapa" />
       </div>
 
-      {/* Modal producto */}
-      {modal === 'form' && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(null)}>
-          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar producto' : 'Nuevo producto'}</div>
+      {modalBloque && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems: isDesktop ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalBloque(false)}>
+          <div style={{ background:'#f2f1ef', borderRadius: isDesktop ? 24 : '24px 24px 0 0', width:'100%', maxWidth:440, padding:'24px 20px 38px', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div style={{ fontSize:18, fontWeight:800, color:'#0a0a0a', marginBottom:4 }}>Agregar bloque</div>
+            <div style={{ fontSize:12, color:'#8b928b', marginBottom:18 }}>{campoActivo?.nombre}</div>
             {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
 
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Categoría</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
-              {CATEGORIAS.map(cat => (
-                <button key={cat.key} onClick={() => setForm(f => ({...f, categoria_nombre:cat.key}))}
-                  style={{ padding:'7px 14px', borderRadius:20, border:'1px solid #e8e6e2', fontSize:11, fontWeight:500, cursor:'pointer', background: form.categoria_nombre===cat.key ? '#212121' : '#fff', color: form.categoria_nombre===cat.key ? '#fff' : '#555' }}>
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-
-            {[
-              ['Nombre *', 'nombre', 'text', 'Ej: Acetamix'],
-              ['Principio activo', 'principio_activo', 'text', 'Ej: Acetamiprid'],
-              ['Stock actual', 'stock_actual', 'number', '0'],
-              ['Stock mínimo (alerta)', 'stock_minimo', 'number', '0'],
-              ['Días de carencia', 'carencia_dias', 'number', 'Ej: 7'],
-              ['Notas', 'notas', 'text', 'Opcional'],
-            ].map(([lbl, key, type, ph]) => (
-              <div key={key}>
-                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>{lbl}</div>
-                <input style={inpStyle} type={type} value={form[key]||''} onChange={e => setForm(f => ({...f, [key]:e.target.value}))} placeholder={ph}/>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr', gap:10 }}>
+              <div>
+                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Letra</div>
+                <input value={formBloque.letra} maxLength={3} onChange={e => setFormBloque(f => ({ ...f, letra:e.target.value.toUpperCase().replace(/[^A-Z]/g, '') }))} style={inputBloque} placeholder="A" />
               </div>
-            ))}
-
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Unidad</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:16 }}>
-              {['kg','gramos','litros','cc','unidades'].map(u => (
-                <button key={u} onClick={() => setForm(f => ({...f, unidad:u}))}
-                  style={{ padding:'9px 14px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.unidad===u ? '#212121' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>
-                  {u}
-                </button>
-              ))}
+              <div>
+                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Número</div>
+                <input value={formBloque.numero} inputMode="numeric" onChange={e => setFormBloque(f => ({ ...f, numero:e.target.value.replace(/[^0-9]/g, '') }))} style={inputBloque} placeholder="Ej: 9" />
+              </div>
             </div>
 
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(null)}>Cancelar</button>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Tipo</div>
+            <select value={formBloque.tipo} onChange={e => setFormBloque(f => ({ ...f, tipo:e.target.value }))} style={inputBloque}>
+              <option value="invernadero">Invernadero</option>
+              <option value="campo_abierto">Campo abierto</option>
+            </select>
+
+            <div style={{ background:'#fff', borderRadius:14, padding:'12px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:12, color:'#8b928b' }}>Vista previa</span>
+              <strong style={{ fontSize:18, color:'#0a0a0a' }}>{`${(formBloque.letra || 'A').toUpperCase()}-${formBloque.numero || '?'}`}</strong>
+            </div>
+
+            <button onClick={guardarBloque} disabled={savingBloque} style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:800, color:'#fff', cursor:'pointer' }}>
+              {savingBloque ? 'Guardando...' : 'Guardar bloque'}
+            </button>
+            <button onClick={() => setModalBloque(false)} style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }}>
+              Cancelar
+            </button>
           </div>
         </div>
       )}
     </div>
   )
+}
+
+const inputBloque = {
+  width:'100%',
+  padding:'11px 14px',
+  borderRadius:12,
+  border:'1px solid #e8e6e2',
+  background:'#fff',
+  fontSize:13,
+  color:'#0a0a0a',
+  marginBottom:12,
+  boxSizing:'border-box',
 }

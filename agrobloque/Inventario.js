@@ -1,277 +1,722 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import NotasPanel from '../components/NotasPanel'
-import { descargarCsv } from '../lib/exporters'
-import { registrarAuditoria } from '../lib/audit'
+import DesktopDashboard from './DesktopDashboard'
+import { filterTabsByRole } from '../lib/permissions'
 
-const TIPOS_COSTO = [
-  { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:'#212121', bg:'#eeeeee' },
-  { key:'combustible',          label:'Combustible',          icon:'ti-flame',       color:'#e07b00', bg:'#fff3e8' },
-  { key:'herramientas',         label:'Herramientas',         icon:'ti-tool',        color:'#555',    bg:'#f2f1ef' },
-  { key:'electricidad',         label:'Electricidad',         icon:'ti-bolt',        color:'#2980b9', bg:'#eaf4fb' },
-  { key:'gastos_administrativos',label:'Gastos administrativos',icon:'ti-file-invoice',color:'#8e44ad',bg:'#f5eefb' },
-  { key:'otro',                 label:'Otro',                 icon:'ti-plus-circle', color:'#888',    bg:'#f2f1ef' },
-]
+const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
+const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
+const fmtNum = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
+const COSTO_MANUAL_LABELS = {
+  insumos: { label: 'Insumos', color: '#2563eb' },
+  combustible: { label: 'Combustible', color: '#d9841f' },
+  herramientas: { label: 'Herramientas', color: '#6f7770' },
+  electricidad: { label: 'Electricidad', color: '#0284c7' },
+  gastos_administrativos: { label: 'Administracion', color: '#8e44ad' },
+  otro: { label: 'Otros gastos', color: '#64748b' },
+}
 
-const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
-const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
+const normalizarTipoCosto = (valor = '') => String(valor || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9]+/g, '_')
+  .replace(/^_+|_+$/g, '')
 
-export default function Costos({ campoActivo, isGuest = false }) {
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
-  const [campos, setCampos] = useState([])
-  const [campoSel, setCampoSel] = useState(null)
-  const [bloques, setBloques] = useState([])
-  const [costosAuto, setCostosAuto] = useState({ agroquimicos: 0, jornales: 0 })
-  const [costosManuales, setCostosManuales] = useState([])
-  const [modal, setModal] = useState(false)
-  const [form, setForm] = useState({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'' })
-  const [saving, setSaving] = useState(false)
-  const [periodo, setPeriodo] = useState('mes')
+const completarCategoriasCostos = (totalCostos, categorias) => {
+  const base = (categorias || [])
+    .filter(c => Number(c.value) > 0)
+    .map(c => ({ ...c, value: Number(c.value) || 0 }))
+  const suma = base.reduce((s, c) => s + c.value, 0)
+  const diferencia = Math.max(0, (Number(totalCostos) || 0) - suma)
+  const completas = diferencia > 0
+    ? [...base, { label: 'Otros costos', value: diferencia, color: '#8a948b' }]
+    : base
 
-  useEffect(() => { fetchCampos() }, [])
-  useEffect(() => { if (campoActivo) setCampoSel(campoActivo) }, [campoActivo])
-  useEffect(() => { if (campoSel) { fetchBloques(); fetchCostos() } }, [campoSel, periodo])
+  return completas.sort((a, b) => b.value - a.value)
+}
 
-  const fetchCampos = async () => {
-    const { data } = await supabase.from('campos').select('*').order('nombre')
-    const lista = data || []
-    setCampos(lista)
-    if (!campoSel && lista.length > 0) {
-      const campoGuardado = typeof window !== 'undefined' ? window.localStorage.getItem('agrobloque-campo-activo') : null
-      setCampoSel(campoActivo || lista.find(c => c.id === campoGuardado) || lista[0])
-    }
-  }
+const crearGradienteCostos = (categorias, total) => {
+  if (!categorias.length || total <= 0) return '#e3e8e1'
+  let acumulado = 0
+  const partes = categorias.map(c => {
+    const inicio = (acumulado / total) * 100
+    acumulado += Number(c.value) || 0
+    const fin = (acumulado / total) * 100
+    return `${c.color} ${inicio}% ${fin}%`
+  })
+  return `conic-gradient(${partes.join(', ')})`
+}
 
-  const fetchBloques = async () => {
-    const { data } = await supabase.from('bloques').select('*').eq('campo_id', campoSel.id).order('codigo')
-    setBloques(data || [])
-  }
+const sumarCategoria = (grupos, key, label, value, color) => {
+  const monto = Number(value) || 0
+  if (monto <= 0) return
+  if (!grupos[key]) grupos[key] = { label, value: 0, color }
+  grupos[key].value += monto
+}
 
-  const getFechaDesde = () => {
-    if (periodo === 'total') return '2020-01-01'
-    const d = new Date()
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
-  }
+function LogoHS({ size = 56 }) {
+  return (
+    <div style={{
+      width: size,
+      height: size,
+      borderRadius: 18,
+      border: '1px solid rgba(255,255,255,0.22)',
+      background: 'linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+      boxShadow: '0 14px 34px rgba(0,0,0,0.35)',
+      flexShrink: 0,
+    }}>
+      <span style={{
+        color: '#fff',
+        fontSize: Math.round(size * 0.42),
+        fontWeight: 900,
+        letterSpacing: -2,
+        lineHeight: 1,
+        fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif",
+      }}>HS</span>
+    </div>
+  )
+}
 
-  const formVacio = () => ({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'' })
-
-  const abrirNuevo = () => {
-    setForm(formVacio())
-    setModal(true)
-  }
-
-  const abrirEditar = (costo) => {
-    setForm({
-      id: costo.id,
-      tipo: costo.tipo || 'insumos',
-      descripcion: costo.descripcion || '',
-      monto: costo.monto ? fmtGs(costo.monto) : '',
-      fecha: costo.fecha || new Date().toISOString().split('T')[0],
-      bloque_id: costo.bloque_id || '',
-    })
-    setModal(true)
-  }
-
-  const cerrarModal = () => {
-    setModal(false)
-    setForm(formVacio())
-  }
-
-  const fetchCostos = async () => {
-    const desde = getFechaDesde()
-    const { data: fumis } = await supabase.from('fumigaciones')
-      .select('fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
-      .eq('campo_id', campoSel.id).gte('fecha', desde)
-    let totalAgro = 0
-    fumis?.forEach(f => f.fumigacion_productos?.forEach(fp => {
-        totalAgro += (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
-    }))
-    const { data: asist } = isGuest
-      ? { data: [] }
-      : await supabase.from('asistencia')
-        .select('monto, operarios(campo_id)').gte('fecha', desde)
-    let totalJornales = 0
-    asist?.forEach(a => { if (a.operarios?.campo_id === campoSel.id) totalJornales += Number(a.monto) || 0 })
-    setCostosAuto({ agroquimicos: totalAgro, jornales: totalJornales })
-    const { data: manuales } = await supabase.from('costos')
-      .select('*, bloques(codigo)').eq('campo_id', campoSel.id).gte('fecha', desde).order('fecha', { ascending: false })
-    setCostosManuales(manuales || [])
-  }
-
-  const guardar = async () => {
-    if (!form.monto || !form.fecha) return
-    setSaving(true)
-    const payload = {
-      tipo: form.tipo, descripcion: form.descripcion || null,
-      monto: parsearGs(form.monto), fecha: form.fecha,
-      campo_id: campoSel?.id || null, bloque_id: form.bloque_id || null
-    }
-    if (form.id) await supabase.from('costos').update(payload).eq('id', form.id)
-    else await supabase.from('costos').insert(payload)
-    await registrarAuditoria({
-      accion: form.id ? 'Edito costo manual' : 'Registro costo manual',
-      modulo: 'Costos',
-      tabla: 'costos',
-      registroId: form.id || '',
-      detalle: `${payload.descripcion || payload.tipo} - Gs. ${payload.monto}`,
-    })
-    await fetchCostos(); setSaving(false); cerrarModal()
-  }
-
-  const eliminar = async (id) => {
-    await supabase.from('costos').delete().eq('id', id)
-    await registrarAuditoria({ accion:'Elimino costo manual', modulo:'Costos', tabla:'costos', registroId:id })
-    fetchCostos()
-  }
-
-  const totalManuales = costosManuales.reduce((s, c) => s + Number(c.monto), 0)
-  const totalGeneral = costosAuto.agroquimicos + costosAuto.jornales + totalManuales
-
-  const exportarCostos = () => {
-    const rows = costosManuales.map(c => ({
-      Fecha: c.fecha,
-      Tipo: TIPOS_COSTO.find(t => t.key === c.tipo)?.label || c.tipo,
-      Descripcion: c.descripcion || '',
-      Bloque: c.bloques?.codigo || '',
-      Monto: Number(c.monto) || 0,
-    }))
-    descargarCsv('costos-manuales', ['Fecha', 'Tipo', 'Descripcion', 'Bloque', 'Monto'], rows)
-  }
+function WatermarkHS({ compact }) {
+  const width = compact ? 180 : 230
+  const height = compact ? 150 : 190
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
-          <div>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Gastos</div>
-            <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Costos</div>
-          </div>
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={exportarCostos} style={{ width:40, height:40, borderRadius:14, background:'#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-              <i className="ti ti-download" style={{ color:'#212121', fontSize:19 }} aria-hidden="true"></i>
-            </button>
-            {!isGuest && (
-              <button onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-              </button>
-            )}
-          </div>
-        </div>
-        {campos.length > 1 && (
-          <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:12 }}>
-            {campos.map(c => (
-              <button key={c.id} onClick={() => setCampoSel(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoSel?.id===c.id ? '#212121' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
-            ))}
-          </div>
-        )}
-        <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4 }}>
-          {[['mes','Este mes'],['total','Historico']].map(([k,v]) => (
-            <button key={k} onClick={() => setPeriodo(k)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
-          ))}
-        </div>
-      </div>
+    <svg
+      viewBox="0 0 260 220"
+      width={width}
+      height={height}
+      style={{
+        position: 'absolute',
+        right: compact ? 8 : 22,
+        top: compact ? 54 : 58,
+        opacity: 0.16,
+        pointerEvents: 'none',
+      }}
+      aria-hidden="true"
+    >
+      <text x="10" y="170" fontFamily="Georgia, 'Times New Roman', serif" fontSize="132" fontWeight="800" fill="#fff" letterSpacing="-9">HS</text>
+      <path d="M145 69c10-22 19-35 27-51 16 25 16 48-1 72-10 14-21 23-32 30 0-18 0-34 6-51z" fill="#fff"/>
+      <path d="M119 86c-23-4-39-12-52-29 31-1 53 10 66 33 7 12 10 24 10 36-11-13-17-27-24-40z" fill="#fff"/>
+      <path d="M187 91c18-19 39-27 66-25-8 28-26 45-53 52-15 4-29 4-42 1 9-8 18-16 29-28z" fill="#fff"/>
+      <path d="M165 114c17-30 39-46 70-51-4 34-22 59-53 73-19 8-37 11-55 9 14-8 26-18 38-31z" fill="#fff"/>
+      <path d="M214 146c30-17 58-25 84-23-25 20-51 34-82 43-22 6-43 9-63 8 20-7 40-16 61-28z" fill="none" stroke="#fff" strokeWidth="6" strokeLinecap="round"/>
+      <path d="M222 174c24-13 49-20 74-21-23 19-47 32-75 40-17 5-34 7-50 7 16-6 33-14 51-26z" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round"/>
+    </svg>
+  )
+}
 
-      <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
-        <div style={{ background:'#212121', borderRadius:20, padding:'18px 20px', marginBottom:10 }}>
-          <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:6 }}>Total costos · {periodo === 'mes' ? 'este mes' : 'historico'}</div>
-          <div style={{ fontSize:36, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>Gs. {fmtGs(totalGeneral)}</div>
-          <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', marginTop:4 }}>{campoSel?.nombre}</div>
-        </div>
+function useViewportWidth() {
+  const [width, setWidth] = useState(typeof window === 'undefined' ? 480 : window.innerWidth)
 
-        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? '0.9fr 1.1fr' : '1fr', gap: isDesktop ? 12 : 0 }}>
-        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-          <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:12, textTransform:'uppercase' }}>Calculados automaticamente</div>
-          {[
-            { icon:'ti-spray', color:'#e07b00', bg:'#fff3e8', label:'Agroquimicos', sub:'Desde fumigaciones registradas', val: costosAuto.agroquimicos },
-            ...(!isGuest ? [{ icon:'ti-users', color:'#212121', bg:'#eeeeee', label:'Jornales', sub:'Desde asistencia registrada', val: costosAuto.jornales }] : []),
-          ].map((item, i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom: i===0 ? '1px solid #f2f1ef' : 'none' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <div style={{ width:32, height:32, borderRadius:9, background:item.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <i className={`ti ${item.icon}`} style={{ fontSize:15, color:item.color }} aria-hidden="true"></i>
-                </div>
-                <div>
-                  <div style={{ fontSize:13, fontWeight:500, color:'#0a0a0a' }}>{item.label}</div>
-                  <div style={{ fontSize:10, color:'#9a9a9a' }}>{item.sub}</div>
-                </div>
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return width
+}
+
+function ViveroIcon({ size = 24, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 21V10" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 12C8.2 12 5.4 9.7 4.5 6.2C8.2 6 11.1 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 12C15.8 12 18.6 9.7 19.5 6.2C15.8 6 12.9 7.7 12 12Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 21H17" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function DashboardIcon({ icon, size, color }) {
+  if (['vivero-icon', 'agro-vivero', 'ti-leaf', 'ti-seeding', 'ti-plant-2'].includes(icon)) {
+    return <ViveroIcon size={size} color={color} />
+  }
+  return <i className={`ti ${icon}`} style={{ fontSize: size, color }} aria-hidden="true"></i>
+}
+
+const accesos = [
+  { icon: 'ti-map', label: 'Mapa', sub: 'Ver bloques', path: '/mapa', green: true },
+  { icon: 'ti-calendar', label: 'Agenda', sub: 'Tareas', path: '/agenda', green: true },
+  { icon: 'vivero-icon', label: 'Vivero', sub: 'Plantines', path: '/vivero', green: true },
+  { icon: 'ti-timeline', label: 'Historial', sub: 'Trazabilidad', path: '/historial', green: true },
+  { icon: 'ti-users', label: 'Asistencia', sub: 'Planilla', path: '/asistencia' },
+  { icon: 'ti-chart-bar', label: 'Reportes', sub: 'Rentabilidad', path: '/reportes' },
+  { icon: 'ti-spray', label: 'Fumigaciones', sub: 'Historial', path: '/fumigaciones', green: true },
+  { icon: 'ti-plant', label: 'Plan Nutricional', sub: 'Fertirriego', path: '/plan-nutricional', green: true },
+  { icon: 'ti-box', label: 'Inventario', sub: 'Stock', path: '/inventario' },
+  { icon: 'ti-cut', label: 'Cosecha', sub: 'Produccion', path: '/cosecha' },
+  { icon: 'ti-cash-register', label: 'Ventas', sub: 'Cobros', path: '/ventas' },
+  { icon: 'ti-coin', label: 'Costos', sub: 'Gastos', path: '/costos' },
+  { icon: 'ti-calculator', label: 'Contabilidad', sub: 'Balance', path: '/contabilidad' },
+]
+
+const operacionesFrecuentes = [
+  { icon: 'vivero-icon', label: 'Vivero', path: '/vivero' },
+  { icon: 'ti-cut', label: 'Cosecha', path: '/cosecha' },
+  { icon: 'ti-cash-register', label: 'Ventas', path: '/ventas' },
+  { icon: 'ti-box', label: 'Inventario', path: '/inventario' },
+]
+
+const fondo = {
+  minHeight: '100vh',
+  background: `
+    radial-gradient(circle at 20% 0%, rgba(74,124,50,0.22), transparent 28%),
+    radial-gradient(circle at 90% 30%, rgba(200,170,95,0.14), transparent 30%),
+    linear-gradient(180deg, #090b0a 0%, #111310 48%, #090a09 100%)
+  `,
+  color: '#fff',
+}
+
+const cardBlanca = {
+  background: 'linear-gradient(145deg, #ffffff, #f5f5f3)',
+  border: '1px solid rgba(255,255,255,0.82)',
+  boxShadow: '0 18px 35px rgba(0,0,0,0.22)',
+}
+
+const elegirCampoConDatos = (campos, bloques = [], guardado) => {
+  if (!campos || campos.length === 0) return null
+  const conteo = bloques.reduce((acc, b) => {
+    if (b.campo_id) acc[b.campo_id] = (acc[b.campo_id] || 0) + 1
+    return acc
+  }, {})
+  const campoGuardado = campos.find(c => c.id === guardado)
+  const campoConMasBloques = campos.reduce((mejor, campo) => {
+    return (conteo[campo.id] || 0) > (conteo[mejor.id] || 0) ? campo : mejor
+  }, campos[0])
+  const hayCampoConDatos = (conteo[campoConMasBloques.id] || 0) > 0
+
+  if (campoGuardado && (!hayCampoConDatos || (conteo[campoGuardado.id] || 0) > 0)) {
+    return campoGuardado
+  }
+
+  return campoConMasBloques
+}
+
+export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false, role }) {
+  const [campos, setCampos] = useState([])
+  const [stats, setStats] = useState({ bloques: 0, activos: 0, cultivos: 0, operarios: 0 })
+  const [alertas, setAlertas] = useState([])
+  const [mobileData, setMobileData] = useState({
+    productos: 0,
+    costos: 0,
+    costosCategorias: [],
+    produccion: [],
+    actividades: [],
+  })
+  const [loading, setLoading] = useState(true)
+  const viewportWidth = useViewportWidth()
+  const navigate = useNavigate()
+  const hoy = new Date().toISOString().split('T')[0]
+  const compacto = viewportWidth < 520
+  const muyChico = viewportWidth < 375
+  const usarDashboardEscritorio = viewportWidth >= 1100
+
+  const cargarStats = async (campo) => {
+    if (!campo?.id) return
+    setLoading(true)
+    const mesDesde = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+
+    const { data: bloques } = await supabase
+      .from('bloques')
+      .select('id, activo')
+      .eq('campo_id', campo.id)
+
+    const bloqueIds = (bloques || []).map(b => b.id)
+    const plantacionesQuery = bloqueIds.length > 0
+      ? supabase.from('plantaciones').select('id, bloque_id, densidad_plantas_m2, cultivos(nombre)').eq('activa', true).in('bloque_id', bloqueIds)
+      : Promise.resolve({ data: [] })
+
+    const operariosQuery = isGuest
+      ? Promise.resolve({ data: [] })
+      : supabase.from('operarios').select('id').eq('campo_id', campo.id)
+
+    const [
+      { data: plantas },
+      { data: ops },
+      { data: tareas },
+      { data: productos },
+      { data: cosechas },
+      { data: costosManuales },
+      { data: asistencia },
+      { data: fumigaciones },
+      { data: ventas },
+    ] = await Promise.all([
+      plantacionesQuery,
+      operariosQuery,
+      supabase
+        .from('tareas')
+        .select('*, campos(nombre), bloques(codigo)')
+        .eq('campo_id', campo.id)
+        .eq('completada', false)
+        .lte('fecha_programada', hoy)
+        .order('fecha_programada'),
+      supabase.from('productos').select('id').eq('activo', true),
+      bloqueIds.length > 0
+        ? supabase.from('cosechas').select('id, fecha, kg_total, bloques(codigo)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
+        : Promise.resolve({ data: [] }),
+      supabase.from('costos').select('id, tipo, descripcion, concepto, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
+      isGuest
+        ? Promise.resolve({ data: [] })
+        : supabase.from('asistencia').select('monto, fecha, operarios(campo_id, nombre)').gte('fecha', mesDesde),
+      supabase
+        .from('fumigaciones')
+        .select('id, fecha, tipo, operario, bloques(codigo), fumigacion_productos(dosis, descuento_stock, productos(nombre, precio_unitario))')
+        .eq('campo_id', campo.id)
+        .gte('fecha', mesDesde)
+        .order('fecha', { ascending: false }),
+      bloqueIds.length > 0
+        ? supabase.from('ventas').select('id, fecha, producto, kg_total, precio_kg, total, estado_cobro, bloque_id, compradores(nombre)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
+        : Promise.resolve({ data: [] }),
+    ])
+
+    const manual = (costosManuales || []).reduce((s, c) => s + (Number(c.monto) || 0), 0)
+    const jornales = (asistencia || [])
+      .filter(a => a.operarios?.campo_id === campo.id)
+      .reduce((s, a) => s + (Number(a.monto) || 0), 0)
+    const agroquimicos = (fumigaciones || []).reduce((total, f) => {
+      return total + (f.fumigacion_productos || []).reduce((s, fp) => {
+        return s + (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
+      }, 0)
+    }, 0)
+    const totalCostos = manual + jornales + agroquimicos
+    const costosCategoriasBase = [
+      { label: 'Jornales', value: jornales, color: '#176a25' },
+      { label: 'Agroquimicos', value: agroquimicos, color: '#d9841f' },
+      ...agruparCostosManualesDashboard(costosManuales || []),
+    ]
+    const costosCategorias = completarCategoriasCostos(totalCostos, costosCategoriasBase)
+
+    setStats({
+      bloques: bloques?.length || 0,
+      activos: bloques?.filter(b => b.activo).length || 0,
+      cultivos: plantas?.length || 0,
+      operarios: ops?.length || 0,
+    })
+    setAlertas(tareas || [])
+    setMobileData({
+      productos: productos?.length || 0,
+      costos: totalCostos,
+      costosCategorias,
+      produccion: agruparProduccionMovil(plantas || []),
+      actividades: construirActividadesMovil({ tareas: tareas || [], cosechas: cosechas || [], ventas: ventas || [], costos: costosManuales || [], fumigaciones: fumigaciones || [] }),
+    })
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    const init = async () => {
+      const [{ data }, { data: bloques }] = await Promise.all([
+        supabase.from('campos').select('*').order('nombre'),
+        supabase.from('bloques').select('campo_id'),
+      ])
+      if (!data || data.length === 0) {
+        setLoading(false)
+        return
+      }
+
+      setCampos(data)
+      const guardado = typeof window !== 'undefined'
+        ? window.localStorage.getItem(CAMPO_STORAGE_KEY)
+        : null
+      const campo = campoActivo || elegirCampoConDatos(data, bloques || [], guardado)
+      if (!campoActivo) setCampoActivo(campo)
+      await cargarStats(campo)
+    }
+
+    init()
+  }, [])
+
+  useEffect(() => {
+    if (campoActivo) cargarStats(campoActivo)
+  }, [campoActivo])
+
+  const seleccionarCampo = (campo) => {
+    setCampoActivo(campo)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CAMPO_STORAGE_KEY, campo.id)
+    }
+  }
+
+  if (usarDashboardEscritorio) {
+    return <DesktopDashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} />
+  }
+
+  const operacionesVisibles = filterTabsByRole(operacionesFrecuentes, role, isGuest)
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#d7dcd4', color: '#111611' }}>
+      <div style={{ background: '#0e130f', padding: '18px 14px 26px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: compacto ? 12 : 16 }}>
+            <LogoHS size={46} />
+            <div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 3 }}>
+                Horticultura
               </div>
-              <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{item.val > 0 ? `Gs. ${fmtGs(item.val)}` : '—'}</div>
+              <div style={{ fontSize: 20, color: '#fff', fontWeight: 850, letterSpacing: -0.7, lineHeight: 1.05 }}>
+                El Sembrador
+              </div>
             </div>
-          ))}
+          </div>
+
+          <button onClick={() => navigate('/agenda')} style={{
+            width: 38,
+            height: 38,
+            borderRadius: 13,
+            border: 'none',
+            background: '#181e19',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            cursor: 'pointer',
+          }} aria-label="Abrir agenda">
+            <i className="ti ti-bell" style={{ fontSize: 23, color: '#fff' }} aria-hidden="true"></i>
+            <span style={{
+              position: 'absolute',
+              top: 7,
+              right: 8,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: alertas.length > 0 ? '#7bc043' : 'rgba(123,192,67,0.45)',
+            }} />
+          </button>
         </div>
 
-        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-            <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', textTransform:'uppercase' }}>Costos manuales</div>
-            <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Gs. {fmtGs(totalManuales)}</div>
-          </div>
-          {costosManuales.length === 0 ? (
-            <div style={{ fontSize:12, color:'#b0b0b0', textAlign:'center', padding:'12px 0' }}>Sin costos manuales registrados</div>
-          ) : costosManuales.map(c => {
-            const tipo = TIPOS_COSTO.find(t => t.key === c.tipo) || TIPOS_COSTO[5]
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(campos.length, 1)}, minmax(0, 1fr))`, gap: 6, padding: 5, borderRadius: 14, background: '#181e19' }}>
+          {campos.length === 0 ? (
+            <div style={{ padding: 14, color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>Sin campos</div>
+          ) : campos.map(campo => {
+            const activo = campoActivo?.id === campo.id
             return (
-              <div key={c.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid #f2f1ef' }}>
-                <div style={{ width:32, height:32, borderRadius:9, background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <i className={`ti ${tipo.icon}`} style={{ fontSize:14, color:tipo.color }} aria-hidden="true"></i>
-                </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:12, fontWeight:500, color:'#0a0a0a' }}>{c.descripcion || tipo.label}</div>
-                  <div style={{ fontSize:10, color:'#9a9a9a' }}>{c.fecha}{c.bloques?.codigo ? ' · ' + c.bloques.codigo : ''}</div>
-                </div>
-                <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Gs. {fmtGs(c.monto)}</div>
-                {!isGuest && (
-                  <>
-                    <button onClick={() => abrirEditar(c)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #e8e6e2', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                      <i className="ti ti-pencil" style={{ fontSize:12, color:'#555' }} aria-hidden="true"></i>
-                    </button>
-                    <button onClick={() => eliminar(c.id)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #ffcccc', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                      <i className="ti ti-x" style={{ fontSize:12, color:'#c84040' }} aria-hidden="true"></i>
-                    </button>
-                  </>
-                )}
-              </div>
+              <button key={campo.id} onClick={() => seleccionarCampo(campo)} style={{
+                minHeight: 36,
+                borderRadius: 11,
+                border: 'none',
+                background: activo ? '#050706' : 'rgba(255,255,255,0.03)',
+                color: activo ? '#fff' : 'rgba(255,255,255,0.72)',
+                fontSize: 13,
+                fontWeight: activo ? 800 : 500,
+                cursor: 'pointer',
+                boxShadow: activo ? '0 14px 24px rgba(0,0,0,0.32)' : 'none',
+              }}>
+                {campo.nombre}
+              </button>
             )
           })}
         </div>
-        </div>
-        <NotasPanel modulo="costos" titulo="Blog de notas de costos" />
       </div>
 
-      {modal && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && cerrarModal()}>
-          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar costo' : 'Nuevo costo'}</div>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:8 }}>Tipo</div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginBottom:14 }}>
-              {TIPOS_COSTO.map(t => (
-                <button key={t.key} onClick={() => setForm(f => ({...f, tipo:t.key}))} style={{ padding:'10px 6px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:10, fontWeight:500, cursor:'pointer', background: form.tipo===t.key ? '#212121' : '#fff', color: form.tipo===t.key ? '#fff' : '#555', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                  <i className={`ti ${t.icon}`} style={{ fontSize:16 }} aria-hidden="true"></i>
-                  {t.label}
-                </button>
-              ))}
+      <main style={{ padding: '14px 14px 84px', marginTop: -12 }}>
+        <button onClick={() => navigate('/mapa')} style={{ ...buttonReset, ...mobileCard, width:'100%', textAlign:'left' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={mobileEyebrow}>Estado general</div>
+              <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+                <strong style={{ fontSize:38, lineHeight:1, letterSpacing:-1.8 }}>{loading ? '-' : stats.activos}</strong>
+                <span style={{ fontSize:15, fontWeight:800 }}>bloques activos</span>
+              </div>
+              <div style={mobileMuted}>de {stats.bloques} totales</div>
             </div>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Monto (Gs.) *</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
-              type="text" inputMode="numeric" value={form.monto}
-              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setForm(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
-              placeholder="Ej: 150.000"/>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Descripcion (opcional)</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
-              type="text" value={form.descripcion} onChange={e => setForm(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Compra de plantines"/>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
-              type="date" value={form.fecha} onChange={e => setForm(f=>({...f,fecha:e.target.value}))}/>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloque (opcional)</div>
-            <select style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16 }}
-              value={form.bloque_id} onChange={e => setForm(f=>({...f,bloque_id:e.target.value}))}>
-              <option value="">Sin bloque especifico</option>
-              {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
-            </select>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar costo'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={cerrarModal}>Cancelar</button>
+            <div onClick={(e) => { e.stopPropagation(); navigate('/alertas') }} style={{ background:'#edf5ec', borderRadius:14, padding:'10px 12px', minWidth:80 }}>
+              <div style={mobileEyebrow}>Alertas</div>
+              <strong style={{ display:'block', fontSize:24, color:'#176a25', lineHeight:1.1 }}>{alertas.length}</strong>
+              <span style={{ fontSize:10, color:'#68716a' }}>{alertas.length ? 'pendientes' : 'sin alertas'}</span>
+            </div>
           </div>
+        </button>
+
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:10, marginTop:12 }}>
+          <MetricCard title="Cultivos" value={stats.cultivos} sub="plantaciones" onClick={() => navigate('/mapa')} />
+          <MetricCard title={isGuest ? 'Acceso' : 'Operarios'} value={isGuest ? 'Ver' : stats.operarios} sub={isGuest ? 'invitado' : 'activos'} onClick={() => navigate(isGuest ? '/mapa' : '/asistencia')} />
+          <MetricCard title="Stock" value={mobileData.productos} sub="productos" onClick={() => navigate('/inventario')} />
         </div>
-      )}
+
+        <section style={{ ...mobileCard, marginTop:12, padding:14 }}>
+          <div style={sectionHeader}>
+            <h2 style={sectionTitle}>Operacion de hoy</h2>
+            <button onClick={() => navigate('/agenda')} style={textButton}>Ver agenda</button>
+          </div>
+          <div style={{ display:'grid', gap:8 }}>
+            {mobileData.actividades.length === 0 ? (
+              <div style={{ color:'#737b74', fontSize:12, padding:'16px 0', textAlign:'center' }}>Sin movimientos recientes ni tareas pendientes.</div>
+            ) : mobileData.actividades.slice(0, 2).map(item => (
+              <ActivityRow key={item.id} item={item} onClick={() => navigate(item.path)} />
+            ))}
+          </div>
+        </section>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:12 }}>
+          <ResumenFinancieroMini onClick={() => navigate('/reportes')} />
+          <ProduccionMini produccion={mobileData.produccion} onClick={() => navigate('/mapa')} />
+        </div>
+
+        <section style={{ ...mobileCard, marginTop:12, padding:14 }}>
+          <h2 style={{ ...sectionTitle, marginBottom:10 }}>Operaciones frecuentes</h2>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4, minmax(0, 1fr))', gap:8 }}>
+            {operacionesVisibles.map(item => (
+              <button key={item.path} onClick={() => navigate(item.path)} style={operationButton}>
+                <DashboardIcon icon={item.icon} size={17} color="#176a25" />
+                <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function agruparProduccionMovil(plantas) {
+  const mapa = {}
+  plantas.forEach(p => {
+    const nombre = p.cultivos?.nombre || 'Sin cultivo'
+    if (!mapa[nombre]) mapa[nombre] = { nombre, plantaciones: 0, bloques: new Set() }
+    mapa[nombre].plantaciones += 1
+    if (p.bloque_id) mapa[nombre].bloques.add(p.bloque_id)
+  })
+  return Object.values(mapa)
+    .map(c => ({ ...c, bloques: c.bloques.size }))
+    .sort((a, b) => b.plantaciones - a.plantaciones)
+    .slice(0, 3)
+}
+
+function agruparCostosManualesDashboard(costos) {
+  const grupos = {}
+  ;(costos || []).forEach(costo => {
+    const key = COSTO_MANUAL_LABELS[normalizarTipoCosto(costo.tipo)]
+      ? normalizarTipoCosto(costo.tipo)
+      : 'otro'
+    const meta = COSTO_MANUAL_LABELS[key] || COSTO_MANUAL_LABELS.otro
+    sumarCategoria(grupos, `manual-${key}`, meta.label, costo.monto, meta.color)
+  })
+  return Object.values(grupos)
+}
+
+function construirActividadesMovil({ tareas, cosechas, ventas, costos, fumigaciones }) {
+  const lista = [
+    ...(tareas || []).map(t => ({
+      id: `tarea-${t.id}`,
+      title: t.descripcion || 'Tarea pendiente',
+      sub: `${t.bloques?.codigo ? `Bloque ${t.bloques.codigo} · ` : ''}${t.fecha_programada || ''}`,
+      badge: 'Agenda',
+      iconBg: '#eef7ee',
+      path: '/agenda',
+      fecha: t.fecha_programada || '',
+    })),
+    ...(cosechas || []).map(c => ({
+      id: `cosecha-${c.id}`,
+      title: `Cosecha ${c.bloques?.codigo || ''}`.trim(),
+      sub: `${fmtNum(c.kg_total)} kg cosechados`,
+      badge: 'Prod.',
+      iconBg: '#eef7ee',
+      path: '/cosecha',
+      fecha: c.fecha || '',
+    })),
+    ...(ventas || []).map(v => ({
+      id: `venta-${v.id}`,
+      title: v.producto || 'Venta',
+      sub: `${v.compradores?.nombre || 'Comprador'} · ${fmtGs(Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0))}`,
+      badge: v.estado_cobro === 'pagado' ? 'Cobrado' : 'Debe',
+      iconBg: v.estado_cobro === 'pagado' ? '#eef7ee' : '#fff3e3',
+      path: '/ventas',
+      fecha: v.fecha || '',
+    })),
+    ...(fumigaciones || []).map(f => ({
+      id: `fumigacion-${f.id}`,
+      title: f.tipo || 'Fumigacion',
+      sub: `${f.bloques?.map?.(b => b.codigo).filter(Boolean).join(', ') || 'Bloques'}${f.operario ? ` · ${f.operario}` : ''}`,
+      badge: 'Hecha',
+      iconBg: '#eef7ee',
+      path: '/fumigaciones',
+      fecha: f.fecha || '',
+    })),
+    ...(costos || []).map(c => ({
+      id: `costo-${c.id}`,
+      title: c.descripcion || c.concepto || 'Gasto registrado',
+      sub: fmtGs(c.monto),
+      badge: 'Costo',
+      iconBg: '#fff3e3',
+      path: '/costos',
+      fecha: c.fecha || '',
+    })),
+  ]
+
+  return lista
+    .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))
+    .slice(0, 4)
+}
+
+const mobileCard = {
+  background: '#fff',
+  border: '1px solid rgba(255,255,255,0.78)',
+  borderRadius: 20,
+  boxShadow: '0 12px 26px rgba(30,38,31,0.08)',
+  padding: 16,
+}
+
+const mobileEyebrow = {
+  color: '#68716a',
+  fontSize: 10,
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+  marginBottom: 6,
+}
+
+const mobileMuted = {
+  color: '#737b74',
+  fontSize: 11,
+  marginTop: 4,
+}
+
+const sectionHeader = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 10,
+}
+
+const sectionTitle = {
+  margin: 0,
+  fontSize: 18,
+  lineHeight: 1.1,
+  letterSpacing: -0.4,
+  fontWeight: 850,
+}
+
+const textButton = {
+  border: 'none',
+  background: 'transparent',
+  color: '#176a25',
+  fontSize: 11,
+  fontWeight: 800,
+  cursor: 'pointer',
+  padding: 0,
+}
+
+const operationButton = {
+  border: 'none',
+  background: '#eef7ee',
+  borderRadius: 10,
+  minHeight: 34,
+  padding: '5px 6px',
+  display: 'grid',
+  placeItems: 'center',
+  gap: 2,
+  color: '#111611',
+  fontSize: 9.5,
+  fontWeight: 850,
+  cursor: 'pointer',
+  minWidth: 0,
+}
+
+const buttonReset = {
+  border: 'none',
+  font: 'inherit',
+  color: 'inherit',
+  cursor: 'pointer',
+  boxSizing: 'border-box',
+}
+
+function MetricCard({ title, value, sub, onClick }) {
+  return (
+    <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, minHeight: 78, padding: '13px 14px', boxSizing: 'border-box', textAlign:'left' }}>
+      <div style={mobileEyebrow}>{title}</div>
+      <strong style={{ display:'block', fontSize:27, lineHeight:1, letterSpacing:-0.8 }}>{value}</strong>
+      <div style={mobileMuted}>{sub}</div>
+    </button>
+  )
+}
+
+function ActivityRow({ item, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      border: 'none',
+      background: '#fafbf8',
+      borderRadius: 14,
+      minHeight: 48,
+      padding: '8px 10px',
+      display: 'grid',
+      gridTemplateColumns: '30px minmax(0, 1fr) 46px',
+      gap: 10,
+      alignItems: 'center',
+      textAlign: 'left',
+      cursor: 'pointer',
+    }}>
+      <span style={{ width:28, height:28, borderRadius:10, background:item.iconBg, display:'block' }} />
+      <span style={{ minWidth:0 }}>
+        <strong style={{ display:'block', fontSize:13, lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.title}</strong>
+        <span style={{ display:'block', color:'#737b74', fontSize:10.5, marginTop:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.sub}</span>
+      </span>
+      <span style={{ justifySelf:'end', background:'#e8f5e5', color:'#176a25', borderRadius:8, padding:'4px 7px', fontSize:9, fontWeight:800 }}>
+        {item.badge}
+      </span>
+    </button>
+  )
+}
+
+function ResumenFinancieroMini({ onClick }) {
+  return (
+    <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, padding:14, minHeight:146, textAlign:'left', width:'100%', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+      <h2 style={{ ...sectionTitle, fontSize:16 }}>Resumen financiero</h2>
+      <div>
+        <strong style={{ display:'block', fontSize:20, lineHeight:1.05, marginTop:4, letterSpacing:-0.5 }}>Ingresos, costos y margen</strong>
+        <div style={{ color:'#737b74', fontSize:11, lineHeight:1.25, marginTop:8 }}>
+          Tocá para ver jornales, insumos y gastos cargados.
+        </div>
+      </div>
+      <span style={{ alignSelf:'flex-start', marginTop:12, background:'#eef7ee', color:'#176a25', borderRadius:10, padding:'7px 10px', fontSize:10.5, fontWeight:850 }}>
+        Ver reporte
+      </span>
+    </button>
+  )
+}
+
+function ProduccionMini({ produccion, onClick }) {
+  const max = Math.max(...(produccion || []).map(p => p.plantaciones), 1)
+  return (
+    <button onClick={onClick} style={{ ...buttonReset, ...mobileCard, padding:14, minHeight:146, textAlign:'left', width:'100%' }}>
+      <h2 style={{ ...sectionTitle, fontSize:16, marginBottom:14 }}>Produccion</h2>
+      <div style={{ display:'grid', gap:11 }}>
+        {(produccion.length ? produccion : [{ nombre:'Sin cultivo', plantaciones:0, bloques:0 }]).slice(0, 3).map((p, i) => {
+          const colors = ['#176a25', '#c7352d', '#cb7a35']
+          const width = p.plantaciones > 0 ? Math.max(20, (p.plantaciones / max) * 100) : 0
+          return (
+            <div key={p.nombre}>
+              <div style={{ display:'flex', justifyContent:'space-between', gap:6, fontSize:10.5, marginBottom:5 }}>
+                <strong style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.nombre}</strong>
+                <span style={{ color:'#737b74', flexShrink:0 }}>{p.bloques} bl.</span>
+              </div>
+              <div style={{ height:6, borderRadius:8, background:'#dde5dc', overflow:'hidden' }}>
+                <div style={{ width:`${width}%`, height:'100%', background:colors[i] || '#176a25', borderRadius:8 }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </button>
+  )
+}
+
+function MiniStat({ icon, label, value, compact }) {
+  return (
+    <div style={{
+      padding: compact ? '0 7px' : '0 18px',
+      minWidth: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 9, color: '#fff', marginBottom: compact ? 8 : 13 }}>
+        <i className={`ti ${icon}`} style={{ color: '#7bc043', fontSize: compact ? 19 : 27, flexShrink: 0 }} aria-hidden="true"></i>
+        <span style={{ fontSize: compact ? 11.5 : 16, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      </div>
+      <div style={{ fontSize: compact ? 25 : 34, color: '#fff', fontWeight: 900, lineHeight: 1 }}>{value}</div>
     </div>
   )
 }

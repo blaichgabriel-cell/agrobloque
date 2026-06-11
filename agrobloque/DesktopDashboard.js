@@ -1,207 +1,520 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { descargarCsv, imprimirHtml } from '../lib/exporters'
 
-const TIPOS = ['Mayorista','Mercado','Particular','Exportador','Otro']
+const meses = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
 
-function ModalConfirm({ nombre, onConfirm, onCancel }) {
-  return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#fff', borderRadius:20, padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:'#0a0a0a', marginBottom:8, textAlign:'center' }}>¿Eliminar comprador?</div>
-        <div style={{ fontSize:13, color:'#9a9a9a', textAlign:'center', marginBottom:20 }}>"{nombre}" y su historial serán eliminados.</div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={onCancel} style={{ flex:1, padding:12, borderRadius:12, border:'1px solid #e8e6e2', background:'transparent', fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:12, border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
-        </div>
-      </div>
-    </div>
-  )
+const categoriasCompra = ['Insumos', 'Mercaderia', 'Sueldos', 'Servicios', 'Reparaciones', 'Combustible', 'Otros']
+const categoriasVenta = ['Verduras', 'Plantines', 'Servicios', 'Otros']
+const mediosPago = ['Efectivo', 'Transferencia', 'Cheque', 'Tarjeta', 'Otro']
+
+const hoy = () => new Date().toISOString().split('T')[0]
+const anhoActual = () => new Date().getFullYear()
+const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
+const parseGs = (v) => parseInt(String(v || '').replace(/[^0-9]/g, ''), 10) || 0
+
+const formInicial = {
+  fecha: hoy(),
+  tipo: 'compra',
+  descripcion: '',
+  categoria: 'Insumos',
+  contraparte: '',
+  medio_pago: 'Efectivo',
+  comprobante: '',
+  monto: '',
+  notas: '',
 }
 
-export default function Compradores() {
+export default function Contabilidad() {
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
-  const [compradores, setCompradores] = useState([])
-  const [historial, setHistorial] = useState({})
+  const [movimientos, setMovimientos] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [modal, setModal] = useState(false)
-  const [confirmar, setConfirmar] = useState(null)
-  const [form, setForm] = useState({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' })
   const [saving, setSaving] = useState(false)
-  const [expandido, setExpandido] = useState(null)
+  const [form, setForm] = useState(formInicial)
+  const [filtro, setFiltro] = useState('todos')
+  const [anho, setAnho] = useState(anhoActual())
 
-  useEffect(() => { fetchCompradores() }, [])
+  useEffect(() => { fetchMovimientos() }, [anho])
 
-  const fetchCompradores = async () => {
-    const { data } = await supabase.from('compradores').select('*').order('nombre')
-    setCompradores(data || [])
-    if (data?.length > 0) fetchHistorial(data)
+  const fetchMovimientos = async () => {
+    setLoading(true)
+    const desde = `${anho}-01-01`
+    const hasta = `${anho}-12-31`
+    const { data, error } = await supabase
+      .from('contabilidad_movimientos')
+      .select('*')
+      .gte('fecha', desde)
+      .lte('fecha', hasta)
+      .order('fecha', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setError('Falta ejecutar el SQL de contabilidad en Supabase.')
+      setMovimientos([])
+    } else {
+      setError('')
+      setMovimientos(data || [])
+    }
+    setLoading(false)
   }
 
-  const fetchHistorial = async (comps) => {
-    const ids = comps.map(c => c.id)
-    const { data } = await supabase
-      .from('cosechas')
-      .select('comprador_id, kg_total, precio_kg, fecha, bloques(codigo, plantaciones(cultivos(nombre), activa))')
-      .in('comprador_id', ids)
-      .order('fecha', { ascending: false })
+  const resumen = useMemo(() => {
+    const porMes = meses.map((nombre, idx) => ({ nombre, idx, compras: 0, ventas: 0, balance: 0 }))
 
-    const mapa = {}
-    ;(data || []).forEach(c => {
-      if (!mapa[c.comprador_id]) mapa[c.comprador_id] = []
-      mapa[c.comprador_id].push(c)
+    movimientos.forEach(m => {
+      const idx = Number((m.fecha || '').slice(5, 7)) - 1
+      if (idx < 0 || idx > 11) return
+      const monto = Number(m.monto) || 0
+      if (m.tipo === 'venta') porMes[idx].ventas += monto
+      else porMes[idx].compras += monto
+      porMes[idx].balance = porMes[idx].ventas - porMes[idx].compras
     })
-    setHistorial(mapa)
+
+    const ventas = porMes.reduce((s, m) => s + m.ventas, 0)
+    const compras = porMes.reduce((s, m) => s + m.compras, 0)
+    return { porMes, ventas, compras, balance: ventas - compras }
+  }, [movimientos])
+
+  const movimientosFiltrados = useMemo(() => {
+    if (filtro === 'todos') return movimientos
+    return movimientos.filter(m => m.tipo === filtro)
+  }, [movimientos, filtro])
+
+  const abrirNuevo = (tipo = 'compra') => {
+    setForm({
+      ...formInicial,
+      tipo,
+      categoria: tipo === 'venta' ? 'Verduras' : 'Insumos',
+    })
+    setModal(true)
+  }
+
+  const abrirEditar = (mov) => {
+    setForm({
+      id: mov.id,
+      fecha: mov.fecha || hoy(),
+      tipo: mov.tipo || 'compra',
+      descripcion: mov.descripcion || '',
+      categoria: mov.categoria || (mov.tipo === 'venta' ? 'Verduras' : 'Insumos'),
+      contraparte: mov.contraparte || '',
+      medio_pago: mov.medio_pago || 'Efectivo',
+      comprobante: mov.comprobante || '',
+      monto: mov.monto ? fmtGs(mov.monto) : '',
+      notas: mov.notas || '',
+    })
+    setModal(true)
+  }
+
+  const setTipo = (tipo) => {
+    setForm(f => ({
+      ...f,
+      tipo,
+      categoria: tipo === 'venta' ? 'Verduras' : 'Insumos',
+    }))
   }
 
   const guardar = async () => {
-    if (!form.nombre.trim()) return
+    const monto = parseGs(form.monto)
+    if (!form.fecha || !form.descripcion.trim() || monto <= 0) return
     setSaving(true)
-    if (form.id) {
-      await supabase.from('compradores').update({ nombre:form.nombre, tipo:form.tipo, telefono:form.telefono||null, notas:form.notas||null }).eq('id', form.id)
-    } else {
-      await supabase.from('compradores').insert({ nombre:form.nombre, tipo:form.tipo, telefono:form.telefono||null, notas:form.notas||null })
+    const payload = {
+      fecha: form.fecha,
+      tipo: form.tipo,
+      descripcion: form.descripcion.trim(),
+      categoria: form.categoria || null,
+      contraparte: form.contraparte || null,
+      medio_pago: form.medio_pago || null,
+      comprobante: form.comprobante || null,
+      monto,
+      notas: form.notas || null,
     }
-    await fetchCompradores(); setSaving(false); setModal(false)
-    setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' })
+
+    const res = form.id
+      ? await supabase.from('contabilidad_movimientos').update(payload).eq('id', form.id)
+      : await supabase.from('contabilidad_movimientos').insert(payload)
+
+    if (res.error) setError('No se pudo guardar. Revisa si ejecutaste el SQL de contabilidad.')
+    else {
+      setModal(false)
+      await fetchMovimientos()
+    }
+    setSaving(false)
   }
 
-  const eliminar = (c) => {
-    setConfirmar({ nombre: c.nombre, fn: async () => {
-      await supabase.from('compradores').delete().eq('id', c.id)
-      setConfirmar(null); fetchCompradores()
-    }})
+  const eliminar = async (id) => {
+    if (!window.confirm('Eliminar este movimiento de contabilidad?')) return
+    const { error } = await supabase.from('contabilidad_movimientos').delete().eq('id', id)
+    if (error) setError('No se pudo eliminar el movimiento.')
+    else fetchMovimientos()
   }
 
-  const getStats = (id) => {
-    const h = historial[id] || []
-    const kg = h.reduce((s, c) => s + Number(c.kg_total), 0)
-    const ingresos = h.reduce((s, c) => s + Number(c.kg_total) * Number(c.precio_kg || 0), 0)
-    const precios = h.filter(c => c.precio_kg > 0).map(c => Number(c.precio_kg))
-    const precioProm = precios.length > 0 ? Math.round(precios.reduce((s, p) => s + p, 0) / precios.length) : 0
-    return { kg, ingresos, precioProm, operaciones: h.length }
+  const exportarCsv = () => {
+    const rows = movimientosFiltrados.map(m => ({
+      Fecha: m.fecha,
+      Tipo: m.tipo,
+      Descripcion: m.descripcion,
+      Categoria: m.categoria || '',
+      Contraparte: m.contraparte || '',
+      MedioPago: m.medio_pago || '',
+      Comprobante: m.comprobante || '',
+      Monto: Number(m.monto) || 0,
+      Notas: m.notas || '',
+    }))
+    descargarCsv('contabilidad-movimientos', ['Fecha', 'Tipo', 'Descripcion', 'Categoria', 'Contraparte', 'MedioPago', 'Comprobante', 'Monto', 'Notas'], rows)
   }
 
-  const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12 }
-  const lblStyle = { fontSize:10, color:'#9a9a9a', marginBottom:6, display:'block' }
+  const imprimirBalance = () => {
+    imprimirHtml('Balance contable AgroBloque', `
+      <h1>Balance contable AgroBloque</h1>
+      <div class="muted">Año ${anho}</div>
+      <table>
+        <tr><th>Mes</th><th class="right">Compras</th><th class="right">Ventas</th><th class="right">Balance</th></tr>
+        ${resumen.porMes.map(m => `<tr><td>${m.nombre}</td><td class="right">Gs. ${fmtGs(m.compras)}</td><td class="right">Gs. ${fmtGs(m.ventas)}</td><td class="right total">Gs. ${fmtGs(m.balance)}</td></tr>`).join('')}
+        <tr><td class="total">Total</td><td class="right total">Gs. ${fmtGs(resumen.compras)}</td><td class="right total">Gs. ${fmtGs(resumen.ventas)}</td><td class="right total">Gs. ${fmtGs(resumen.balance)}</td></tr>
+      </table>
+    `)
+  }
+
+  const categorias = form.tipo === 'venta' ? categoriasVenta : categoriasCompra
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      {confirmar && <ModalConfirm nombre={confirmar.nombre} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-
-      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:4 }}>
-          <div>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Ventas</div>
-            <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Compradores</div>
+      <div style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
+          <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+            <div style={headerIcon}><i className="ti ti-calculator" style={{ fontSize:26, color:'#176a25' }} aria-hidden="true"></i></div>
+            <div>
+              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Balance independiente</div>
+              <div style={{ fontSize:24, fontWeight:850, color:'#0a0a0a', letterSpacing:-.5 }}>Contabilidad</div>
+            </div>
           </div>
-          <button onClick={() => { setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' }); setModal(true) }} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+          <button onClick={() => abrirNuevo('compra')} style={addBtn}>
+            <i className="ti ti-plus" style={{ color:'#fff', fontSize:21 }} aria-hidden="true"></i>
           </button>
+        </div>
+
+        {error && <div style={errorBox}>{error}</div>}
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:8, marginBottom:12 }}>
+          <select value={anho} onChange={e => setAnho(Number(e.target.value))} style={selectYear}>
+            {[anhoActual() - 1, anhoActual(), anhoActual() + 1].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <div style={{ display:'flex', gap:6 }}>
+            <button onClick={exportarCsv} style={smallAction}>CSV</button>
+            <button onClick={imprimirBalance} style={smallAction}>PDF</button>
+            <button onClick={() => abrirNuevo('compra')} style={smallAction}>Compra</button>
+            <button onClick={() => abrirNuevo('venta')} style={{ ...smallAction, background:'#176a25', color:'#fff' }}>Venta</button>
+          </div>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
+          <TotalCard label="Ventas" value={resumen.ventas} tone="green" />
+          <TotalCard label="Compras" value={resumen.compras} tone="red" />
+          <TotalCard label="Balance" value={resumen.balance} tone={resumen.balance >= 0 ? 'dark' : 'red'} />
         </div>
       </div>
 
       <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
-        {compradores.length === 0 ? (
-          <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>
-            Sin compradores registrados.<br/>
-            <span style={{ fontSize:11 }}>Agregá compradores para asignarlos en cada cosecha.</span>
-          </div>
-        ) : (
-          <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
-            {compradores.map(c => {
-          const stats = getStats(c.id)
-          const isOpen = expandido === c.id
-          return (
-            <div key={c.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }} onClick={() => setExpandido(isOpen ? null : c.id)}>
-                <div style={{ width:40, height:40, borderRadius:12, background:'#eeeeee', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <i className="ti ti-building-store" style={{ fontSize:18, color:'#212121' }} aria-hidden="true"></i>
-                </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{c.nombre}</div>
-                  <div style={{ fontSize:11, color:'#9a9a9a', marginTop:1 }}>{c.tipo}{c.telefono ? ' · ' + c.telefono : ''}</div>
-                </div>
-                <div style={{ textAlign:'right' }}>
-                  {stats.operaciones > 0 ? (
-                    <>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#212121' }}>{stats.kg.toLocaleString()} kg</div>
-                      <div style={{ fontSize:10, color:'#9a9a9a' }}>{stats.operaciones} operaciones</div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize:11, color:'#c0c0c0' }}>Sin historial</div>
-                  )}
-                </div>
-                <i className={`ti ${isOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize:14, color:'#d0d0d0' }} aria-hidden="true"></i>
-              </div>
-
-              {isOpen && (
-                <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid #f2f1ef' }}>
-                  {stats.operaciones > 0 && (
-                    <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-                      <div style={{ flex:1, background:'#f2f1ef', borderRadius:12, padding:'10px 12px', textAlign:'center' }}>
-                        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:3 }}>Total kg</div>
-                        <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{stats.kg.toLocaleString()}</div>
-                      </div>
-                      <div style={{ flex:1, background:'#eeeeee', borderRadius:12, padding:'10px 12px', textAlign:'center' }}>
-                        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:3 }}>Precio prom</div>
-                        <div style={{ fontSize:14, fontWeight:700, color:'#212121' }}>Gs. {stats.precioProm.toLocaleString()}</div>
-                      </div>
-                      <div style={{ flex:1, background:'#f2f1ef', borderRadius:12, padding:'10px 12px', textAlign:'center' }}>
-                        <div style={{ fontSize:9, color:'#9a9a9a', marginBottom:3 }}>Ingresos</div>
-                        <div style={{ fontSize:12, fontWeight:700, color:'#0a0a0a' }}>Gs. {Math.round(stats.ingresos/1000)}k</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Últimas operaciones */}
-                  {(historial[c.id] || []).slice(0, 4).map((h, i) => {
-                    const cultivo = h.bloques?.plantaciones?.find(p => p.activa)?.cultivos?.nombre
-                    return (
-                      <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #f2f1ef' }}>
-                        <div>
-                          <div style={{ fontSize:11, color:'#0a0a0a' }}>{cultivo || 'Bloque ' + h.bloques?.codigo} · {h.kg_total} kg</div>
-                          <div style={{ fontSize:10, color:'#9a9a9a' }}>{h.fecha}</div>
-                        </div>
-                        {h.precio_kg > 0 && <div style={{ fontSize:11, fontWeight:600, color:'#212121' }}>Gs. {Number(h.precio_kg).toLocaleString()}/kg</div>}
-                      </div>
-                    )
-                  })}
-
-                  <div style={{ display:'flex', gap:6, marginTop:12 }}>
-                    <button onClick={() => { setForm({...c}); setModal(true) }} style={{ flex:1, padding:'8px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:12, color:'#555', cursor:'pointer' }}>Editar</button>
-                    <button onClick={() => eliminar(c)} style={{ flex:1, padding:'8px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:12, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
-                  </div>
-                </div>
-              )}
+        <section style={card}>
+          <div style={sectionHead}>
+            <div>
+              <div style={eyebrow}>Control de balance {anho}</div>
+              <h2 style={sectionTitle}>Resumen mensual</h2>
             </div>
-          )
-        })}
+            <i className="ti ti-table" style={{ fontSize:22, color:'#176a25' }} aria-hidden="true"></i>
           </div>
-        )}
-        <NotasPanel modulo="compradores" titulo="Blog de notas de compradores" />
+
+          <div style={{ overflowX:'auto' }}>
+            <table style={tabla}>
+              <thead>
+                <tr>
+                  <th style={th}>Mes</th>
+                  <th style={thRight}>Compras</th>
+                  <th style={thRight}>Ventas</th>
+                  <th style={thRight}>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resumen.porMes.map(m => (
+                  <tr key={m.nombre}>
+                    <td style={td}>{m.nombre}</td>
+                    <td style={tdRight}>Gs. {fmtGs(m.compras)}</td>
+                    <td style={tdRight}>Gs. {fmtGs(m.ventas)}</td>
+                    <td style={{ ...tdRight, color: m.balance >= 0 ? '#176a25' : '#c84040', fontWeight:800 }}>Gs. {fmtGs(m.balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td style={tf}>Total</td>
+                  <td style={tfRight}>Gs. {fmtGs(resumen.compras)}</td>
+                  <td style={tfRight}>Gs. {fmtGs(resumen.ventas)}</td>
+                  <td style={{ ...tfRight, color: resumen.balance >= 0 ? '#176a25' : '#c84040' }}>Gs. {fmtGs(resumen.balance)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <section style={card}>
+          <div style={sectionHead}>
+            <div>
+              <div style={eyebrow}>Compras y ventas</div>
+              <h2 style={sectionTitle}>Movimientos</h2>
+            </div>
+            <div style={segmented}>
+              {['todos', 'compra', 'venta'].map(k => (
+                <button key={k} onClick={() => setFiltro(k)} style={filtro === k ? segActive : segBtn}>
+                  {k === 'todos' ? 'Todos' : k === 'compra' ? 'Compras' : 'Ventas'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loading ? (
+            <Empty text="Cargando movimientos..." />
+          ) : movimientosFiltrados.length === 0 ? (
+            <Empty text="Sin movimientos registrados." />
+          ) : movimientosFiltrados.map(m => (
+            <Movimiento key={m.id} mov={m} onEdit={() => abrirEditar(m)} onDelete={() => eliminar(m.id)} />
+          ))}
+        </section>
+
+        <NotasPanel modulo="contabilidad" titulo="Blog de notas de contabilidad" />
       </div>
 
       {modal && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(false)}>
-          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'80vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar comprador' : 'Nuevo comprador'}</div>
-            <label style={lblStyle}>Nombre *</label>
-            <input style={inpStyle} value={form.nombre} onChange={e => setForm(f => ({...f, nombre:e.target.value}))} placeholder="Ej: Mercado Central"/>
-            <label style={lblStyle}>Tipo</label>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
-              {TIPOS.map(t => (
-                <button key={t} onClick={() => setForm(f => ({...f, tipo:t}))} style={{ padding:'8px 14px', borderRadius:20, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>{t}</button>
-              ))}
+        <div style={overlay} onClick={e => e.target === e.currentTarget && setModal(false)}>
+          <div style={sheet}>
+            <div style={{ fontSize:19, fontWeight:850, marginBottom:16 }}>
+              {form.id ? 'Editar movimiento' : 'Nuevo movimiento'}
             </div>
-            <label style={lblStyle}>Teléfono (opcional)</label>
-            <input style={inpStyle} value={form.telefono} onChange={e => setForm(f => ({...f, telefono:e.target.value}))} placeholder="Ej: 0981 000 000"/>
-            <label style={lblStyle}>Notas (opcional)</label>
-            <textarea style={{ ...inpStyle, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
+              <button onClick={() => setTipo('compra')} style={form.tipo === 'compra' ? tipoActiveRed : tipoBtn}>Compra</button>
+              <button onClick={() => setTipo('venta')} style={form.tipo === 'venta' ? tipoActiveGreen : tipoBtn}>Venta</button>
+            </div>
+
+            <Field label="Fecha *" type="date" value={form.fecha} onChange={v => setForm(f => ({ ...f, fecha:v }))} />
+            <Field label="Monto (Gs.) *" value={form.monto} inputMode="numeric" onChange={v => {
+              const n = parseGs(v)
+              setForm(f => ({ ...f, monto:n ? fmtGs(n) : '' }))
+            }} placeholder="Ej: 150.000" />
+            <Field label="Descripcion *" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion:v }))} placeholder="Ej: compra de insumos / venta de tomate" />
+            <Select label="Categoria" value={form.categoria} onChange={v => setForm(f => ({ ...f, categoria:v }))} options={categorias} />
+            <Field label={form.tipo === 'venta' ? 'Cliente' : 'Proveedor'} value={form.contraparte} onChange={v => setForm(f => ({ ...f, contraparte:v }))} placeholder="Nombre opcional" />
+            <Select label="Medio de pago" value={form.medio_pago} onChange={v => setForm(f => ({ ...f, medio_pago:v }))} options={mediosPago} />
+            <Field label="Comprobante" value={form.comprobante} onChange={v => setForm(f => ({ ...f, comprobante:v }))} placeholder="Factura, recibo, transferencia..." />
+            <Field label="Notas" textarea value={form.notas} onChange={v => setForm(f => ({ ...f, notas:v }))} />
+
+            <button onClick={guardar} disabled={saving} style={primaryBtn}>{saving ? 'Guardando...' : 'Guardar'}</button>
+            <button onClick={() => setModal(false)} style={secondaryBtn}>Cancelar</button>
           </div>
         </div>
       )}
     </div>
   )
 }
+
+function TotalCard({ label, value, tone }) {
+  const bg = tone === 'dark' ? '#161a16' : '#fff'
+  const color = tone === 'dark' ? '#fff' : tone === 'red' ? '#c84040' : '#176a25'
+  return (
+    <div style={{ background:bg, borderRadius:16, padding:'14px 13px', border:'1px solid #e8ece8' }}>
+      <div style={{ fontSize:10, color: tone === 'dark' ? 'rgba(255,255,255,0.58)' : '#8a918b', textTransform:'uppercase', marginBottom:6 }}>{label}</div>
+      <div style={{ fontSize:18, fontWeight:900, color, letterSpacing:-0.3 }}>Gs. {fmtGs(value)}</div>
+    </div>
+  )
+}
+
+function Movimiento({ mov, onEdit, onDelete }) {
+  const venta = mov.tipo === 'venta'
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'42px 1fr auto', gap:11, alignItems:'center', padding:'11px 0', borderBottom:'1px solid #eef0ee' }}>
+      <div style={{ ...iconPill, background: venta ? '#edf6ec' : '#fff0f0' }}>
+        <i className={`ti ${venta ? 'ti-arrow-up-right' : 'ti-arrow-down-left'}`} style={{ fontSize:20, color: venta ? '#176a25' : '#c84040' }} aria-hidden="true"></i>
+      </div>
+      <div style={{ minWidth:0 }}>
+        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+          <strong style={{ fontSize:13, color:'#111611' }}>{mov.descripcion}</strong>
+          <span style={{ borderRadius:20, background: venta ? '#edf6ec' : '#fff0f0', color: venta ? '#176a25' : '#c84040', padding:'3px 7px', fontSize:10, fontWeight:800 }}>
+            {venta ? 'Venta' : 'Compra'}
+          </span>
+        </div>
+        <div style={{ fontSize:11, color:'#7a817b', marginTop:3 }}>
+          {mov.fecha} · {mov.categoria || 'Sin categoria'}{mov.contraparte ? ` · ${mov.contraparte}` : ''}
+        </div>
+      </div>
+      <div style={{ display:'grid', justifyItems:'end', gap:5 }}>
+        <strong style={{ fontSize:13, color: venta ? '#176a25' : '#c84040' }}>Gs. {fmtGs(mov.monto)}</strong>
+        <div style={{ display:'flex', gap:5 }}>
+          <button onClick={onEdit} style={miniBtn}><i className="ti ti-pencil" /></button>
+          <button onClick={onDelete} style={{ ...miniBtn, color:'#c84040', borderColor:'#ffd1d1' }}><i className="ti ti-trash" /></button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, value, onChange, type = 'text', placeholder = '', textarea, inputMode }) {
+  return (
+    <label style={{ display:'block' }}>
+      <div style={labelStyle}>{label}</div>
+      {textarea ? (
+        <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...inputStyle, minHeight:72, resize:'vertical' }} />
+      ) : (
+        <input type={type} inputMode={inputMode} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
+      )}
+    </label>
+  )
+}
+
+function Select({ label, value, onChange, options }) {
+  return (
+    <label style={{ display:'block' }}>
+      <div style={labelStyle}>{label}</div>
+      <select value={value || ''} onChange={e => onChange(e.target.value)} style={inputStyle}>
+        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+      </select>
+    </label>
+  )
+}
+
+function Empty({ text }) {
+  return <div style={{ color:'#8c938d', textAlign:'center', padding:'26px 0', fontSize:13 }}>{text}</div>
+}
+
+const headerIcon = {
+  width:46,
+  height:46,
+  borderRadius:16,
+  background:'#edf6ec',
+  display:'flex',
+  alignItems:'center',
+  justifyContent:'center',
+  flexShrink:0,
+}
+
+const addBtn = {
+  width:42,
+  height:42,
+  borderRadius:14,
+  background:'#212121',
+  border:'none',
+  display:'flex',
+  alignItems:'center',
+  justifyContent:'center',
+  cursor:'pointer',
+}
+
+const smallAction = {
+  border:'none',
+  background:'#fff',
+  color:'#121512',
+  borderRadius:12,
+  padding:'0 12px',
+  fontSize:12,
+  fontWeight:800,
+  cursor:'pointer',
+}
+
+const selectYear = {
+  width:'100%',
+  border:'1px solid #e1e5e1',
+  borderRadius:14,
+  background:'#fff',
+  padding:'11px 12px',
+  fontSize:13,
+  color:'#111611',
+}
+
+const card = {
+  background:'#fff',
+  border:'1px solid #e8ece8',
+  borderRadius:20,
+  padding:16,
+  marginBottom:10,
+  boxShadow:'0 12px 28px rgba(29, 38, 29, 0.05)',
+}
+
+const sectionHead = {
+  display:'flex',
+  justifyContent:'space-between',
+  alignItems:'center',
+  gap:12,
+  marginBottom:14,
+}
+
+const eyebrow = { fontSize:10, color:'#8a918b', textTransform:'uppercase', marginBottom:4, fontWeight:800 }
+const sectionTitle = { margin:0, fontSize:17, letterSpacing:-0.3 }
+
+const tabla = { width:'100%', minWidth:560, borderCollapse:'collapse', fontSize:12 }
+const th = { textAlign:'left', padding:'10px 8px', color:'#6a716b', borderBottom:'1px solid #e8ece8', textTransform:'uppercase', fontSize:10 }
+const thRight = { ...th, textAlign:'right' }
+const td = { padding:'10px 8px', borderBottom:'1px solid #f0f2f0', color:'#111611' }
+const tdRight = { ...td, textAlign:'right' }
+const tf = { padding:'12px 8px', fontWeight:900, background:'#f5f7f5', borderTop:'1px solid #dfe5df' }
+const tfRight = { ...tf, textAlign:'right' }
+
+const segmented = { display:'flex', gap:4, background:'#eef0ee', padding:4, borderRadius:12 }
+const segBtn = { border:'none', borderRadius:9, background:'transparent', padding:'7px 9px', fontSize:11, fontWeight:800, color:'#737a74', cursor:'pointer' }
+const segActive = { ...segBtn, background:'#fff', color:'#111611', boxShadow:'0 4px 10px rgba(0,0,0,0.06)' }
+
+const iconPill = {
+  width:42,
+  height:42,
+  borderRadius:13,
+  display:'flex',
+  alignItems:'center',
+  justifyContent:'center',
+  flexShrink:0,
+}
+
+const miniBtn = {
+  width:27,
+  height:27,
+  borderRadius:8,
+  border:'1px solid #e2e6e2',
+  background:'#fff',
+  color:'#4f5650',
+  display:'flex',
+  alignItems:'center',
+  justifyContent:'center',
+  cursor:'pointer',
+}
+
+const overlay = {
+  position:'fixed',
+  inset:0,
+  background:'rgba(0,0,0,0.42)',
+  zIndex:100,
+  display:'flex',
+  alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end',
+  justifyContent:'center',
+}
+
+const sheet = {
+  width:'100%',
+  maxWidth:520,
+  maxHeight:'88vh',
+  overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
+  background:'#f2f1ef',
+  borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0',
+  padding:'24px 20px 40px',
+  boxSizing:'border-box',
+}
+
+const labelStyle = { fontSize:10, color:'#8a918b', marginBottom:6, fontWeight:800, textTransform:'uppercase' }
+const inputStyle = { width:'100%', boxSizing:'border-box', border:'1px solid #e1e5e1', borderRadius:12, padding:'11px 13px', fontSize:13, color:'#111611', background:'#fff', marginBottom:12 }
+const primaryBtn = { width:'100%', border:'none', borderRadius:14, background:'#161a16', color:'#fff', padding:14, fontSize:14, fontWeight:850, cursor:'pointer', marginTop:4 }
+const secondaryBtn = { width:'100%', border:'1px solid #dfe4df', borderRadius:14, background:'transparent', color:'#69706a', padding:12, fontSize:13, fontWeight:800, cursor:'pointer', marginTop:8 }
+const tipoBtn = { border:'1px solid #e1e5e1', borderRadius:13, background:'#fff', padding:12, fontSize:13, fontWeight:850, cursor:'pointer', color:'#4f5650' }
+const tipoActiveRed = { ...tipoBtn, background:'#c84040', borderColor:'#c84040', color:'#fff' }
+const tipoActiveGreen = { ...tipoBtn, background:'#176a25', borderColor:'#176a25', color:'#fff' }
+const errorBox = { background:'#fff3e8', color:'#a35f00', border:'1px solid #ffdda8', fontSize:12, padding:'9px 12px', borderRadius:12, marginBottom:12 }

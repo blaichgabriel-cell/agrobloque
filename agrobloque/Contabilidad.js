@@ -1,232 +1,470 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
 
-const hoyIso = () => new Date().toISOString().slice(0, 10)
-const diasEntre = (fecha) => {
-  if (!fecha) return 0
-  return Math.floor((new Date(hoyIso() + 'T00:00:00') - new Date(fecha + 'T00:00:00')) / 86400000)
+const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
+const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado']
+const DIAS_CORTO = ['L','M','M','J','V','S']
+
+const fechaLocal = (date = new Date()) => {
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
-const severidad = {
-  alta: { color:'#c84040', bg:'#fff0f0', icon:'ti-alert-triangle' },
-  media: { color:'#e07b00', bg:'#fff4e8', icon:'ti-alert-circle' },
-  baja: { color:'#176a25', bg:'#edf6ec', icon:'ti-info-circle' },
+const getLunes = (offset = 0) => {
+  const hoy = new Date()
+  hoy.setHours(12, 0, 0, 0)
+  const dia = hoy.getDay()
+  const diff = dia === 0 ? -6 : 1 - dia
+  const lunes = new Date(hoy)
+  lunes.setDate(hoy.getDate() + diff + offset * 7)
+  lunes.setHours(12, 0, 0, 0)
+  return lunes
 }
 
-export default function Alertas() {
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
-  const [alertas, setAlertas] = useState([])
+const formatFecha = (d) => fechaLocal(d)
+const formatLabel = (d) => d.toLocaleDateString('es-PY', { day:'numeric', month:'short' })
+const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
+const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 
-  useEffect(() => { cargar() }, [])
+const getCampoGuardado = () => {
+  if (typeof window === 'undefined') return null
+  return window.localStorage.getItem(CAMPO_STORAGE_KEY)
+}
 
-  const cargar = async () => {
-    setLoading(true)
-    const hoy = hoyIso()
-    const [
-      { data: tareas },
-      { data: productos },
-      { data: plantaciones },
-      { data: vivero },
-      { data: fumigaciones },
-      { data: planesFertilizacion },
-      { data: planesNutricionales },
-    ] = await Promise.all([
-      supabase.from('tareas').select('id, descripcion, fecha_programada, completada').eq('completada', false).order('fecha_programada'),
-      supabase.from('productos').select('id, nombre, stock_actual, stock_minimo').eq('activo', true).order('nombre'),
-      supabase.from('plantaciones').select('id, fecha_siembra, activa, bloques(id, codigo), cultivos(nombre)').eq('activa', true),
-      supabase.from('vivero_lotes').select('id, cultivo, variedad, fecha_siembra, fecha_trasplante_estimada, estado').order('fecha_siembra', { ascending:false }),
-      supabase.from('fumigaciones').select('id, fecha, campo_id, fumigacion_bloques(bloque_id, bloques(id, codigo)), fumigacion_productos(productos(nombre, carencia_dias))').order('fecha', { ascending:false }),
-      supabase.from('fertilizacion_planes').select('id, nombre, fecha_inicio, bloque_id, bloques(codigo), fertilizacion_plan_aplicaciones(fecha)').eq('activo', true),
-      supabase.from('plan_nutricional_registros').select('id, fecha, objetivo, ec_final, bloque_id, bloques(codigo)').order('fecha', { ascending:false }).limit(250),
-    ])
+export default function Asistencia() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
+  const [campoActivo, setCampoActivo] = useState(null)
+  const [campos, setCampos] = useState([])
+  const [operarios, setOperarios] = useState([])
+  const [registros, setRegistros] = useState({})
+  const [inputs, setInputs] = useState({})
+  const [adelantos, setAdelantos] = useState([])
+  const [semanaOffset, setSemanaOffset] = useState(0)
+  const [modalAdelanto, setModalAdelanto] = useState(null)
+  const [modalHistorial, setModalHistorial] = useState(null)
+  const [modalEditarAdelanto, setModalEditarAdelanto] = useState(null)
+  const [formAdelanto, setFormAdelanto] = useState({ monto:'', descripcion:'' })
+  const [formEditarAdelanto, setFormEditarAdelanto] = useState({ monto:'', descripcion:'' })
+  const [notasDia, setNotasDia] = useState({})
+  const [fechaNotaActiva, setFechaNotaActiva] = useState('')
+  const [savingNota, setSavingNota] = useState(false)
+  const [savingAdelanto, setSavingAdelanto] = useState(false)
+  const [error, setError] = useState('')
+  const saveTimers = useRef({})
 
-    const lista = []
+  const lunes = getLunes(semanaOffset)
+  const diasFechas = DIAS.map((_, i) => {
+    const d = new Date(lunes); d.setDate(lunes.getDate() + i); return formatFecha(d)
+  })
+  const fechaNotaActual = fechaNotaActiva || diasFechas[0]
+  const indiceNotaActivo = Math.max(0, diasFechas.indexOf(fechaNotaActual))
 
-    ;(tareas || []).forEach(t => {
-      const vencida = t.fecha_programada && t.fecha_programada < hoy
-      lista.push({
-        tipo: vencida ? 'alta' : 'media',
-        titulo: vencida ? 'Tarea vencida' : 'Tarea pendiente',
-        detalle: `${t.descripcion} - ${t.fecha_programada || 'sin fecha'}`,
-        path: '/agenda',
-      })
-    })
+  useEffect(() => { fetchCampos() }, [])
+  useEffect(() => { if (campoActivo) { fetchOperarios(); fetchRegistros(); fetchNotasDia() } }, [campoActivo, semanaOffset])
+  useEffect(() => {
+    setFechaNotaActiva(prev => diasFechas.includes(prev) ? prev : diasFechas[0])
+  }, [campoActivo?.id, semanaOffset])
 
-    ;(productos || []).forEach(p => {
-      const stock = Number(p.stock_actual) || 0
-      const minimo = Number(p.stock_minimo) || 0
-      if (stock <= 0) {
-        lista.push({ tipo:'alta', titulo:'Producto sin stock', detalle:p.nombre, path:'/inventario' })
-      } else if (minimo > 0 && stock <= minimo) {
-        lista.push({ tipo:'media', titulo:'Producto con bajo stock', detalle:`${p.nombre} - stock ${stock} / minimo ${minimo}`, path:'/inventario' })
-      }
-    })
-
-    ;(vivero || []).forEach(l => {
-      if (l.estado && String(l.estado).toLowerCase().includes('trasplant')) return
-      if (l.fecha_trasplante_estimada && l.fecha_trasplante_estimada <= hoy) {
-        lista.push({
-          tipo:'media',
-          titulo:'Lote de vivero listo para revisar',
-          detalle:`${l.cultivo || 'Cultivo'} ${l.variedad || ''} - trasplante estimado ${l.fecha_trasplante_estimada}`,
-          path:'/vivero',
-        })
-      }
-    })
-
-    ;(planesFertilizacion || []).forEach(plan => {
-      const aplicaciones = plan.fertilizacion_plan_aplicaciones || []
-      const ultima = aplicaciones
-        .map(a => a.fecha)
-        .filter(Boolean)
-        .sort()
-        .pop()
-      const fechaBase = ultima || plan.fecha_inicio
-      if (!fechaBase) return
-      const dias = diasEntre(fechaBase)
-      if (dias >= 7) {
-        lista.push({
-          tipo: dias >= 10 ? 'alta' : 'media',
-          titulo: 'Plan semanal sin aplicacion reciente',
-          detalle:`Bloque ${plan.bloques?.codigo || '-'} - ${plan.nombre || 'Plan semanal'} - ${dias} dias desde la ultima aplicacion`,
-          path: plan.bloque_id ? `/bloque/${plan.bloque_id}` : '/mapa',
-        })
-      }
-    })
-
-    const ultimoPlanNutricionalPorBloque = {}
-    ;(planesNutricionales || []).forEach(plan => {
-      if (plan.bloque_id && !ultimoPlanNutricionalPorBloque[plan.bloque_id]) {
-        ultimoPlanNutricionalPorBloque[plan.bloque_id] = plan
-      }
-      const ec = Number(plan.ec_final) || 0
-      if (ec >= 3.2) {
-        lista.push({
-          tipo:'alta',
-          titulo:'EC alta en plan nutricional',
-          detalle:`Bloque ${plan.bloques?.codigo || '-'} - ${ec} mS/cm - ${plan.objetivo || 'sin objetivo'}`,
-          path:'/plan-nutricional',
-        })
-      } else if (ec > 0 && ec <= 0.8) {
-        lista.push({
-          tipo:'media',
-          titulo:'EC baja en plan nutricional',
-          detalle:`Bloque ${plan.bloques?.codigo || '-'} - ${ec} mS/cm - revisar si corresponde al objetivo`,
-          path:'/plan-nutricional',
-        })
-      }
-    })
-
-    const ultimaFumiPorBloque = {}
-    ;(fumigaciones || []).forEach(f => {
-      ;(f.fumigacion_bloques || []).forEach(fb => {
-        const id = fb.bloque_id
-        if (!id || ultimaFumiPorBloque[id]) return
-        ultimaFumiPorBloque[id] = { fecha:f.fecha, codigo:fb.bloques?.codigo }
-      })
-    })
-
-    ;(fumigaciones || []).forEach(f => {
-      const maxCarencia = Math.max(0, ...(f.fumigacion_productos || []).map(fp => Number(fp.productos?.carencia_dias) || 0))
-      if (maxCarencia <= 0) return
-      const fechaFin = new Date(f.fecha + 'T00:00:00')
-      fechaFin.setDate(fechaFin.getDate() + maxCarencia)
-      const restantes = Math.ceil((fechaFin - new Date(hoy + 'T00:00:00')) / 86400000)
-      if (restantes <= 0) return
-      const bloquesTxt = (f.fumigacion_bloques || []).map(fb => fb.bloques?.codigo).filter(Boolean).join(', ')
-      const productosTxt = (f.fumigacion_productos || []).map(fp => fp.productos?.nombre).filter(Boolean).join(', ')
-      lista.push({
-        tipo:'alta',
-        titulo:'Carencia activa',
-        detalle:`Bloques ${bloquesTxt || '-'} - faltan ${restantes} dia${restantes === 1 ? '' : 's'} - ${productosTxt || 'producto con carencia'}`,
-        path:'/fumigaciones',
-      })
-    })
-
-    ;(plantaciones || []).forEach(p => {
-      const dias = diasEntre(p.fecha_siembra)
-      const ultima = ultimaFumiPorBloque[p.bloques?.id]
-      const ultimoPlan = ultimoPlanNutricionalPorBloque[p.bloques?.id]
-      if (dias >= 14 && (!ultimoPlan || diasEntre(ultimoPlan.fecha) >= 14)) {
-        lista.push({
-          tipo:'media',
-          titulo:'Bloque activo sin plan nutricional reciente',
-          detalle:`Bloque ${p.bloques?.codigo || '-'} - ${p.cultivos?.nombre || 'cultivo'} - ${ultimoPlan ? `${diasEntre(ultimoPlan.fecha)} dias desde ultimo plan` : 'sin plan registrado'}`,
-          path:'/plan-nutricional',
-        })
-      }
-      if (dias >= 21 && (!ultima || diasEntre(ultima.fecha) >= 21)) {
-        lista.push({
-          tipo:'baja',
-          titulo:'Cultivo sin fumigacion reciente',
-          detalle:`Bloque ${p.bloques?.codigo || '-'} - ${p.cultivos?.nombre || 'cultivo'} - ${ultima ? `${diasEntre(ultima.fecha)} dias desde ultima` : 'sin registro'}`,
-          path: p.bloques?.id ? `/bloque/${p.bloques.id}` : '/mapa',
-        })
-      }
-    })
-
-    setAlertas(lista)
-    setLoading(false)
+  const fetchCampos = async () => {
+    const { data } = await supabase.from('campos').select('*').order('nombre')
+    const lista = data || []
+    setCampos(lista)
+    if (lista.length > 0) {
+      const guardado = getCampoGuardado()
+      setCampoActivo(lista.find(c => c.id === guardado) || lista[0])
+    }
   }
 
-  const resumen = useMemo(() => ({
-    alta: alertas.filter(a => a.tipo === 'alta').length,
-    media: alertas.filter(a => a.tipo === 'media').length,
-    baja: alertas.filter(a => a.tipo === 'baja').length,
-  }), [alertas])
+  const seleccionarCampo = (campo) => {
+    setCampoActivo(campo)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CAMPO_STORAGE_KEY, campo.id)
+    }
+  }
+
+  const fetchOperarios = async () => {
+    const { data } = await supabase.from('operarios').select('*').eq('campo_id', campoActivo.id).order('orden', { ascending: true })
+    setOperarios(data || [])
+    if (data) fetchAdelantos(data)
+  }
+
+  const fetchRegistros = async () => {
+    const { data } = await supabase.from('asistencia').select('*').in('fecha', diasFechas)
+    const mapa = {}
+    const newInputs = {}
+    ;(data || []).forEach(a => {
+      const key = `${a.operario_id}_${a.fecha}`
+      mapa[key] = { id: a.id, monto: a.monto }
+      newInputs[key] = a.monto > 0 ? fmtGs(a.monto) : ''
+    })
+    setRegistros(mapa)
+    setInputs(newInputs)
+  }
+
+  const fetchNotasDia = async () => {
+    if (!campoActivo) return
+    const { data, error } = await supabase
+      .from('asistencia_notas_dia')
+      .select('*')
+      .eq('campo_id', campoActivo.id)
+      .in('fecha', diasFechas)
+
+    if (error) {
+      setError(`No se pudieron cargar los trabajos realizados: ${error.message}`)
+      return
+    }
+
+    const mapa = {}
+    ;(data || []).forEach(n => { mapa[n.fecha] = n })
+    setNotasDia(mapa)
+  }
+
+  const fetchAdelantos = async (ops) => {
+    const ids = ops.map(o => o.id)
+    if (!ids.length) {
+      setAdelantos([])
+      return
+    }
+    const { data } = await supabase.from('adelantos').select('*').in('operario_id', ids).order('fecha', { ascending: false })
+    setAdelantos(data || [])
+  }
+
+  const getKey = (operario_id, fecha) => `${operario_id}_${fecha}`
+
+  const handleChange = (operario_id, fecha, diaIdx, value) => {
+    const raw = value.replace(/[^0-9]/g, '')
+    const fmt = raw ? parseInt(raw, 10).toLocaleString('es-PY') : ''
+    const key = getKey(operario_id, fecha)
+    setInputs(prev => ({ ...prev, [key]: fmt }))
+
+    if (saveTimers.current[key]) clearTimeout(saveTimers.current[key])
+    saveTimers.current[key] = setTimeout(async () => {
+      const monto = parsearGs(fmt)
+      const existing = registros[key]
+      try {
+        if (existing) {
+          await supabase.from('asistencia').update({ monto }).eq('id', existing.id)
+        } else {
+          const { data } = await supabase.from('asistencia').insert({
+            operario_id, fecha, dia_semana: DIAS[diaIdx], monto, estado: 'presente'
+          }).select().single()
+          if (data) setRegistros(prev => ({ ...prev, [key]: { id: data.id, monto: data.monto } }))
+        }
+      } catch (e) {
+        setError('Error al guardar asistencia')
+      }
+    }, 1200)
+  }
+
+  const getMonto = (operario_id, fecha) => inputs[getKey(operario_id, fecha)] || ''
+
+  const getTotalSemana = (operario_id) =>
+    diasFechas.reduce((sum, f) => sum + parsearGs(inputs[getKey(operario_id, f)] || '0'), 0)
+
+  const getTotalGeneral = () => operarios.reduce((sum, o) => sum + getTotalSemana(o.id), 0)
+
+  const guardarNotaDia = async () => {
+    if (!campoActivo) return
+    const fecha = fechaNotaActual
+    const texto = (notasDia[fecha]?.trabajos || '').trim()
+    setSavingNota(true)
+    setError('')
+    try {
+      const payload = {
+        campo_id: campoActivo.id,
+        fecha,
+        dia_semana: DIAS[indiceNotaActivo],
+        trabajos: texto,
+        updated_at: new Date().toISOString(),
+      }
+      let resultado
+      const existenteId = notasDia[fecha]?.id
+
+      if (existenteId) {
+        resultado = await supabase
+          .from('asistencia_notas_dia')
+          .update(payload)
+          .eq('id', existenteId)
+          .select()
+          .single()
+      } else {
+        const buscado = await supabase
+          .from('asistencia_notas_dia')
+          .select('id')
+          .eq('campo_id', campoActivo.id)
+          .eq('fecha', fecha)
+          .maybeSingle()
+
+        if (buscado.error) throw buscado.error
+
+        resultado = buscado.data?.id
+          ? await supabase
+            .from('asistencia_notas_dia')
+            .update(payload)
+            .eq('id', buscado.data.id)
+            .select()
+            .single()
+          : await supabase
+            .from('asistencia_notas_dia')
+            .insert(payload)
+            .select()
+            .single()
+      }
+
+      if (resultado.error) throw resultado.error
+      if (resultado.data) setNotasDia(prev => ({ ...prev, [fecha]: resultado.data }))
+    } catch (e) {
+      setError(`Error al guardar trabajos del dia: ${e.message || 'sin detalle'}`)
+    }
+    setSavingNota(false)
+  }
+
+  const actualizarNotaDia = (texto) => {
+    const fecha = fechaNotaActual
+    setNotasDia(prev => ({
+      ...prev,
+      [fecha]: {
+        ...(prev[fecha] || { campo_id: campoActivo?.id, fecha, dia_semana: DIAS[indiceNotaActivo] }),
+        trabajos: texto,
+      },
+    }))
+  }
+
+  const esAdelantoPagado = (adelanto) => (adelanto.descripcion || '').includes('[PAGADO]')
+  const getAdelantosOperario = (operario_id) => adelantos.filter(a => a.operario_id === operario_id)
+  const getAdelantosPendientesOperario = (operario_id) => getAdelantosOperario(operario_id).filter(a => !esAdelantoPagado(a))
+  const getTotalAdelantos = (operario_id) => getAdelantosPendientesOperario(operario_id).reduce((s, a) => s + Number(a.monto), 0)
+
+  const guardarAdelanto = async () => {
+    const monto = parsearGs(formAdelanto.monto)
+    if (!monto) return
+    setSavingAdelanto(true)
+    try {
+      await supabase.from('adelantos').insert({
+        operario_id: modalAdelanto.id,
+        fecha: fechaLocal(),
+        monto, descripcion: formAdelanto.descripcion || null
+      })
+      setModalAdelanto(null)
+      setFormAdelanto({ monto:'', descripcion:'' })
+      fetchAdelantos(operarios)
+    } catch (e) { setError('Error al guardar adelanto') }
+    setSavingAdelanto(false)
+  }
+
+  const eliminarAdelanto = async (id) => {
+    await supabase.from('adelantos').delete().eq('id', id)
+    fetchAdelantos(operarios)
+  }
+
+  const abrirEditarAdelanto = (adelanto) => {
+    setModalEditarAdelanto(adelanto)
+    setFormEditarAdelanto({
+      monto: fmtGs(adelanto.monto),
+      descripcion: (adelanto.descripcion || '').replace('[PAGADO]', '').trim(),
+    })
+  }
+
+  const guardarEdicionAdelanto = async () => {
+    if (!modalEditarAdelanto) return
+    const monto = parsearGs(formEditarAdelanto.monto)
+    if (!monto) return
+    setSavingAdelanto(true)
+    try {
+      const estabaPagado = (modalEditarAdelanto.descripcion || '').includes('[PAGADO]')
+      const descripcionBase = (formEditarAdelanto.descripcion || '').trim()
+      const descripcion = `${descripcionBase}${estabaPagado ? ' [PAGADO]' : ''}`.trim() || null
+      await supabase
+        .from('adelantos')
+        .update({ monto, descripcion })
+        .eq('id', modalEditarAdelanto.id)
+      setModalEditarAdelanto(null)
+      setFormEditarAdelanto({ monto:'', descripcion:'' })
+      fetchAdelantos(operarios)
+    } catch (e) {
+      setError('Error al editar adelanto')
+    }
+    setSavingAdelanto(false)
+  }
+
+  const marcarPagado = async (adelanto) => {
+    if (esAdelantoPagado(adelanto)) return
+    const descripcion = `${(adelanto.descripcion || '').replace('[PAGADO]', '').trim()} [PAGADO]`.trim()
+    await supabase.from('adelantos').update({ descripcion }).eq('id', adelanto.id)
+    fetchAdelantos(operarios)
+  }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f2f1ef', padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
-      <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 900, margin:'0 auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:16 }}>
-          <div>
-            <div style={{ fontSize:12, color:'#8b928b' }}>Control operativo</div>
-            <h1 style={{ margin:0, fontSize:24, letterSpacing:-0.6 }}>Alertas inteligentes</h1>
-          </div>
-          <button onClick={cargar} style={{ width:42, height:42, borderRadius:14, border:'none', background:'#212121', color:'#fff', cursor:'pointer' }}>
-            <i className="ti ti-refresh" style={{ fontSize:20 }} aria-hidden="true"></i>
-          </button>
+    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Control semanal</div>
+        <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:16 }}>Asistencia y pagos</div>
+        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
+        <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:16 }}>
+          {campos.map(c => (
+            <button key={c.id} onClick={() => seleccionarCampo(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#212121' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }}>
+              {c.nombre}
+            </button>
+          ))}
         </div>
-
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8, marginBottom:12 }}>
-          <Stat label="Altas" value={resumen.alta} color="#c84040" />
-          <Stat label="Medias" value={resumen.media} color="#e07b00" />
-          <Stat label="Avisos" value={resumen.baja} color="#176a25" />
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <button onClick={() => setSemanaOffset(o => o-1)} style={{ padding:'7px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a', cursor:'pointer' }}>← Anterior</button>
+          <div style={{ fontSize:12, fontWeight:600, color:'#0a0a0a' }}>{formatLabel(lunes)} — {formatLabel(new Date(lunes.getTime() + 5*86400000))}</div>
+          <button onClick={() => setSemanaOffset(o => o+1)} style={{ padding:'7px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a', cursor:'pointer' }}>Siguiente →</button>
         </div>
-
-        {loading ? (
-          <div style={{ textAlign:'center', padding:38, color:'#8b928b' }}>Calculando alertas...</div>
-        ) : alertas.length === 0 ? (
-          <div style={{ textAlign:'center', padding:38, color:'#176a25', background:'#fff', borderRadius:20 }}>Todo tranquilo por ahora.</div>
-        ) : alertas.map((a, i) => {
-          const s = severidad[a.tipo] || severidad.baja
-          return (
-            <div key={`${a.titulo}-${i}`} onClick={() => navigate(a.path)} style={{ background:'#fff', borderRadius:18, padding:'14px 16px', marginBottom:8, border:'1px solid #e8ece8', cursor:'pointer', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'44px 1fr 18px', gap:12, alignItems:'center' }}>
-                <span style={{ width:44, height:44, borderRadius:14, background:s.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <i className={`ti ${s.icon}`} style={{ fontSize:22, color:s.color }} aria-hidden="true"></i>
-                </span>
-                <span>
-                  <strong style={{ display:'block', fontSize:15 }}>{a.titulo}</strong>
-                  <span style={{ display:'block', fontSize:12, color:'#687068', marginTop:3 }}>{a.detalle}</span>
-                </span>
-                <i className="ti ti-chevron-right" style={{ fontSize:18 }} aria-hidden="true"></i>
-              </div>
-            </div>
-          )
-        })}
       </div>
-    </div>
-  )
-}
 
-function Stat({ label, value, color }) {
-  return (
-    <div style={{ background:'#fff', borderRadius:18, padding:'14px', border:'1px solid #e8ece8' }}>
-      <div style={{ fontSize:11, color:'#8b928b', textTransform:'uppercase', fontWeight:800 }}>{label}</div>
-      <div style={{ fontSize:28, fontWeight:900, color, lineHeight:1.1, marginTop:4 }}>{value}</div>
+      <div style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
+        {operarios.map(op => (
+          <div key={op.id} style={{ background:'#fff', borderRadius:20, marginBottom:10, overflow:'hidden', boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderBottom:'1px solid #f2f1ef' }}>
+              <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{op.nombre}</div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#212121' }}>Gs. {fmtGs(getTotalSemana(op.id))}</div>
+            </div>
+            <div style={{ display:'flex', padding:'12px 14px', gap:4 }}>
+              {DIAS.map((dia, i) => (
+                <div key={dia} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                  <div style={{ fontSize:10, color:'#9a9a9a', fontWeight:500 }}>{DIAS_CORTO[i]}</div>
+                  <input
+                    type="text" inputMode="numeric"
+                    value={getMonto(op.id, diasFechas[i])}
+                    onChange={e => handleChange(op.id, diasFechas[i], i, e.target.value)}
+                    placeholder="0"
+                    style={{ width:'100%', padding:'6px 2px', borderRadius:8, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:11, color:'#0a0a0a', textAlign:'center' }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderTop:'1px solid #f2f1ef' }}>
+              <button onClick={() => setModalHistorial(op)} style={{ fontSize:11, color:'#9a9a9a', background:'none', border:'none', cursor:'pointer' }}>
+                Adelantos pendientes: <span style={{ color: getTotalAdelantos(op.id) > 0 ? '#c84040' : '#9a9a9a', fontWeight:600 }}>Gs. {fmtGs(getTotalAdelantos(op.id))}</span> →
+              </button>
+              <button onClick={() => setModalAdelanto(op)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, fontWeight:500, color:'#0a0a0a', cursor:'pointer' }}>+ Adelanto</button>
+            </div>
+          </div>
+        ))}
+
+        <div style={{ background:'#212121', borderRadius:20, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>Total semanal del campo</div>
+          <div style={{ fontSize:20, fontWeight:800, color:'#fff', letterSpacing:-.5 }}>Gs. {fmtGs(getTotalGeneral())}</div>
+        </div>
+
+        <div style={{ background:'#fff', borderRadius:20, padding:'16px', marginTop:12, marginBottom:12 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:12 }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:800, color:'#0a0a0a' }}>Trabajos realizados</div>
+              <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>Bitacora diaria vinculada a la asistencia</div>
+            </div>
+            <button onClick={guardarNotaDia} disabled={savingNota} style={{ border:'none', background:'#176a25', color:'#fff', borderRadius:12, padding:'9px 13px', fontSize:12, fontWeight:800, cursor:'pointer' }}>
+              {savingNota ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:6, marginBottom:10 }}>
+            {DIAS.map((dia, i) => {
+              const fecha = diasFechas[i]
+              const activo = fechaNotaActual === fecha
+              const tieneNota = Boolean((notasDia[fecha]?.trabajos || '').trim())
+              return (
+                <button key={dia} onClick={() => setFechaNotaActiva(fecha)} style={{
+                  border:'1px solid #e8e6e2',
+                  background: activo ? '#212121' : tieneNota ? '#edf6ec' : '#f8f8f6',
+                  color: activo ? '#fff' : tieneNota ? '#176a25' : '#687068',
+                  borderRadius:12,
+                  padding:'9px 4px',
+                  fontSize:11,
+                  fontWeight:800,
+                  cursor:'pointer',
+                }}>
+                  {DIAS_CORTO[i]}
+                </button>
+              )
+            })}
+          </div>
+          <textarea
+            value={notasDia[fechaNotaActual]?.trabajos || ''}
+            onChange={e => actualizarNotaDia(e.target.value)}
+            placeholder="Ej: limpieza de canteros, riego, cosecha parcial, preparación de sustrato..."
+            style={{ width:'100%', minHeight:92, resize:'vertical', border:'1px solid #e8e6e2', borderRadius:14, background:'#f8f8f6', padding:12, fontSize:13, color:'#0a0a0a', lineHeight:1.45 }}
+          />
+        </div>
+        <NotasPanel modulo="asistencia" titulo="Blog de notas de asistencia" />
+      </div>
+
+      {/* Modal historial adelantos */}
+      {modalHistorial && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalHistorial(null)}>
+          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'80vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Adelantos — {modalHistorial.nombre}</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Pendiente: Gs. {fmtGs(getTotalAdelantos(modalHistorial.id))}</div>
+            {getAdelantosOperario(modalHistorial.id).length === 0 ? (
+              <div style={{ textAlign:'center', color:'#9a9a9a', fontSize:13, padding:'20px 0' }}>Sin adelantos registrados</div>
+            ) : getAdelantosOperario(modalHistorial.id).map(a => (
+              <div key={a.id} style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:8 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                  <div style={{ fontSize:13, fontWeight:600, color: a.descripcion?.includes('[PAGADO]') ? '#9a9a9a' : '#0a0a0a' }}>
+                    Gs. {fmtGs(a.monto)}
+                    {a.descripcion?.includes('[PAGADO]') && <span style={{ fontSize:10, color:'#1E5631', background:'#edf7ed', padding:'1px 6px', borderRadius:6, marginLeft:6 }}>Pagado</span>}
+                  </div>
+                  <div style={{ fontSize:11, color:'#9a9a9a' }}>{a.fecha}</div>
+                </div>
+                {a.descripcion && <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:8 }}>{a.descripcion.replace('[PAGADO]','').trim()}</div>}
+                <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={() => abrirEditarAdelanto(a)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#0a0a0a', cursor:'pointer' }}>Editar</button>
+                  {!a.descripcion?.includes('[PAGADO]') && (
+                    <button onClick={() => marcarPagado(a)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #c8ddc8', background:'transparent', fontSize:11, color:'#1E5631', cursor:'pointer' }}>✓ Marcar pagado</button>
+                  )}
+                  <button onClick={() => eliminarAdelanto(a.id)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                </div>
+              </div>
+            ))}
+            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModalHistorial(null)}>Cerrar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar adelanto */}
+      {modalEditarAdelanto && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:110, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalEditarAdelanto(null)}>
+          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Editar adelanto</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>{modalHistorial?.nombre || ''}</div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Monto (Gs.)</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
+              type="text" inputMode="numeric" value={formEditarAdelanto.monto}
+              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setFormEditarAdelanto(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
+              placeholder="Ej: 50.000"/>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Descripcion (opcional)</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, boxSizing:'border-box' }}
+              type="text" value={formEditarAdelanto.descripcion} onChange={e => setFormEditarAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarEdicionAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar cambios'}</button>
+            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModalEditarAdelanto(null)}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal nuevo adelanto */}
+      {modalAdelanto && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalAdelanto(null)}>
+          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Registrar adelanto</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>{modalAdelanto.nombre}</div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Monto (Gs.)</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
+              type="text" inputMode="numeric" value={formAdelanto.monto}
+              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setFormAdelanto(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
+              placeholder="Ej: 50.000"/>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Descripción (opcional)</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, boxSizing:'border-box' }}
+              type="text" value={formAdelanto.descripcion} onChange={e => setFormAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar adelanto'}</button>
+            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModalAdelanto(null)}>Cancelar</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

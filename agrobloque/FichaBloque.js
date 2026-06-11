@@ -1,874 +1,481 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { forceLocalSignOut, supabase } from '../lib/supabase'
-import { descargarJson } from '../lib/exporters'
-import { ACTIONS } from '../lib/permissions'
-const PERMISOS_MODULOS = [
-  { key: 'buscar', label: 'Buscar' },
-  { key: 'alertas', label: 'Alertas' },
-  { key: 'historial', label: 'Historial' },
-  { key: 'mapa', label: 'Mapa' },
-  { key: 'agenda', label: 'Agenda' },
-  { key: 'vivero', label: 'Vivero' },
-  { key: 'asistencia', label: 'Asistencia' },
-  { key: 'cosecha', label: 'Cosecha' },
-  { key: 'inventario', label: 'Inventario' },
-  { key: 'fumigaciones', label: 'Fumigaciones' },
-  { key: 'plan_nutricional', label: 'Plan Nutricional' },
-  { key: 'costos', label: 'Costos' },
-  { key: 'contabilidad', label: 'Contabilidad' },
-  { key: 'cuentas_pagar', label: 'Cuentas a pagar' },
-  { key: 'reportes', label: 'Reportes' },
-  { key: 'compradores', label: 'Compradores' },
-  { key: 'auditoria', label: 'Auditoria' },
-  { key: 'configuracion', label: 'Configuracion' },
-]
+import React, { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+import NotasPanel from '../components/NotasPanel'
+import { registrarAuditoria } from '../lib/audit'
 
-const ABONO_BASE_CATEGORIA = 'Abono de base'
-const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
-const BACKUP_KEY = 'agrobloque-ultimo-backup'
-
-const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
-const esDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 768
-
-function PermisosSelector({ permisos, onChange, ayuda }) {
-  return (
-    <div style={{ background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:14, padding:12, marginBottom:12 }}>
-      <div style={{ fontSize:12, fontWeight:900, color:'#176a25', marginBottom:4, textTransform:'uppercase' }}>Modulos permitidos</div>
-      {ayuda && <div style={{ fontSize:11, color:'#687068', marginBottom:9, lineHeight:1.35 }}>{ayuda}</div>}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-        {PERMISOS_MODULOS.map(m => {
-          const checked = !Array.isArray(permisos) || permisos.length === 0 || permisos.includes(m.key)
-          return (
-            <label key={m.key} style={{ display:'flex', alignItems:'center', gap:7, fontSize:12, color:'#1d241f', padding:'6px 4px' }}>
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={e => {
-                  const actual = Array.isArray(permisos) && permisos.length > 0
-                    ? permisos
-                    : PERMISOS_MODULOS.map(x => x.key)
-                  onChange(e.target.checked
-                    ? [...new Set([...actual, m.key])]
-                    : actual.filter(k => k !== m.key)
-                  )
-                }}
-              />
-              <span>{m.label}</span>
-            </label>
-          )
-        })}
-      </div>
-      <div style={{ fontSize:11, color:'#8b928b', marginTop:6 }}>Si desmarcas un modulo, no aparece en el menu ni en accesos.</div>
-    </div>
-  )
+const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
+const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
+const parsearKg = (v) => { const n = parseFloat(String(v || '').replace(',','.')); return isNaN(n) ? 0 : n }
+const fmtKg = (n) => { const num = Number(n)||0; return num % 1 === 0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY', {minimumFractionDigits:1, maximumFractionDigits:2}) }
+const fechaLocal = () => {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
-function AccionesSelector({ permisos, acciones, rol, onChange }) {
-  const modulosActivos = Array.isArray(permisos) && permisos.length > 0
-    ? PERMISOS_MODULOS.filter(m => permisos.includes(m.key))
-    : PERMISOS_MODULOS
-  const defaults = rol === 'admin'
-    ? ['view', 'create', 'edit', 'delete']
-    : rol === 'operador'
-      ? ['view', 'create', 'edit']
-      : ['view']
-
+function ModalConfirm({ onConfirm, onCancel }) {
   return (
-    <div style={{ background:'#fff', border:'1px solid #e8ece8', borderRadius:14, padding:12, marginBottom:12 }}>
-      <div style={{ fontSize:12, fontWeight:900, color:'#176a25', marginBottom:4, textTransform:'uppercase' }}>Acciones permitidas</div>
-      <div style={{ fontSize:11, color:'#687068', marginBottom:9, lineHeight:1.35 }}>Define si este usuario puede ver, crear, editar o borrar en cada modulo permitido.</div>
-      <div style={{ display:'grid', gap:7, maxHeight:240, overflowY:'auto', paddingRight:4 }}>
-        {modulosActivos.map(m => {
-          const actuales = Array.isArray(acciones?.[m.key]) ? acciones[m.key] : defaults
-          return (
-            <div key={m.key} style={{ display:'grid', gridTemplateColumns:'115px repeat(4, 1fr)', gap:6, alignItems:'center', fontSize:11, borderBottom:'1px solid #f2f1ef', paddingBottom:6 }}>
-              <strong style={{ color:'#1d241f' }}>{m.label}</strong>
-              {ACTIONS.map(a => (
-                <label key={a.key} style={{ display:'flex', alignItems:'center', gap:4, color:'#4d544e' }}>
-                  <input
-                    type="checkbox"
-                    checked={actuales.includes(a.key)}
-                    disabled={a.key === 'view'}
-                    onChange={e => {
-                      const base = Array.isArray(acciones?.[m.key]) ? acciones[m.key] : defaults
-                      const nuevo = e.target.checked
-                        ? [...new Set([...base, a.key, 'view'])]
-                        : base.filter(k => k !== a.key)
-                      onChange({ ...(acciones || {}), [m.key]: nuevo })
-                    }}
-                  />
-                  {a.label}
-                </label>
-              ))}
-            </div>
-          )
-        })}
+    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+      <div style={{ background:'#fff', borderRadius:20, padding:'24px 20px', width:'100%', maxWidth:340 }}>
+        <div style={{ fontSize:15, fontWeight:600, color:'#0a0a0a', marginBottom:8, textAlign:'center' }}>¿Eliminar registro?</div>
+        <div style={{ fontSize:13, color:'#9a9a9a', textAlign:'center', marginBottom:20 }}>Esta acción no se puede deshacer.</div>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={onCancel} style={{ flex:1, padding:12, borderRadius:12, border:'1px solid #e8e6e2', background:'transparent', fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cancelar</button>
+          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:12, border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
+        </div>
       </div>
     </div>
   )
 }
 
-const comprimirFotoPerfil = (file) => new Promise((resolve, reject) => {
-  const reader = new FileReader()
-  reader.onerror = () => reject(new Error('No se pudo leer la foto'))
-  reader.onload = () => {
-    const img = new Image()
-    img.onerror = () => reject(new Error('No se pudo procesar la foto'))
-    img.onload = () => {
-      const max = 320
-      const escala = Math.min(1, max / img.width, max / img.height)
-      const canvas = document.createElement('canvas')
-      canvas.width = Math.max(1, Math.round(img.width * escala))
-      canvas.height = Math.max(1, Math.round(img.height * escala))
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      resolve(canvas.toDataURL('image/jpeg', 0.78))
-    }
-    img.src = reader.result
-  }
-  reader.readAsDataURL(file)
-})
+const fechaPlantacion = (p) => p?.fecha_siembra || (p?.created_at || '').slice(0, 10)
 
-export default function Configuracion() {
-  const navigate = useNavigate()
-  const fotoRef = useRef()
-  const [modal, setModal] = useState(null)
-  const [perfil, setPerfil] = useState({ nombre:'', email:'', foto:'' })
-  const [campos, setCampos] = useState([])
-  const [cultivos, setCultivos] = useState([])
-  const [operarios, setOperarios] = useState([])
-  const [abonos, setAbonos] = useState([])
-  const [compradores, setCompradores] = useState([])
-  const [bloques, setBloques] = useState([])
-  const [invitados, setInvitados] = useState([])
-  const [roles, setRoles] = useState([])
-  const [linkInvitado, setLinkInvitado] = useState('')
-  const [form, setForm] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [ultimoBackup, setUltimoBackup] = useState('')
+const elegirPlantacionParaCosecha = (plantaciones = [], fechaCosecha = '') => {
+  const lista = Array.isArray(plantaciones) ? plantaciones : []
+  if (lista.length === 0) return null
 
-  useEffect(() => {
-    fetchAll()
-    if (typeof window !== 'undefined') {
-      setUltimoBackup(window.localStorage.getItem(BACKUP_KEY) || '')
-    }
-  }, [])
-
-  const backupVencido = () => {
-    if (!ultimoBackup) return true
-    return Math.floor((Date.now() - new Date(ultimoBackup).getTime()) / 86400000) >= 7
-  }
-
-  const fetchAll = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) setPerfil({
-      nombre: user.user_metadata?.nombre || user.user_metadata?.full_name || user.user_metadata?.name || '',
-      email: user.email,
-      foto: typeof window !== 'undefined' ? (window.localStorage.getItem(FOTO_PERFIL_KEY) || '') : ''
+  const anteriores = fechaCosecha
+    ? lista.filter(p => {
+      const fecha = fechaPlantacion(p)
+      return fecha && fecha <= fechaCosecha
     })
-    const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }, { data: inv }, { data: rolData }] = await Promise.all([
-      supabase.from('campos').select('*').order('nombre'),
-      supabase.from('cultivos').select('*').order('nombre'),
-      supabase.from('operarios').select('*').order('nombre'),
-      supabase.from('abonos').select('*').order('nombre'),
-      supabase.from('compradores').select('*').order('nombre'),
-      supabase.from('bloques').select('*').order('codigo'),
-      supabase.from('guest_access_links').select('*, campos(nombre)').order('created_at', { ascending:false }),
-      supabase.from('app_user_roles').select('*').order('email'),
-    ])
-    setCampos(c||[]); setCultivos(cu||[]); setOperarios(op||[])
-    setAbonos(ab||[]); setCompradores(comp||[]); setBloques(bl||[])
-    setInvitados(inv||[])
-    setRoles(rolData||[])
-  }
+    : []
 
-  const abrir = (tipo, datos = {}) => { setForm(datos); setModal(tipo); setError(''); setSuccess('') }
-  const cerrar = () => { setModal(null); setForm({}); setError(''); setSuccess('') }
+  const candidatas = anteriores.length > 0
+    ? anteriores
+    : lista.filter(p => p.activa) || lista
 
-  const asegurarCategoriaProducto = async () => {
-    const { data: existente } = await supabase
-      .from('categorias_producto')
-      .select('id')
-      .eq('nombre', ABONO_BASE_CATEGORIA)
-      .maybeSingle()
+  return [...(candidatas.length > 0 ? candidatas : lista)]
+    .sort((a, b) => fechaPlantacion(b).localeCompare(fechaPlantacion(a)))[0]
+}
 
-    if (existente?.id) return existente.id
+const getCultivoCosecha = (cosecha) => {
+  const plantacion = elegirPlantacionParaCosecha(cosecha?.bloques?.plantaciones, cosecha?.fecha)
+  return plantacion?.cultivos?.nombre || 'Sin cultivo'
+}
 
-    const { data: creada } = await supabase
-      .from('categorias_producto')
-      .insert({ nombre: ABONO_BASE_CATEGORIA })
-      .select('id')
-      .single()
+const getCultivoBloque = (bloque, fecha) => {
+  const plantacion = elegirPlantacionParaCosecha(bloque?.plantaciones, fecha)
+  return plantacion?.cultivos?.nombre || ''
+}
 
-    return creada?.id || null
-  }
+const calidadLabel = (calidad) => calidad === 'primera'
+  ? '1ra calidad'
+  : calidad === 'segunda'
+    ? '2da calidad'
+    : 'Mixta'
 
-  const sincronizarProductoAbono = async (nombre, nombreAnterior = '') => {
-    const nombreLimpio = String(nombre || '').trim()
-    if (!nombreLimpio) return
-
-    const categoriaId = await asegurarCategoriaProducto()
-    if (!categoriaId) return
-
-    const nombres = [nombreLimpio, nombreAnterior].filter(Boolean)
-    const { data: productos } = await supabase
-      .from('productos')
-      .select('id, nombre')
-      .in('nombre', nombres)
-
-    const producto = (productos || []).find(p =>
-      normalizarNombre(p.nombre) === normalizarNombre(nombreAnterior) ||
-      normalizarNombre(p.nombre) === normalizarNombre(nombreLimpio)
-    )
-
-    if (producto) {
-      await supabase.from('productos').update({
-        nombre: nombreLimpio,
-        categoria_id: categoriaId,
-        activo: true,
-      }).eq('id', producto.id)
-    } else {
-      await supabase.from('productos').insert({
-        nombre: nombreLimpio,
-        categoria_id: categoriaId,
-        unidad: 'kg',
-        stock_actual: 0,
-        stock_minimo: 0,
-        carencia_dias: 0,
-        activo: true,
-      })
-    }
-  }
-
-  // --- PERFIL 
-
-  const guardarNombre = async () => {
-    setLoading(true); setError(''); setSuccess('')
-    try {
-      const nombre = form.nombre?.trim() || ''
-      const { error } = await supabase.auth.updateUser({
-        data: { nombre, full_name: nombre, name: nombre }
-      })
-      if (error) throw error
-      setPerfil(p => ({ ...p, nombre }))
-      setSuccess('Nombre actualizado')
-    } catch (e) { setError('Error: ' + e.message) }
-    setLoading(false)
-  }
-
-  const guardarEmail = async () => {
-    if (!form.email || form.email === perfil.email) return
-    setLoading(true); setError(''); setSuccess('')
-    try {
-      const { error } = await supabase.auth.updateUser({ email: form.email.trim() })
-      if (error) throw error
-      setSuccess('Revisa tu nuevo email para confirmar el cambio')
-    } catch (e) { setError('Error: ' + e.message) }
-    setLoading(false)
-  }
-
-  const guardarContrasena = async () => {
-    if (!form.nueva || form.nueva.length < 6) { setError('La contrasena debe tener al menos 6 caracteres'); return }
-    if (form.nueva !== form.repetir) { setError('Las contrasenas no coinciden'); return }
-    setLoading(true); setError(''); setSuccess('')
-    try {
-      const { error } = await supabase.auth.updateUser({ password: form.nueva })
-      if (error) throw error
-      setSuccess('Contrasena actualizada correctamente')
-      setForm({})
-    } catch (e) { setError('Error: ' + e.message) }
-    setLoading(false)
-  }
-
-  const subirFotoPerfil = async (e) => {
-    const file = e.target.files[0]; if (!file) return
-    setLoading(true); setError(''); setSuccess('')
-    try {
-      const fotoBase64 = await comprimirFotoPerfil(file)
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(FOTO_PERFIL_KEY, fotoBase64)
-      }
-      setPerfil(p => ({ ...p, foto: fotoBase64 }))
-      setSuccess('Foto actualizada en este dispositivo')
-    } catch (e) { setError('Error al subir foto: ' + e.message) }
-    setLoading(false)
-    e.target.value = ''
-  }
-
-  // --- OTROS 
-
-  const guardarCultivo = async () => {
-    if (!form.nombre) return; setLoading(true); setError('')
-    try {
-      if (form.id) await supabase.from('cultivos').update({ nombre: form.nombre }).eq('id', form.id)
-      else await supabase.from('cultivos').insert({ nombre: form.nombre })
-      await fetchAll(); abrir('cultivos')
-    } catch (e) { setError('Error: ' + e.message) }
-    setLoading(false)
-  }
-
-  const guardarOperario = async () => {
-    if (!form.nombre) return; setLoading(true); setError('')
-    try {
-      if (form.id) await supabase.from('operarios').update({ nombre: form.nombre }).eq('id', form.id)
-      else await supabase.from('operarios').insert({ nombre: form.nombre, campo_id: form.campo_id })
-      await fetchAll(); abrir('operarios')
-    } catch (e) { setError('Error: ' + e.message) }
-    setLoading(false)
-  }
-
-  const guardarAbono = async () => {
-    if (!form.nombre) return; setLoading(true); setError('')
-    try {
-      const nombre = form.nombre.trim()
-      const anterior = form.id ? abonos.find(a => a.id === form.id)?.nombre : ''
-      if (form.id) await supabase.from('abonos').update({ nombre }).eq('id', form.id)
-      else await supabase.from('abonos').insert({ nombre })
-      await sincronizarProductoAbono(nombre, anterior)
-      await fetchAll(); abrir('abonos')
-    } catch (e) { setError('Error: ' + e.message) }
-    setLoading(false)
-  }
-
-  const guardarBloque = async () => {
-    if (!form.id) return; setLoading(true); setError('')
-    try {
-      await supabase.from('bloques').update({ tipo: form.tipo }).eq('id', form.id)
-      await fetchAll(); abrir('bloques')
-    } catch (e) { setError('Error: ' + e.message) }
-    setLoading(false)
-  }
-
-  const eliminar = async (tabla, id, volver) => {
-    await supabase.from(tabla).delete().eq('id', id)
-    await fetchAll(); abrir(volver)
-  }
-
-  const descargarBackup = async () => {
-    setLoading(true); setError(''); setSuccess('')
-    const tablas = [
-      'campos', 'bloques', 'plantaciones', 'cultivos', 'abonos',
-      'productos', 'categorias_producto', 'operarios', 'asistencia',
-      'cosechas', 'costos', 'fumigaciones', 'fumigacion_productos',
-      'fumigacion_bloques', 'fertilizaciones', 'fertilizacion_planes',
-      'fertilizacion_plan_aplicaciones',
-      'compradores', 'tareas', 'notas_modulo', 'vivero_lotes',
-      'vivero_tratamientos', 'contabilidad_movimientos',
-      'proveedores_credito', 'proveedor_movimientos',
-      'asistencia_notas_dia', 'plan_nutricional_registros',
-      'guest_access_links', 'app_user_roles', 'audit_log',
-    ]
-
-    const backup = {
-      app: 'AgroBloque',
-      generado_en: new Date().toISOString(),
-      tablas: {},
-      errores: {},
-    }
-
-    for (const tabla of tablas) {
-      const { data, error } = await supabase.from(tabla).select('*')
-      if (error) backup.errores[tabla] = error.message
-      else backup.tablas[tabla] = data || []
-    }
-
-    descargarJson('agrobloque-backup', backup)
-    const ahora = new Date().toISOString()
-    if (typeof window !== 'undefined') window.localStorage.setItem(BACKUP_KEY, ahora)
-    setUltimoBackup(ahora)
-    setSuccess('Backup descargado')
-    setLoading(false)
-  }
-
-  const generarToken = () => {
-    const bytes = new Uint8Array(24)
-    window.crypto.getRandomValues(bytes)
-    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
-  }
-
-  const hashToken = async (token) => {
-    const bytes = new TextEncoder().encode(token)
-    const hash = await window.crypto.subtle.digest('SHA-256', bytes)
-    return Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('')
-  }
-
-  const crearInvitado = async () => {
-    if (!form.nombre) return
-    setLoading(true); setError(''); setSuccess(''); setLinkInvitado('')
-    try {
-      const token = generarToken()
-      const token_hash = await hashToken(token)
-      const vencimiento = form.dias && Number(form.dias) > 0
-        ? new Date(Date.now() + Number(form.dias) * 24 * 60 * 60 * 1000).toISOString()
-        : null
-      const { error } = await supabase.from('guest_access_links').insert({
-        nombre: form.nombre.trim(),
-        campo_id: form.campo_id || null,
-        token_hash,
-        expires_at: vencimiento,
-        permisos: Array.isArray(form.permisos) && form.permisos.length > 0 ? form.permisos : null,
-        activo: true,
-      })
-      if (error) throw error
-      const url = `${window.location.origin}/invitado/${token}`
-      setLinkInvitado(url)
-      setSuccess('Link invitado creado. Copialo ahora.')
-      setForm({ nombre:'', campo_id:'', dias:'30', permisos: [] })
-      await fetchAll()
-    } catch (e) {
-      setError('No se pudo crear el invitado. Ejecuta primero el SQL de invitados.')
-    }
-    setLoading(false)
-  }
-
-  const copiarLinkInvitado = async () => {
-    if (!linkInvitado) return
-    await navigator.clipboard.writeText(linkInvitado)
-    setSuccess('Link copiado')
-  }
-
-  const desactivarInvitado = async (id) => {
-    await supabase.from('guest_access_links').update({ activo:false }).eq('id', id)
-    await fetchAll()
-  }
-
-  const guardarRol = async () => {
-    if (!form.email || !form.rol) return
-    setLoading(true); setError(''); setSuccess('')
-    try {
-      const payload = {
-        email: form.email.trim().toLowerCase(),
-        nombre: form.nombre || null,
-        rol: form.rol,
-        permisos: Array.isArray(form.permisos) ? form.permisos : null,
-        acciones: form.acciones && typeof form.acciones === 'object' ? form.acciones : null,
-        activo: form.activo !== false,
-        notas: form.notas || null,
-      }
-      const { error } = form.id
-        ? await supabase.from('app_user_roles').update(payload).eq('id', form.id)
-        : await supabase.from('app_user_roles').insert(payload)
-      if (error) throw error
-
-      if (form.invitar_real) {
-        const { data: { session } } = await supabase.auth.getSession()
-        const resp = await fetch('/api/invitar-usuario', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token || ''}`,
-          },
-          body: JSON.stringify(payload),
-        })
-        const result = await resp.json().catch(() => ({}))
-        if (!resp.ok) throw new Error(result.error || 'No se pudo enviar la invitacion real.')
-      }
-
-      await fetchAll()
-      abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false })
-      setSuccess(form.invitar_real ? 'Usuario guardado e invitacion enviada.' : 'Permiso guardado.')
-    } catch (e) {
-      setError('No se pudo guardar: ' + (e.message || 'Ejecuta primero el SQL profesional.'))
-    }
-    setLoading(false)
-  }
-
-  const eliminarRol = async (id) => {
-    await supabase.from('app_user_roles').delete().eq('id', id)
-    await fetchAll()
-  }
-
-  const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
-  const saveBtn = (color = '#212121') => ({ width:'100%', padding:14, borderRadius:14, background: color, border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' })
-  const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
-  const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f2f1ef' }
-  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #d4b89a', background:'#eeeeee', fontSize:13, color:'#212121', cursor:'pointer', marginTop:8, fontWeight:500 }
-
-  const menuItems = [
-    { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email }) },
-    { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', action: () => abrir('campos') },
-    { icon:'ti-seeding', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#212121', bg:'#eeeeee', action: () => abrir('cultivos') },
-    { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
-    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#212121', bg:'#eeeeee', action: () => abrir('abonos') },
-    { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#212121', bg:'#eeeeee', action: () => abrir('bloques') },
-    { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
-    { icon:'ti-receipt-2', title:'Cuentas a pagar', sub:'Creditos con proveedores', color:'#176a25', bg:'#edf6ec', action: () => navigate('/cuentas-pagar') },
-    { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:'#176a25', bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30', permisos: [] }) },
-    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:'#176a25', bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false }) },
-    { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:'#212121', bg:'#eeeeee', action: () => navigate('/auditoria') },
-    { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Ultimo: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
-  ]
+function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
+  const cultivo = getCultivoCosecha(cosecha)
+  const item = { display:'flex', justifyContent:'space-between', gap:16, padding:'11px 0', borderBottom:'1px solid #eeeeee' }
+  const label = { fontSize:12, color:'#8d938d' }
+  const value = { fontSize:13, fontWeight:700, color:'#111' }
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <input type="file" accept="image/*" ref={fotoRef} style={{ display:'none' }} onChange={subirFotoPerfil} />
-
-      <div style={{ padding:'24px 20px 16px' }}>
-        <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Sistema</div>
-        <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:20 }}>Configuracion</div>
-        {error && !modal && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
-        {success && !modal && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{success}</div>}
-
-        {/* Tarjeta de perfil rapida */}
-        <div style={{ background:'#212121', borderRadius:20, padding:'16px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:14 }}>
-          <div style={{ position:'relative', flexShrink:0 }}>
-            {perfil.foto ? (
-              <img src={perfil.foto} alt="perfil"
-                style={{ width:52, height:52, borderRadius:'50%', objectFit:'cover', border:'2px solid rgba(255,255,255,0.2)' }}/>
-            ) : (
-              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(255,255,255,0.12)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <i className="ti ti-user" style={{ fontSize:24, color:'rgba(255,255,255,0.6)' }} aria-hidden="true"></i>
-              </div>
-            )}
-            <button onClick={() => fotoRef.current?.click()}
-              style={{ position:'absolute', bottom:-2, right:-2, width:20, height:20, borderRadius:'50%', background:'#fff', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>
-              <i className="ti ti-camera" style={{ fontSize:11, color:'#212121' }} aria-hidden="true"></i>
-            </button>
+    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:150, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && onClose()}>
+      <div style={{ background:'#fff', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'22px 20px 34px', maxHeight:'88vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
+          <div>
+            <div style={{ fontSize:12, color:'#8d938d', marginBottom:4 }}>Detalle de cosecha</div>
+            <div style={{ fontSize:22, fontWeight:800, color:'#0a0a0a' }}>{cultivo}</div>
+            <div style={{ fontSize:12, color:'#8d938d', marginTop:4 }}>Bloque {cosecha.bloques?.codigo} · {cosecha.fecha}</div>
           </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-              {perfil.nombre || 'Sin nombre'}
-            </div>
-            <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{perfil.email}</div>
+          <button onClick={onClose} style={{ width:36, height:36, borderRadius:12, border:'1px solid #ececec', background:'#fff', cursor:'pointer' }}>
+            <i className="ti ti-x" style={{ fontSize:18 }} aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
+          <div style={{ background:'#212121', borderRadius:16, padding:'14px 15px' }}>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:4 }}>Kilos</div>
+            <div style={{ fontSize:24, color:'#fff', fontWeight:850 }}>{fmtKg(cosecha.kg_total)} kg</div>
           </div>
-          <button onClick={() => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email })}
-            style={{ padding:'6px 12px', borderRadius:10, background:'rgba(255,255,255,0.12)', border:'none', fontSize:11, color:'rgba(255,255,255,0.8)', cursor:'pointer', flexShrink:0 }}>
-            Editar
+          <div style={{ background:'#f2f1ef', borderRadius:16, padding:'14px 15px' }}>
+            <div style={{ fontSize:10, color:'#8d938d', marginBottom:4 }}>Calidad</div>
+            <div style={{ fontSize:18, color:'#212121', fontWeight:850 }}>{calidadLabel(cosecha.calidad)}</div>
+          </div>
+        </div>
+
+        <div style={{ background:'#fafafa', borderRadius:16, padding:'4px 14px', marginBottom:14 }}>
+          <div style={item}><span style={label}>Producto/cultivo</span><span style={value}>{cultivo}</span></div>
+          <div style={item}><span style={label}>Campo</span><span style={value}>{cosecha.bloques?.campos?.nombre || '-'}</span></div>
+          <div style={item}><span style={label}>Bloque</span><span style={value}>{cosecha.bloques?.codigo || '-'}</span></div>
+          <div style={item}><span style={label}>Calidad</span><span style={value}>{calidadLabel(cosecha.calidad)}</span></div>
+          <div style={{ ...item, borderBottom:'none' }}><span style={label}>Uso</span><span style={value}>Produccion del bloque</span></div>
+        </div>
+
+        {cosecha.notas && (
+          <div style={{ background:'#f2f1ef', borderRadius:14, padding:'12px 14px', fontSize:13, color:'#4d544e', marginBottom:14 }}>
+            {cosecha.notas}
+          </div>
+        )}
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          <button onClick={onEdit} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #d9ddd8', background:'#fff', color:'#212121', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            Editar cosecha
+          </button>
+          <button onClick={onDelete} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            Eliminar
           </button>
         </div>
       </div>
+    </div>
+  )
+}
 
-      <div style={{ padding:'0 14px 100px' }}>
-        {menuItems.map((it, i) => (
-          <div key={i} onClick={it.action} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
-            <div style={{ width:40, height:40, borderRadius:12, background: it.bg || '#f2f1ef', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <i className={`ti ${it.icon}`} style={{ fontSize:18, color: it.color || '#0a0a0a' }} aria-hidden="true"></i>
-            </div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:'#0a0a0a' }}>{it.title}</div>
-              <div style={{ fontSize:11, color:'#b0b0b0', marginTop:2 }}>{it.sub}</div>
-            </div>
-            <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
+export default function Cosecha() {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
+  const [cosechas, setCosechas] = useState([])
+  const [campos, setCampos] = useState([])
+  const [bloques, setBloques] = useState([])
+  const [modal, setModal] = useState(false)
+  const [modoMultiple, setModoMultiple] = useState(false)
+  const [filasCosecha, setFilasCosecha] = useState([])
+  const [detalle, setDetalle] = useState(null)
+  const [confirmar, setConfirmar] = useState(null)
+  const [form, setForm] = useState({ bloque_id:'', fecha:fechaLocal(), kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
+  const [saving, setSaving] = useState(false)
+  const [campoFiltro, setCampoFiltro] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => { fetchCampos(); fetchCosechas() }, [])
+  useEffect(() => { if (campoFiltro) fetchBloques(campoFiltro) }, [campoFiltro])
+
+  const fetchCampos = async () => {
+    const { data } = await supabase.from('campos').select('*').order('nombre')
+    setCampos(data || [])
+    if (data?.length > 0) setCampoFiltro(data[0].id)
+  }
+  const fetchCosechas = async () => {
+    const { data, error } = await supabase.from('cosechas')
+      .select('*, bloques(codigo, campos(nombre), plantaciones(cultivos(nombre), activa, created_at, fecha_siembra))')
+      .order('fecha', { ascending: false })
+    if (error) setError('Error al cargar cosechas')
+    else setCosechas(data || [])
+  }
+  const fetchBloques = async (campo_id) => {
+    const { data } = await supabase.from('bloques')
+      .select('*, plantaciones(cultivos(nombre), activa, created_at, fecha_siembra)')
+      .eq('campo_id', campo_id)
+      .order('codigo')
+    setBloques(data || [])
+  }
+  const crearFilaCosecha = () => ({ bloque_id:'', kg_total:'', calidad:'primera', notas:'' })
+  const limpiarForm = () => {
+    setForm({ bloque_id:'', fecha:fechaLocal(), kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
+    setFilasCosecha([crearFilaCosecha(), crearFilaCosecha()])
+  }
+
+  const abrirNuevaCosecha = () => {
+    limpiarForm()
+    setModoMultiple(false)
+    setModal(true)
+  }
+
+  const abrirEditarCosecha = (cosecha) => {
+    const campoId = campos.find(c => c.nombre === cosecha.bloques?.campos?.nombre)?.id || campoFiltro || ''
+    if (campoId) setCampoFiltro(campoId)
+    setForm({
+      id: cosecha.id,
+      bloque_id: cosecha.bloque_id || '',
+      fecha: cosecha.fecha || '',
+      kg_total: cosecha.kg_total || '',
+      precio_kg: cosecha.precio_kg ? Number(cosecha.precio_kg).toLocaleString('es-PY') : '',
+      calidad: cosecha.calidad || 'primera',
+      comprador_id: cosecha.comprador_id || '',
+      notas: cosecha.notas || ''
+    })
+    setDetalle(null)
+    setModoMultiple(false)
+    setModal(true)
+  }
+
+  const actualizarFilaCosecha = (idx, campo, valor) => {
+    setFilasCosecha(prev => prev.map((fila, i) => i === idx ? { ...fila, [campo]: valor } : fila))
+  }
+
+  const agregarFilaCosecha = () => setFilasCosecha(prev => [...prev, crearFilaCosecha()])
+  const quitarFilaCosecha = (idx) => setFilasCosecha(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)
+
+  const guardarMultiple = async () => {
+    const filasValidas = filasCosecha
+      .map(fila => ({
+        bloque_id: fila.bloque_id,
+        fecha: form.fecha,
+        kg_total: parsearKg(fila.kg_total),
+        precio_kg: 0,
+        calidad: fila.calidad || 'primera',
+        comprador_id: null,
+        notas: fila.notas || form.notas || null,
+      }))
+      .filter(fila => fila.bloque_id && fila.fecha && fila.kg_total > 0)
+
+    if (!form.fecha || filasValidas.length === 0) {
+      setError('Cargá fecha y al menos una cosecha con bloque y kilos.')
+      return
+    }
+
+    setSaving(true); setError('')
+    try {
+      const { error } = await supabase.from('cosechas').insert(filasValidas)
+      if (error) throw error
+      await registrarAuditoria({
+        accion: 'Registro lote de cosechas',
+        modulo: 'Cosecha',
+        tabla: 'cosechas',
+        registroId: '',
+        detalle: `${filasValidas.length} cosechas - ${filasValidas.reduce((s, f) => s + f.kg_total, 0)} kg`,
+      })
+      await fetchCosechas()
+      setModal(false)
+      setModoMultiple(false)
+      limpiarForm()
+    } catch (e) {
+      setError('Error al guardar lote: ' + e.message)
+    }
+    setSaving(false)
+  }
+
+  const guardar = async () => {
+    if (modoMultiple && !form.id) {
+      await guardarMultiple()
+      return
+    }
+    if (!form.bloque_id || !form.fecha || !form.kg_total) return
+    setSaving(true); setError('')
+    try {
+      const payload = {
+        bloque_id: form.bloque_id, fecha: form.fecha,
+        kg_total: parsearKg(form.kg_total),
+        precio_kg: form.id ? parsearGs(form.precio_kg) : 0,
+        calidad: form.calidad,
+        comprador_id: form.id ? (form.comprador_id || null) : null,
+        notas: form.notas || null
+      }
+
+      const { error } = form.id
+        ? await supabase.from('cosechas').update(payload).eq('id', form.id)
+        : await supabase.from('cosechas').insert(payload)
+      if (error) throw error
+      await registrarAuditoria({
+        accion: form.id ? 'Edito cosecha' : 'Registro cosecha',
+        modulo: 'Cosecha',
+        tabla: 'cosechas',
+        registroId: form.id || '',
+        detalle: `${payload.kg_total} kg cosechados`,
+      })
+      await fetchCosechas(); setModal(false)
+      limpiarForm()
+    } catch (e) {
+      setError('Error al guardar: ' + e.message)
+    }
+    setSaving(false)
+  }
+
+  const eliminar = (id) => {
+    setConfirmar({ fn: async () => {
+      await supabase.from('cosechas').delete().eq('id', id)
+      await registrarAuditoria({ accion:'Elimino cosecha', modulo:'Cosecha', tabla:'cosechas', registroId:id })
+      setConfirmar(null); setDetalle(null); fetchCosechas()
+    }})
+  }
+
+  const totalKg = cosechas.reduce((sum, c) => sum + (Number(c.kg_total) || 0), 0)
+  const promedioKg = cosechas.length > 0 ? totalKg / cosechas.length : 0
+  const bloqueSeleccionado = bloques.find(b => b.id === form.bloque_id)
+  const cultivoSeleccionado = getCultivoBloque(bloqueSeleccionado, form.fecha)
+  const totalKgMultiple = filasCosecha.reduce((sum, fila) => sum + parsearKg(fila.kg_total), 0)
+
+  const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
+
+  return (
+    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+      {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
+      {detalle && <ModalDetalle cosecha={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditarCosecha(detalle)} onDelete={() => eliminar(detalle.id)} />}
+
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+          <div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Producción</div>
+            <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Cosecha</div>
           </div>
-        ))}
-        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginTop:8, cursor:'pointer' }} onClick={() => forceLocalSignOut()}>
-          <div style={{ fontSize:14, fontWeight:600, color:'#c84040', textAlign:'center' }}>Cerrar sesion</div>
+          <button onClick={abrirNuevaCosecha} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+          </button>
+        </div>
+        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: isDesktop ? 14 : 8 }}>
+          <div style={{ background:'#212121', borderRadius:16, padding:'14px 16px' }}>
+            <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:4 }}>Total cosechado</div>
+            <div style={{ fontSize:28, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>{fmtKg(totalKg)}</div>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,0.5)', marginTop:3 }}>kg · {cosechas.length} registros</div>
+          </div>
+          <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
+            <div style={{ fontSize:9, color:'#9a9a9a', textTransform:'uppercase', marginBottom:4 }}>Promedio por registro</div>
+            <div style={{ fontSize:18, fontWeight:800, color:'#212121', letterSpacing:-.5, lineHeight:1 }}>
+              {promedioKg > 0 ? `${fmtKg(promedioKg)} kg` : '—'}
+            </div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginTop:3 }}>solo produccion cosechada</div>
+          </div>
         </div>
       </div>
 
+      <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
+        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+        {cosechas.length === 0 ? (
+          <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin registros de cosecha</div>
+        ) : cosechas.map(c => {
+          const cultivo = getCultivoCosecha(c)
+          return (
+            <div key={c.id} onClick={() => setDetalle(c)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:700, color:'#0a0a0a' }}>Bloque {c.bloques?.codigo}</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#176a25', marginTop:2 }}>{cultivo}</div>
+                  <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>{c.bloques?.campos?.nombre} · {c.fecha}</div>
+                </div>
+                <div style={{ textAlign:'right' }}>
+                  <div style={{ fontSize:20, fontWeight:800, color:'#0a0a0a' }}>{fmtKg(c.kg_total)} kg</div>
+                  <div style={{ fontSize:11, color:'#687068', fontWeight:600 }}>Produccion</div>
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
+                <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:700, background:'#e8f5e5', color:'#176a25' }}>
+                  {cultivo}
+                </div>
+                <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:600, background: c.calidad==='primera' ? '#eeeeee' : '#fff3e8', color: c.calidad==='primera' ? '#212121' : '#c8700a' }}>
+                  {calidadLabel(c.calidad)}
+                </div>
+              </div>
+              {c.notas && <div style={{ fontSize:11, color:'#9a9a9a', padding:'7px 10px', background:'#f2f1ef', borderRadius:8, marginBottom:8 }}>{c.notas}</div>}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:11, color:'#777' }}>Tocar para ver detalle</span>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }}>Editar</button>
+                  <button onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        </div>
+        <NotasPanel modulo="cosecha" titulo="Blog de notas de cosecha" />
+      </div>
+
       {modal && (
-        <div style={{
-          position:'fixed',
-          top:0,
-          left:0,
-          right:0,
-          bottom:0,
-          background:'rgba(0,0,0,0.4)',
-          zIndex:100,
-          display:'flex',
-          alignItems: esDesktop() ? 'center' : 'flex-end',
-          justifyContent:'center',
-          padding: esDesktop() ? 24 : 0,
-          boxSizing:'border-box',
-        }}
-          onClick={e => e.target===e.currentTarget && cerrar()}>
-          <div style={{
-            background:'#f2f1ef',
-            borderRadius: esDesktop() ? 24 : '24px 24px 0 0',
-            width:'100%',
-            maxWidth: esDesktop() ? 620 : 480,
-            padding:'24px 20px 40px',
-            maxHeight: esDesktop() ? '82vh' : '88vh',
-            overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
-            boxShadow: esDesktop() ? '0 28px 70px rgba(0,0,0,0.28)' : 'none',
-          }}>
-
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(false)}>
+          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar cosecha' : 'Registrar cosecha'}</div>
             {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
-            {success && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{success}</div>}
 
-            {modal === 'invitados' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:8 }}>Invitados de solo lectura</div>
-              <div style={{ fontSize:12, color:'#8b928b', marginBottom:16 }}>El invitado entra con un link y no puede editar ni borrar datos.</div>
-
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Crear link</div>
-                <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del invitado"/>
-                <div style={{ fontSize:11, fontWeight:800, color:'#687068', margin:'2px 0 7px', textTransform:'uppercase' }}>Campo permitido</div>
-                <select style={inp} value={form.campo_id||''} onChange={e=>setForm(f=>({...f,campo_id:e.target.value}))}>
-                  <option value="">Todos los campos</option>
-                  {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
-                <select style={inp} value={form.dias||'30'} onChange={e=>setForm(f=>({...f,dias:e.target.value}))}>
-                  <option value="7">Vence en 7 dias</option>
-                  <option value="30">Vence en 30 dias</option>
-                  <option value="90">Vence en 90 dias</option>
-                  <option value="">Sin vencimiento</option>
-                </select>
-                <PermisosSelector
-                  permisos={form.permisos}
-                  ayuda="Elegí exactamente a que apartados puede entrar este invitado."
-                  onChange={permisos => setForm(f => ({ ...f, permisos }))}
-                />
-                <button style={saveBtn('#176a25')} onClick={crearInvitado} disabled={loading}>{loading ? 'Creando...' : 'Crear acceso invitado'}</button>
+            {!form.id && (
+              <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:14 }}>
+                <button type="button" onClick={() => setModoMultiple(false)} style={{ flex:1, padding:9, borderRadius:10, border:'none', cursor:'pointer', background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:800 }}>
+                  Una cosecha
+                </button>
+                <button type="button" onClick={() => setModoMultiple(true)} style={{ flex:1, padding:9, borderRadius:10, border:'none', cursor:'pointer', background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:800 }}>
+                  Varias juntas
+                </button>
               </div>
+            )}
 
-              {linkInvitado && (
-                <div style={{ background:'#edf6ec', border:'1px solid #cde6c8', borderRadius:16, padding:'12px 14px', marginBottom:12 }}>
-                  <div style={{ fontSize:11, color:'#176a25', fontWeight:800, marginBottom:6 }}>Link creado</div>
-                  <div style={{ fontSize:12, color:'#1d261d', wordBreak:'break-all', lineHeight:1.4, marginBottom:10 }}>{linkInvitado}</div>
-                  <button style={saveBtn('#212121')} onClick={copiarLinkInvitado}>Copiar link</button>
-                </div>
-              )}
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Campo</div>
+            <select style={inp} value={campoFiltro||''} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({...f, bloque_id:''})) }}>
+              {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
 
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Links creados</div>
-                {invitados.length === 0 ? (
-                  <div style={{ fontSize:12, color:'#9a9a9a', padding:'8px 0' }}>Sin invitados creados.</div>
-                ) : invitados.map(inv => (
-                  <div key={inv.id} style={listItem}>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>{inv.nombre}</div>
-                      <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>
-                        {inv.campos?.nombre || 'Todos los campos'}  -  {inv.activo ? 'Activo' : 'Desactivado'}{inv.expires_at ? `  -  vence ${String(inv.expires_at).slice(0,10)}` : ''}
+            {(!modoMultiple || form.id) && (
+              <>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloque *</div>
+            <select style={inp} value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
+              <option value="">Seleccioná bloque...</option>
+              {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
+            </select>
+
+            {form.bloque_id && (
+              <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:12, padding:'9px 12px', fontSize:12, fontWeight:700, marginBottom:12 }}>
+                Producto/cultivo: {cultivoSeleccionado || 'Sin plantacion activa registrada'}
+              </div>
+            )}
+              </>
+            )}
+
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha *</div>
+            <input style={inp} type="date" value={form.fecha} onChange={e => setForm(f => ({...f, fecha:e.target.value}))}/>
+
+            {(!modoMultiple || form.id) ? (
+              <>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Kg cosechados * (admite decimales, ej: 1.5)</div>
+            <input style={inp} type="text" inputMode="decimal" value={form.kg_total}
+              onChange={e => setForm(f => ({...f, kg_total: e.target.value}))}
+              placeholder="Ej: 150 o 1.5"/>
+
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Calidad</div>
+            <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+              {['primera','segunda','mixta'].map(q => (
+                <button key={q} onClick={() => setForm(f => ({...f, calidad:q}))} style={{ flex:1, padding:'9px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.calidad===q ? '#212121' : '#fff', color: form.calidad===q ? '#fff' : '#555' }}>
+                  {q === 'primera' ? '1ra' : q === 'segunda' ? '2da' : 'Mixta'}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas (opcional)</div>
+            <textarea style={{ ...inp, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:8 }}>Cosechas del lote</div>
+                <div style={{ display:'grid', gap:10, marginBottom:12 }}>
+                  {filasCosecha.map((fila, idx) => {
+                    const bloqueFila = bloques.find(b => b.id === fila.bloque_id)
+                    const cultivoFila = getCultivoBloque(bloqueFila, form.fecha)
+                    return (
+                      <div key={idx} style={{ background:'#fff', border:'1px solid #e4e6e2', borderRadius:16, padding:12 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                          <strong style={{ fontSize:13 }}>Cosecha {idx + 1}</strong>
+                          {filasCosecha.length > 1 && (
+                            <button type="button" onClick={() => quitarFilaCosecha(idx)} style={{ border:'1px solid #ffcccc', background:'#fff', color:'#c84040', borderRadius:10, padding:'5px 9px', fontSize:11, cursor:'pointer' }}>Quitar</button>
+                          )}
+                        </div>
+                        <select style={inp} value={fila.bloque_id} onChange={e => actualizarFilaCosecha(idx, 'bloque_id', e.target.value)}>
+                          <option value="">Bloque...</option>
+                          {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
+                        </select>
+                        {fila.bloque_id && (
+                          <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:10, padding:'7px 10px', fontSize:11, fontWeight:700, margin:'-4px 0 10px' }}>
+                            {cultivoFila || 'Sin plantacion activa registrada'}
+                          </div>
+                        )}
+                        <input style={inp} type="text" inputMode="decimal" value={fila.kg_total} onChange={e => actualizarFilaCosecha(idx, 'kg_total', e.target.value)} placeholder="Kg cosechados"/>
+                        <select style={inp} value={fila.calidad} onChange={e => actualizarFilaCosecha(idx, 'calidad', e.target.value)}>
+                          <option value="primera">1ra calidad</option>
+                          <option value="segunda">2da calidad</option>
+                          <option value="mixta">Mixta</option>
+                        </select>
+                        <input style={{ ...inp, marginBottom:0 }} value={fila.notas} onChange={e => actualizarFilaCosecha(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
                       </div>
-                    </div>
-                    {inv.activo && (
-                      <button onClick={() => desactivarInvitado(inv.id)}
-                        style={{ border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', borderRadius:10, padding:'7px 10px', fontSize:11, cursor:'pointer' }}>
-                        Desactivar
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>}
-
-            {/* -- CUENTA -- */}
-            {modal === 'roles' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:8 }}>Usuarios y permisos</div>
-              <div style={{ fontSize:12, color:'#8b928b', marginBottom:16 }}>Registro interno de roles. Para dar acceso real, el usuario tambien debe existir en Supabase Authentication.</div>
-
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>{form.id ? 'Editar usuario' : 'Agregar usuario'}</div>
-                <input style={inp} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="correo@empresa.com"/>
-                <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre"/>
-                <select style={inp} value={form.rol||'operador'} onChange={e=>setForm(f=>({...f,rol:e.target.value}))}>
-                  <option value="admin">Admin</option>
-                  <option value="operador">Operador</option>
-                  <option value="lectura">Solo lectura</option>
-                </select>
-                <PermisosSelector
-                  permisos={form.permisos}
-                  ayuda="Elegí exactamente a que apartados puede entrar este usuario."
-                  onChange={permisos => setForm(f => ({ ...f, permisos }))}
-                />
-                <AccionesSelector
-                  permisos={form.permisos}
-                  acciones={form.acciones}
-                  rol={form.rol || 'operador'}
-                  onChange={acciones => setForm(f => ({ ...f, acciones }))}
-                />
-                <label style={{ display:'flex', alignItems:'center', gap:8, background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:14, padding:12, marginBottom:12, fontSize:12, color:'#1d241f' }}>
-                  <input type="checkbox" checked={Boolean(form.invitar_real)} onChange={e=>setForm(f=>({...f,invitar_real:e.target.checked}))}/>
-                  Enviar invitacion real por email
-                </label>
-                <textarea style={{ ...inp, minHeight:64, resize:'vertical' }} value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
-                <button style={saveBtn('#176a25')} onClick={guardarRol} disabled={loading}>{loading ? 'Guardando...' : 'Guardar permiso'}</button>
-              </div>
-
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Registrados</div>
-                {roles.length === 0 ? (
-                  <div style={{ fontSize:12, color:'#9a9a9a', padding:'8px 0' }}>Sin usuarios registrados.</div>
-                ) : roles.map(r => (
-                  <div key={r.id} style={listItem}>
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>{r.nombre || r.email}</div>
-                      <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.email} - {r.rol}</div>
-                    </div>
-                    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-                      <button style={{ padding:'5px 10px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, invitar_real:false })}>Editar</button>
-                      <button style={{ padding:'5px 10px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminarRol(r.id)}>Borrar</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'cuenta' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Mi cuenta</div>
-
-              {/* Foto */}
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:24 }}>
-                <div style={{ position:'relative', marginBottom:10 }}>
-                  {perfil.foto ? (
-                    <img src={perfil.foto} alt="perfil"
-                      style={{ width:80, height:80, borderRadius:'50%', objectFit:'cover', border:'3px solid #e8e6e2' }}/>
-                  ) : (
-                    <div style={{ width:80, height:80, borderRadius:'50%', background:'#e8e6e2', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <i className="ti ti-user" style={{ fontSize:36, color:'#9a9a9a' }} aria-hidden="true"></i>
-                    </div>
-                  )}
-                  <button onClick={() => fotoRef.current?.click()}
-                    style={{ position:'absolute', bottom:0, right:0, width:26, height:26, borderRadius:'50%', background:'#212121', border:'2px solid #f2f1ef', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <i className="ti ti-camera" style={{ fontSize:13, color:'#fff' }} aria-hidden="true"></i>
-                  </button>
+                    )
+                  })}
                 </div>
-                <span style={{ fontSize:11, color:'#9a9a9a' }}>Toca la camara para cambiar la foto</span>
-              </div>
-
-              {/* Nombre */}
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Nombre</div>
-                <input style={{ ...inp, marginBottom:8 }} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/>
-                <button style={saveBtn()} onClick={guardarNombre} disabled={loading}>{loading?'Guardando...':'Guardar nombre'}</button>
-              </div>
-
-              {/* Email */}
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Email</div>
-                <input style={{ ...inp, marginBottom:8 }} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/>
-                <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:10 }}>Si cambias el email, recibiras un link de confirmacion</div>
-                <button style={saveBtn('#1a5c2e')} onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
-              </div>
-
-              {/* Contrasena */}
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Contrasena</div>
-                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contrasena"/>
-                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contrasena"/>
-                <button style={saveBtn('#c84040')} onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contrasena'}</button>
-              </div>
-
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {/* -- CAMPOS -- */}
-            {modal === 'campos' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Campos</div>
-              {campos.map(c => (<div key={c.id} style={listItem}><div style={{ fontSize:13, fontWeight:500 }}>{c.nombre}</div></div>))}
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {/* -- CULTIVOS -- */}
-            {modal === 'cultivos' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Cultivos</div>
-              {cultivos.map(c => (
-                <div key={c.id} style={listItem}>
-                  <div style={{ fontSize:13, fontWeight:500 }}>{c.nombre}</div>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
-                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('cultivos',c.id,'cultivos')}>Eliminar</button>
+                <button type="button" onClick={agregarFilaCosecha} style={{ width:'100%', padding:12, borderRadius:14, border:'1px dashed #bfc6bf', background:'#fff', fontSize:13, fontWeight:800, color:'#176a25', cursor:'pointer', marginBottom:12 }}>
+                  + Agregar otra cosecha
+                </button>
+                {totalKgMultiple > 0 && (
+                  <div style={{ background:'#eeeeee', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between', gap:12 }}>
+                    <span style={{ fontSize:12, color:'#212121' }}>{fmtKg(totalKgMultiple)} kg en total</span>
+                    <span style={{ fontSize:14, fontWeight:700, color:'#212121' }}>Produccion</span>
                   </div>
-                </div>
-              ))}
-              <button style={addBtn} onClick={() => abrir('editarCultivo',{})}>+ Agregar cultivo</button>
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
-            </>}
+                )}
+              </>
+            )}
 
-            {modal === 'editarCultivo' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
-              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
-              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morron"/>
-              <button style={saveBtn()} onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={cancelBtn} onClick={() => abrir('cultivos')}>Volver</button>
-            </>}
-
-            {/* -- OPERARIOS -- */}
-            {modal === 'operarios' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Operarios</div>
-              {campos.map(campo => (
-                <div key={campo.id}>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', padding:'10px 0 6px' }}>{campo.nombre}</div>
-                  {operarios.filter(o => o.campo_id === campo.id).map(o => (
-                    <div key={o.id} style={listItem}>
-                      <div style={{ fontSize:13, fontWeight:500 }}>{o.nombre}</div>
-                      <div style={{ display:'flex', gap:6 }}>
-                        <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
-                        <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('operarios',o.id,'operarios')}>Eliminar</button>
-                      </div>
-                    </div>
-                  ))}
-                  <button style={addBtn} onClick={() => abrir('editarOperario',{campo_id:campo.id})}>+ Agregar a {campo.nombre}</button>
-                </div>
-              ))}
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'editarOperario' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar operario':'Nuevo operario'}</div>
-              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
-              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
-              <button style={saveBtn()} onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={cancelBtn} onClick={() => abrir('operarios')}>Volver</button>
-            </>}
-
-            {/* -- ABONOS -- */}
-            {modal === 'abonos' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Abonos de base</div>
-              {abonos.map(a => (
-                <div key={a.id} style={listItem}>
-                  <div style={{ fontSize:13, fontWeight:500 }}>{a.nombre}</div>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
-                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('abonos',a.id,'abonos')}>Eliminar</button>
-                  </div>
-                </div>
-              ))}
-              <button style={addBtn} onClick={() => abrir('editarAbono',{})}>+ Agregar abono</button>
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'editarAbono' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar abono':'Nuevo abono'}</div>
-              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
-              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
-              <button style={saveBtn()} onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={cancelBtn} onClick={() => abrir('abonos')}>Volver</button>
-            </>}
-
-            {/* -- BLOQUES -- */}
-            {modal === 'bloques' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:6 }}>Tipo de bloques</div>
-              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Toca un bloque para cambiar si es invernadero o campo abierto</div>
-              {campos.map(campo => (
-                <div key={campo.id}>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', padding:'10px 0 6px' }}>{campo.nombre}</div>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
-                    {bloques.filter(b => b.campo_id === campo.id).map(b => (
-                      <div key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })}
-                        style={{ padding:'6px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', border:'1px solid #e8e6e2', background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
-                        {b.codigo}  -  {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'editarBloque' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:6 }}>Bloque {form.codigo}</div>
-              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Selecciona el tipo de este bloque</div>
-              <div style={{ display:'flex', gap:8, marginBottom:20 }}>
-                {['invernadero','campo_abierto'].map(t => (
-                  <button key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ flex:1, padding:14, borderRadius:14, border:'1px solid #e8e6e2', fontSize:13, fontWeight:600, cursor:'pointer', background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
-                    {t === 'invernadero' ? 'Invernadero' : 'Campo abierto'}
-                  </button>
-                ))}
-              </div>
-              <button style={saveBtn()} onClick={guardarBloque} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={cancelBtn} onClick={() => abrir('bloques')}>Volver</button>
-            </>}
-
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : modoMultiple ? 'Guardar lote de cosechas' : 'Guardar cosecha'}</button>
+            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </div>
       )}
     </div>
   )
 }
-

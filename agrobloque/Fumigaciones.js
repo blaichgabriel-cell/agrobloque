@@ -1,520 +1,277 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
-import { descargarCsv, imprimirHtml } from '../lib/exporters'
+import { descargarCsv } from '../lib/exporters'
+import { registrarAuditoria } from '../lib/audit'
 
-const meses = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+const TIPOS_COSTO = [
+  { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:'#212121', bg:'#eeeeee' },
+  { key:'combustible',          label:'Combustible',          icon:'ti-flame',       color:'#e07b00', bg:'#fff3e8' },
+  { key:'herramientas',         label:'Herramientas',         icon:'ti-tool',        color:'#555',    bg:'#f2f1ef' },
+  { key:'electricidad',         label:'Electricidad',         icon:'ti-bolt',        color:'#2980b9', bg:'#eaf4fb' },
+  { key:'gastos_administrativos',label:'Gastos administrativos',icon:'ti-file-invoice',color:'#8e44ad',bg:'#f5eefb' },
+  { key:'otro',                 label:'Otro',                 icon:'ti-plus-circle', color:'#888',    bg:'#f2f1ef' },
 ]
 
-const categoriasCompra = ['Insumos', 'Mercaderia', 'Sueldos', 'Servicios', 'Reparaciones', 'Combustible', 'Otros']
-const categoriasVenta = ['Verduras', 'Plantines', 'Servicios', 'Otros']
-const mediosPago = ['Efectivo', 'Transferencia', 'Cheque', 'Tarjeta', 'Otro']
-
-const hoy = () => new Date().toISOString().split('T')[0]
-const anhoActual = () => new Date().getFullYear()
+const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
-const parseGs = (v) => parseInt(String(v || '').replace(/[^0-9]/g, ''), 10) || 0
 
-const formInicial = {
-  fecha: hoy(),
-  tipo: 'compra',
-  descripcion: '',
-  categoria: 'Insumos',
-  contraparte: '',
-  medio_pago: 'Efectivo',
-  comprobante: '',
-  monto: '',
-  notas: '',
-}
-
-export default function Contabilidad() {
+export default function Costos({ campoActivo, isGuest = false }) {
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
-  const [movimientos, setMovimientos] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [campos, setCampos] = useState([])
+  const [campoSel, setCampoSel] = useState(null)
+  const [bloques, setBloques] = useState([])
+  const [costosAuto, setCostosAuto] = useState({ agroquimicos: 0, jornales: 0 })
+  const [costosManuales, setCostosManuales] = useState([])
   const [modal, setModal] = useState(false)
+  const [form, setForm] = useState({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'' })
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState(formInicial)
-  const [filtro, setFiltro] = useState('todos')
-  const [anho, setAnho] = useState(anhoActual())
+  const [periodo, setPeriodo] = useState('mes')
 
-  useEffect(() => { fetchMovimientos() }, [anho])
+  useEffect(() => { fetchCampos() }, [])
+  useEffect(() => { if (campoActivo) setCampoSel(campoActivo) }, [campoActivo])
+  useEffect(() => { if (campoSel) { fetchBloques(); fetchCostos() } }, [campoSel, periodo])
 
-  const fetchMovimientos = async () => {
-    setLoading(true)
-    const desde = `${anho}-01-01`
-    const hasta = `${anho}-12-31`
-    const { data, error } = await supabase
-      .from('contabilidad_movimientos')
-      .select('*')
-      .gte('fecha', desde)
-      .lte('fecha', hasta)
-      .order('fecha', { ascending: false })
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      setError('Falta ejecutar el SQL de contabilidad en Supabase.')
-      setMovimientos([])
-    } else {
-      setError('')
-      setMovimientos(data || [])
+  const fetchCampos = async () => {
+    const { data } = await supabase.from('campos').select('*').order('nombre')
+    const lista = data || []
+    setCampos(lista)
+    if (!campoSel && lista.length > 0) {
+      const campoGuardado = typeof window !== 'undefined' ? window.localStorage.getItem('agrobloque-campo-activo') : null
+      setCampoSel(campoActivo || lista.find(c => c.id === campoGuardado) || lista[0])
     }
-    setLoading(false)
   }
 
-  const resumen = useMemo(() => {
-    const porMes = meses.map((nombre, idx) => ({ nombre, idx, compras: 0, ventas: 0, balance: 0 }))
+  const fetchBloques = async () => {
+    const { data } = await supabase.from('bloques').select('*').eq('campo_id', campoSel.id).order('codigo')
+    setBloques(data || [])
+  }
 
-    movimientos.forEach(m => {
-      const idx = Number((m.fecha || '').slice(5, 7)) - 1
-      if (idx < 0 || idx > 11) return
-      const monto = Number(m.monto) || 0
-      if (m.tipo === 'venta') porMes[idx].ventas += monto
-      else porMes[idx].compras += monto
-      porMes[idx].balance = porMes[idx].ventas - porMes[idx].compras
-    })
+  const getFechaDesde = () => {
+    if (periodo === 'total') return '2020-01-01'
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
+  }
 
-    const ventas = porMes.reduce((s, m) => s + m.ventas, 0)
-    const compras = porMes.reduce((s, m) => s + m.compras, 0)
-    return { porMes, ventas, compras, balance: ventas - compras }
-  }, [movimientos])
+  const formVacio = () => ({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'' })
 
-  const movimientosFiltrados = useMemo(() => {
-    if (filtro === 'todos') return movimientos
-    return movimientos.filter(m => m.tipo === filtro)
-  }, [movimientos, filtro])
+  const abrirNuevo = () => {
+    setForm(formVacio())
+    setModal(true)
+  }
 
-  const abrirNuevo = (tipo = 'compra') => {
+  const abrirEditar = (costo) => {
     setForm({
-      ...formInicial,
-      tipo,
-      categoria: tipo === 'venta' ? 'Verduras' : 'Insumos',
+      id: costo.id,
+      tipo: costo.tipo || 'insumos',
+      descripcion: costo.descripcion || '',
+      monto: costo.monto ? fmtGs(costo.monto) : '',
+      fecha: costo.fecha || new Date().toISOString().split('T')[0],
+      bloque_id: costo.bloque_id || '',
     })
     setModal(true)
   }
 
-  const abrirEditar = (mov) => {
-    setForm({
-      id: mov.id,
-      fecha: mov.fecha || hoy(),
-      tipo: mov.tipo || 'compra',
-      descripcion: mov.descripcion || '',
-      categoria: mov.categoria || (mov.tipo === 'venta' ? 'Verduras' : 'Insumos'),
-      contraparte: mov.contraparte || '',
-      medio_pago: mov.medio_pago || 'Efectivo',
-      comprobante: mov.comprobante || '',
-      monto: mov.monto ? fmtGs(mov.monto) : '',
-      notas: mov.notas || '',
-    })
-    setModal(true)
+  const cerrarModal = () => {
+    setModal(false)
+    setForm(formVacio())
   }
 
-  const setTipo = (tipo) => {
-    setForm(f => ({
-      ...f,
-      tipo,
-      categoria: tipo === 'venta' ? 'Verduras' : 'Insumos',
+  const fetchCostos = async () => {
+    const desde = getFechaDesde()
+    const { data: fumis } = await supabase.from('fumigaciones')
+      .select('fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
+      .eq('campo_id', campoSel.id).gte('fecha', desde)
+    let totalAgro = 0
+    fumis?.forEach(f => f.fumigacion_productos?.forEach(fp => {
+        totalAgro += (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
     }))
+    const { data: asist } = isGuest
+      ? { data: [] }
+      : await supabase.from('asistencia')
+        .select('monto, operarios(campo_id)').gte('fecha', desde)
+    let totalJornales = 0
+    asist?.forEach(a => { if (a.operarios?.campo_id === campoSel.id) totalJornales += Number(a.monto) || 0 })
+    setCostosAuto({ agroquimicos: totalAgro, jornales: totalJornales })
+    const { data: manuales } = await supabase.from('costos')
+      .select('*, bloques(codigo)').eq('campo_id', campoSel.id).gte('fecha', desde).order('fecha', { ascending: false })
+    setCostosManuales(manuales || [])
   }
 
   const guardar = async () => {
-    const monto = parseGs(form.monto)
-    if (!form.fecha || !form.descripcion.trim() || monto <= 0) return
+    if (!form.monto || !form.fecha) return
     setSaving(true)
     const payload = {
-      fecha: form.fecha,
-      tipo: form.tipo,
-      descripcion: form.descripcion.trim(),
-      categoria: form.categoria || null,
-      contraparte: form.contraparte || null,
-      medio_pago: form.medio_pago || null,
-      comprobante: form.comprobante || null,
-      monto,
-      notas: form.notas || null,
+      tipo: form.tipo, descripcion: form.descripcion || null,
+      monto: parsearGs(form.monto), fecha: form.fecha,
+      campo_id: campoSel?.id || null, bloque_id: form.bloque_id || null
     }
-
-    const res = form.id
-      ? await supabase.from('contabilidad_movimientos').update(payload).eq('id', form.id)
-      : await supabase.from('contabilidad_movimientos').insert(payload)
-
-    if (res.error) setError('No se pudo guardar. Revisa si ejecutaste el SQL de contabilidad.')
-    else {
-      setModal(false)
-      await fetchMovimientos()
-    }
-    setSaving(false)
+    if (form.id) await supabase.from('costos').update(payload).eq('id', form.id)
+    else await supabase.from('costos').insert(payload)
+    await registrarAuditoria({
+      accion: form.id ? 'Edito costo manual' : 'Registro costo manual',
+      modulo: 'Costos',
+      tabla: 'costos',
+      registroId: form.id || '',
+      detalle: `${payload.descripcion || payload.tipo} - Gs. ${payload.monto}`,
+    })
+    await fetchCostos(); setSaving(false); cerrarModal()
   }
 
   const eliminar = async (id) => {
-    if (!window.confirm('Eliminar este movimiento de contabilidad?')) return
-    const { error } = await supabase.from('contabilidad_movimientos').delete().eq('id', id)
-    if (error) setError('No se pudo eliminar el movimiento.')
-    else fetchMovimientos()
+    await supabase.from('costos').delete().eq('id', id)
+    await registrarAuditoria({ accion:'Elimino costo manual', modulo:'Costos', tabla:'costos', registroId:id })
+    fetchCostos()
   }
 
-  const exportarCsv = () => {
-    const rows = movimientosFiltrados.map(m => ({
-      Fecha: m.fecha,
-      Tipo: m.tipo,
-      Descripcion: m.descripcion,
-      Categoria: m.categoria || '',
-      Contraparte: m.contraparte || '',
-      MedioPago: m.medio_pago || '',
-      Comprobante: m.comprobante || '',
-      Monto: Number(m.monto) || 0,
-      Notas: m.notas || '',
+  const totalManuales = costosManuales.reduce((s, c) => s + Number(c.monto), 0)
+  const totalGeneral = costosAuto.agroquimicos + costosAuto.jornales + totalManuales
+
+  const exportarCostos = () => {
+    const rows = costosManuales.map(c => ({
+      Fecha: c.fecha,
+      Tipo: TIPOS_COSTO.find(t => t.key === c.tipo)?.label || c.tipo,
+      Descripcion: c.descripcion || '',
+      Bloque: c.bloques?.codigo || '',
+      Monto: Number(c.monto) || 0,
     }))
-    descargarCsv('contabilidad-movimientos', ['Fecha', 'Tipo', 'Descripcion', 'Categoria', 'Contraparte', 'MedioPago', 'Comprobante', 'Monto', 'Notas'], rows)
+    descargarCsv('costos-manuales', ['Fecha', 'Tipo', 'Descripcion', 'Bloque', 'Monto'], rows)
   }
-
-  const imprimirBalance = () => {
-    imprimirHtml('Balance contable AgroBloque', `
-      <h1>Balance contable AgroBloque</h1>
-      <div class="muted">Año ${anho}</div>
-      <table>
-        <tr><th>Mes</th><th class="right">Compras</th><th class="right">Ventas</th><th class="right">Balance</th></tr>
-        ${resumen.porMes.map(m => `<tr><td>${m.nombre}</td><td class="right">Gs. ${fmtGs(m.compras)}</td><td class="right">Gs. ${fmtGs(m.ventas)}</td><td class="right total">Gs. ${fmtGs(m.balance)}</td></tr>`).join('')}
-        <tr><td class="total">Total</td><td class="right total">Gs. ${fmtGs(resumen.compras)}</td><td class="right total">Gs. ${fmtGs(resumen.ventas)}</td><td class="right total">Gs. ${fmtGs(resumen.balance)}</td></tr>
-      </table>
-    `)
-  }
-
-  const categorias = form.tipo === 'venta' ? categoriasVenta : categoriasCompra
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
-          <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <div style={headerIcon}><i className="ti ti-calculator" style={{ fontSize:26, color:'#176a25' }} aria-hidden="true"></i></div>
-            <div>
-              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Balance independiente</div>
-              <div style={{ fontSize:24, fontWeight:850, color:'#0a0a0a', letterSpacing:-.5 }}>Contabilidad</div>
-            </div>
+      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+          <div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Gastos</div>
+            <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Costos</div>
           </div>
-          <button onClick={() => abrirNuevo('compra')} style={addBtn}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:21 }} aria-hidden="true"></i>
-          </button>
-        </div>
-
-        {error && <div style={errorBox}>{error}</div>}
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:8, marginBottom:12 }}>
-          <select value={anho} onChange={e => setAnho(Number(e.target.value))} style={selectYear}>
-            {[anhoActual() - 1, anhoActual(), anhoActual() + 1].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <div style={{ display:'flex', gap:6 }}>
-            <button onClick={exportarCsv} style={smallAction}>CSV</button>
-            <button onClick={imprimirBalance} style={smallAction}>PDF</button>
-            <button onClick={() => abrirNuevo('compra')} style={smallAction}>Compra</button>
-            <button onClick={() => abrirNuevo('venta')} style={{ ...smallAction, background:'#176a25', color:'#fff' }}>Venta</button>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={exportarCostos} style={{ width:40, height:40, borderRadius:14, background:'#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <i className="ti ti-download" style={{ color:'#212121', fontSize:19 }} aria-hidden="true"></i>
+            </button>
+            {!isGuest && (
+              <button onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+              </button>
+            )}
           </div>
         </div>
-
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
-          <TotalCard label="Ventas" value={resumen.ventas} tone="green" />
-          <TotalCard label="Compras" value={resumen.compras} tone="red" />
-          <TotalCard label="Balance" value={resumen.balance} tone={resumen.balance >= 0 ? 'dark' : 'red'} />
+        {campos.length > 1 && (
+          <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:12 }}>
+            {campos.map(c => (
+              <button key={c.id} onClick={() => setCampoSel(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoSel?.id===c.id ? '#212121' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
+            ))}
+          </div>
+        )}
+        <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4 }}>
+          {[['mes','Este mes'],['total','Historico']].map(([k,v]) => (
+            <button key={k} onClick={() => setPeriodo(k)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
+          ))}
         </div>
       </div>
 
       <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
-        <section style={card}>
-          <div style={sectionHead}>
-            <div>
-              <div style={eyebrow}>Control de balance {anho}</div>
-              <h2 style={sectionTitle}>Resumen mensual</h2>
-            </div>
-            <i className="ti ti-table" style={{ fontSize:22, color:'#176a25' }} aria-hidden="true"></i>
-          </div>
+        <div style={{ background:'#212121', borderRadius:20, padding:'18px 20px', marginBottom:10 }}>
+          <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:6 }}>Total costos · {periodo === 'mes' ? 'este mes' : 'historico'}</div>
+          <div style={{ fontSize:36, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>Gs. {fmtGs(totalGeneral)}</div>
+          <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', marginTop:4 }}>{campoSel?.nombre}</div>
+        </div>
 
-          <div style={{ overflowX:'auto' }}>
-            <table style={tabla}>
-              <thead>
-                <tr>
-                  <th style={th}>Mes</th>
-                  <th style={thRight}>Compras</th>
-                  <th style={thRight}>Ventas</th>
-                  <th style={thRight}>Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resumen.porMes.map(m => (
-                  <tr key={m.nombre}>
-                    <td style={td}>{m.nombre}</td>
-                    <td style={tdRight}>Gs. {fmtGs(m.compras)}</td>
-                    <td style={tdRight}>Gs. {fmtGs(m.ventas)}</td>
-                    <td style={{ ...tdRight, color: m.balance >= 0 ? '#176a25' : '#c84040', fontWeight:800 }}>Gs. {fmtGs(m.balance)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td style={tf}>Total</td>
-                  <td style={tfRight}>Gs. {fmtGs(resumen.compras)}</td>
-                  <td style={tfRight}>Gs. {fmtGs(resumen.ventas)}</td>
-                  <td style={{ ...tfRight, color: resumen.balance >= 0 ? '#176a25' : '#c84040' }}>Gs. {fmtGs(resumen.balance)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </section>
-
-        <section style={card}>
-          <div style={sectionHead}>
-            <div>
-              <div style={eyebrow}>Compras y ventas</div>
-              <h2 style={sectionTitle}>Movimientos</h2>
+        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? '0.9fr 1.1fr' : '1fr', gap: isDesktop ? 12 : 0 }}>
+        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+          <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:12, textTransform:'uppercase' }}>Calculados automaticamente</div>
+          {[
+            { icon:'ti-spray', color:'#e07b00', bg:'#fff3e8', label:'Agroquimicos', sub:'Desde fumigaciones registradas', val: costosAuto.agroquimicos },
+            ...(!isGuest ? [{ icon:'ti-users', color:'#212121', bg:'#eeeeee', label:'Jornales', sub:'Desde asistencia registrada', val: costosAuto.jornales }] : []),
+          ].map((item, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom: i===0 ? '1px solid #f2f1ef' : 'none' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <div style={{ width:32, height:32, borderRadius:9, background:item.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <i className={`ti ${item.icon}`} style={{ fontSize:15, color:item.color }} aria-hidden="true"></i>
+                </div>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:500, color:'#0a0a0a' }}>{item.label}</div>
+                  <div style={{ fontSize:10, color:'#9a9a9a' }}>{item.sub}</div>
+                </div>
+              </div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{item.val > 0 ? `Gs. ${fmtGs(item.val)}` : '—'}</div>
             </div>
-            <div style={segmented}>
-              {['todos', 'compra', 'venta'].map(k => (
-                <button key={k} onClick={() => setFiltro(k)} style={filtro === k ? segActive : segBtn}>
-                  {k === 'todos' ? 'Todos' : k === 'compra' ? 'Compras' : 'Ventas'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {loading ? (
-            <Empty text="Cargando movimientos..." />
-          ) : movimientosFiltrados.length === 0 ? (
-            <Empty text="Sin movimientos registrados." />
-          ) : movimientosFiltrados.map(m => (
-            <Movimiento key={m.id} mov={m} onEdit={() => abrirEditar(m)} onDelete={() => eliminar(m.id)} />
           ))}
-        </section>
+        </div>
 
-        <NotasPanel modulo="contabilidad" titulo="Blog de notas de contabilidad" />
+        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', textTransform:'uppercase' }}>Costos manuales</div>
+            <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Gs. {fmtGs(totalManuales)}</div>
+          </div>
+          {costosManuales.length === 0 ? (
+            <div style={{ fontSize:12, color:'#b0b0b0', textAlign:'center', padding:'12px 0' }}>Sin costos manuales registrados</div>
+          ) : costosManuales.map(c => {
+            const tipo = TIPOS_COSTO.find(t => t.key === c.tipo) || TIPOS_COSTO[5]
+            return (
+              <div key={c.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid #f2f1ef' }}>
+                <div style={{ width:32, height:32, borderRadius:9, background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <i className={`ti ${tipo.icon}`} style={{ fontSize:14, color:tipo.color }} aria-hidden="true"></i>
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:500, color:'#0a0a0a' }}>{c.descripcion || tipo.label}</div>
+                  <div style={{ fontSize:10, color:'#9a9a9a' }}>{c.fecha}{c.bloques?.codigo ? ' · ' + c.bloques.codigo : ''}</div>
+                </div>
+                <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Gs. {fmtGs(c.monto)}</div>
+                {!isGuest && (
+                  <>
+                    <button onClick={() => abrirEditar(c)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #e8e6e2', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                      <i className="ti ti-pencil" style={{ fontSize:12, color:'#555' }} aria-hidden="true"></i>
+                    </button>
+                    <button onClick={() => eliminar(c.id)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #ffcccc', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                      <i className="ti ti-x" style={{ fontSize:12, color:'#c84040' }} aria-hidden="true"></i>
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        </div>
+        <NotasPanel modulo="costos" titulo="Blog de notas de costos" />
       </div>
 
       {modal && (
-        <div style={overlay} onClick={e => e.target === e.currentTarget && setModal(false)}>
-          <div style={sheet}>
-            <div style={{ fontSize:19, fontWeight:850, marginBottom:16 }}>
-              {form.id ? 'Editar movimiento' : 'Nuevo movimiento'}
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && cerrarModal()}>
+          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar costo' : 'Nuevo costo'}</div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:8 }}>Tipo</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginBottom:14 }}>
+              {TIPOS_COSTO.map(t => (
+                <button key={t.key} onClick={() => setForm(f => ({...f, tipo:t.key}))} style={{ padding:'10px 6px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:10, fontWeight:500, cursor:'pointer', background: form.tipo===t.key ? '#212121' : '#fff', color: form.tipo===t.key ? '#fff' : '#555', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                  <i className={`ti ${t.icon}`} style={{ fontSize:16 }} aria-hidden="true"></i>
+                  {t.label}
+                </button>
+              ))}
             </div>
-
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
-              <button onClick={() => setTipo('compra')} style={form.tipo === 'compra' ? tipoActiveRed : tipoBtn}>Compra</button>
-              <button onClick={() => setTipo('venta')} style={form.tipo === 'venta' ? tipoActiveGreen : tipoBtn}>Venta</button>
-            </div>
-
-            <Field label="Fecha *" type="date" value={form.fecha} onChange={v => setForm(f => ({ ...f, fecha:v }))} />
-            <Field label="Monto (Gs.) *" value={form.monto} inputMode="numeric" onChange={v => {
-              const n = parseGs(v)
-              setForm(f => ({ ...f, monto:n ? fmtGs(n) : '' }))
-            }} placeholder="Ej: 150.000" />
-            <Field label="Descripcion *" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion:v }))} placeholder="Ej: compra de insumos / venta de tomate" />
-            <Select label="Categoria" value={form.categoria} onChange={v => setForm(f => ({ ...f, categoria:v }))} options={categorias} />
-            <Field label={form.tipo === 'venta' ? 'Cliente' : 'Proveedor'} value={form.contraparte} onChange={v => setForm(f => ({ ...f, contraparte:v }))} placeholder="Nombre opcional" />
-            <Select label="Medio de pago" value={form.medio_pago} onChange={v => setForm(f => ({ ...f, medio_pago:v }))} options={mediosPago} />
-            <Field label="Comprobante" value={form.comprobante} onChange={v => setForm(f => ({ ...f, comprobante:v }))} placeholder="Factura, recibo, transferencia..." />
-            <Field label="Notas" textarea value={form.notas} onChange={v => setForm(f => ({ ...f, notas:v }))} />
-
-            <button onClick={guardar} disabled={saving} style={primaryBtn}>{saving ? 'Guardando...' : 'Guardar'}</button>
-            <button onClick={() => setModal(false)} style={secondaryBtn}>Cancelar</button>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Monto (Gs.) *</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
+              type="text" inputMode="numeric" value={form.monto}
+              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setForm(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
+              placeholder="Ej: 150.000"/>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Descripcion (opcional)</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
+              type="text" value={form.descripcion} onChange={e => setForm(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Compra de plantines"/>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
+              type="date" value={form.fecha} onChange={e => setForm(f=>({...f,fecha:e.target.value}))}/>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloque (opcional)</div>
+            <select style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16 }}
+              value={form.bloque_id} onChange={e => setForm(f=>({...f,bloque_id:e.target.value}))}>
+              <option value="">Sin bloque especifico</option>
+              {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
+            </select>
+            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar costo'}</button>
+            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={cerrarModal}>Cancelar</button>
           </div>
         </div>
       )}
     </div>
   )
 }
-
-function TotalCard({ label, value, tone }) {
-  const bg = tone === 'dark' ? '#161a16' : '#fff'
-  const color = tone === 'dark' ? '#fff' : tone === 'red' ? '#c84040' : '#176a25'
-  return (
-    <div style={{ background:bg, borderRadius:16, padding:'14px 13px', border:'1px solid #e8ece8' }}>
-      <div style={{ fontSize:10, color: tone === 'dark' ? 'rgba(255,255,255,0.58)' : '#8a918b', textTransform:'uppercase', marginBottom:6 }}>{label}</div>
-      <div style={{ fontSize:18, fontWeight:900, color, letterSpacing:-0.3 }}>Gs. {fmtGs(value)}</div>
-    </div>
-  )
-}
-
-function Movimiento({ mov, onEdit, onDelete }) {
-  const venta = mov.tipo === 'venta'
-  return (
-    <div style={{ display:'grid', gridTemplateColumns:'42px 1fr auto', gap:11, alignItems:'center', padding:'11px 0', borderBottom:'1px solid #eef0ee' }}>
-      <div style={{ ...iconPill, background: venta ? '#edf6ec' : '#fff0f0' }}>
-        <i className={`ti ${venta ? 'ti-arrow-up-right' : 'ti-arrow-down-left'}`} style={{ fontSize:20, color: venta ? '#176a25' : '#c84040' }} aria-hidden="true"></i>
-      </div>
-      <div style={{ minWidth:0 }}>
-        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-          <strong style={{ fontSize:13, color:'#111611' }}>{mov.descripcion}</strong>
-          <span style={{ borderRadius:20, background: venta ? '#edf6ec' : '#fff0f0', color: venta ? '#176a25' : '#c84040', padding:'3px 7px', fontSize:10, fontWeight:800 }}>
-            {venta ? 'Venta' : 'Compra'}
-          </span>
-        </div>
-        <div style={{ fontSize:11, color:'#7a817b', marginTop:3 }}>
-          {mov.fecha} · {mov.categoria || 'Sin categoria'}{mov.contraparte ? ` · ${mov.contraparte}` : ''}
-        </div>
-      </div>
-      <div style={{ display:'grid', justifyItems:'end', gap:5 }}>
-        <strong style={{ fontSize:13, color: venta ? '#176a25' : '#c84040' }}>Gs. {fmtGs(mov.monto)}</strong>
-        <div style={{ display:'flex', gap:5 }}>
-          <button onClick={onEdit} style={miniBtn}><i className="ti ti-pencil" /></button>
-          <button onClick={onDelete} style={{ ...miniBtn, color:'#c84040', borderColor:'#ffd1d1' }}><i className="ti ti-trash" /></button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Field({ label, value, onChange, type = 'text', placeholder = '', textarea, inputMode }) {
-  return (
-    <label style={{ display:'block' }}>
-      <div style={labelStyle}>{label}</div>
-      {textarea ? (
-        <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...inputStyle, minHeight:72, resize:'vertical' }} />
-      ) : (
-        <input type={type} inputMode={inputMode} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
-      )}
-    </label>
-  )
-}
-
-function Select({ label, value, onChange, options }) {
-  return (
-    <label style={{ display:'block' }}>
-      <div style={labelStyle}>{label}</div>
-      <select value={value || ''} onChange={e => onChange(e.target.value)} style={inputStyle}>
-        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-    </label>
-  )
-}
-
-function Empty({ text }) {
-  return <div style={{ color:'#8c938d', textAlign:'center', padding:'26px 0', fontSize:13 }}>{text}</div>
-}
-
-const headerIcon = {
-  width:46,
-  height:46,
-  borderRadius:16,
-  background:'#edf6ec',
-  display:'flex',
-  alignItems:'center',
-  justifyContent:'center',
-  flexShrink:0,
-}
-
-const addBtn = {
-  width:42,
-  height:42,
-  borderRadius:14,
-  background:'#212121',
-  border:'none',
-  display:'flex',
-  alignItems:'center',
-  justifyContent:'center',
-  cursor:'pointer',
-}
-
-const smallAction = {
-  border:'none',
-  background:'#fff',
-  color:'#121512',
-  borderRadius:12,
-  padding:'0 12px',
-  fontSize:12,
-  fontWeight:800,
-  cursor:'pointer',
-}
-
-const selectYear = {
-  width:'100%',
-  border:'1px solid #e1e5e1',
-  borderRadius:14,
-  background:'#fff',
-  padding:'11px 12px',
-  fontSize:13,
-  color:'#111611',
-}
-
-const card = {
-  background:'#fff',
-  border:'1px solid #e8ece8',
-  borderRadius:20,
-  padding:16,
-  marginBottom:10,
-  boxShadow:'0 12px 28px rgba(29, 38, 29, 0.05)',
-}
-
-const sectionHead = {
-  display:'flex',
-  justifyContent:'space-between',
-  alignItems:'center',
-  gap:12,
-  marginBottom:14,
-}
-
-const eyebrow = { fontSize:10, color:'#8a918b', textTransform:'uppercase', marginBottom:4, fontWeight:800 }
-const sectionTitle = { margin:0, fontSize:17, letterSpacing:-0.3 }
-
-const tabla = { width:'100%', minWidth:560, borderCollapse:'collapse', fontSize:12 }
-const th = { textAlign:'left', padding:'10px 8px', color:'#6a716b', borderBottom:'1px solid #e8ece8', textTransform:'uppercase', fontSize:10 }
-const thRight = { ...th, textAlign:'right' }
-const td = { padding:'10px 8px', borderBottom:'1px solid #f0f2f0', color:'#111611' }
-const tdRight = { ...td, textAlign:'right' }
-const tf = { padding:'12px 8px', fontWeight:900, background:'#f5f7f5', borderTop:'1px solid #dfe5df' }
-const tfRight = { ...tf, textAlign:'right' }
-
-const segmented = { display:'flex', gap:4, background:'#eef0ee', padding:4, borderRadius:12 }
-const segBtn = { border:'none', borderRadius:9, background:'transparent', padding:'7px 9px', fontSize:11, fontWeight:800, color:'#737a74', cursor:'pointer' }
-const segActive = { ...segBtn, background:'#fff', color:'#111611', boxShadow:'0 4px 10px rgba(0,0,0,0.06)' }
-
-const iconPill = {
-  width:42,
-  height:42,
-  borderRadius:13,
-  display:'flex',
-  alignItems:'center',
-  justifyContent:'center',
-  flexShrink:0,
-}
-
-const miniBtn = {
-  width:27,
-  height:27,
-  borderRadius:8,
-  border:'1px solid #e2e6e2',
-  background:'#fff',
-  color:'#4f5650',
-  display:'flex',
-  alignItems:'center',
-  justifyContent:'center',
-  cursor:'pointer',
-}
-
-const overlay = {
-  position:'fixed',
-  inset:0,
-  background:'rgba(0,0,0,0.42)',
-  zIndex:100,
-  display:'flex',
-  alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end',
-  justifyContent:'center',
-}
-
-const sheet = {
-  width:'100%',
-  maxWidth:520,
-  maxHeight:'88vh',
-  overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
-  background:'#f2f1ef',
-  borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0',
-  padding:'24px 20px 40px',
-  boxSizing:'border-box',
-}
-
-const labelStyle = { fontSize:10, color:'#8a918b', marginBottom:6, fontWeight:800, textTransform:'uppercase' }
-const inputStyle = { width:'100%', boxSizing:'border-box', border:'1px solid #e1e5e1', borderRadius:12, padding:'11px 13px', fontSize:13, color:'#111611', background:'#fff', marginBottom:12 }
-const primaryBtn = { width:'100%', border:'none', borderRadius:14, background:'#161a16', color:'#fff', padding:14, fontSize:14, fontWeight:850, cursor:'pointer', marginTop:4 }
-const secondaryBtn = { width:'100%', border:'1px solid #dfe4df', borderRadius:14, background:'transparent', color:'#69706a', padding:12, fontSize:13, fontWeight:800, cursor:'pointer', marginTop:8 }
-const tipoBtn = { border:'1px solid #e1e5e1', borderRadius:13, background:'#fff', padding:12, fontSize:13, fontWeight:850, cursor:'pointer', color:'#4f5650' }
-const tipoActiveRed = { ...tipoBtn, background:'#c84040', borderColor:'#c84040', color:'#fff' }
-const tipoActiveGreen = { ...tipoBtn, background:'#176a25', borderColor:'#176a25', color:'#fff' }
-const errorBox = { background:'#fff3e8', color:'#a35f00', border:'1px solid #ffdda8', fontSize:12, padding:'9px 12px', borderRadius:12, marginBottom:12 }
