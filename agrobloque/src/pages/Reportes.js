@@ -57,14 +57,22 @@ export default function Reportes({ campoActivo, isGuest = false }) {
       // Cosechas — query simple sin joins anidados
       const { data: cosechas, error: e1 } = await supabase
         .from('cosechas')
-        .select('id, kg_total, precio_kg, bloque_id, fecha, bloques(codigo, campo_id)')
+        .select('id, kg_total, bloque_id, fecha, bloques(codigo, campo_id)')
         .gte('fecha', desde)
         .lte('fecha', hasta)
       if (e1) throw e1
 
       const cosechasCampo = (cosechas || []).filter(c => c.bloques?.campo_id === campoSel.id)
-      const ingresos = cosechasCampo.reduce((s, c) => s + (Number(c.kg_total) * Number(c.precio_kg||0)), 0)
       const kg = cosechasCampo.reduce((s, c) => s + Number(c.kg_total), 0)
+
+      const { data: ventas, error: ventasError } = await supabase
+        .from('ventas')
+        .select('id, producto, kg_total, precio_kg, total, bloque_id, fecha, bloques(codigo, campo_id)')
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
+      if (ventasError && !String(ventasError.message || '').toLowerCase().includes('ventas')) throw ventasError
+      const ventasCampo = (ventas || []).filter(v => !v.bloques?.campo_id || v.bloques?.campo_id === campoSel.id)
+      const ingresos = ventasCampo.reduce((s, v) => s + (Number(v.total) || Number(v.kg_total) * Number(v.precio_kg || 0)), 0)
 
       // Obtener plantaciones activas de los bloques para saber el cultivo
       const bloqueIds = [...new Set(cosechasCampo.map(c => c.bloque_id))]
@@ -111,8 +119,12 @@ export default function Reportes({ campoActivo, isGuest = false }) {
         const cultivo = cultivoPorBloque[c.bloque_id] || 'Sin cultivo'
         if (!cultivoMap[cultivo]) cultivoMap[cultivo] = { kg:0, ingresos:0, registros:0 }
         cultivoMap[cultivo].kg += Number(c.kg_total)
-        cultivoMap[cultivo].ingresos += Number(c.kg_total) * Number(c.precio_kg||0)
         cultivoMap[cultivo].registros++
+      })
+      ventasCampo.forEach(v => {
+        const cultivo = v.producto || cultivoPorBloque[v.bloque_id] || 'Sin cultivo'
+        if (!cultivoMap[cultivo]) cultivoMap[cultivo] = { kg:0, ingresos:0, registros:0 }
+        cultivoMap[cultivo].ingresos += Number(v.total) || Number(v.kg_total) * Number(v.precio_kg || 0)
       })
       const cultivoArr = Object.entries(cultivoMap).map(([nombre, d]) => ({
         nombre, ...d, precioProm: d.kg > 0 ? Math.round(d.ingresos / d.kg) : 0
@@ -126,7 +138,11 @@ export default function Reportes({ campoActivo, isGuest = false }) {
         const cod = c.bloques?.codigo || '?'
         if (!bloqueMap[cod]) bloqueMap[cod] = { kg:0, ingresos:0 }
         bloqueMap[cod].kg += Number(c.kg_total)
-        bloqueMap[cod].ingresos += Number(c.kg_total) * Number(c.precio_kg||0)
+      })
+      ventasCampo.forEach(v => {
+        const cod = v.bloques?.codigo || 'Sin bloque'
+        if (!bloqueMap[cod]) bloqueMap[cod] = { kg:0, ingresos:0 }
+        bloqueMap[cod].ingresos += Number(v.total) || Number(v.kg_total) * Number(v.precio_kg || 0)
       })
       const bloqueArr = Object.entries(bloqueMap).map(([codigo, d]) => ({ codigo, ...d }))
       bloqueArr.sort((a, b) => b.kg - a.kg)
@@ -134,10 +150,10 @@ export default function Reportes({ campoActivo, isGuest = false }) {
 
       // Historial precios
       const histMap = {}
-      cosechasCampo.filter(c => c.precio_kg > 0).forEach(c => {
-        const cultivo = cultivoPorBloque[c.bloque_id] || 'Sin cultivo'
+      ventasCampo.filter(v => v.precio_kg > 0).forEach(v => {
+        const cultivo = v.producto || cultivoPorBloque[v.bloque_id] || 'Sin cultivo'
         if (!histMap[cultivo]) histMap[cultivo] = []
-        histMap[cultivo].push(Number(c.precio_kg))
+        histMap[cultivo].push(Number(v.precio_kg))
       })
       setPrecioHistorial(histMap)
 
@@ -214,13 +230,15 @@ export default function Reportes({ campoActivo, isGuest = false }) {
   const imprimirCompleto = async () => {
     const [
       { data: cosechas },
+      { data: ventas },
       { data: costos },
       { data: inventario },
       { data: vivero },
       { data: fumigaciones },
       { data: contabilidad },
     ] = await Promise.all([
-      supabase.from('cosechas').select('fecha, kg_total, precio_kg, calidad, notas, bloques(codigo), compradores(nombre)').order('fecha', { ascending:false }).limit(150),
+      supabase.from('cosechas').select('fecha, kg_total, calidad, notas, bloques(codigo)').order('fecha', { ascending:false }).limit(150),
+      supabase.from('ventas').select('fecha, producto, kg_total, precio_kg, total, estado_cobro, monto_cobrado, compradores(nombre), bloques(codigo)').order('fecha', { ascending:false }).limit(150),
       supabase.from('costos').select('fecha, tipo, descripcion, monto, bloques(codigo)').order('fecha', { ascending:false }).limit(150),
       supabase.from('productos').select('nombre, unidad, stock_actual, stock_minimo, carencia_dias, categorias_producto(nombre)').eq('activo', true).order('nombre'),
       supabase.from('vivero_lotes').select('fecha_siembra, cultivo, variedad, cantidad_semillas, germinadas, perdidas, estado').order('fecha_siembra', { ascending:false }).limit(150),
@@ -236,8 +254,11 @@ export default function Reportes({ campoActivo, isGuest = false }) {
         <tr><th>Ingresos</th><th>Costos</th><th>Ganancia neta</th><th>Kg cosechados</th><th>Registros</th></tr>
         <tr><td>${fmtGs(datos.ingresos)}</td><td>${fmtGs(datos.costos)}</td><td>${fmtGs(datos.ganancia)}</td><td>${fmtKg(datos.kg)}</td><td>${datos.registros}</td></tr>
       </table>
-      ${tablaHtml('Cosechas', ['Fecha', 'Bloque', 'Kg', 'Precio', 'Comprador', 'Calidad'], (cosechas || []).map(c => ({
-        Fecha:c.fecha, Bloque:c.bloques?.codigo || '', Kg:c.kg_total || '', Precio:c.precio_kg || '', Comprador:c.compradores?.nombre || '', Calidad:c.calidad || '',
+      ${tablaHtml('Cosechas', ['Fecha', 'Bloque', 'Kg', 'Calidad'], (cosechas || []).map(c => ({
+        Fecha:c.fecha, Bloque:c.bloques?.codigo || '', Kg:c.kg_total || '', Calidad:c.calidad || '',
+      })))}
+      ${tablaHtml('Ventas', ['Fecha', 'Producto', 'Comprador', 'Bloque', 'Kg', 'Precio', 'Total', 'Estado'], (ventas || []).map(v => ({
+        Fecha:v.fecha, Producto:v.producto || '', Comprador:v.compradores?.nombre || '', Bloque:v.bloques?.codigo || '', Kg:v.kg_total || '', Precio:v.precio_kg || '', Total:v.total || '', Estado:v.estado_cobro || '',
       })))}
       ${tablaHtml('Costos manuales', ['Fecha', 'Tipo', 'Descripcion', 'Bloque', 'Monto'], (costos || []).map(c => ({
         Fecha:c.fecha, Tipo:c.tipo || '', Descripcion:c.descripcion || '', Bloque:c.bloques?.codigo || '', Monto:c.monto || '',
@@ -259,9 +280,15 @@ export default function Reportes({ campoActivo, isGuest = false }) {
 
   const imprimirModulo = async (modulo) => {
     if (modulo === 'cosechas') {
-      const { data } = await supabase.from('cosechas').select('fecha, kg_total, precio_kg, calidad, notas, bloques(codigo), compradores(nombre)').order('fecha', { ascending:false }).limit(200)
-      imprimirTabla('Reporte de cosechas', ['Fecha', 'Bloque', 'Kg', 'Precio', 'Comprador', 'Calidad', 'Notas'], (data || []).map(c => ({
-        Fecha:c.fecha, Bloque:c.bloques?.codigo || '', Kg:c.kg_total || '', Precio:c.precio_kg || '', Comprador:c.compradores?.nombre || '', Calidad:c.calidad || '', Notas:c.notas || '',
+      const { data } = await supabase.from('cosechas').select('fecha, kg_total, calidad, notas, bloques(codigo)').order('fecha', { ascending:false }).limit(200)
+      imprimirTabla('Reporte de cosechas', ['Fecha', 'Bloque', 'Kg', 'Calidad', 'Notas'], (data || []).map(c => ({
+        Fecha:c.fecha, Bloque:c.bloques?.codigo || '', Kg:c.kg_total || '', Calidad:c.calidad || '', Notas:c.notas || '',
+      })))
+    }
+    if (modulo === 'ventas') {
+      const { data } = await supabase.from('ventas').select('fecha, producto, kg_total, precio_kg, total, estado_cobro, monto_cobrado, compradores(nombre), bloques(codigo)').order('fecha', { ascending:false }).limit(200)
+      imprimirTabla('Reporte de ventas', ['Fecha', 'Producto', 'Comprador', 'Bloque', 'Kg', 'Precio', 'Total', 'Estado', 'Cobrado'], (data || []).map(v => ({
+        Fecha:v.fecha || '', Producto:v.producto || '', Comprador:v.compradores?.nombre || '', Bloque:v.bloques?.codigo || '', Kg:v.kg_total || '', Precio:v.precio_kg || '', Total:v.total || '', Estado:v.estado_cobro || '', Cobrado:v.monto_cobrado || '',
       })))
     }
     if (modulo === 'costos') {
@@ -350,6 +377,7 @@ export default function Reportes({ campoActivo, isGuest = false }) {
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:6 }}>
             {[
               ['cosechas', 'Cosechas'],
+              ['ventas', 'Ventas'],
               ['costos', 'Costos'],
               ['inventario', 'Inventario'],
               ['vivero', 'Vivero'],

@@ -68,7 +68,6 @@ const calidadLabel = (calidad) => calidad === 'primera'
     : 'Mixta'
 
 function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
-  const ingreso = (Number(cosecha.kg_total) || 0) * (Number(cosecha.precio_kg) || 0)
   const cultivo = getCultivoCosecha(cosecha)
   const item = { display:'flex', justifyContent:'space-between', gap:16, padding:'11px 0', borderBottom:'1px solid #eeeeee' }
   const label = { fontSize:12, color:'#8d938d' }
@@ -94,8 +93,8 @@ function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
             <div style={{ fontSize:24, color:'#fff', fontWeight:850 }}>{fmtKg(cosecha.kg_total)} kg</div>
           </div>
           <div style={{ background:'#f2f1ef', borderRadius:16, padding:'14px 15px' }}>
-            <div style={{ fontSize:10, color:'#8d938d', marginBottom:4 }}>Ingreso</div>
-            <div style={{ fontSize:18, color:'#212121', fontWeight:850 }}>{ingreso > 0 ? `Gs. ${fmtGs(ingreso)}` : '-'}</div>
+            <div style={{ fontSize:10, color:'#8d938d', marginBottom:4 }}>Calidad</div>
+            <div style={{ fontSize:18, color:'#212121', fontWeight:850 }}>{calidadLabel(cosecha.calidad)}</div>
           </div>
         </div>
 
@@ -103,9 +102,8 @@ function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
           <div style={item}><span style={label}>Producto/cultivo</span><span style={value}>{cultivo}</span></div>
           <div style={item}><span style={label}>Campo</span><span style={value}>{cosecha.bloques?.campos?.nombre || '-'}</span></div>
           <div style={item}><span style={label}>Bloque</span><span style={value}>{cosecha.bloques?.codigo || '-'}</span></div>
-          <div style={item}><span style={label}>Precio por kg</span><span style={value}>{cosecha.precio_kg > 0 ? `Gs. ${fmtGs(cosecha.precio_kg)}` : '-'}</span></div>
           <div style={item}><span style={label}>Calidad</span><span style={value}>{calidadLabel(cosecha.calidad)}</span></div>
-          <div style={{ ...item, borderBottom:'none' }}><span style={label}>Comprador</span><span style={value}>{cosecha.compradores?.nombre || '-'}</span></div>
+          <div style={{ ...item, borderBottom:'none' }}><span style={label}>Uso</span><span style={value}>Produccion del bloque</span></div>
         </div>
 
         {cosecha.notas && (
@@ -132,7 +130,6 @@ export default function Cosecha() {
   const [cosechas, setCosechas] = useState([])
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
-  const [compradores, setCompradores] = useState([])
   const [modal, setModal] = useState(false)
   const [modoMultiple, setModoMultiple] = useState(false)
   const [filasCosecha, setFilasCosecha] = useState([])
@@ -143,7 +140,7 @@ export default function Cosecha() {
   const [campoFiltro, setCampoFiltro] = useState(null)
   const [error, setError] = useState('')
 
-  useEffect(() => { fetchCampos(); fetchCosechas(); fetchCompradores() }, [])
+  useEffect(() => { fetchCampos(); fetchCosechas() }, [])
   useEffect(() => { if (campoFiltro) fetchBloques(campoFiltro) }, [campoFiltro])
 
   const fetchCampos = async () => {
@@ -153,7 +150,7 @@ export default function Cosecha() {
   }
   const fetchCosechas = async () => {
     const { data, error } = await supabase.from('cosechas')
-      .select('*, bloques(codigo, campos(nombre), plantaciones(cultivos(nombre), activa, created_at, fecha_siembra)), compradores(nombre)')
+      .select('*, bloques(codigo, campos(nombre), plantaciones(cultivos(nombre), activa, created_at, fecha_siembra))')
       .order('fecha', { ascending: false })
     if (error) setError('Error al cargar cosechas')
     else setCosechas(data || [])
@@ -165,12 +162,7 @@ export default function Cosecha() {
       .order('codigo')
     setBloques(data || [])
   }
-  const fetchCompradores = async () => {
-    const { data } = await supabase.from('compradores').select('*').order('nombre')
-    setCompradores(data || [])
-  }
-
-  const crearFilaCosecha = () => ({ bloque_id:'', kg_total:'', precio_kg:'', calidad:'primera', notas:'' })
+  const crearFilaCosecha = () => ({ bloque_id:'', kg_total:'', calidad:'primera', notas:'' })
   const limpiarForm = () => {
     setForm({ bloque_id:'', fecha:fechaLocal(), kg_total:'', precio_kg:'', calidad:'primera', comprador_id:'', notas:'' })
     setFilasCosecha([crearFilaCosecha(), crearFilaCosecha()])
@@ -213,9 +205,9 @@ export default function Cosecha() {
         bloque_id: fila.bloque_id,
         fecha: form.fecha,
         kg_total: parsearKg(fila.kg_total),
-        precio_kg: parsearGs(fila.precio_kg),
+        precio_kg: 0,
         calidad: fila.calidad || 'primera',
-        comprador_id: form.comprador_id || null,
+        comprador_id: null,
         notas: fila.notas || form.notas || null,
       }))
       .filter(fila => fila.bloque_id && fila.fecha && fila.kg_total > 0)
@@ -257,9 +249,9 @@ export default function Cosecha() {
       const payload = {
         bloque_id: form.bloque_id, fecha: form.fecha,
         kg_total: parsearKg(form.kg_total),
-        precio_kg: parsearGs(form.precio_kg),
+        precio_kg: form.id ? parsearGs(form.precio_kg) : 0,
         calidad: form.calidad,
-        comprador_id: form.comprador_id || null,
+        comprador_id: form.id ? (form.comprador_id || null) : null,
         notas: form.notas || null
       }
 
@@ -272,7 +264,7 @@ export default function Cosecha() {
         modulo: 'Cosecha',
         tabla: 'cosechas',
         registroId: form.id || '',
-        detalle: `${payload.kg_total} kg - Gs. ${payload.precio_kg}/kg`,
+        detalle: `${payload.kg_total} kg cosechados`,
       })
       await fetchCosechas(); setModal(false)
       limpiarForm()
@@ -291,12 +283,10 @@ export default function Cosecha() {
   }
 
   const totalKg = cosechas.reduce((sum, c) => sum + (Number(c.kg_total) || 0), 0)
-  const totalIngresos = cosechas.reduce((sum, c) => sum + ((Number(c.kg_total)||0) * (Number(c.precio_kg)||0)), 0)
-  const ingresoCosecha = parsearKg(form.kg_total) * parsearGs(form.precio_kg)
+  const promedioKg = cosechas.length > 0 ? totalKg / cosechas.length : 0
   const bloqueSeleccionado = bloques.find(b => b.id === form.bloque_id)
   const cultivoSeleccionado = getCultivoBloque(bloqueSeleccionado, form.fecha)
   const totalKgMultiple = filasCosecha.reduce((sum, fila) => sum + parsearKg(fila.kg_total), 0)
-  const totalGsMultiple = filasCosecha.reduce((sum, fila) => sum + (parsearKg(fila.kg_total) * parsearGs(fila.precio_kg)), 0)
 
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
 
@@ -323,11 +313,11 @@ export default function Cosecha() {
             <div style={{ fontSize:10, color:'rgba(255,255,255,0.5)', marginTop:3 }}>kg · {cosechas.length} registros</div>
           </div>
           <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
-            <div style={{ fontSize:9, color:'#9a9a9a', textTransform:'uppercase', marginBottom:4 }}>Ingresos totales</div>
+            <div style={{ fontSize:9, color:'#9a9a9a', textTransform:'uppercase', marginBottom:4 }}>Promedio por registro</div>
             <div style={{ fontSize:18, fontWeight:800, color:'#212121', letterSpacing:-.5, lineHeight:1 }}>
-              {totalIngresos > 0 ? `Gs. ${fmtGs(totalIngresos)}` : '—'}
+              {promedioKg > 0 ? `${fmtKg(promedioKg)} kg` : '—'}
             </div>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginTop:3 }}>calculado automáticamente</div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginTop:3 }}>solo produccion cosechada</div>
           </div>
         </div>
       </div>
@@ -337,7 +327,6 @@ export default function Cosecha() {
         {cosechas.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin registros de cosecha</div>
         ) : cosechas.map(c => {
-          const ingreso = (Number(c.kg_total)||0) * (Number(c.precio_kg)||0)
           const cultivo = getCultivoCosecha(c)
           return (
             <div key={c.id} onClick={() => setDetalle(c)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
@@ -349,7 +338,7 @@ export default function Cosecha() {
                 </div>
                 <div style={{ textAlign:'right' }}>
                   <div style={{ fontSize:20, fontWeight:800, color:'#0a0a0a' }}>{fmtKg(c.kg_total)} kg</div>
-                  {c.precio_kg > 0 && <div style={{ fontSize:11, color:'#212121', fontWeight:600 }}>Gs. {fmtGs(ingreso)}</div>}
+                  <div style={{ fontSize:11, color:'#687068', fontWeight:600 }}>Produccion</div>
                 </div>
               </div>
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
@@ -359,8 +348,6 @@ export default function Cosecha() {
                 <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:600, background: c.calidad==='primera' ? '#eeeeee' : '#fff3e8', color: c.calidad==='primera' ? '#212121' : '#c8700a' }}>
                   {calidadLabel(c.calidad)}
                 </div>
-                {c.precio_kg > 0 && <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, background:'#f2f1ef', color:'#555' }}>Gs. {fmtGs(c.precio_kg)}/kg</div>}
-                {c.compradores?.nombre && <div style={{ padding:'3px 10px', borderRadius:20, fontSize:10, background:'#e6f1fb', color:'#185fa5' }}>{c.compradores.nombre}</div>}
               </div>
               {c.notas && <div style={{ fontSize:11, color:'#9a9a9a', padding:'7px 10px', background:'#f2f1ef', borderRadius:8, marginBottom:8 }}>{c.notas}</div>}
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -425,11 +412,6 @@ export default function Cosecha() {
               onChange={e => setForm(f => ({...f, kg_total: e.target.value}))}
               placeholder="Ej: 150 o 1.5"/>
 
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Precio por kg (Gs.)</div>
-            <input style={inp} type="text" inputMode="numeric" value={form.precio_kg}
-              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setForm(f=>({...f,precio_kg:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
-              placeholder="Ej: 5.000"/>
-
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Calidad</div>
             <div style={{ display:'flex', gap:8, marginBottom:12 }}>
               {['primera','segunda','mixta'].map(q => (
@@ -439,21 +421,8 @@ export default function Cosecha() {
               ))}
             </div>
 
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Comprador (opcional)</div>
-            <select style={inp} value={form.comprador_id} onChange={e => setForm(f => ({...f, comprador_id:e.target.value}))}>
-              <option value="">Sin comprador asignado</option>
-              {compradores.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
-
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas (opcional)</div>
             <textarea style={{ ...inp, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
-
-            {form.kg_total && form.precio_kg && ingresoCosecha > 0 && (
-              <div style={{ background:'#eeeeee', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:12, color:'#212121' }}>Ingreso estimado</span>
-                <span style={{ fontSize:14, fontWeight:700, color:'#212121' }}>Gs. {fmtGs(ingresoCosecha)}</span>
-              </div>
-            )}
               </>
             ) : (
               <>
@@ -479,10 +448,7 @@ export default function Cosecha() {
                             {cultivoFila || 'Sin plantacion activa registrada'}
                           </div>
                         )}
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                          <input style={inp} type="text" inputMode="decimal" value={fila.kg_total} onChange={e => actualizarFilaCosecha(idx, 'kg_total', e.target.value)} placeholder="Kg"/>
-                          <input style={inp} type="text" inputMode="numeric" value={fila.precio_kg} onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); actualizarFilaCosecha(idx, 'precio_kg', r ? parseInt(r,10).toLocaleString('es-PY') : '') }} placeholder="Gs/kg"/>
-                        </div>
+                        <input style={inp} type="text" inputMode="decimal" value={fila.kg_total} onChange={e => actualizarFilaCosecha(idx, 'kg_total', e.target.value)} placeholder="Kg cosechados"/>
                         <select style={inp} value={fila.calidad} onChange={e => actualizarFilaCosecha(idx, 'calidad', e.target.value)}>
                           <option value="primera">1ra calidad</option>
                           <option value="segunda">2da calidad</option>
@@ -496,10 +462,10 @@ export default function Cosecha() {
                 <button type="button" onClick={agregarFilaCosecha} style={{ width:'100%', padding:12, borderRadius:14, border:'1px dashed #bfc6bf', background:'#fff', fontSize:13, fontWeight:800, color:'#176a25', cursor:'pointer', marginBottom:12 }}>
                   + Agregar otra cosecha
                 </button>
-                {(totalKgMultiple > 0 || totalGsMultiple > 0) && (
+                {totalKgMultiple > 0 && (
                   <div style={{ background:'#eeeeee', borderRadius:12, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between', gap:12 }}>
                     <span style={{ fontSize:12, color:'#212121' }}>{fmtKg(totalKgMultiple)} kg en total</span>
-                    <span style={{ fontSize:14, fontWeight:700, color:'#212121' }}>{totalGsMultiple > 0 ? `Gs. ${fmtGs(totalGsMultiple)}` : ''}</span>
+                    <span style={{ fontSize:14, fontWeight:700, color:'#212121' }}>Produccion</span>
                   </div>
                 )}
               </>

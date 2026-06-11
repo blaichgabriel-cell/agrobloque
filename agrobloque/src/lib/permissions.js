@@ -7,6 +7,7 @@ export const MODULES = [
   { key: 'vivero', label: 'Vivero', path: '/vivero' },
   { key: 'asistencia', label: 'Asistencia', path: '/asistencia', sensitive: true },
   { key: 'cosecha', label: 'Cosecha', path: '/cosecha' },
+  { key: 'ventas', label: 'Ventas', path: '/ventas' },
   { key: 'inventario', label: 'Inventario', path: '/inventario' },
   { key: 'fumigaciones', label: 'Fumigaciones', path: '/fumigaciones' },
   { key: 'plan_nutricional', label: 'Plan Nutricional', path: '/plan-nutricional' },

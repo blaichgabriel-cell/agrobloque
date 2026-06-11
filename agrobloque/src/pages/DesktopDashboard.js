@@ -18,18 +18,19 @@ const COSTO_MANUAL_LABELS = {
 
 const quickLinks = [
   { path: '/mapa', icon: 'ti-map', title: 'Mapa', sub: 'Ver bloques' },
+  { path: '/cosecha', icon: 'ti-cut', title: 'Cosechas', sub: 'Produccion' },
+  { path: '/ventas', icon: 'ti-cash-register', title: 'Ventas', sub: 'Cobros' },
   { path: '/agenda', icon: 'ti-calendar', title: 'Agenda', sub: 'Tareas' },
-  { path: '/vivero', icon: 'vivero-icon', title: 'Vivero', sub: 'Plantines' },
-  { path: '/historial', icon: 'ti-timeline', title: 'Historial', sub: 'Trazabilidad' },
   { path: '/asistencia', icon: 'ti-users', title: 'Asistencia', sub: 'Planilla' },
-  { path: '/reportes', icon: 'ti-chart-bar', title: 'Reportes', sub: 'Analisis' },
-  { path: '/fumigaciones', icon: 'ti-spray', title: 'Fumigaciones', sub: 'Historial' },
   { path: '/inventario', icon: 'ti-box', title: 'Inventario', sub: 'Stock' },
-  { path: '/cosecha', icon: 'ti-cut', title: 'Cosecha', sub: 'Produccion' },
+  { path: '/fumigaciones', icon: 'ti-spray', title: 'Fumigaciones', sub: 'Historial' },
+  { path: '/vivero', icon: 'vivero-icon', title: 'Vivero', sub: 'Plantines' },
+  { path: '/reportes', icon: 'ti-chart-bar', title: 'Reportes', sub: 'Analisis' },
   { path: '/plan-nutricional', icon: 'ti-leaf', title: 'Plan Nutricional', sub: 'Fertirriego' },
   { path: '/costos', icon: 'ti-coin', title: 'Costos', sub: 'Gastos' },
   { path: '/contabilidad', icon: 'ti-calculator', title: 'Contabilidad', sub: 'Balance' },
   { path: '/compradores', icon: 'ti-building-store', title: 'Compradores', sub: 'Clientes' },
+  { path: '/historial', icon: 'ti-timeline', title: 'Historial', sub: 'Trazabilidad' },
   { path: '/configuracion', icon: 'ti-settings', title: 'Configuracion', sub: 'Ajustes' },
 ]
 
@@ -105,7 +106,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
     plantacionesTotal: 0,
     bloquesTotal: 0,
   })
-  const [finanzas, setFinanzas] = useState({ ingresos: 0, costos: 0, margen: 0 })
+  const [finanzas, setFinanzas] = useState({ ingresos: 0, cobrado: 0, pendiente: 0, costos: 0, margen: 0 })
   const [costBreakdown, setCostBreakdown] = useState([])
   const [produccion, setProduccion] = useState([])
   const [actividades, setActividades] = useState([])
@@ -191,7 +192,15 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
     const { data: cosechas } = bloqueIds.length > 0
       ? await supabase
         .from('cosechas')
-        .select('id, kg_total, precio_kg, fecha, bloque_id')
+        .select('id, kg_total, fecha, bloque_id')
+        .gte('fecha', mesDesde)
+        .in('bloque_id', bloqueIds)
+      : { data: [] }
+
+    const { data: ventas } = bloqueIds.length > 0
+      ? await supabase
+        .from('ventas')
+        .select('id, producto, kg_total, precio_kg, total, monto_cobrado, estado_cobro, fecha, bloque_id, compradores(nombre)')
         .gte('fecha', mesDesde)
         .in('bloque_id', bloqueIds)
       : { data: [] }
@@ -217,8 +226,10 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         .limit(5),
     ])
 
-    const ingresos = (cosechas || []).reduce((s, c) =>
-      s + (Number(c.kg_total) || 0) * (Number(c.precio_kg) || 0), 0)
+    const ingresos = (ventas || []).reduce((s, v) =>
+      s + (Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0)), 0)
+    const cobrado = (ventas || []).reduce((s, v) => s + (Number(v.monto_cobrado) || 0), 0)
+    const pendiente = Math.max(0, ingresos - cobrado)
     const costosManual = (costosManuales || []).reduce((s, c) => s + (Number(c.monto) || 0), 0)
     const jornales = (asistencia || [])
       .filter(a => a.operarios?.campo_id === campo.id)
@@ -261,22 +272,23 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
     }
 
     setStats(statsActuales)
-    setFinanzas({ ingresos, costos, margen: ingresos - costos })
+    setFinanzas({ ingresos, cobrado, pendiente, costos, margen: ingresos - costos })
     setCostBreakdown(breakdown)
     setProduccion(agruparProduccion(plantasActivas || []))
     setActividades(construirActividadDashboard({
       tareas: tareas || [],
       cosechas: cosechas || [],
+      ventas: ventas || [],
       fumigaciones: fumigaciones || [],
       planesNutricionales: planesNutricionales || [],
       costos: costosManuales || [],
       resumen: {
         stats: statsActuales,
-        finanzas: { ingresos, costos, margen: ingresos - costos },
+        finanzas: { ingresos, cobrado, pendiente, costos, margen: ingresos - costos },
         produccion: agruparProduccion(plantasActivas || []),
       },
     }))
-    setChart(construirGrafico(cosechas || [], costosGrafico))
+    setChart(construirGrafico(ventas || [], costosGrafico))
     setLoading(false)
   }
 
@@ -338,10 +350,11 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 16, marginBottom: 16 }}>
         <Panel title="Resumen financiero del mes" action="Ver costos" onAction={() => navigate('/costos')} wide>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
-            <Money title="Ingresos del mes" value={finanzas.ingresos} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
+            <Money title="Ventas del mes" value={finanzas.ingresos} />
+            <Money title="Cobrado" value={finanzas.cobrado} />
+            <Money title="Pendiente" value={finanzas.pendiente} />
             <Money title="Gastos del mes" value={finanzas.costos} />
-            <Money title="Margen estimado" value={finanzas.margen} />
           </div>
           <div style={{ borderTop: '1px solid #ecefec', paddingTop: 14, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 270px', gap: 16, alignItems: 'stretch' }}>
             <div>
@@ -460,12 +473,12 @@ function agruparCostosManualesDashboard(costos) {
   return Object.values(grupos)
 }
 
-function construirGrafico(cosechas, costos) {
+function construirGrafico(ventas, costos) {
   const puntos = [1, 7, 14, 21, 28]
   return puntos.map(dia => {
-    const ingresos = cosechas
-      .filter(c => Number((c.fecha || '').slice(8, 10)) <= dia)
-      .reduce((s, c) => s + (Number(c.kg_total) || 0) * (Number(c.precio_kg) || 0), 0)
+    const ingresos = ventas
+      .filter(v => Number((v.fecha || '').slice(8, 10)) <= dia)
+      .reduce((s, v) => s + (Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0)), 0)
     const gastos = costos
       .filter(c => Number((c.fecha || '').slice(8, 10)) <= dia)
       .reduce((s, c) => s + (Number(c.monto) || 0), 0)
@@ -485,7 +498,7 @@ function formatFechaCorta(fecha) {
   return d.toLocaleDateString('es-PY', { day: 'numeric', month: 'short' })
 }
 
-function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNutricionales, costos, resumen }) {
+function construirActividadDashboard({ tareas, cosechas, ventas, fumigaciones, planesNutricionales, costos, resumen }) {
   const agenda = (tareas || []).map(t => ({
     id: `tarea-${t.id}`,
     title: t.descripcion || (t.completada ? 'Tarea completada' : 'Tarea pendiente'),
@@ -501,11 +514,22 @@ function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNut
     id: `cosecha-${c.id}`,
     title: `${fmtNumber(c.kg_total)} kg cosechados`,
     date: `Cosecha - ${formatFechaCorta(c.fecha)}`,
-    tag: fmtGs((Number(c.kg_total) || 0) * (Number(c.precio_kg) || 0)),
+    tag: 'Produccion',
     icon: 'ti-cut',
     color: '#176a25',
     path: '/cosecha',
     order: fechaValor(c.fecha),
+  }))
+
+  const venta = (ventas || []).map(v => ({
+    id: `venta-${v.id}`,
+    title: `${v.producto || 'Venta'} - ${fmtGs(Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0))}`,
+    date: `${v.compradores?.nombre || 'Venta'} - ${formatFechaCorta(v.fecha)}`,
+    tag: v.estado_cobro === 'pagado' ? 'Cobrado' : 'Por cobrar',
+    icon: 'ti-cash-register',
+    color: v.estado_cobro === 'pagado' ? '#176a25' : '#bd640b',
+    path: '/ventas',
+    order: fechaValor(v.fecha) + 1,
   }))
 
   const fumigacion = (fumigaciones || []).map(f => ({
@@ -541,7 +565,7 @@ function construirActividadDashboard({ tareas, cosechas, fumigaciones, planesNut
     order: fechaValor(c.fecha),
   }))
 
-  const actividad = [...agenda, ...cosecha, ...fumigacion, ...nutricion, ...costosMes]
+  const actividad = [...agenda, ...cosecha, ...venta, ...fumigacion, ...nutricion, ...costosMes]
     .sort((a, b) => b.order - a.order)
     .slice(0, 5)
 

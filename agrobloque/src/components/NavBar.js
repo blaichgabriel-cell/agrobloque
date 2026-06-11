@@ -3,13 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { filterTabsByRole } from '../lib/permissions'
 
 const moreTabs = [
-  { path: '/buscar', icon: 'ti-search', label: 'Buscar' },
-  { path: '/alertas', icon: 'ti-bell-ringing', label: 'Alertas' },
-  { path: '/historial', icon: 'ti-timeline', label: 'Historial' },
   { path: '/mapa', icon: 'ti-map', label: 'Mapa' },
   { path: '/vivero', icon: 'vivero-icon', label: 'Vivero' },
   { path: '/asistencia', icon: 'ti-users', label: 'Asistencia' },
   { path: '/cosecha', icon: 'ti-cut', label: 'Cosecha' },
+  { path: '/ventas', icon: 'ti-cash-register', label: 'Ventas' },
   { path: '/inventario', icon: 'ti-box', label: 'Inventario' },
   { path: '/fumigaciones', icon: 'ti-spray', label: 'Fumig.' },
   { path: '/plan-nutricional', icon: 'ti-leaf', label: 'Nutricion' },
@@ -18,6 +16,8 @@ const moreTabs = [
   { path: '/cuentas-pagar', icon: 'ti-receipt-2', label: 'Deudas' },
   { path: '/reportes', icon: 'ti-chart-bar', label: 'Reportes' },
   { path: '/compradores', icon: 'ti-building-store', label: 'Compradores' },
+  { path: '/alertas', icon: 'ti-bell-ringing', label: 'Alertas' },
+  { path: '/historial', icon: 'ti-timeline', label: 'Historial' },
   { path: '/auditoria', icon: 'ti-history', label: 'Audit.' },
   { path: '/configuracion', icon: 'ti-settings', label: 'Config.' },
 ]

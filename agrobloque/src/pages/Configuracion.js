@@ -12,6 +12,7 @@ const PERMISOS_MODULOS = [
   { key: 'vivero', label: 'Vivero' },
   { key: 'asistencia', label: 'Asistencia' },
   { key: 'cosecha', label: 'Cosecha' },
+  { key: 'ventas', label: 'Ventas' },
   { key: 'inventario', label: 'Inventario' },
   { key: 'fumigaciones', label: 'Fumigaciones' },
   { key: 'plan_nutricional', label: 'Plan Nutricional' },
@@ -352,7 +353,7 @@ export default function Configuracion() {
     const tablas = [
       'campos', 'bloques', 'plantaciones', 'cultivos', 'abonos',
       'productos', 'categorias_producto', 'operarios', 'asistencia',
-      'cosechas', 'costos', 'fumigaciones', 'fumigacion_productos',
+      'cosechas', 'ventas', 'costos', 'fumigaciones', 'fumigacion_productos',
       'fumigacion_bloques', 'fertilizaciones', 'fertilizacion_planes',
       'fertilizacion_plan_aplicaciones',
       'compradores', 'tareas', 'notas_modulo', 'vivero_lotes',

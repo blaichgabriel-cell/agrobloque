@@ -40,8 +40,8 @@ export default function Compradores() {
   const fetchHistorial = async (comps) => {
     const ids = comps.map(c => c.id)
     const { data } = await supabase
-      .from('cosechas')
-      .select('comprador_id, kg_total, precio_kg, fecha, bloques(codigo, plantaciones(cultivos(nombre), activa))')
+      .from('ventas')
+      .select('comprador_id, producto, kg_total, precio_kg, total, estado_cobro, monto_cobrado, fecha, bloques(codigo)')
       .in('comprador_id', ids)
       .order('fecha', { ascending: false })
 
@@ -75,7 +75,7 @@ export default function Compradores() {
   const getStats = (id) => {
     const h = historial[id] || []
     const kg = h.reduce((s, c) => s + Number(c.kg_total), 0)
-    const ingresos = h.reduce((s, c) => s + Number(c.kg_total) * Number(c.precio_kg || 0), 0)
+    const ingresos = h.reduce((s, c) => s + (Number(c.total) || Number(c.kg_total) * Number(c.precio_kg || 0)), 0)
     const precios = h.filter(c => c.precio_kg > 0).map(c => Number(c.precio_kg))
     const precioProm = precios.length > 0 ? Math.round(precios.reduce((s, p) => s + p, 0) / precios.length) : 0
     return { kg, ingresos, precioProm, operaciones: h.length }
@@ -104,7 +104,7 @@ export default function Compradores() {
         {compradores.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>
             Sin compradores registrados.<br/>
-            <span style={{ fontSize:11 }}>Agregá compradores para asignarlos en cada cosecha.</span>
+            <span style={{ fontSize:11 }}>Agrega compradores para asignarlos en cada venta.</span>
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
@@ -155,11 +155,10 @@ export default function Compradores() {
 
                   {/* Últimas operaciones */}
                   {(historial[c.id] || []).slice(0, 4).map((h, i) => {
-                    const cultivo = h.bloques?.plantaciones?.find(p => p.activa)?.cultivos?.nombre
                     return (
                       <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #f2f1ef' }}>
                         <div>
-                          <div style={{ fontSize:11, color:'#0a0a0a' }}>{cultivo || 'Bloque ' + h.bloques?.codigo} · {h.kg_total} kg</div>
+                          <div style={{ fontSize:11, color:'#0a0a0a' }}>{h.producto || 'Venta'}{h.bloques?.codigo ? ' - Bloque ' + h.bloques.codigo : ''} · {h.kg_total} kg</div>
                           <div style={{ fontSize:10, color:'#9a9a9a' }}>{h.fecha}</div>
                         </div>
                         {h.precio_kg > 0 && <div style={{ fontSize:11, fontWeight:600, color:'#212121' }}>Gs. {Number(h.precio_kg).toLocaleString()}/kg</div>}

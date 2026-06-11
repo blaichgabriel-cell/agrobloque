@@ -125,7 +125,7 @@ export default function FichaBloque() {
         setAbonosPlantacion(ab || [])
 
         const { data: cos } = await supabase.from('cosechas')
-          .select('*, compradores(nombre)')
+          .select('*')
           .eq('bloque_id', id)
           .gte('fecha', activa.fecha_siembra || '2000-01-01')
           .order('fecha', { ascending: false })
@@ -592,7 +592,6 @@ export default function FichaBloque() {
   }
 
   const totalKgCiclo = cosechasCiclo.reduce((s, c) => s + Number(c.kg_total), 0)
-  const totalIngresosCiclo = cosechasCiclo.reduce((s, c) => s + (Number(c.kg_total) * Number(c.precio_kg||0)), 0)
   const kgPorPlanta = plantacionActiva?.densidad_plantas_m2 && totalKgCiclo > 0
     ? (totalKgCiclo / Number(plantacionActiva.densidad_plantas_m2)).toFixed(2)
     : null
@@ -978,7 +977,6 @@ export default function FichaBloque() {
                 <div style={{ background:'#212121', borderRadius:20, padding:'16px', marginBottom:10 }}>
                   <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', marginBottom:4 }}>TOTAL DEL CICLO</div>
                   <div style={{ fontSize:32, fontWeight:800, color:'#fff' }}>{fmtKg(totalKgCiclo)} kg</div>
-                  {totalIngresosCiclo > 0 && <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', marginTop:4 }}>Gs. {fmtGs(totalIngresosCiclo)} en ingresos</div>}
                   {kgPorPlanta && <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginTop:2 }}>{kgPorPlanta} kg por planta</div>}
                 </div>
                 {cosechasCiclo.map(c => (
@@ -991,8 +989,6 @@ export default function FichaBloque() {
                       <div style={{ fontSize:10, padding:'2px 8px', borderRadius:6, background:'#eeeeee', color:'#555' }}>
                         {c.calidad === 'primera' ? '1ra' : c.calidad === 'segunda' ? '2da' : 'Mixta'}
                       </div>
-                      {c.precio_kg > 0 && <div style={{ fontSize:10, padding:'2px 8px', borderRadius:6, background:'#eeeeee', color:'#555' }}>Gs. {fmtGs(c.precio_kg)}/kg</div>}
-                      {c.compradores?.nombre && <div style={{ fontSize:10, padding:'2px 8px', borderRadius:6, background:'#e6f1fb', color:'#185fa5' }}>{c.compradores.nombre}</div>}
                     </div>
                   </div>
                 ))}

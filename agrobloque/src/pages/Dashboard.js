@@ -152,14 +152,15 @@ const accesos = [
   { icon: 'ti-plant', label: 'Plan Nutricional', sub: 'Fertirriego', path: '/plan-nutricional', green: true },
   { icon: 'ti-box', label: 'Inventario', sub: 'Stock', path: '/inventario' },
   { icon: 'ti-cut', label: 'Cosecha', sub: 'Produccion', path: '/cosecha' },
+  { icon: 'ti-cash-register', label: 'Ventas', sub: 'Cobros', path: '/ventas' },
   { icon: 'ti-coin', label: 'Costos', sub: 'Gastos', path: '/costos' },
   { icon: 'ti-calculator', label: 'Contabilidad', sub: 'Balance', path: '/contabilidad' },
 ]
 
 const operacionesFrecuentes = [
   { icon: 'vivero-icon', label: 'Vivero', path: '/vivero' },
-  { icon: 'ti-spray', label: 'Fumigar', path: '/fumigaciones' },
   { icon: 'ti-cut', label: 'Cosecha', path: '/cosecha' },
+  { icon: 'ti-cash-register', label: 'Ventas', path: '/ventas' },
   { icon: 'ti-box', label: 'Inventario', path: '/inventario' },
 ]
 
@@ -245,6 +246,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       { data: costosManuales },
       { data: asistencia },
       { data: fumigaciones },
+      { data: ventas },
     ] = await Promise.all([
       plantacionesQuery,
       operariosQuery,
@@ -257,7 +259,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
         .order('fecha_programada'),
       supabase.from('productos').select('id').eq('activo', true),
       bloqueIds.length > 0
-        ? supabase.from('cosechas').select('id, fecha, kg_total, precio_kg, bloques(codigo), cultivos(nombre)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
+        ? supabase.from('cosechas').select('id, fecha, kg_total, bloques(codigo)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
         : Promise.resolve({ data: [] }),
       supabase.from('costos').select('id, tipo, descripcion, concepto, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
       isGuest
@@ -269,6 +271,9 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
         .eq('campo_id', campo.id)
         .gte('fecha', mesDesde)
         .order('fecha', { ascending: false }),
+      bloqueIds.length > 0
+        ? supabase.from('ventas').select('id, fecha, producto, kg_total, precio_kg, total, estado_cobro, bloque_id, compradores(nombre)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
+        : Promise.resolve({ data: [] }),
     ])
 
     const manual = (costosManuales || []).reduce((s, c) => s + (Number(c.monto) || 0), 0)
@@ -300,7 +305,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       costos: totalCostos,
       costosCategorias,
       produccion: agruparProduccionMovil(plantas || []),
-      actividades: construirActividadesMovil({ tareas: tareas || [], cosechas: cosechas || [], costos: costosManuales || [], fumigaciones: fumigaciones || [] }),
+      actividades: construirActividadesMovil({ tareas: tareas || [], cosechas: cosechas || [], ventas: ventas || [], costos: costosManuales || [], fumigaciones: fumigaciones || [] }),
     })
     setLoading(false)
   }
@@ -496,7 +501,7 @@ function agruparCostosManualesDashboard(costos) {
   return Object.values(grupos)
 }
 
-function construirActividadesMovil({ tareas, cosechas, costos, fumigaciones }) {
+function construirActividadesMovil({ tareas, cosechas, ventas, costos, fumigaciones }) {
   const lista = [
     ...(tareas || []).map(t => ({
       id: `tarea-${t.id}`,
@@ -510,11 +515,20 @@ function construirActividadesMovil({ tareas, cosechas, costos, fumigaciones }) {
     ...(cosechas || []).map(c => ({
       id: `cosecha-${c.id}`,
       title: `Cosecha ${c.bloques?.codigo || ''}`.trim(),
-      sub: `${fmtNum(c.kg_total)} kg · ${fmtGs((Number(c.kg_total) || 0) * (Number(c.precio_kg) || 0))}`,
-      badge: 'Venta',
-      iconBg: '#fff3e3',
+      sub: `${fmtNum(c.kg_total)} kg cosechados`,
+      badge: 'Prod.',
+      iconBg: '#eef7ee',
       path: '/cosecha',
       fecha: c.fecha || '',
+    })),
+    ...(ventas || []).map(v => ({
+      id: `venta-${v.id}`,
+      title: v.producto || 'Venta',
+      sub: `${v.compradores?.nombre || 'Comprador'} · ${fmtGs(Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0))}`,
+      badge: v.estado_cobro === 'pagado' ? 'Cobrado' : 'Debe',
+      iconBg: v.estado_cobro === 'pagado' ? '#eef7ee' : '#fff3e3',
+      path: '/ventas',
+      fecha: v.fecha || '',
     })),
     ...(fumigaciones || []).map(f => ({
       id: `fumigacion-${f.id}`,

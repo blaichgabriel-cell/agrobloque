@@ -9,6 +9,7 @@ import Configuracion from './pages/Configuracion'
 import Agenda from './pages/Agenda'
 import Asistencia from './pages/Asistencia'
 import Cosecha from './pages/Cosecha'
+import Ventas from './pages/Ventas'
 import Inventario from './pages/Inventario'
 import Fumigaciones from './pages/Fumigaciones'
 import PlanNutricional from './pages/PlanNutricional'
@@ -72,14 +73,12 @@ function MenuIcon({ icon, color, size = 19 }) {
 // Sidebar para desktop
 const allTabs = [
   { path:'/', icon:'ti-home', label:'Inicio' },
-  { path:'/buscar', icon:'ti-search', label:'Buscar' },
-  { path:'/alertas', icon:'ti-bell-ringing', label:'Alertas' },
-  { path:'/historial', icon:'ti-timeline', label:'Historial' },
   { path:'/mapa', icon:'ti-map', label:'Mapa' },
   { path:'/agenda', icon:'ti-calendar', label:'Agenda' },
   { path:'/vivero', icon:'vivero-icon', label:'Vivero' },
   { path:'/asistencia', icon:'ti-users', label:'Asistencia' },
   { path:'/cosecha', icon:'ti-cut', label:'Cosecha' },
+  { path:'/ventas', icon:'ti-cash-register', label:'Ventas' },
   { path:'/inventario', icon:'ti-box', label:'Inventario' },
   { path:'/fumigaciones', icon:'ti-spray', label:'Fumigaciones' },
   { path:'/plan-nutricional', icon:'ti-leaf', label:'Plan Nutricional' },
@@ -88,6 +87,8 @@ const allTabs = [
   { path:'/cuentas-pagar', icon:'ti-receipt-2', label:'Cuentas a pagar' },
   { path:'/reportes', icon:'ti-chart-bar', label:'Reportes' },
   { path:'/compradores', icon:'ti-building-store', label:'Compradores' },
+  { path:'/alertas', icon:'ti-bell-ringing', label:'Alertas' },
+  { path:'/historial', icon:'ti-timeline', label:'Historial' },
   { path:'/auditoria', icon:'ti-history', label:'Auditoria' },
   { path:'/configuracion', icon:'ti-settings', label:'Configuración' },
 ]
@@ -290,6 +291,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
             <Route path="/vivero" element={<ProtectedRoute role={role} moduleKey="vivero"><Vivero/></ProtectedRoute>}/>
             <Route path="/asistencia" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="asistencia"><Asistencia/></ProtectedRoute>}/>
             <Route path="/cosecha" element={<ProtectedRoute role={role} moduleKey="cosecha"><Cosecha/></ProtectedRoute>}/>
+            <Route path="/ventas" element={<ProtectedRoute role={role} moduleKey="ventas"><Ventas/></ProtectedRoute>}/>
             <Route path="/inventario" element={<ProtectedRoute role={role} moduleKey="inventario"><Inventario/></ProtectedRoute>}/>
             <Route path="/fumigaciones" element={<ProtectedRoute role={role} moduleKey="fumigaciones"><Fumigaciones/></ProtectedRoute>}/>
             <Route path="/plan-nutricional" element={<ProtectedRoute role={role} moduleKey="plan_nutricional"><PlanNutricional campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
@@ -318,7 +320,7 @@ export default function App() {
   const [role, setRole] = useState(normalizeRole(null))
   const [guestRole, setGuestRole] = useState(normalizeRole({
     rol:'lectura',
-    permisos:['buscar','alertas','historial','mapa','agenda','vivero','cosecha','inventario','fumigaciones','plan_nutricional','costos','contabilidad','reportes','compradores'],
+    permisos:['alertas','historial','mapa','agenda','vivero','cosecha','ventas','inventario','fumigaciones','plan_nutricional','costos','contabilidad','reportes','compradores'],
   }))
   const guestPath = Boolean(guestToken)
 
