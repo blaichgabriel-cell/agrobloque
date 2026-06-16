@@ -90,6 +90,64 @@ function ModalDetalle({ venta, onClose, onEdit, onDelete }) {
   )
 }
 
+function ModalDetalleGrupo({ grupo, onClose, onEdit, onDelete }) {
+  const saldo = Math.max(0, grupo.total - grupo.cobrado)
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:150, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background:'#fff', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:560, padding:'22px 20px 34px', maxHeight:'88vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
+          <div>
+            <div style={{ fontSize:12, color:'#8d938d', marginBottom:4 }}>Detalle de venta agrupada</div>
+            <div style={{ fontSize:22, fontWeight:850, color:'#0a0a0a' }}>{grupo.comprador}</div>
+            <div style={{ fontSize:12, color:'#8d938d', marginTop:4 }}>{grupo.fecha} - {grupo.items.length} productos</div>
+          </div>
+          <button onClick={onClose} style={{ width:36, height:36, borderRadius:12, border:'1px solid #ececec', background:'#fff', cursor:'pointer' }}>
+            <i className="ti ti-x" style={{ fontSize:18 }} aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
+          <div style={{ background:'#212121', borderRadius:16, padding:'14px 15px' }}>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:4 }}>Total venta</div>
+            <div style={{ fontSize:21, color:'#fff', fontWeight:850 }}>Gs. {fmtGs(grupo.total)}</div>
+          </div>
+          <div style={{ background: saldo > 0 ? '#fff3e3' : '#e8f5e5', borderRadius:16, padding:'14px 15px' }}>
+            <div style={{ fontSize:10, color:'#6d746e', marginBottom:4 }}>Cobro</div>
+            <div style={{ fontSize:18, color: saldo > 0 ? '#bd640b' : '#176a25', fontWeight:850 }}>{saldo > 0 ? `Debe Gs. ${fmtGs(saldo)}` : 'Pagado'}</div>
+          </div>
+        </div>
+
+        <div style={{ background:'#fafafa', borderRadius:16, overflow:'hidden', marginBottom:14 }}>
+          {grupo.items.map((venta, idx) => {
+            const total = Number(venta.total) || (Number(venta.kg_total) || 0) * (Number(venta.precio_kg) || 0)
+            return (
+              <div key={venta.id} style={{ padding:'12px 14px', borderBottom: idx === grupo.items.length - 1 ? 'none' : '1px solid #eeeeee' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:4 }}>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:14, fontWeight:850, color:'#0a0a0a' }}>{venta.producto}</div>
+                    <div style={{ fontSize:11, color:'#8b928b', marginTop:2 }}>{venta.bloques?.codigo ? `Bloque ${venta.bloques.codigo}` : 'Sin bloque asignado'}</div>
+                  </div>
+                  <div style={{ textAlign:'right', flexShrink:0 }}>
+                    <div style={{ fontSize:14, fontWeight:900, color:'#0a0a0a' }}>Gs. {fmtGs(total)}</div>
+                    <div style={{ fontSize:11, color:'#687068' }}>{fmtKg(venta.kg_total)} kg - Gs. {fmtGs(venta.precio_kg)}/kg</div>
+                  </div>
+                </div>
+                <div style={{ display:'flex', justifyContent:'flex-end', gap:6, marginTop:8 }}>
+                  <button onClick={() => onEdit(venta)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'#fff', fontSize:11, color:'#555', cursor:'pointer' }}>Editar</button>
+                  <button onClick={() => onDelete(venta.id)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'#fff0f0', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#8b928b', cursor:'pointer' }} onClick={onClose}>Cerrar</button>
+      </div>
+    </div>
+  )
+}
+
 export default function Ventas() {
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [ventas, setVentas] = useState([])
@@ -98,6 +156,7 @@ export default function Ventas() {
   const [bloques, setBloques] = useState([])
   const [modal, setModal] = useState(false)
   const [detalle, setDetalle] = useState(null)
+  const [detalleGrupo, setDetalleGrupo] = useState(null)
   const [confirmar, setConfirmar] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -356,6 +415,7 @@ export default function Ventas() {
       await registrarAuditoria({ accion:'Elimino venta', modulo:'Ventas', tabla:'ventas', registroId:id })
       setConfirmar(null)
       setDetalle(null)
+      setDetalleGrupo(null)
       fetchVentas()
     }})
   }
@@ -368,6 +428,28 @@ export default function Ventas() {
   const ventaTotalMultiple = lineasVenta.reduce((s, linea) => s + (parsearKg(linea.kg_total) * parsearGs(linea.precio_kg)), 0)
   const bloqueSeleccionado = bloques.find(b => b.id === form.bloque_id)
   const cultivoSugerido = getCultivoBloque(bloqueSeleccionado)
+  const gruposVentas = Object.values(ventas.reduce((acc, v) => {
+    const lote = v.created_at || v.id
+    const key = `${v.fecha || ''}|${v.comprador_id || ''}|${lote}`
+    if (!acc[key]) {
+      acc[key] = {
+        key,
+        fecha: v.fecha,
+        comprador: v.compradores?.nombre || 'Sin comprador',
+        created_at: v.created_at,
+        items: [],
+        total: 0,
+        cobrado: 0,
+        kg: 0,
+      }
+    }
+    const total = Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0)
+    acc[key].items.push(v)
+    acc[key].total += total
+    acc[key].cobrado += Number(v.monto_cobrado) || 0
+    acc[key].kg += Number(v.kg_total) || 0
+    return acc
+  }, {}))
   const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
   const label = { fontSize:10, color:'#8b928b', marginBottom:6, display:'block', fontWeight:750 }
 
@@ -375,6 +457,7 @@ export default function Ventas() {
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
       {detalle && <ModalDetalle venta={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditar(detalle)} onDelete={() => eliminar(detalle.id)} />}
+      {detalleGrupo && <ModalDetalleGrupo grupo={detalleGrupo} onClose={() => setDetalleGrupo(null)} onEdit={(venta) => abrirEditar(venta)} onDelete={(id) => eliminar(id)} />}
 
       <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
@@ -403,39 +486,41 @@ export default function Ventas() {
         ) : isDesktop ? (
           <div style={{ background:'#fff', border:'1px solid #e4e8e4', borderRadius:16, overflow:'hidden', boxShadow:'0 12px 28px rgba(31,36,31,0.05)' }}>
             <div style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 110px 120px 130px 108px', gap:12, padding:'11px 16px', background:'#fafbf8', borderBottom:'1px solid #edf0ed', color:'#687068', fontSize:11, fontWeight:850, textTransform:'uppercase' }}>
-              <span>Producto</span>
+              <span>Venta</span>
               <span>Comprador / origen</span>
               <span style={{ textAlign:'right' }}>Kg</span>
-              <span style={{ textAlign:'right' }}>Precio</span>
+              <span style={{ textAlign:'right' }}>Productos</span>
               <span style={{ textAlign:'right' }}>Total</span>
               <span style={{ textAlign:'right' }}>Acciones</span>
             </div>
-            {ventas.map(v => {
-              const total = Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0)
-              const saldo = Math.max(0, total - (Number(v.monto_cobrado) || 0))
+            {gruposVentas.map(g => {
+              const saldo = Math.max(0, g.total - g.cobrado)
+              const esGrupo = g.items.length > 1
+              const v = g.items[0]
               return (
-                <div key={v.id} onClick={() => setDetalle(v)} style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 110px 120px 130px 108px', gap:12, alignItems:'center', padding:'13px 16px', borderBottom:'1px solid #f0f2ef', cursor:'pointer' }}>
+                <div key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)} style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 110px 120px 130px 108px', gap:12, alignItems:'center', padding:'13px 16px', borderBottom:'1px solid #f0f2ef', cursor:'pointer' }}>
                   <div style={{ minWidth:0 }}>
-                    <div style={{ fontSize:14, fontWeight:850, color:'#0a0a0a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{v.producto}</div>
+                    <div style={{ fontSize:14, fontWeight:850, color:'#0a0a0a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{esGrupo ? `${g.items.length} productos vendidos` : v.producto}</div>
+                    {esGrupo && <div style={{ fontSize:11, color:'#687068', marginTop:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.items.map(item => item.producto).join(', ')}</div>}
                     <div style={{ display:'flex', gap:6, marginTop:5, flexWrap:'wrap' }}>
-                      <span style={{ padding:'2px 8px', borderRadius:20, fontSize:10, fontWeight:800, background: saldo > 0 ? '#fff3e3' : '#e8f5e5', color: saldo > 0 ? '#bd640b' : '#176a25' }}>{estadoLabel[v.estado_cobro] || 'Pagado'}</span>
+                      <span style={{ padding:'2px 8px', borderRadius:20, fontSize:10, fontWeight:800, background: saldo > 0 ? '#fff3e3' : '#e8f5e5', color: saldo > 0 ? '#bd640b' : '#176a25' }}>{saldo > 0 ? 'Pendiente' : 'Pagado'}</span>
                       {saldo > 0 && <span style={{ padding:'2px 8px', borderRadius:20, fontSize:10, background:'#fff0f0', color:'#c84040' }}>Debe Gs. {fmtGs(saldo)}</span>}
                     </div>
                   </div>
                   <div style={{ minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:750, color:'#176a25', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{v.compradores?.nombre || 'Sin comprador'}</div>
-                    <div style={{ fontSize:11, color:'#8b928b', marginTop:3 }}>{v.bloques?.codigo ? `Bloque ${v.bloques.codigo} - ` : ''}{v.fecha}</div>
+                    <div style={{ fontSize:13, fontWeight:750, color:'#176a25', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.comprador}</div>
+                    <div style={{ fontSize:11, color:'#8b928b', marginTop:3 }}>{g.fecha}</div>
                   </div>
-                  <div style={{ textAlign:'right', fontSize:13, fontWeight:800 }}>{fmtKg(v.kg_total)}</div>
-                  <div style={{ textAlign:'right', fontSize:13, color:'#4d544e' }}>Gs. {fmtGs(v.precio_kg)}</div>
-                  <div style={{ textAlign:'right', fontSize:15, fontWeight:900 }}>Gs. {fmtGs(total)}</div>
+                  <div style={{ textAlign:'right', fontSize:13, fontWeight:800 }}>{fmtKg(g.kg)}</div>
+                  <div style={{ textAlign:'right', fontSize:13, color:'#4d544e' }}>{g.items.length}</div>
+                  <div style={{ textAlign:'right', fontSize:15, fontWeight:900 }}>Gs. {fmtGs(g.total)}</div>
                   <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
-                    <button onClick={(e) => { e.stopPropagation(); abrirEditar(v) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #e1e5e1', background:'#fff', color:'#333', cursor:'pointer' }} title="Editar">
-                      <i className="ti ti-pencil" style={{ fontSize:16 }} aria-hidden="true"></i>
+                    <button onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #e1e5e1', background:'#fff', color:'#333', cursor:'pointer' }} title={esGrupo ? 'Ver detalle' : 'Editar'}>
+                      <i className={`ti ${esGrupo ? 'ti-eye' : 'ti-pencil'}`} style={{ fontSize:16 }} aria-hidden="true"></i>
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #ffcccc', background:'#fff', color:'#c84040', cursor:'pointer' }} title="Eliminar">
+                    {!esGrupo && <button onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #ffcccc', background:'#fff', color:'#c84040', cursor:'pointer' }} title="Eliminar">
                       <i className="ti ti-trash" style={{ fontSize:16 }} aria-hidden="true"></i>
-                    </button>
+                    </button>}
                   </div>
                 </div>
               )
@@ -443,33 +528,35 @@ export default function Ventas() {
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
-            {ventas.map(v => {
-              const total = Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0)
-              const saldo = Math.max(0, total - (Number(v.monto_cobrado) || 0))
+            {gruposVentas.map(g => {
+              const saldo = Math.max(0, g.total - g.cobrado)
+              const esGrupo = g.items.length > 1
+              const v = g.items[0]
               return (
-                <div key={v.id} onClick={() => setDetalle(v)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+                <div key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:8 }}>
                     <div style={{ minWidth:0 }}>
-                      <div style={{ fontSize:15, fontWeight:800, color:'#0a0a0a' }}>{v.producto}</div>
-                      <div style={{ fontSize:12, color:'#176a25', fontWeight:750, marginTop:2 }}>{v.compradores?.nombre || 'Sin comprador'}</div>
-                      <div style={{ fontSize:11, color:'#8b928b', marginTop:2 }}>{v.bloques?.codigo ? `Bloque ${v.bloques.codigo} - ` : ''}{v.fecha}</div>
+                      <div style={{ fontSize:15, fontWeight:800, color:'#0a0a0a' }}>{esGrupo ? `${g.items.length} productos vendidos` : v.producto}</div>
+                      <div style={{ fontSize:12, color:'#176a25', fontWeight:750, marginTop:2 }}>{g.comprador}</div>
+                      <div style={{ fontSize:11, color:'#8b928b', marginTop:2 }}>{g.fecha}</div>
+                      {esGrupo && <div style={{ fontSize:11, color:'#687068', marginTop:5 }}>{g.items.map(item => item.producto).join(', ')}</div>}
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0 }}>
-                      <div style={{ fontSize:19, fontWeight:850, color:'#0a0a0a' }}>Gs. {fmtGs(total)}</div>
-                      <div style={{ fontSize:11, color:'#555', fontWeight:700 }}>{fmtKg(v.kg_total)} kg</div>
+                      <div style={{ fontSize:19, fontWeight:850, color:'#0a0a0a' }}>Gs. {fmtGs(g.total)}</div>
+                      <div style={{ fontSize:11, color:'#555', fontWeight:700 }}>{fmtKg(g.kg)} kg</div>
                     </div>
                   </div>
                   <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-                    <span style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:800, background: saldo > 0 ? '#fff3e3' : '#e8f5e5', color: saldo > 0 ? '#bd640b' : '#176a25' }}>{estadoLabel[v.estado_cobro] || 'Pagado'}</span>
-                    <span style={{ padding:'3px 10px', borderRadius:20, fontSize:10, background:'#f2f1ef', color:'#555' }}>Gs. {fmtGs(v.precio_kg)}/kg</span>
+                    <span style={{ padding:'3px 10px', borderRadius:20, fontSize:10, fontWeight:800, background: saldo > 0 ? '#fff3e3' : '#e8f5e5', color: saldo > 0 ? '#bd640b' : '#176a25' }}>{saldo > 0 ? 'Pendiente' : 'Pagado'}</span>
+                    <span style={{ padding:'3px 10px', borderRadius:20, fontSize:10, background:'#f2f1ef', color:'#555' }}>{g.items.length} producto{g.items.length === 1 ? '' : 's'}</span>
                     {saldo > 0 && <span style={{ padding:'3px 10px', borderRadius:20, fontSize:10, background:'#fff0f0', color:'#c84040' }}>Debe Gs. {fmtGs(saldo)}</span>}
                   </div>
-                  {v.notas && <div style={{ fontSize:11, color:'#8b928b', padding:'7px 10px', background:'#f2f1ef', borderRadius:8, marginBottom:8 }}>{v.notas}</div>}
+                  {v.notas && !esGrupo && <div style={{ fontSize:11, color:'#8b928b', padding:'7px 10px', background:'#f2f1ef', borderRadius:8, marginBottom:8 }}>{v.notas}</div>}
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <span style={{ fontSize:11, color:'#777' }}>Tocar para ver detalle</span>
                     <div style={{ display:'flex', gap:6 }}>
-                      <button onClick={(e) => { e.stopPropagation(); abrirEditar(v) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }}>Editar</button>
-                      <button onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                      <button onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }}>{esGrupo ? 'Ver' : 'Editar'}</button>
+                      {!esGrupo && <button onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>}
                     </div>
                   </div>
                 </div>
