@@ -49,6 +49,7 @@ export default function FichaBloque() {
   const [cultivos, setCultivos] = useState([])
   const [abonos, setAbonos] = useState([])
   const [abonosPlantacion, setAbonosPlantacion] = useState([])
+  const [bloquesCampo, setBloquesCampo] = useState([])
 
   // Fertilizacion
   const [fertilizaciones, setFertilizaciones] = useState([])
@@ -59,6 +60,7 @@ export default function FichaBloque() {
   const [showNuevaFertilizacion, setShowNuevaFertilizacion] = useState(false)
   const [formFert, setFormFert] = useState({
     fecha: new Date().toISOString().split('T')[0],
+    bloques_ids: [],
     notas: '',
     soluciones: [
       { nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }
@@ -112,6 +114,17 @@ export default function FichaBloque() {
   const fetchData = async () => {
     const { data: b } = await supabase.from('bloques').select('*, sectores(nombre), campos(nombre)').eq('id', id).single()
     setBloque(b)
+    if (b?.campo_id) {
+      const { data: bloquesDelCampo } = await supabase
+        .from('bloques')
+        .select('id, codigo, tipo, activo, plantaciones(activa, cultivos(nombre))')
+        .eq('campo_id', b.campo_id)
+        .eq('activo', true)
+        .order('codigo')
+      setBloquesCampo(bloquesDelCampo || [])
+    } else {
+      setBloquesCampo([])
+    }
 
     const { data: plantas } = await supabase.from('plantaciones')
       .select('*, cultivos(nombre)').eq('bloque_id', id).order('created_at', { ascending: false })
@@ -394,17 +407,6 @@ export default function FichaBloque() {
 
   // --- FERTILIZACION 
 
-  const abrirNuevaFertilizacion = () => {
-    setFormFert({
-      fecha: new Date().toISOString().split('T')[0],
-      notas: '',
-      soluciones: [
-        { nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }
-      ]
-    })
-    setShowNuevaFertilizacion(true)
-  }
-
   const agregarSolucion = () => {
     const letras = ['A','B','C','D','E','F']
     const usadas = formFert.soluciones.map(s => s.nombre)
@@ -413,6 +415,25 @@ export default function FichaBloque() {
       ...f,
       soluciones: [...f.soluciones, { nombre: siguiente, productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }]
     }))
+  }
+
+  const abrirNuevaFertilizacion = () => {
+    setFormFert({
+      fecha: new Date().toISOString().split('T')[0],
+      bloques_ids: [id],
+      notas: '',
+      soluciones: [{ nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }],
+    })
+    setShowNuevaFertilizacion(true)
+  }
+
+  const alternarBloqueFertilizacion = (bloqueId) => {
+    setFormFert(f => {
+      const actuales = new Set(f.bloques_ids || [])
+      if (actuales.has(bloqueId)) actuales.delete(bloqueId)
+      else actuales.add(bloqueId)
+      return { ...f, bloques_ids: Array.from(actuales) }
+    })
   }
 
   const eliminarSolucion = (si) => {
@@ -565,12 +586,20 @@ export default function FichaBloque() {
 
   const guardarFertilizacion = async () => {
     if (!formFert.fecha) return
+    const bloquesDestino = (formFert.bloques_ids || []).length ? formFert.bloques_ids : [id]
     setSavingFert(true)
-    await supabase.from('fertilizaciones').insert({
-      bloque_id: id,
+    await supabase.from('fertilizaciones').insert(bloquesDestino.map(bloqueId => ({
+      bloque_id: bloqueId,
       fecha: formFert.fecha,
       notas: formFert.notas || null,
       soluciones: formFert.soluciones
+    })))
+    await registrarAuditoria({
+      accion: bloquesDestino.length > 1 ? 'Registro fertilizacion multiple' : 'Registro fertilizacion',
+      modulo:'Bloque',
+      tabla:'fertilizaciones',
+      registroId:'',
+      detalle:`${bloquesDestino.length} bloque${bloquesDestino.length === 1 ? '' : 's'} - ${formFert.fecha}`,
     })
     setSavingFert(false)
     setShowNuevaFertilizacion(false)
@@ -1278,10 +1307,37 @@ export default function FichaBloque() {
           onClick={e => e.target===e.currentTarget && setShowNuevaFertilizacion(false)}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'92vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Nueva fertilizacion</div>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Bloque {bloque.codigo}</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Elegi uno o varios bloques. Se guarda un registro separado por cada bloque.</div>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha *</div>
             <input style={inpStyle} type="date" value={formFert.fecha} onChange={e => setFormFert(f => ({...f, fecha:e.target.value}))}/>
+
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloques *</div>
+            <div style={{ background:'#fff', border:'1px solid #e8e6e2', borderRadius:16, padding:12, marginBottom:12 }}>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+                {(bloquesCampo.length ? bloquesCampo : [{ id, codigo: bloque.codigo }]).map(b => {
+                  const seleccionado = (formFert.bloques_ids || []).includes(b.id)
+                  const cultivo = b.plantaciones?.find(p => p.activa)?.cultivos?.nombre
+                  return (
+                    <button key={b.id} type="button" onClick={() => alternarBloqueFertilizacion(b.id)} style={{
+                      border:'1px solid #dfe6df',
+                      background: seleccionado ? '#1a5c2e' : '#f8f8f8',
+                      color: seleccionado ? '#fff' : '#263026',
+                      borderRadius:999,
+                      padding:'7px 10px',
+                      fontSize:11,
+                      fontWeight:800,
+                      cursor:'pointer',
+                    }}>
+                      {b.codigo}{cultivo ? ` - ${cultivo}` : ''}
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ fontSize:11, color:'#8b928b', marginTop:10 }}>
+                {(formFert.bloques_ids || []).length || 0} bloque{(formFert.bloques_ids || []).length === 1 ? '' : 's'} seleccionado{(formFert.bloques_ids || []).length === 1 ? '' : 's'}
+              </div>
+            </div>
 
             {/* Soluciones */}
             {formFert.soluciones.map((sol, si) => (
