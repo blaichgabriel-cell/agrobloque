@@ -12,7 +12,7 @@ import Cosecha from './pages/Cosecha'
 import Ventas from './pages/Ventas'
 import Inventario from './pages/Inventario'
 import Fumigaciones from './pages/Fumigaciones'
-import PlanNutricional from './pages/PlanNutricional'
+import Fertilizaciones from './pages/Fertilizaciones'
 import Costos from './pages/Costos'
 import Contabilidad from './pages/Contabilidad'
 import CuentasPagar from './pages/CuentasPagar'
@@ -81,7 +81,7 @@ const allTabs = [
   { path:'/ventas', icon:'ti-cash-register', label:'Ventas' },
   { path:'/inventario', icon:'ti-box', label:'Inventario' },
   { path:'/fumigaciones', icon:'ti-spray', label:'Fumigaciones' },
-  { path:'/plan-nutricional', icon:'ti-leaf', label:'Plan Nutricional' },
+  { path:'/fertilizaciones', icon:'ti-leaf', label:'Fertilizaciones' },
   { path:'/costos', icon:'ti-coin', label:'Costos' },
   { path:'/contabilidad', icon:'ti-calculator', label:'Contabilidad' },
   { path:'/cuentas-pagar', icon:'ti-receipt-2', label:'Cuentas a pagar' },
@@ -294,7 +294,8 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
             <Route path="/ventas" element={<ProtectedRoute role={role} moduleKey="ventas"><Ventas/></ProtectedRoute>}/>
             <Route path="/inventario" element={<ProtectedRoute role={role} moduleKey="inventario"><Inventario/></ProtectedRoute>}/>
             <Route path="/fumigaciones" element={<ProtectedRoute role={role} moduleKey="fumigaciones"><Fumigaciones/></ProtectedRoute>}/>
-            <Route path="/plan-nutricional" element={<ProtectedRoute role={role} moduleKey="plan_nutricional"><PlanNutricional campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
+            <Route path="/fertilizaciones" element={<ProtectedRoute role={role} moduleKey="plan_nutricional"><Fertilizaciones campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
+            <Route path="/plan-nutricional" element={<Navigate to="/fertilizaciones"/>}/>
             <Route path="/costos" element={<ProtectedRoute role={role} moduleKey="costos"><Costos campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/contabilidad" element={<ProtectedRoute role={role} moduleKey="contabilidad"><Contabilidad/></ProtectedRoute>}/>
             <Route path="/cuentas-pagar" element={<ProtectedRoute role={role} moduleKey="cuentas_pagar"><CuentasPagar/></ProtectedRoute>}/>

@@ -26,7 +26,7 @@ const quickLinks = [
   { path: '/fumigaciones', icon: 'ti-spray', title: 'Fumigaciones', sub: 'Historial' },
   { path: '/vivero', icon: 'vivero-icon', title: 'Vivero', sub: 'Plantines' },
   { path: '/reportes', icon: 'ti-chart-bar', title: 'Reportes', sub: 'Analisis' },
-  { path: '/plan-nutricional', icon: 'ti-leaf', title: 'Plan Nutricional', sub: 'Fertirriego' },
+  { path: '/fertilizaciones', icon: 'ti-leaf', title: 'Fertilizaciones', sub: 'Aplicaciones' },
   { path: '/costos', icon: 'ti-coin', title: 'Costos', sub: 'Gastos' },
   { path: '/contabilidad', icon: 'ti-calculator', title: 'Contabilidad', sub: 'Balance' },
   { path: '/compradores', icon: 'ti-building-store', title: 'Compradores', sub: 'Clientes' },
@@ -209,6 +209,16 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       ? Promise.resolve({ data: [] })
       : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde)
 
+    const fertilizacionesQuery = bloqueIds.length > 0
+      ? supabase
+        .from('fertilizaciones')
+        .select('id, fecha, bloque_id, soluciones, bloques(codigo)')
+        .gte('fecha', mesDesde)
+        .in('bloque_id', bloqueIds)
+        .order('fecha', { ascending: false })
+        .limit(5)
+      : Promise.resolve({ data: [] })
+
     const [{ data: costosManuales }, { data: asistencia }, { data: fumigaciones }, { data: planesNutricionales }] = await Promise.all([
       supabase.from('costos').select('id, tipo, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
       asistenciaQuery,
@@ -217,13 +227,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         .select('id, fecha, tipo, fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
         .eq('campo_id', campo.id)
         .gte('fecha', mesDesde),
-      supabase
-        .from('plan_nutricional_registros')
-        .select('id, fecha, objetivo, bloque_id, bloques(codigo)')
-        .eq('campo_id', campo.id)
-        .gte('fecha', mesDesde)
-        .order('fecha', { ascending: false })
-        .limit(5),
+      fertilizacionesQuery,
     ])
 
     const ingresos = (ventas || []).reduce((s, v) =>
@@ -545,12 +549,12 @@ function construirActividadDashboard({ tareas, cosechas, ventas, fumigaciones, p
 
   const nutricion = (planesNutricionales || []).map(p => ({
     id: `plan-${p.id}`,
-    title: `${p.objetivo || 'Plan nutricional'}${p.bloques?.codigo ? ` - ${p.bloques.codigo}` : ''}`,
-    date: `Nutricion - ${formatFechaCorta(p.fecha)}`,
-    tag: 'Plan',
+    title: `Fertilizacion${p.bloques?.codigo ? ` - Bloque ${p.bloques.codigo}` : ''}`,
+    date: `Fertilizacion - ${formatFechaCorta(p.fecha)}`,
+    tag: `${(p.soluciones || []).length || 1} solucion`,
     icon: 'ti-leaf',
     color: '#0f7a3a',
-    path: '/plan-nutricional',
+    path: '/fertilizaciones',
     order: fechaValor(p.fecha),
   }))
 
@@ -608,12 +612,12 @@ function construirActividadDashboard({ tareas, cosechas, ventas, fumigaciones, p
     },
     {
       id: 'estado-plan',
-      title: 'Plan nutricional listo para usar',
-      date: 'Asistente contextual por cultivo, EC y bloque',
-      tag: 'Nutricion',
+      title: 'Fertilizaciones listas para cargar',
+      date: 'Aplicaciones por fecha y varios bloques',
+      tag: 'Fertilizacion',
       icon: 'ti-leaf',
       color: '#0f7a3a',
-      path: '/plan-nutricional',
+      path: '/fertilizaciones',
       order: 1,
     },
   ]

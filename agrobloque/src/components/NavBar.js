@@ -10,7 +10,7 @@ const moreTabs = [
   { path: '/ventas', icon: 'ti-cash-register', label: 'Ventas' },
   { path: '/inventario', icon: 'ti-box', label: 'Inventario' },
   { path: '/fumigaciones', icon: 'ti-spray', label: 'Fumig.' },
-  { path: '/plan-nutricional', icon: 'ti-leaf', label: 'Nutricion' },
+  { path: '/fertilizaciones', icon: 'ti-leaf', label: 'Fertil.' },
   { path: '/costos', icon: 'ti-coin', label: 'Costos' },
   { path: '/contabilidad', icon: 'ti-calculator', label: 'Contab.' },
   { path: '/cuentas-pagar', icon: 'ti-receipt-2', label: 'Deudas' },

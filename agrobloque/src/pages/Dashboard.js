@@ -149,7 +149,7 @@ const accesos = [
   { icon: 'ti-users', label: 'Asistencia', sub: 'Planilla', path: '/asistencia' },
   { icon: 'ti-chart-bar', label: 'Reportes', sub: 'Rentabilidad', path: '/reportes' },
   { icon: 'ti-spray', label: 'Fumigaciones', sub: 'Historial', path: '/fumigaciones', green: true },
-  { icon: 'ti-plant', label: 'Plan Nutricional', sub: 'Fertirriego', path: '/plan-nutricional', green: true },
+  { icon: 'ti-plant', label: 'Fertilizaciones', sub: 'Aplicaciones', path: '/fertilizaciones', green: true },
   { icon: 'ti-box', label: 'Inventario', sub: 'Stock', path: '/inventario' },
   { icon: 'ti-cut', label: 'Cosecha', sub: 'Produccion', path: '/cosecha' },
   { icon: 'ti-cash-register', label: 'Ventas', sub: 'Cobros', path: '/ventas' },

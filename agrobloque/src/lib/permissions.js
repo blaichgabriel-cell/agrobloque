@@ -10,7 +10,7 @@ export const MODULES = [
   { key: 'ventas', label: 'Ventas', path: '/ventas' },
   { key: 'inventario', label: 'Inventario', path: '/inventario' },
   { key: 'fumigaciones', label: 'Fumigaciones', path: '/fumigaciones' },
-  { key: 'plan_nutricional', label: 'Plan Nutricional', path: '/plan-nutricional' },
+  { key: 'plan_nutricional', label: 'Fertilizaciones', path: '/fertilizaciones' },
   { key: 'costos', label: 'Costos', path: '/costos' },
   { key: 'contabilidad', label: 'Contabilidad', path: '/contabilidad' },
   { key: 'cuentas_pagar', label: 'Cuentas a pagar', path: '/cuentas-pagar', sensitive: true },

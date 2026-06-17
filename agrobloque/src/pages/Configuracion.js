@@ -15,7 +15,7 @@ const PERMISOS_MODULOS = [
   { key: 'ventas', label: 'Ventas' },
   { key: 'inventario', label: 'Inventario' },
   { key: 'fumigaciones', label: 'Fumigaciones' },
-  { key: 'plan_nutricional', label: 'Plan Nutricional' },
+  { key: 'plan_nutricional', label: 'Fertilizaciones' },
   { key: 'costos', label: 'Costos' },
   { key: 'contabilidad', label: 'Contabilidad' },
   { key: 'cuentas_pagar', label: 'Cuentas a pagar' },
