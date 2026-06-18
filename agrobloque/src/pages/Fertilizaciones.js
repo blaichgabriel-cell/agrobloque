@@ -7,6 +7,29 @@ const hoy = () => new Date().toISOString().split('T')[0]
 const fmtNum = (n) => Number(n || 0).toLocaleString('es-PY')
 const fmtFecha = (fecha) => fecha ? new Date(`${fecha}T00:00:00`).toLocaleDateString('es-PY') : '-'
 
+const normalizarUnidad = (unidad = '') => {
+  const u = String(unidad).trim().toLowerCase()
+  if (['kg', 'kilo', 'kilos'].includes(u)) return 'kg'
+  if (['g', 'gr', 'gramo', 'gramos'].includes(u)) return 'g'
+  if (['l', 'lt', 'lts', 'litro', 'litros'].includes(u)) return 'L'
+  if (['cc', 'ml'].includes(u)) return 'cc'
+  if (['unidad', 'unidades', 'u'].includes(u)) return 'unidad'
+  return u
+}
+
+const convertirAStock = (cantidad, unidadUso, unidadStock) => {
+  const valor = Number(String(cantidad || '').replace(',', '.')) || 0
+  const uso = normalizarUnidad(unidadUso)
+  const stock = normalizarUnidad(unidadStock)
+  if (valor <= 0) return 0
+  if (uso === stock) return valor
+  if (stock === 'kg' && uso === 'g') return valor / 1000
+  if (stock === 'g' && uso === 'kg') return valor * 1000
+  if (stock === 'L' && ['cc', 'ml'].includes(uso)) return valor / 1000
+  if (['cc', 'ml'].includes(stock) && uso === 'L') return valor * 1000
+  return null
+}
+
 function useViewportWidth() {
   const [width, setWidth] = useState(typeof window === 'undefined' ? 1200 : window.innerWidth)
   useEffect(() => {
@@ -59,7 +82,7 @@ const resumenSoluciones = (soluciones = []) => soluciones
   .filter(Boolean)
   .join(' | ')
 
-function ModalFertilizacion({ bloques, form, setForm, onClose, onSave, saving }) {
+function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave, saving }) {
   const width = useViewportWidth()
   const isMobile = width < 720
   const alternarBloque = (bloqueId) => {
@@ -101,9 +124,15 @@ function ModalFertilizacion({ bloques, form, setForm, onClose, onSave, saving })
   const actualizarProducto = (si, pi, campo, valor) => {
     setForm(f => {
       const soluciones = [...f.soluciones]
-      const productos = [...soluciones[si].productos]
-      productos[pi] = { ...productos[pi], [campo]: valor }
-      soluciones[si] = { ...soluciones[si], productos }
+      const productosSol = [...soluciones[si].productos]
+      const actual = { ...productosSol[pi], [campo]: valor }
+      if (campo === 'producto_id') {
+        const prod = productos.find(p => p.id === valor)
+        actual.nombre = prod?.nombre || ''
+        actual.unidad = prod?.unidad || actual.unidad || 'kg'
+      }
+      productosSol[pi] = actual
+      soluciones[si] = { ...soluciones[si], productos: productosSol }
       return { ...f, soluciones }
     })
   }
@@ -171,7 +200,10 @@ function ModalFertilizacion({ bloques, form, setForm, onClose, onSave, saving })
               <div style={{ display:'grid', gap:8 }}>
                 {sol.productos.map((p, pi) => (
                   <div key={pi} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 120px 110px 38px', gap:8, alignItems:'center' }}>
-                    <input value={p.nombre} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Producto" style={inputBase} />
+                    <select value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)} style={inputBase}>
+                      <option value="">Producto del inventario</option>
+                      {productos.map(prod => <option key={prod.id} value={prod.id}>{prod.nombre} - stock {fmtNum(prod.stock_actual)} {prod.unidad || ''}</option>)}
+                    </select>
                     <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)} placeholder="Cantidad" type="number" step="0.01" style={inputBase} />
                     <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} style={inputBase}>
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
@@ -207,6 +239,7 @@ export default function Fertilizaciones({ campoActivo }) {
   const width = useViewportWidth()
   const isMobile = width < 760
   const [bloques, setBloques] = useState([])
+  const [productos, setProductos] = useState([])
   const [registros, setRegistros] = useState([])
   const [modal, setModal] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -220,6 +253,13 @@ export default function Fertilizaciones({ campoActivo }) {
 
   const cargarDatos = async () => {
     setError('')
+    const { data: productosData } = await supabase
+      .from('productos')
+      .select('id, nombre, unidad, stock_actual, stock_minimo, activo')
+      .eq('activo', true)
+      .order('nombre')
+    setProductos(productosData || [])
+
     let queryBloques = supabase
       .from('bloques')
       .select('id, codigo, campo_id, activo, plantaciones(activa, cultivos(nombre))')
@@ -293,14 +333,30 @@ export default function Fertilizaciones({ campoActivo }) {
       .map(sol => ({
         nombre: sol.nombre || 'Solucion',
         productos: (sol.productos || [])
-          .filter(p => p.nombre || p.cantidad)
-          .map(p => ({ nombre:p.nombre || '', cantidad:p.cantidad || '', unidad:p.unidad || 'kg' }))
+          .filter(p => p.producto_id || p.nombre || p.cantidad)
+          .map(p => {
+            const prod = productos.find(x => x.id === p.producto_id)
+            const descuentoStock = prod ? convertirAStock(p.cantidad, p.unidad || prod.unidad, prod.unidad) : null
+            return {
+              producto_id: p.producto_id || null,
+              nombre: prod?.nombre || p.nombre || '',
+              cantidad:p.cantidad || '',
+              unidad:p.unidad || prod?.unidad || 'kg',
+              descuento_stock: descuentoStock === null ? null : descuentoStock,
+            }
+          })
       }))
       .filter(sol => sol.productos.length > 0)
 
     if (!form.fecha) return setError('Elegir una fecha.')
     if (!bloquesDestino.length) return setError('Elegir al menos un bloque.')
     if (!solucionesLimpias.length) return setError('Agregar al menos un producto.')
+    if (solucionesLimpias.flatMap(sol => sol.productos).some(p => !p.producto_id)) {
+      return setError('Elegir los productos desde inventario para poder descontar stock.')
+    }
+    if (solucionesLimpias.flatMap(sol => sol.productos).some(p => p.descuento_stock === null)) {
+      return setError('Hay una unidad que no coincide con el inventario. Usa kg/g para productos en kg o L/cc/ml para liquidos.')
+    }
 
     setSaving(true)
     const payloads = bloquesDestino.map(bloque_id => ({
@@ -315,6 +371,28 @@ export default function Fertilizaciones({ campoActivo }) {
     if (insertError) {
       setError(`No se pudo guardar la fertilizacion: ${insertError.message}`)
       return
+    }
+
+    const descuentos = solucionesLimpias
+      .flatMap(sol => sol.productos)
+      .reduce((acc, p) => {
+        const cantidad = Number(p.descuento_stock) || 0
+        if (!p.producto_id || cantidad <= 0) return acc
+        acc[p.producto_id] = (acc[p.producto_id] || 0) + cantidad
+        return acc
+      }, {})
+
+    for (const [productoId, descuento] of Object.entries(descuentos)) {
+      const { data: prodActual } = await supabase
+        .from('productos')
+        .select('stock_actual')
+        .eq('id', productoId)
+        .single()
+      if (!prodActual) continue
+      await supabase
+        .from('productos')
+        .update({ stock_actual: Math.max(0, Number(prodActual.stock_actual) - descuento) })
+        .eq('id', productoId)
     }
 
     await registrarAuditoria({
@@ -394,6 +472,7 @@ export default function Fertilizaciones({ campoActivo }) {
       {modal && (
         <ModalFertilizacion
           bloques={bloques}
+          productos={productos}
           form={form}
           setForm={setForm}
           onClose={() => setModal(false)}

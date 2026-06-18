@@ -87,6 +87,7 @@ export default function FichaBloque() {
 
   const [seccion, setSeccion] = useState('plantacion')
   const [historialDetalle, setHistorialDetalle] = useState(null)
+  const [incidenciaDetalle, setIncidenciaDetalle] = useState(null)
 
   const [showEditarPlantacion, setShowEditarPlantacion] = useState(false)
   const [showNuevaPlantacion, setShowNuevaPlantacion] = useState(false)
@@ -108,6 +109,7 @@ export default function FichaBloque() {
     setSeccion('plantacion')
     setHistorialDetalle(null)
     setFertDetalle(null)
+    setIncidenciaDetalle(null)
     fetchData()
   }, [id])
 
@@ -145,11 +147,11 @@ export default function FichaBloque() {
         setCosechasCiclo(cos || [])
 
         const { data: fumBloques } = await supabase.from('fumigacion_bloques')
-          .select('fumigaciones(fecha, notas, tipo, fumigacion_productos(productos(nombre)))')
+          .select('fumigaciones(id, fecha, notas, tipo, operario, tanques_cantidad, tanque_litros, campos(nombre), fumigacion_bloques(bloque_id, bloques(codigo)), fumigacion_productos(dosis, cantidad, unidad_uso, descuento_stock, productos(nombre, unidad, carencia_dias)))')
           .eq('bloque_id', id)
         const inc = (fumBloques || [])
           .map(fb => fb.fumigaciones)
-          .filter(f => f && f.notas)
+          .filter(Boolean)
           .sort((a, b) => b.fecha.localeCompare(a.fecha))
         setIncidencias(inc)
 
@@ -1033,7 +1035,7 @@ export default function FichaBloque() {
             {incidencias.length === 0 ? (
               <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin incidencias registradas</div>
             ) : incidencias.map((inc, i) => (
-              <div key={i} style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:8 }}>
+              <div key={i} onClick={() => setIncidenciaDetalle(inc)} style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:8, cursor:'pointer' }}>
                 <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
                   <div style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:6, background: inc.tipo==='fumigacion' ? '#fff3e8' : '#eaf4fb', color: inc.tipo==='fumigacion' ? '#e07b00' : '#2980b9' }}>
                     {inc.tipo === 'fumigacion' ? 'Fumigacion' : inc.tipo === 'fertiriego' ? 'Fertiriego' : 'Foliar'}
@@ -1046,6 +1048,7 @@ export default function FichaBloque() {
                     {inc.fumigacion_productos.map(fp => fp.productos?.nombre).filter(Boolean).join(', ')}
                   </div>
                 )}
+                <div style={{ fontSize:11, color:'#176a25', marginTop:8, fontWeight:700 }}>Tocar para ver detalle</div>
               </div>
             ))}
             {muertes.length > 0 && (
@@ -1298,6 +1301,71 @@ export default function FichaBloque() {
               {savingFert ? 'Guardando...' : 'Guardar aplicacion'}
             </button>
             <button onClick={() => setShowAplicarPlan(false)} style={{ width:'100%', padding:12, borderRadius:14, border:'1px solid #e8e6e2', background:'transparent', marginTop:8, fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {incidenciaDetalle && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:130, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center', padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : 0 }}
+          onClick={e => e.target===e.currentTarget && setIncidenciaDetalle(null)}>
+          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:520, padding:'22px 20px 28px', maxHeight:'88vh', overflowY:'auto' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start', marginBottom:14 }}>
+              <div>
+                <div style={{ fontSize:11, color:'#8b928b', marginBottom:4 }}>Detalle de fumigacion</div>
+                <div style={{ fontSize:22, fontWeight:800, color:'#0a0a0a' }}>{incidenciaDetalle.tipo === 'fertiriego' ? 'Fertiriego' : incidenciaDetalle.tipo === 'foliar' ? 'Foliar' : 'Fumigacion'}</div>
+                <div style={{ fontSize:12, color:'#8b928b', marginTop:3 }}>{incidenciaDetalle.fecha}</div>
+              </div>
+              <button onClick={() => setIncidenciaDetalle(null)} style={{ border:'none', background:'#fff', borderRadius:12, width:38, height:38, cursor:'pointer' }}>
+                <i className="ti ti-x" style={{ fontSize:19 }} aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <div style={{ background:'#fff', borderRadius:16, padding:14, marginBottom:10 }}>
+              <div style={{ fontSize:11, color:'#8b928b', marginBottom:6 }}>Bloques</div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>
+                {(incidenciaDetalle.fumigacion_bloques || []).map(fb => fb.bloques?.codigo).filter(Boolean).join(', ') || bloque?.codigo || '-'}
+              </div>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+              <div style={{ background:'#fff', borderRadius:16, padding:14 }}>
+                <div style={{ fontSize:11, color:'#8b928b', marginBottom:6 }}>Operario</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{incidenciaDetalle.operario || '-'}</div>
+              </div>
+              <div style={{ background:'#fff', borderRadius:16, padding:14 }}>
+                <div style={{ fontSize:11, color:'#8b928b', marginBottom:6 }}>Tanques</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>
+                  {incidenciaDetalle.tanques_cantidad || '-'}{incidenciaDetalle.tanque_litros ? ` x ${incidenciaDetalle.tanque_litros} L` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background:'#fff', borderRadius:16, padding:14, marginBottom:10 }}>
+              <div style={{ fontSize:13, fontWeight:800, color:'#0a0a0a', marginBottom:10 }}>Productos aplicados</div>
+              {(incidenciaDetalle.fumigacion_productos || []).length === 0 ? (
+                <div style={{ fontSize:12, color:'#8b928b' }}>Sin productos cargados.</div>
+              ) : incidenciaDetalle.fumigacion_productos.map((fp, idx) => (
+                <div key={idx} style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:10, padding:'10px 0', borderTop: idx === 0 ? 'none' : '1px solid #f0ede8' }}>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:800, color:'#0a0a0a' }}>{fp.productos?.nombre || 'Producto'}</div>
+                    <div style={{ fontSize:12, color:'#8b928b', marginTop:2 }}>
+                      Dosis: {fp.dosis || `${fp.cantidad || '-'} ${fp.unidad_uso || ''}`}
+                    </div>
+                  </div>
+                  <div style={{ textAlign:'right', fontSize:12, color:'#8b928b' }}>
+                    {fp.descuento_stock ? `Stock: ${fmtKg(fp.descuento_stock)} ${fp.productos?.unidad || ''}` : ''}
+                    {fp.productos?.carencia_dias ? <div>Carencia: {fp.productos.carencia_dias} dias</div> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {incidenciaDetalle.notas && (
+              <div style={{ background:'#fff', borderRadius:16, padding:14 }}>
+                <div style={{ fontSize:11, color:'#8b928b', marginBottom:6 }}>Notas</div>
+                <div style={{ fontSize:13, color:'#0a0a0a', lineHeight:1.45 }}>{incidenciaDetalle.notas}</div>
+              </div>
+            )}
           </div>
         </div>
       )}
