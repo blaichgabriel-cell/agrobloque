@@ -19,8 +19,14 @@ export default function Invitado() {
     setLoading(true)
     setError('')
     const { data, error } = await supabase.rpc('get_guest_access_snapshot', { access_token: token })
-    if (error || !data?.ok) {
-      setError('Este enlace de invitado no existe, vencio o fue desactivado.')
+    if (error) {
+      setError(`No se pudo validar el enlace. Ejecuta el SQL actualizado de invitados. Detalle: ${error.message || 'sin detalle'}`)
+      setData(null)
+    } else if (!data?.ok) {
+      setError(data?.error === 'link_no_valido'
+        ? 'Este enlace no coincide con ningun invitado activo en este Supabase. Crea un link nuevo despues de ejecutar el SQL actualizado.'
+        : 'Este enlace de invitado no existe, vencio o fue desactivado.'
+      )
       setData(null)
     } else {
       setData(data)

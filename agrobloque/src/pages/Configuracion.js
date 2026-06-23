@@ -384,43 +384,26 @@ export default function Configuracion() {
     setLoading(false)
   }
 
-  const generarToken = () => {
-    const bytes = new Uint8Array(24)
-    window.crypto.getRandomValues(bytes)
-    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
-  }
-
-  const hashToken = async (token) => {
-    const bytes = new TextEncoder().encode(token)
-    const hash = await window.crypto.subtle.digest('SHA-256', bytes)
-    return Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('')
-  }
-
   const crearInvitado = async () => {
     if (!form.nombre) return
     setLoading(true); setError(''); setSuccess(''); setLinkInvitado('')
     try {
-      const token = generarToken()
-      const token_hash = await hashToken(token)
-      const vencimiento = form.dias && Number(form.dias) > 0
-        ? new Date(Date.now() + Number(form.dias) * 24 * 60 * 60 * 1000).toISOString()
-        : null
-      const { error } = await supabase.from('guest_access_links').insert({
-        nombre: form.nombre.trim(),
-        campo_id: form.campo_id || null,
-        token_hash,
-        expires_at: vencimiento,
-        permisos: Array.isArray(form.permisos) && form.permisos.length > 0 ? form.permisos : null,
-        activo: true,
+      const { data, error } = await supabase.rpc('create_guest_access_link', {
+        p_nombre: form.nombre.trim(),
+        p_campo_id: form.campo_id || null,
+        p_dias: form.dias && Number(form.dias) > 0 ? Number(form.dias) : null,
+        p_permisos: Array.isArray(form.permisos) && form.permisos.length > 0 ? form.permisos : null,
       })
       if (error) throw error
+      if (!data?.ok || !data?.token) throw new Error(data?.error || 'No se pudo crear el token.')
+      const token = data.token
       const url = `${window.location.origin}/invitado/${token}`
       setLinkInvitado(url)
       setSuccess('Link invitado creado. Copialo ahora.')
       setForm({ nombre:'', campo_id:'', dias:'30', permisos: [] })
       await fetchAll()
     } catch (e) {
-      setError('No se pudo crear el invitado. Ejecuta primero el SQL de invitados.')
+      setError('No se pudo crear el invitado. Ejecuta primero el SQL invitados_rpc_snapshot_2026_06_22.sql.')
     }
     setLoading(false)
   }
