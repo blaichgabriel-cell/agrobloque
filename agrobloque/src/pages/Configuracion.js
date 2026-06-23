@@ -388,7 +388,7 @@ export default function Configuracion() {
     if (!form.nombre) return
     setLoading(true); setError(''); setSuccess(''); setLinkInvitado('')
     try {
-      const { data, error } = await supabase.rpc('create_guest_access_link_v2', {
+      const { data, error } = await supabase.rpc('create_guest_access_link_v3', {
         p_nombre: form.nombre.trim(),
         p_campo_id_text: form.campo_id || '',
         p_dias_text: form.dias || '',
@@ -403,7 +403,7 @@ export default function Configuracion() {
       setForm({ nombre:'', campo_id:'', dias:'30', permisos: [] })
       await fetchAll()
     } catch (e) {
-      setError(`No se pudo crear el invitado. Ejecuta el SQL invitados_rpc_snapshot_2026_06_22_v2.sql. Detalle: ${e.message || 'sin detalle'}`)
+      setError(`No se pudo crear el invitado. Ejecuta el SQL invitados_rpc_snapshot_2026_06_22_v3.sql. Detalle: ${e.message || 'sin detalle'}`)
     }
     setLoading(false)
   }
