@@ -388,11 +388,11 @@ export default function Configuracion() {
     if (!form.nombre) return
     setLoading(true); setError(''); setSuccess(''); setLinkInvitado('')
     try {
-      const { data, error } = await supabase.rpc('create_guest_access_link', {
+      const { data, error } = await supabase.rpc('create_guest_access_link_v2', {
         p_nombre: form.nombre.trim(),
-        p_campo_id: form.campo_id || null,
-        p_dias: form.dias && Number(form.dias) > 0 ? Number(form.dias) : null,
-        p_permisos: Array.isArray(form.permisos) && form.permisos.length > 0 ? form.permisos : null,
+        p_campo_id_text: form.campo_id || '',
+        p_dias_text: form.dias || '',
+        p_permisos_json: Array.isArray(form.permisos) && form.permisos.length > 0 ? JSON.stringify(form.permisos) : '',
       })
       if (error) throw error
       if (!data?.ok || !data?.token) throw new Error(data?.error || 'No se pudo crear el token.')
@@ -403,7 +403,7 @@ export default function Configuracion() {
       setForm({ nombre:'', campo_id:'', dias:'30', permisos: [] })
       await fetchAll()
     } catch (e) {
-      setError('No se pudo crear el invitado. Ejecuta primero el SQL invitados_rpc_snapshot_2026_06_22.sql.')
+      setError(`No se pudo crear el invitado. Ejecuta el SQL invitados_rpc_snapshot_2026_06_22_v2.sql. Detalle: ${e.message || 'sin detalle'}`)
     }
     setLoading(false)
   }
