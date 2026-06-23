@@ -19,6 +19,7 @@ import CuentasPagar from './pages/CuentasPagar'
 import Reportes from './pages/Reportes'
 import Compradores from './pages/Compradores'
 import Vivero from './pages/Vivero'
+import Invitado from './pages/Invitado'
 import Buscador from './pages/Buscador'
 import Alertas from './pages/Alertas'
 import Auditoria from './pages/Auditoria'
@@ -319,10 +320,6 @@ export default function App() {
   const [campoActivo, setCampoActivo] = useState(null)
   const [dataError, setDataError] = useState('')
   const [role, setRole] = useState(normalizeRole(null))
-  const [guestRole, setGuestRole] = useState(normalizeRole({
-    rol:'lectura',
-    permisos:['alertas','historial','mapa','agenda','vivero','cosecha','ventas','inventario','fumigaciones','plan_nutricional','costos','contabilidad','reportes','compradores'],
-  }))
   const guestPath = Boolean(guestToken)
 
   useEffect(() => {
@@ -394,17 +391,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!guestPath) return
-    supabase.rpc('guest_get_permissions')
-      .then(({ data }) => {
-        if (Array.isArray(data?.permisos) && data.permisos.length > 0) {
-          setGuestRole(normalizeRole({ rol:'lectura', permisos:data.permisos }))
-        }
-      })
-      .catch(() => {})
-  }, [guestPath])
-
-  useEffect(() => {
+    if (guestPath) return
     if (!session && !guestPath) {
       setCampoActivo(null)
       return
@@ -415,18 +402,28 @@ export default function App() {
       const { data, error } = await supabase.from('campos').select('*').order('nombre')
       if (error) {
         console.error('Error cargando campos', error)
-        if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch failed')) {
+        if (guestPath) {
+          setDataError(textoErrorProfesional(error, { modulo:'Invitados / Campos', accion:'leer' }))
+        } else if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch failed')) {
           setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
         } else if (esErrorSesion(error)) {
           await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${error.message}`)
         } else setDataError(textoErrorProfesional(error, { modulo:'Campos', accion:'leer' }))
         return
       }
-      if (cancelled || !data || data.length === 0) return
+      if (cancelled) return
+      if (!data || data.length === 0) {
+        if (guestPath) {
+          setDataError('El link fue validado, pero Supabase no devolvio campos para el invitado. Ejecuta el SQL supabase/invitados_fix_total_2026_06_18.sql y revisa que el link tenga campo permitido.')
+        }
+        return
+      }
       const { data: bloques, error: bloquesError } = await supabase.from('bloques').select('campo_id')
       if (bloquesError) {
         console.error('Error cargando bloques', bloquesError)
-        if (bloquesError.message?.includes('Failed to fetch') || bloquesError.message?.includes('fetch failed')) {
+        if (guestPath) {
+          setDataError(textoErrorProfesional(bloquesError, { modulo:'Invitados / Bloques', accion:'leer' }))
+        } else if (bloquesError.message?.includes('Failed to fetch') || bloquesError.message?.includes('fetch failed')) {
           setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
         } else if (esErrorSesion(bloquesError)) {
           await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${bloquesError.message}`)
@@ -452,9 +449,12 @@ export default function App() {
   }, [campoActivo])
 
   if (guestPath) return (
-    <BrowserRouter basename={`/invitado/${guestToken}`}>
+    <BrowserRouter>
       <ScrollToTop />
-      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest role={guestRole} />
+      <Routes>
+        <Route path="/invitado/:token" element={<Invitado />} />
+        <Route path="*" element={<Navigate to={`/invitado/${guestToken}`} />} />
+      </Routes>
     </BrowserRouter>
   )
 
