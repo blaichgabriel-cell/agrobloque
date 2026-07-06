@@ -177,7 +177,7 @@ export default function Ventas() {
   })
 
   useEffect(() => { fetchInicial() }, [])
-  useEffect(() => { if (campoFiltro) fetchBloques(campoFiltro) }, [campoFiltro])
+  useEffect(() => { fetchBloques(campoFiltro) }, [campoFiltro])
 
   const fetchInicial = async () => {
     await Promise.all([fetchVentas(), fetchCompradores(), fetchCampos()])
@@ -209,16 +209,21 @@ export default function Ventas() {
   const fetchCampos = async () => {
     const { data } = await supabase.from('campos').select('*').order('nombre')
     setCampos(data || [])
-    if (data?.length > 0) setCampoFiltro(data[0].id)
   }
 
-  const fetchBloques = async (campo_id) => {
-    const { data } = await supabase
+  const fetchBloques = async (campo_id = '') => {
+    let query = supabase
       .from('bloques')
-      .select('id, codigo, plantaciones(cultivos(nombre), activa, created_at, fecha_siembra)')
-      .eq('campo_id', campo_id)
+      .select('id, codigo, campo_id, campos(nombre), plantaciones(cultivos(nombre), activa, created_at, fecha_siembra)')
       .order('codigo')
+    if (campo_id) query = query.eq('campo_id', campo_id)
+    const { data } = await query
     setBloques(data || [])
+  }
+
+  const getEtiquetaBloque = (bloque) => {
+    const campo = bloque?.campos?.nombre
+    return campo ? `${campo} - ${bloque.codigo}` : bloque.codigo
   }
 
   const getCultivoBloque = (bloque) => {
@@ -568,7 +573,7 @@ export default function Ventas() {
       </div>
 
       {modal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target === e.currentTarget && setModal(false)}>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:500, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div style={{ fontSize:18, fontWeight:800, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar venta' : 'Registrar venta'}</div>
             {error && <div style={{ background:'#fff3e3', color:'#8a4d00', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
@@ -611,6 +616,7 @@ export default function Ventas() {
 
                 <label style={label}>Campo/bloque origen (opcional)</label>
                 <select style={inp} value={campoFiltro} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({ ...f, bloque_id:'' })) }}>
+                  <option value="">Todos los campos</option>
                   {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
                 <select style={inp} value={form.bloque_id} onChange={e => {
@@ -619,7 +625,7 @@ export default function Ventas() {
                   setForm(f => ({ ...f, bloque_id:e.target.value, producto: f.producto || cultivo }))
                 }}>
                   <option value="">Venta sin bloque especifico</option>
-                  {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
+                  {bloques.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
                 </select>
                 {cultivoSugerido && <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:12, padding:'9px 12px', fontSize:12, fontWeight:750, marginBottom:12 }}>Cultivo sugerido: {cultivoSugerido}</div>}
               </>
@@ -627,6 +633,7 @@ export default function Ventas() {
               <>
                 <label style={label}>Campo para sugerir bloques</label>
                 <select style={inp} value={campoFiltro} onChange={e => setCampoFiltro(e.target.value)}>
+                  <option value="">Todos los campos</option>
                   {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
                 <div style={{ display:'grid', gap:10, marginBottom:12 }}>
@@ -654,7 +661,7 @@ export default function Ventas() {
                           if (!linea.producto && cultivo) actualizarLineaVenta(idx, 'producto', cultivo)
                         }}>
                           <option value="">Sin bloque especifico</option>
-                          {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
+                          {bloques.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
                         </select>
                         {cultivoLinea && <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:10, padding:'7px 10px', fontSize:11, fontWeight:750, margin:'-4px 0 10px' }}>{cultivoLinea}</div>}
                         <input style={{ ...inp, marginBottom:0 }} value={linea.notas} onChange={e => actualizarLineaVenta(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>

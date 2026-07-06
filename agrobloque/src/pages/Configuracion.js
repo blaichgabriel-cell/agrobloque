@@ -557,8 +557,7 @@ export default function Configuracion() {
           justifyContent:'center',
           padding: esDesktop() ? 24 : 0,
           boxSizing:'border-box',
-        }}
-          onClick={e => e.target===e.currentTarget && cerrar()}>
+        }}>
           <div style={{
             background:'#f2f1ef',
             borderRadius: esDesktop() ? 24 : '24px 24px 0 0',

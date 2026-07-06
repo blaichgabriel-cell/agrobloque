@@ -234,10 +234,17 @@ export default function Asistencia() {
     }))
   }
 
-  const esAdelantoPagado = (adelanto) => (adelanto.descripcion || '').includes('[PAGADO]')
+  const limpiarMarcaPagado = (descripcion = '') => String(descripcion).replace(/\[PAGADO[^\]]*\]/g, '').trim()
+  const getFechaPagoAdelanto = (adelanto) => {
+    const match = String(adelanto?.descripcion || '').match(/\[PAGADO\s*([0-9-]+)?\]/)
+    return match?.[1] || ''
+  }
+  const esAdelantoPagado = (adelanto) => (adelanto.descripcion || '').includes('[PAGADO')
   const getAdelantosOperario = (operario_id) => adelantos.filter(a => a.operario_id === operario_id)
   const getAdelantosPendientesOperario = (operario_id) => getAdelantosOperario(operario_id).filter(a => !esAdelantoPagado(a))
+  const getAdelantosPagadosOperario = (operario_id) => getAdelantosOperario(operario_id).filter(esAdelantoPagado)
   const getTotalAdelantos = (operario_id) => getAdelantosPendientesOperario(operario_id).reduce((s, a) => s + Number(a.monto), 0)
+  const getTotalAdelantosPagados = (operario_id) => getAdelantosPagadosOperario(operario_id).reduce((s, a) => s + Number(a.monto), 0)
 
   const guardarAdelanto = async () => {
     const monto = parsearGs(formAdelanto.monto)
@@ -265,7 +272,7 @@ export default function Asistencia() {
     setModalEditarAdelanto(adelanto)
     setFormEditarAdelanto({
       monto: fmtGs(adelanto.monto),
-      descripcion: (adelanto.descripcion || '').replace('[PAGADO]', '').trim(),
+      descripcion: limpiarMarcaPagado(adelanto.descripcion || ''),
     })
   }
 
@@ -275,9 +282,10 @@ export default function Asistencia() {
     if (!monto) return
     setSavingAdelanto(true)
     try {
-      const estabaPagado = (modalEditarAdelanto.descripcion || '').includes('[PAGADO]')
+      const estabaPagado = esAdelantoPagado(modalEditarAdelanto)
+      const fechaPago = getFechaPagoAdelanto(modalEditarAdelanto)
       const descripcionBase = (formEditarAdelanto.descripcion || '').trim()
-      const descripcion = `${descripcionBase}${estabaPagado ? ' [PAGADO]' : ''}`.trim() || null
+      const descripcion = `${descripcionBase}${estabaPagado ? ` [PAGADO${fechaPago ? ` ${fechaPago}` : ''}]` : ''}`.trim() || null
       await supabase
         .from('adelantos')
         .update({ monto, descripcion })
@@ -293,7 +301,7 @@ export default function Asistencia() {
 
   const marcarPagado = async (adelanto) => {
     if (esAdelantoPagado(adelanto)) return
-    const descripcion = `${(adelanto.descripcion || '').replace('[PAGADO]', '').trim()} [PAGADO]`.trim()
+    const descripcion = `${limpiarMarcaPagado(adelanto.descripcion || '')} [PAGADO ${fechaLocal()}]`.trim()
     await supabase.from('adelantos').update({ descripcion }).eq('id', adelanto.id)
     fetchAdelantos(operarios)
   }
@@ -396,25 +404,26 @@ export default function Asistencia() {
 
       {/* Modal historial adelantos */}
       {modalHistorial && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalHistorial(null)}>
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'80vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Adelantos — {modalHistorial.nombre}</div>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Pendiente: Gs. {fmtGs(getTotalAdelantos(modalHistorial.id))}</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Pendiente: Gs. {fmtGs(getTotalAdelantos(modalHistorial.id))} | Pagados: Gs. {fmtGs(getTotalAdelantosPagados(modalHistorial.id))}</div>
             {getAdelantosOperario(modalHistorial.id).length === 0 ? (
               <div style={{ textAlign:'center', color:'#9a9a9a', fontSize:13, padding:'20px 0' }}>Sin adelantos registrados</div>
             ) : getAdelantosOperario(modalHistorial.id).map(a => (
               <div key={a.id} style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:8 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color: a.descripcion?.includes('[PAGADO]') ? '#9a9a9a' : '#0a0a0a' }}>
+                  <div style={{ fontSize:13, fontWeight:600, color: esAdelantoPagado(a) ? '#9a9a9a' : '#0a0a0a' }}>
                     Gs. {fmtGs(a.monto)}
-                    {a.descripcion?.includes('[PAGADO]') && <span style={{ fontSize:10, color:'#1E5631', background:'#edf7ed', padding:'1px 6px', borderRadius:6, marginLeft:6 }}>Pagado</span>}
+                    {esAdelantoPagado(a) && <span style={{ fontSize:10, color:'#1E5631', background:'#edf7ed', padding:'1px 6px', borderRadius:6, marginLeft:6 }}>Pagado</span>}
                   </div>
                   <div style={{ fontSize:11, color:'#9a9a9a' }}>{a.fecha}</div>
                 </div>
-                {a.descripcion && <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:8 }}>{a.descripcion.replace('[PAGADO]','').trim()}</div>}
-                <div style={{ display:'flex', gap:6 }}>
+                {esAdelantoPagado(a) && <div style={{ fontSize:11, color:'#1E5631', marginBottom:6 }}>{getFechaPagoAdelanto(a) ? `Pagado: ${getFechaPagoAdelanto(a)}` : 'Pagado'}</div>}
+                {limpiarMarcaPagado(a.descripcion || '') && <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:8 }}>{limpiarMarcaPagado(a.descripcion || '')}</div>}
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                   <button onClick={() => abrirEditarAdelanto(a)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#0a0a0a', cursor:'pointer' }}>Editar</button>
-                  {!a.descripcion?.includes('[PAGADO]') && (
+                  {!esAdelantoPagado(a) && (
                     <button onClick={() => marcarPagado(a)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #c8ddc8', background:'transparent', fontSize:11, color:'#1E5631', cursor:'pointer' }}>✓ Marcar pagado</button>
                   )}
                   <button onClick={() => eliminarAdelanto(a.id)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
@@ -428,7 +437,7 @@ export default function Asistencia() {
 
       {/* Modal editar adelanto */}
       {modalEditarAdelanto && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:110, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalEditarAdelanto(null)}>
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:110, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Editar adelanto</div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>{modalHistorial?.nombre || ''}</div>
@@ -448,7 +457,7 @@ export default function Asistencia() {
 
       {/* Modal nuevo adelanto */}
       {modalAdelanto && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalAdelanto(null)}>
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:4 }}>Registrar adelanto</div>
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>{modalAdelanto.nombre}</div>
