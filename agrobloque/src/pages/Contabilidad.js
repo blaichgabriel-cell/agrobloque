@@ -14,8 +14,10 @@ const mediosPago = ['Efectivo', 'Transferencia', 'Cheque', 'Tarjeta', 'Otro']
 
 const hoy = () => new Date().toISOString().split('T')[0]
 const anhoActual = () => new Date().getFullYear()
+const mesActual = () => new Date().getMonth()
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 const parseGs = (v) => parseInt(String(v || '').replace(/[^0-9]/g, ''), 10) || 0
+const fechaInicioMes = (anho, mes) => `${anho}-${String(mes + 1).padStart(2, '0')}-01`
 
 const formInicial = {
   fecha: hoy(),
@@ -39,6 +41,7 @@ export default function Contabilidad() {
   const [form, setForm] = useState(formInicial)
   const [filtro, setFiltro] = useState('todos')
   const [anho, setAnho] = useState(anhoActual())
+  const [mesSeleccionado, setMesSeleccionado] = useState(mesActual())
 
   useEffect(() => { fetchMovimientos() }, [anho])
 
@@ -81,14 +84,28 @@ export default function Contabilidad() {
     return { porMes, ventas, compras, balance: ventas - compras }
   }, [movimientos])
 
+  const movimientosDelMes = useMemo(() => {
+    return movimientos.filter(m => Number((m.fecha || '').slice(5, 7)) - 1 === mesSeleccionado)
+  }, [movimientos, mesSeleccionado])
+
+  const resumenMes = useMemo(() => {
+    const ventas = movimientosDelMes.filter(m => m.tipo === 'venta').reduce((s, m) => s + (Number(m.monto) || 0), 0)
+    const compras = movimientosDelMes.filter(m => m.tipo !== 'venta').reduce((s, m) => s + (Number(m.monto) || 0), 0)
+    return { ventas, compras, balance: ventas - compras, total: movimientosDelMes.length }
+  }, [movimientosDelMes])
+
   const movimientosFiltrados = useMemo(() => {
-    if (filtro === 'todos') return movimientos
-    return movimientos.filter(m => m.tipo === filtro)
-  }, [movimientos, filtro])
+    if (filtro === 'todos') return movimientosDelMes
+    return movimientosDelMes.filter(m => m.tipo === filtro)
+  }, [movimientosDelMes, filtro])
 
   const abrirNuevo = (tipo = 'compra') => {
+    const fechaSugerida = anho === anhoActual() && mesSeleccionado === mesActual()
+      ? hoy()
+      : fechaInicioMes(anho, mesSeleccionado)
     setForm({
       ...formInicial,
+      fecha: fechaSugerida,
       tipo,
       categoria: tipo === 'venta' ? 'Verduras' : 'Insumos',
     })
@@ -166,12 +183,24 @@ export default function Contabilidad() {
       Monto: Number(m.monto) || 0,
       Notas: m.notas || '',
     }))
-    descargarCsv('contabilidad-movimientos', ['Fecha', 'Tipo', 'Descripcion', 'Categoria', 'Contraparte', 'MedioPago', 'Comprobante', 'Monto', 'Notas'], rows)
+    descargarCsv(`contabilidad-${anho}-${String(mesSeleccionado + 1).padStart(2, '0')}`, ['Fecha', 'Tipo', 'Descripcion', 'Categoria', 'Contraparte', 'MedioPago', 'Comprobante', 'Monto', 'Notas'], rows)
   }
 
   const imprimirBalance = () => {
     imprimirHtml('Balance contable AgroBloque', `
       <h1>Balance contable AgroBloque</h1>
+      <div class="muted">Historial de ${meses[mesSeleccionado]} ${anho}</div>
+      <h2>Resumen del mes</h2>
+      <table>
+        <tr><th>Periodo</th><th class="right">Compras</th><th class="right">Ventas</th><th class="right">Balance</th></tr>
+        <tr><td>${meses[mesSeleccionado]} ${anho}</td><td class="right">Gs. ${fmtGs(resumenMes.compras)}</td><td class="right">Gs. ${fmtGs(resumenMes.ventas)}</td><td class="right total">Gs. ${fmtGs(resumenMes.balance)}</td></tr>
+      </table>
+      <h2>Movimientos del mes</h2>
+      <table>
+        <tr><th>Fecha</th><th>Tipo</th><th>Descripcion</th><th>Categoria</th><th>Contraparte</th><th>Comprobante</th><th class="right">Monto</th></tr>
+        ${movimientosFiltrados.map(m => `<tr><td>${m.fecha || ''}</td><td>${m.tipo || ''}</td><td>${m.descripcion || ''}</td><td>${m.categoria || ''}</td><td>${m.contraparte || ''}</td><td>${m.comprobante || ''}</td><td class="right">Gs. ${fmtGs(m.monto)}</td></tr>`).join('')}
+      </table>
+      <h2>Resumen anual</h2>
       <div class="muted">Año ${anho}</div>
       <table>
         <tr><th>Mes</th><th class="right">Compras</th><th class="right">Ventas</th><th class="right">Balance</th></tr>
@@ -214,13 +243,37 @@ export default function Contabilidad() {
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
-          <TotalCard label="Ventas" value={resumen.ventas} tone="green" />
-          <TotalCard label="Compras" value={resumen.compras} tone="red" />
-          <TotalCard label="Balance" value={resumen.balance} tone={resumen.balance >= 0 ? 'dark' : 'red'} />
+          <TotalCard label={`Ventas ${meses[mesSeleccionado]}`} value={resumenMes.ventas} tone="green" />
+          <TotalCard label={`Compras ${meses[mesSeleccionado]}`} value={resumenMes.compras} tone="red" />
+          <TotalCard label={`Balance ${meses[mesSeleccionado]}`} value={resumenMes.balance} tone={resumenMes.balance >= 0 ? 'dark' : 'red'} />
         </div>
       </div>
 
       <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
+        <section style={card}>
+          <div style={sectionHead}>
+            <div>
+              <div style={eyebrow}>Historial contable {anho}</div>
+              <h2 style={sectionTitle}>Elegir mes</h2>
+            </div>
+            <div style={{ fontSize:12, color:'#69706a', fontWeight:800 }}>{resumenMes.total} movimientos</div>
+          </div>
+          <div style={monthGrid}>
+            {resumen.porMes.map(m => {
+              const activo = mesSeleccionado === m.idx
+              const tieneMovimientos = (m.compras + m.ventas) > 0
+              return (
+                <button key={m.nombre} onClick={() => setMesSeleccionado(m.idx)} style={activo ? monthBtnActive : monthBtn}>
+                  <span style={{ fontWeight:900 }}>{m.nombre}</span>
+                  <span style={{ fontSize:10, color: activo ? 'rgba(255,255,255,0.68)' : tieneMovimientos ? '#176a25' : '#9a9f9a' }}>
+                    {tieneMovimientos ? `Gs. ${fmtGs(m.balance)}` : 'Sin movimientos'}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
         <section style={card}>
           <div style={sectionHead}>
             <div>
@@ -242,7 +295,7 @@ export default function Contabilidad() {
               </thead>
               <tbody>
                 {resumen.porMes.map(m => (
-                  <tr key={m.nombre}>
+                  <tr key={m.nombre} onClick={() => setMesSeleccionado(m.idx)} style={{ cursor:'pointer', background: mesSeleccionado === m.idx ? '#f0f7ef' : 'transparent' }}>
                     <td style={td}>{m.nombre}</td>
                     <td style={tdRight}>Gs. {fmtGs(m.compras)}</td>
                     <td style={tdRight}>Gs. {fmtGs(m.ventas)}</td>
@@ -266,7 +319,7 @@ export default function Contabilidad() {
           <div style={sectionHead}>
             <div>
               <div style={eyebrow}>Compras y ventas</div>
-              <h2 style={sectionTitle}>Movimientos</h2>
+              <h2 style={sectionTitle}>Historial de {meses[mesSeleccionado]} {anho}</h2>
             </div>
             <div style={segmented}>
               {['todos', 'compra', 'venta'].map(k => (
@@ -290,7 +343,7 @@ export default function Contabilidad() {
       </div>
 
       {modal && (
-        <div style={overlay} onClick={e => e.target === e.currentTarget && setModal(false)}>
+        <div style={overlay}>
           <div style={sheet}>
             <div style={{ fontSize:19, fontWeight:850, marginBottom:16 }}>
               {form.id ? 'Editar movimiento' : 'Nuevo movimiento'}
@@ -461,6 +514,33 @@ const td = { padding:'10px 8px', borderBottom:'1px solid #f0f2f0', color:'#11161
 const tdRight = { ...td, textAlign:'right' }
 const tf = { padding:'12px 8px', fontWeight:900, background:'#f5f7f5', borderTop:'1px solid #dfe5df' }
 const tfRight = { ...tf, textAlign:'right' }
+
+const monthGrid = {
+  display:'grid',
+  gridTemplateColumns:'repeat(auto-fit, minmax(112px, 1fr))',
+  gap:8,
+}
+
+const monthBtn = {
+  border:'1px solid #e1e7e1',
+  background:'#fff',
+  color:'#111611',
+  borderRadius:13,
+  padding:'10px 11px',
+  cursor:'pointer',
+  display:'grid',
+  gap:4,
+  textAlign:'left',
+  fontSize:12,
+}
+
+const monthBtnActive = {
+  ...monthBtn,
+  background:'#176a25',
+  borderColor:'#176a25',
+  color:'#fff',
+  boxShadow:'0 10px 22px rgba(23,106,37,0.22)',
+}
 
 const segmented = { display:'flex', gap:4, background:'#eef0ee', padding:4, borderRadius:12 }
 const segBtn = { border:'none', borderRadius:9, background:'transparent', padding:'7px 9px', fontSize:11, fontWeight:800, color:'#737a74', cursor:'pointer' }
