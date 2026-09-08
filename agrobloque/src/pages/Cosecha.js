@@ -146,7 +146,21 @@ export default function Cosecha() {
   const fetchCampos = async () => {
     const { data } = await supabase.from('campos').select('*').order('nombre')
     setCampos(data || [])
-    if (data?.length > 0) setCampoFiltro(data[0].id)
+    if (data?.length > 0) {
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+      const campoQr = params?.get('campo') || ''
+      const bloqueQr = params?.get('bloque') || ''
+      const abrirQr = params?.get('nuevo') === '1' && campoQr && bloqueQr
+      const campoInicial = abrirQr && data.some(c => c.id === campoQr) ? campoQr : data[0].id
+      setCampoFiltro(campoInicial)
+      if (abrirQr) {
+        await fetchBloques(campoInicial)
+        limpiarForm()
+        setForm(f => ({ ...f, bloque_id:bloqueQr }))
+        setModoMultiple(false)
+        setModal(true)
+      }
+    }
   }
   const fetchCosechas = async () => {
     const { data, error } = await supabase.from('cosechas')
@@ -411,7 +425,7 @@ export default function Cosecha() {
       </div>
 
       {modal && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModal(false)}>
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar cosecha' : 'Registrar cosecha'}</div>
             {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}

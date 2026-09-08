@@ -439,7 +439,7 @@ export default function Vivero() {
       )}
 
       {modal && (
-        <div style={overlay} onClick={e => e.target === e.currentTarget && setModal(false)}>
+        <div style={overlay}>
           <div style={sheet}>
             <div style={{ fontSize:18, fontWeight:800, marginBottom:16 }}>{form.id ? 'Editar lote' : 'Nuevo lote de vivero'}</div>
             <Select label="Campo" value={form.campo_id} onChange={v => setForm(f => ({ ...f, campo_id:v }))} options={campos.map(c => [c.id, c.nombre])} />
@@ -470,7 +470,7 @@ export default function Vivero() {
       )}
 
       {modalTratamiento && (
-        <div style={overlay} onClick={e => e.target === e.currentTarget && setModalTratamiento(false)}>
+        <div style={overlay}>
           <div style={sheet}>
             <div style={{ fontSize:18, fontWeight:800, marginBottom:16 }}>Nuevo tratamiento</div>
             <Field label="Fecha *" type="date" value={tratForm.fecha} onChange={v => setTratForm(f => ({ ...f, fecha:v }))} />
@@ -486,7 +486,7 @@ export default function Vivero() {
       )}
 
       {modalTrasplante && detalle && (
-        <div style={overlay} onClick={e => e.target === e.currentTarget && setModalTrasplante(false)}>
+        <div style={overlay}>
           <div style={sheet}>
             <div style={{ fontSize:18, fontWeight:800, marginBottom:4 }}>Trasplantar a bloque</div>
             <div style={{ fontSize:12, color:'#7d837d', marginBottom:16 }}>

@@ -177,10 +177,9 @@ export default function Ventas() {
   })
 
   useEffect(() => { fetchInicial() }, [])
-  useEffect(() => { fetchBloques(campoFiltro) }, [campoFiltro])
 
   const fetchInicial = async () => {
-    await Promise.all([fetchVentas(), fetchCompradores(), fetchCampos()])
+    await Promise.all([fetchVentas(), fetchCompradores(), fetchCampos(), fetchBloques()])
   }
 
   const fetchVentas = async () => {
@@ -211,13 +210,16 @@ export default function Ventas() {
     setCampos(data || [])
   }
 
-  const fetchBloques = async (campo_id = '') => {
-    let query = supabase
+  const fetchBloques = async () => {
+    const { data, error } = await supabase
       .from('bloques')
       .select('id, codigo, campo_id, campos(nombre), plantaciones(cultivos(nombre), activa, created_at, fecha_siembra)')
       .order('codigo')
-    if (campo_id) query = query.eq('campo_id', campo_id)
-    const { data } = await query
+    if (error) {
+      setError('No se pudieron cargar todos los bloques: ' + error.message)
+      setBloques([])
+      return
+    }
     setBloques(data || [])
   }
 
@@ -235,6 +237,7 @@ export default function Ventas() {
 
   const crearLineaVenta = () => ({ producto:'', bloque_id:'', kg_total:'', precio_kg:'', notas:'' })
   const limpiarForm = () => {
+    setCampoFiltro('')
     setForm({
       fecha: fechaLocal(),
       comprador_id: '',
@@ -257,6 +260,7 @@ export default function Ventas() {
   }
 
   const abrirEditar = (venta) => {
+    setCampoFiltro('')
     setForm({
       id: venta.id,
       fecha: venta.fecha || fechaLocal(),
@@ -432,6 +436,9 @@ export default function Ventas() {
   const ventaTotalForm = parsearKg(form.kg_total) * parsearGs(form.precio_kg)
   const ventaTotalMultiple = lineasVenta.reduce((s, linea) => s + (parsearKg(linea.kg_total) * parsearGs(linea.precio_kg)), 0)
   const bloqueSeleccionado = bloques.find(b => b.id === form.bloque_id)
+  const bloquesVisibles = campoFiltro
+    ? bloques.filter(b => b.campo_id === campoFiltro)
+    : bloques
   const cultivoSugerido = getCultivoBloque(bloqueSeleccionado)
   const gruposVentas = Object.values(ventas.reduce((acc, v) => {
     const lote = v.created_at || v.id
@@ -625,7 +632,7 @@ export default function Ventas() {
                   setForm(f => ({ ...f, bloque_id:e.target.value, producto: f.producto || cultivo }))
                 }}>
                   <option value="">Venta sin bloque especifico</option>
-                  {bloques.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
+                  {bloquesVisibles.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
                 </select>
                 {cultivoSugerido && <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:12, padding:'9px 12px', fontSize:12, fontWeight:750, marginBottom:12 }}>Cultivo sugerido: {cultivoSugerido}</div>}
               </>
@@ -661,7 +668,7 @@ export default function Ventas() {
                           if (!linea.producto && cultivo) actualizarLineaVenta(idx, 'producto', cultivo)
                         }}>
                           <option value="">Sin bloque especifico</option>
-                          {bloques.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
+                          {bloquesVisibles.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
                         </select>
                         {cultivoLinea && <div style={{ background:'#e8f5e5', color:'#176a25', borderRadius:10, padding:'7px 10px', fontSize:11, fontWeight:750, margin:'-4px 0 10px' }}>{cultivoLinea}</div>}
                         <input style={{ ...inp, marginBottom:0 }} value={linea.notas} onChange={e => actualizarLineaVenta(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>

@@ -9,6 +9,11 @@ const TIPOS = {
   foliar:      { label:'Foliar',     icon:'ti-leaf',    color:'#212121', bg:'#eeeeee' },
 }
 
+const fechaLocal = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const UNIDADES_USO = ['g', 'kg', 'cc', 'ml', 'L', 'unidades']
 
 const normalizarUnidad = (unidad = '') => {
@@ -137,6 +142,22 @@ export default function Fumigaciones() {
   const isGuest = Boolean(guestToken)
 
   useEffect(() => { fetchFumigaciones(); fetchCampos(); fetchProductos() }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const campoId = params.get('campo') || ''
+    const bloqueId = params.get('bloque') || ''
+    if (params.get('nuevo') !== '1' || !campoId || !bloqueId) return
+
+    const abrirDesdeBloque = async () => {
+      await fetchBloques(campoId)
+      setForm({ ...formVacio(), fecha:fechaLocal(), campo_id:campoId, bloques_ids:[bloqueId] })
+      setDetalle(null)
+      setModal(true)
+    }
+    abrirDesdeBloque()
+  }, [])
 
   const fetchFumigaciones = async () => {
     const { data } = await supabase.from('fumigaciones')
@@ -549,7 +570,7 @@ export default function Fumigaciones() {
           justifyContent:'center',
           padding: isDesktop ? '24px' : 0,
           overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
-        }} onClick={e => e.target===e.currentTarget && cerrarModal()}>
+        }}>
           <div style={{
             background:'#f2f1ef',
             borderRadius: isDesktop ? 24 : '24px 24px 0 0',

@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import QRCode from 'qrcode'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
 
@@ -99,6 +100,9 @@ export default function FichaBloque() {
   const [nuevoCultivoNombre, setNuevoCultivoNombre] = useState('')
   const [cultivoRapidoError, setCultivoRapidoError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showQr, setShowQr] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState('')
+  const [qrError, setQrError] = useState('')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -112,6 +116,47 @@ export default function FichaBloque() {
     setIncidenciaDetalle(null)
     fetchData()
   }, [id])
+
+  useEffect(() => {
+    if (!bloque || typeof window === 'undefined') return
+    const url = `${window.location.origin}/bloque/${id}`
+    setQrError('')
+    QRCode.toDataURL(url, { width:720, margin:2, errorCorrectionLevel:'H' })
+      .then(setQrDataUrl)
+      .catch(() => setQrError('No se pudo generar el QR de este bloque.'))
+  }, [bloque, id])
+
+  const abrirCargaRapida = (modulo) => {
+    if (!bloque) return
+    if (modulo === 'fertilizacion') {
+      setSeccion('fertilizacion')
+      abrirNuevaFertilizacion()
+      return
+    }
+    navigate(`/${modulo}?nuevo=1&campo=${encodeURIComponent(bloque.campo_id || '')}&bloque=${encodeURIComponent(id)}`)
+  }
+
+  const descargarQr = () => {
+    if (!qrDataUrl) return
+    const enlace = document.createElement('a')
+    enlace.href = qrDataUrl
+    enlace.download = `QR-${bloque.campos?.nombre || 'Campo'}-${bloque.codigo || id}.png`.replace(/[^a-zA-Z0-9._-]+/g, '-')
+    enlace.click()
+  }
+
+  const imprimirQr = () => {
+    if (!qrDataUrl) return
+    const ventana = window.open('', '_blank', 'width=520,height=720')
+    if (!ventana) {
+      setQrError('El navegador bloqueo la impresion. Habilita las ventanas emergentes y proba de nuevo.')
+      return
+    }
+    const escapar = (valor) => String(valor || '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]))
+    const campo = escapar(bloque.campos?.nombre || 'Campo')
+    const codigo = escapar(bloque.codigo)
+    ventana.document.write(`<!doctype html><html><head><title>QR Bloque ${codigo}</title><style>body{font-family:Arial,sans-serif;margin:0;display:flex;justify-content:center}.etiqueta{width:360px;text-align:center;border:2px solid #111;border-radius:18px;padding:24px;margin:20px}.marca{font-size:14px;font-weight:800;letter-spacing:1px}.campo{font-size:18px;margin-top:14px}.bloque{font-size:32px;font-weight:900;margin:4px 0 10px}.qr{width:290px;height:290px}.ayuda{font-size:13px;margin-top:10px}@media print{.etiqueta{margin:0}}</style></head><body><div class="etiqueta"><div class="marca">HORTICULTURA EL SEMBRADOR</div><div class="campo">${campo}</div><div class="bloque">Bloque ${codigo}</div><img class="qr" src="${qrDataUrl}" alt="QR del bloque"/><div class="ayuda">Escanear para ver el bloque y registrar trabajos</div></div><script>window.onload=()=>window.print()</script></body></html>`)
+    ventana.document.close()
+  }
 
   const fetchData = async () => {
     const { data: b } = await supabase.from('bloques').select('*, sectores(nombre), campos(nombre)').eq('id', id).single()
@@ -758,6 +803,23 @@ export default function FichaBloque() {
           )}
         </div>
 
+        <div style={{ background:'#fff', borderRadius:18, padding:12, marginBottom:12, border:'1px solid #e8e6e2' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:10 }}>
+            <div>
+              <div style={{ fontSize:13, fontWeight:800, color:'#0a0a0a' }}>Acceso rápido del bloque</div>
+              <div style={{ fontSize:11, color:'#8b928b', marginTop:2 }}>El bloque queda seleccionado automáticamente</div>
+            </div>
+            <button type="button" onClick={() => setShowQr(true)} style={{ padding:'8px 12px', borderRadius:11, border:'1px solid #d9ddd8', background:'#fff', color:'#212121', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+              <i className="ti ti-qrcode" style={{ marginRight:5 }} aria-hidden="true"></i> Ver QR
+            </button>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:7 }}>
+            <button type="button" onClick={() => abrirCargaRapida('fumigaciones')} style={{ padding:'10px 5px', borderRadius:11, border:'none', background:'#fff3e8', color:'#a85b00', fontSize:11, fontWeight:700, cursor:'pointer' }}>Fumigación</button>
+            <button type="button" onClick={() => abrirCargaRapida('fertilizacion')} style={{ padding:'10px 5px', borderRadius:11, border:'none', background:'#edf6ec', color:'#176a25', fontSize:11, fontWeight:700, cursor:'pointer' }}>Fertilización</button>
+            <button type="button" onClick={() => abrirCargaRapida('cosecha')} style={{ padding:'10px 5px', borderRadius:11, border:'none', background:'#eeeeee', color:'#212121', fontSize:11, fontWeight:700, cursor:'pointer' }}>Cosecha</button>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div style={{ display:'flex', gap:5, overflowX:'auto', paddingBottom:4 }}>
           {[
@@ -1121,7 +1183,7 @@ export default function FichaBloque() {
 
       {/* Modal nueva/editar plantacion */}
       {(showNuevaPlantacion || showEditarPlantacion) && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && (setShowNuevaPlantacion(false)||setShowEditarPlantacion(false))}>
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{showEditarPlantacion ? 'Editar plantacion' : 'Nueva plantacion'}</div>
 
@@ -1209,7 +1271,7 @@ export default function FichaBloque() {
 
       {/* Modal muerte de plantas */}
       {showMuerte && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setShowMuerte(false)}>
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
           <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Registrar muerte de plantas</div>
 
@@ -1492,6 +1554,25 @@ export default function FichaBloque() {
               onClick={() => setShowNuevaFertilizacion(false)}>
               Cancelar
             </button>
+          </div>
+        </div>
+      )}
+
+      {showQr && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:220, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div style={{ background:'#fff', borderRadius:24, width:'100%', maxWidth:420, padding:'22px 20px 26px', textAlign:'center', maxHeight:'90vh', overflowY:'auto' }}>
+            <div style={{ fontSize:12, color:'#8b928b' }}>{bloque.campos?.nombre}</div>
+            <div style={{ fontSize:24, fontWeight:850, color:'#0a0a0a', margin:'3px 0 14px' }}>QR Bloque {bloque.codigo}</div>
+            {qrError && <div style={{ background:'#fff0f0', color:'#b02a2a', borderRadius:12, padding:10, fontSize:12, marginBottom:12 }}>{qrError}</div>}
+            {qrDataUrl
+              ? <img src={qrDataUrl} alt={`QR del bloque ${bloque.codigo}`} style={{ width:'100%', maxWidth:300, height:'auto', display:'block', margin:'0 auto 14px' }}/>
+              : <div style={{ padding:50, color:'#8b928b', fontSize:13 }}>Generando QR...</div>}
+            <div style={{ fontSize:12, color:'#687068', lineHeight:1.45, marginBottom:16 }}>Al escanear, abre directamente este bloque. Para cargar información se requiere iniciar sesión.</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              <button type="button" onClick={descargarQr} disabled={!qrDataUrl} style={{ padding:12, borderRadius:13, border:'1px solid #d9ddd8', background:'#fff', color:'#212121', fontSize:13, fontWeight:700, cursor:'pointer' }}>Descargar</button>
+              <button type="button" onClick={imprimirQr} disabled={!qrDataUrl} style={{ padding:12, borderRadius:13, border:'none', background:'#212121', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Imprimir etiqueta</button>
+            </div>
+            <button type="button" onClick={() => { setShowQr(false); setQrError('') }} style={{ width:'100%', padding:11, borderRadius:13, border:'none', background:'transparent', color:'#8b928b', fontSize:13, cursor:'pointer', marginTop:8 }}>Cerrar</button>
           </div>
         </div>
       )}

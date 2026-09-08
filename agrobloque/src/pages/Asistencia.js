@@ -410,7 +410,9 @@ export default function Asistencia() {
             <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Pendiente: Gs. {fmtGs(getTotalAdelantos(modalHistorial.id))} | Pagados: Gs. {fmtGs(getTotalAdelantosPagados(modalHistorial.id))}</div>
             {getAdelantosOperario(modalHistorial.id).length === 0 ? (
               <div style={{ textAlign:'center', color:'#9a9a9a', fontSize:13, padding:'20px 0' }}>Sin adelantos registrados</div>
-            ) : getAdelantosOperario(modalHistorial.id).map(a => (
+            ) : <>
+              {getAdelantosPendientesOperario(modalHistorial.id).length > 0 && <div style={{ fontSize:11, fontWeight:800, color:'#8a4d00', textTransform:'uppercase', letterSpacing:.5, margin:'4px 2px 8px' }}>Pendientes</div>}
+              {getAdelantosPendientesOperario(modalHistorial.id).map(a => (
               <div key={a.id} style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:8 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                   <div style={{ fontSize:13, fontWeight:600, color: esAdelantoPagado(a) ? '#9a9a9a' : '#0a0a0a' }}>
@@ -423,13 +425,23 @@ export default function Asistencia() {
                 {limpiarMarcaPagado(a.descripcion || '') && <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:8 }}>{limpiarMarcaPagado(a.descripcion || '')}</div>}
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                   <button onClick={() => abrirEditarAdelanto(a)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#0a0a0a', cursor:'pointer' }}>Editar</button>
-                  {!esAdelantoPagado(a) && (
-                    <button onClick={() => marcarPagado(a)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #c8ddc8', background:'transparent', fontSize:11, color:'#1E5631', cursor:'pointer' }}>✓ Marcar pagado</button>
-                  )}
+                  <button onClick={() => marcarPagado(a)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #c8ddc8', background:'transparent', fontSize:11, color:'#1E5631', cursor:'pointer' }}>✓ Marcar pagado</button>
                   <button onClick={() => eliminarAdelanto(a.id)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
                 </div>
               </div>
-            ))}
+              ))}
+              {getAdelantosPagadosOperario(modalHistorial.id).length > 0 && <div style={{ fontSize:11, fontWeight:800, color:'#1E5631', textTransform:'uppercase', letterSpacing:.5, margin:'18px 2px 8px' }}>Historial de pagados</div>}
+              {getAdelantosPagadosOperario(modalHistorial.id).map(a => (
+                <div key={a.id} style={{ background:'#edf7ed', border:'1px solid #d6ead6', borderRadius:16, padding:'12px 14px', marginBottom:8 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:4 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#1E5631' }}>Gs. {fmtGs(a.monto)} <span style={{ fontSize:10, background:'#fff', padding:'2px 7px', borderRadius:7, marginLeft:5 }}>Pagado</span></div>
+                    <div style={{ fontSize:11, color:'#6e8b72' }}>{a.fecha}</div>
+                  </div>
+                  <div style={{ fontSize:11, color:'#1E5631', marginBottom:4 }}>{getFechaPagoAdelanto(a) ? `Pagado el ${getFechaPagoAdelanto(a)}` : 'Pago registrado'}</div>
+                  {limpiarMarcaPagado(a.descripcion || '') && <div style={{ fontSize:11, color:'#6e8b72' }}>{limpiarMarcaPagado(a.descripcion || '')}</div>}
+                </div>
+              ))}
+            </>}
             <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModalHistorial(null)}>Cerrar</button>
           </div>
         </div>
