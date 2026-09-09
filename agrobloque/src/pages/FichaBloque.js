@@ -99,6 +99,8 @@ export default function FichaBloque() {
   const [formMuerte, setFormMuerte] = useState({ cantidad:'', causa:'Enfermedad', descripcion:'' })
   const [nuevoCultivoNombre, setNuevoCultivoNombre] = useState('')
   const [cultivoRapidoError, setCultivoRapidoError] = useState('')
+  const [nuevoAbonoNombre, setNuevoAbonoNombre] = useState('')
+  const [abonoRapidoError, setAbonoRapidoError] = useState('')
   const [saving, setSaving] = useState(false)
   const [showQr, setShowQr] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -193,7 +195,7 @@ export default function FichaBloque() {
         setCosechasCiclo(cos || [])
 
         const { data: fumBloques } = await supabase.from('fumigacion_bloques')
-          .select('fumigaciones(id, fecha, notas, tipo, operario, tanques_cantidad, tanque_litros, campos(nombre), fumigacion_bloques(bloque_id, bloques(codigo)), fumigacion_productos(dosis, cantidad, unidad_uso, descuento_stock, productos(nombre, unidad, carencia_dias)))')
+          .select('fumigaciones(id, fecha, notas, tipo, operario, tanques_cantidad, tanque_litros, campos(nombre), fumigacion_bloques(bloque_id, bloques(codigo)), fumigacion_productos(*, productos(nombre, unidad, carencia_dias)))')
           .eq('bloque_id', id)
         const inc = (fumBloques || [])
           .map(fb => fb.fumigaciones)
@@ -463,6 +465,29 @@ export default function FichaBloque() {
       ...f,
       soluciones: [...f.soluciones, { nombre: siguiente, productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }]
     }))
+  }
+
+  const agregarAbonoRapido = async () => {
+    const nombre = nuevoAbonoNombre.trim()
+    if (!nombre) return
+
+    const existente = abonos.find(a => (a.nombre || '').trim().toLowerCase() === nombre.toLowerCase())
+    if (existente) {
+      setForm(f => ({ ...f, abonos_ids: f.abonos_ids.includes(existente.id) ? f.abonos_ids : [...f.abonos_ids, existente.id] }))
+      setNuevoAbonoNombre('')
+      setAbonoRapidoError('')
+      return
+    }
+
+    const { data, error } = await supabase.from('abonos').insert({ nombre }).select('*').single()
+    if (error) {
+      setAbonoRapidoError(`No se pudo agregar el abono: ${error.message}`)
+      return
+    }
+    setAbonos(lista => [...lista, data].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')))
+    setForm(f => ({ ...f, abonos_ids: [...f.abonos_ids, data.id] }))
+    setNuevoAbonoNombre('')
+    setAbonoRapidoError('')
   }
 
   const abrirNuevaFertilizacion = () => {
@@ -1126,7 +1151,7 @@ export default function FichaBloque() {
                 <div style={{ fontSize:13, color:'#0a0a0a', marginBottom:4 }}>{inc.notas}</div>
                 {inc.fumigacion_productos?.length > 0 && (
                   <div style={{ fontSize:11, color:'#9a9a9a' }}>
-                    {inc.fumigacion_productos.map(fp => fp.productos?.nombre).filter(Boolean).join(', ')}
+                    {inc.fumigacion_productos.map(fp => fp.productos?.nombre || fp.producto_nombre).filter(Boolean).join(', ')}
                   </div>
                 )}
                 <div style={{ fontSize:11, color:'#176a25', marginTop:8, fontWeight:700 }}>Tocar para ver detalle</div>
@@ -1243,6 +1268,12 @@ export default function FichaBloque() {
             <input style={inpStyle} type="number" value={form.cantidad_plantas} onChange={e => setForm(f => ({...f, cantidad_plantas:e.target.value}))} placeholder="Ej: 1000"/>
 
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:8 }}>Abonos de base</div>
+            <div style={{ display:'flex', gap:7, marginBottom:10 }}>
+              <input style={{ ...inpStyle, marginBottom:0, flex:1 }} type="text" value={nuevoAbonoNombre} onChange={e => setNuevoAbonoNombre(e.target.value)} placeholder="Escribir abono directamente" />
+              <button type="button" onClick={agregarAbonoRapido} disabled={!nuevoAbonoNombre.trim()} style={{ padding:'9px 13px', borderRadius:11, border:'none', background:'#1a5c2e', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>Agregar</button>
+            </div>
+            <div style={{ fontSize:10, color:'#8b928b', margin:'-4px 0 9px' }}>No hace falta cargarlo previamente en inventario.</div>
+            {abonoRapidoError && <div style={{ background:'#fff0f0', color:'#a52525', borderRadius:10, padding:'9px 11px', fontSize:12, marginBottom:10 }}>{abonoRapidoError}</div>}
             {abonos.map(a => (
               <div key={a.id} style={{ marginBottom:8 }}>
                 <div onClick={() => toggleAbono(a.id)}
@@ -1428,7 +1459,7 @@ export default function FichaBloque() {
               ) : incidenciaDetalle.fumigacion_productos.map((fp, idx) => (
                 <div key={idx} style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:10, padding:'10px 0', borderTop: idx === 0 ? 'none' : '1px solid #f0ede8' }}>
                   <div>
-                    <div style={{ fontSize:14, fontWeight:800, color:'#0a0a0a' }}>{fp.productos?.nombre || 'Producto'}</div>
+                    <div style={{ fontSize:14, fontWeight:800, color:'#0a0a0a' }}>{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</div>
                     <div style={{ fontSize:12, color:'#8b928b', marginTop:2 }}>
                       Dosis: {fp.dosis || `${fp.cantidad || '-'} ${fp.unidad_uso || ''}`}
                     </div>

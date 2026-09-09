@@ -200,10 +200,13 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
               <div style={{ display:'grid', gap:8 }}>
                 {sol.productos.map((p, pi) => (
                   <div key={pi} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 120px 110px 38px', gap:8, alignItems:'center' }}>
-                    <select value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)} style={inputBase}>
-                      <option value="">Producto del inventario</option>
-                      {productos.map(prod => <option key={prod.id} value={prod.id}>{prod.nombre} - stock {fmtNum(prod.stock_actual)} {prod.unidad || ''}</option>)}
-                    </select>
+                    <div style={{ display:'grid', gap:6 }}>
+                      <select value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)} style={inputBase}>
+                        <option value="">Sin inventario</option>
+                        {productos.map(prod => <option key={prod.id} value={prod.id}>{prod.nombre} - stock {fmtNum(prod.stock_actual)} {prod.unidad || ''}</option>)}
+                      </select>
+                      {!p.producto_id && <input value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Escribir producto" style={{ ...inputBase, background:'#f7fbf7', borderColor:'#d6dfd6' }} />}
+                    </div>
                     <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)} placeholder="Cantidad" type="number" step="0.01" style={inputBase} />
                     <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} style={inputBase}>
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
@@ -351,10 +354,10 @@ export default function Fertilizaciones({ campoActivo }) {
     if (!form.fecha) return setError('Elegir una fecha.')
     if (!bloquesDestino.length) return setError('Elegir al menos un bloque.')
     if (!solucionesLimpias.length) return setError('Agregar al menos un producto.')
-    if (solucionesLimpias.flatMap(sol => sol.productos).some(p => !p.producto_id)) {
-      return setError('Elegir los productos desde inventario para poder descontar stock.')
+    if (solucionesLimpias.flatMap(sol => sol.productos).some(p => !p.producto_id && !p.nombre?.trim())) {
+      return setError('Escribir el nombre del producto o elegirlo desde inventario.')
     }
-    if (solucionesLimpias.flatMap(sol => sol.productos).some(p => p.descuento_stock === null)) {
+    if (solucionesLimpias.flatMap(sol => sol.productos).some(p => p.producto_id && p.descuento_stock === null)) {
       return setError('Hay una unidad que no coincide con el inventario. Usa kg/g para productos en kg o L/cc/ml para liquidos.')
     }
 

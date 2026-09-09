@@ -70,7 +70,7 @@ export default function Historial({ campoActivo }) {
     ] = await Promise.all([
       bloqueIds.length ? filtrarFecha(supabase.from('plantaciones').select('id, bloque_id, fecha_siembra, activa, cultivos(nombre)'), 'fecha_siembra').in('bloque_id', bloqueIds) : Promise.resolve({ data: [] }),
       bloqueIds.length ? filtrarFecha(supabase.from('cosechas').select('id, fecha, bloque_id, kg_total, precio_kg, compradores(nombre)')).in('bloque_id', bloqueIds) : Promise.resolve({ data: [] }),
-      filtrarFecha(supabase.from('fumigaciones').select('id, fecha, tipo, operario, notas, tanques_cantidad, tanque_litros, fumigacion_bloques(bloque_id, bloques(codigo)), fumigacion_productos(dosis, productos(nombre))').eq('campo_id', campoId)),
+      filtrarFecha(supabase.from('fumigaciones').select('id, fecha, tipo, operario, notas, tanques_cantidad, tanque_litros, fumigacion_bloques(bloque_id, bloques(codigo)), fumigacion_productos(*, productos(nombre))').eq('campo_id', campoId)),
       bloqueIds.length ? filtrarFecha(supabase.from('fertilizaciones').select('id, fecha, bloque_id, notas, soluciones')).in('bloque_id', bloqueIds) : Promise.resolve({ data: [] }),
       filtrarFecha(supabase.from('vivero_lotes').select('id, fecha_siembra, cultivo, variedad, estado'), 'fecha_siembra'),
       filtrarFecha(supabase.from('costos').select('id, fecha, tipo, descripcion, monto, bloque_id').eq('campo_id', campoId)),
@@ -102,7 +102,7 @@ export default function Historial({ campoActivo }) {
 
     ;(fumigaciones || []).forEach(f => {
       const bloquesTxt = (f.fumigacion_bloques || []).map(b => b.bloques?.codigo).filter(Boolean).join(', ')
-      const productosTxt = (f.fumigacion_productos || []).map(p => `${p.productos?.nombre || ''} ${p.dosis || ''}`.trim()).filter(Boolean).join(' + ')
+      const productosTxt = (f.fumigacion_productos || []).map(p => `${p.productos?.nombre || p.producto_nombre || ''} ${p.dosis || ''}`.trim()).filter(Boolean).join(' + ')
       const tanques = f.tanques_cantidad && f.tanque_litros ? ` - ${f.tanques_cantidad} x ${f.tanque_litros} L` : ''
       lista.push({
         tipo:'fumigacion',

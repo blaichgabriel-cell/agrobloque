@@ -133,7 +133,7 @@ export default function Fumigaciones() {
     operarios_nombres:[],
     tanques_cantidad:'',
     tanque_litros:'',
-    productos_form:[{ producto_id:'', cantidad:'', unidad_uso:'g' }],
+    productos_form:[{ producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
     notas:'',
   })
   const [form, setForm] = useState(formVacio())
@@ -215,6 +215,7 @@ export default function Fumigaciones() {
     const match = String(fp.dosis || '').match(/^\s*([\d.,]+)\s*([a-zA-Z]+)?/)
     return {
       producto_id: fp.producto_id || '',
+      producto_nombre: fp.producto_nombre || fp.productos?.nombre || '',
       cantidad: fp.cantidad ?? match?.[1] ?? '',
       unidad_uso: fp.unidad_uso || match?.[2] || unidadUsoDefault(fp.productos?.unidad),
     }
@@ -234,7 +235,7 @@ export default function Fumigaciones() {
       tanque_litros: fumigacion.tanque_litros || '',
       productos_form: (fumigacion.fumigacion_productos || []).length
         ? fumigacion.fumigacion_productos.map(parseProductoForm)
-        : [{ producto_id:'', cantidad:'', unidad_uso:'g' }],
+        : [{ producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
       notas: fumigacion.notas || '',
     })
     setDetalle(null)
@@ -282,23 +283,25 @@ export default function Fumigaciones() {
       }))
     }
 
-    const prods = form.productos_form.filter(p => p.producto_id && p.cantidad)
+    const prods = form.productos_form.filter(p => (p.producto_id || p.producto_nombre?.trim()) && p.cantidad)
     if (prods.length === 0) return
 
-    await supabase.from('fumigacion_productos').insert(prods.map(p => {
+    const { error: productosError } = await supabase.from('fumigacion_productos').insert(prods.map(p => {
       const prod = productos.find(x => x.id === p.producto_id)
       const descuento = calcularDescuentoStock(p, prod, form.tanques_cantidad)
       return {
         fumigacion_id: fumigacionId,
-        producto_id: p.producto_id,
+        producto_id: p.producto_id || null,
+        producto_nombre: p.producto_id ? null : p.producto_nombre.trim(),
         dosis: `${p.cantidad} ${p.unidad_uso}`,
         cantidad: Number(String(p.cantidad || '').replace(',', '.')) || null,
         unidad_uso: p.unidad_uso || null,
         descuento_stock: descuento === null ? null : descuento,
       }
     }))
+    if (productosError) throw productosError
 
-    for (const p of prods) {
+    for (const p of prods.filter(item => item.producto_id)) {
       const { data: prodActual } = await supabase
         .from('productos')
         .select('stock_actual, unidad')
@@ -317,6 +320,14 @@ export default function Fumigaciones() {
 
   const guardar = async () => {
     if (!form.fecha || form.bloques_ids.length === 0) return
+    const usaProductosLibres = form.productos_form.some(p => !p.producto_id && p.producto_nombre?.trim())
+    if (usaProductosLibres) {
+      const { error: soporteError } = await supabase.from('fumigacion_productos').select('producto_nombre').limit(1)
+      if (soporteError) {
+        if (typeof window !== 'undefined') window.alert('Primero hay que activar en Supabase el soporte para productos sin inventario.')
+        return
+      }
+    }
     const bloquesGuardados = [...form.bloques_ids]
     const eraEdicion = Boolean(form.id)
     setSaving(true)
@@ -370,6 +381,8 @@ export default function Fumigaciones() {
         .map(codigo => `Bloque ${codigo}`)
         .join(', ')
       setMensajeExito(`${eraEdicion ? 'Fumigación actualizada' : 'Fumigación guardada'} y vinculada a ${codigos || `${bloquesGuardados.length} bloque(s)`}. Ya aparece en la lista general.`)
+    } catch (error) {
+      if (typeof window !== 'undefined') window.alert(`No se pudo completar la fumigación: ${error?.message || 'error desconocido'}`)
     } finally {
       setSaving(false)
     }
@@ -456,7 +469,7 @@ export default function Fumigaciones() {
             {porFecha[fecha].map(f => {
               const tipo = TIPOS[f.tipo] || TIPOS.fumigacion
               const bloquesCodes = getBloquesConCultivo(f)
-              const nombresProductos = f.fumigacion_productos?.map(fp => fp.productos?.nombre).filter(Boolean).join(' + ')
+              const nombresProductos = f.fumigacion_productos?.map(fp => fp.productos?.nombre || fp.producto_nombre).filter(Boolean).join(' + ')
               const carencia = getCarencia(f)
               const tanques = f.tanques_cantidad && f.tanque_litros ? `${fmtCantidad(f.tanques_cantidad)} tanque${Number(f.tanques_cantidad) === 1 ? '' : 's'} x ${fmtCantidad(f.tanque_litros)} L` : ''
 
@@ -555,7 +568,7 @@ export default function Fumigaciones() {
                     <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:8 }}>PRODUCTOS USADOS</div>
                     {detalle.fumigacion_productos.map(fp => (
                       <div key={fp.id} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f2f1ef' }}>
-                        <div style={{ fontSize:13, color:'#0a0a0a' }}>{fp.productos?.nombre}</div>
+                        <div style={{ fontSize:13, color:'#0a0a0a' }}>{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</div>
                         <div style={{ fontSize:13, fontWeight:500, color:'#0a0a0a' }}>{fp.dosis || '—'}</div>
                       </div>
                     ))}
@@ -654,17 +667,20 @@ export default function Fumigaciones() {
                 Total preparado: {fmtCantidad((Number(form.tanques_cantidad) || 0) * (Number(form.tanque_litros) || 0))} L
               </div>
             )}
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos <span style={{ color:'#212121' }}>(descuenta stock automaticamente)</span></div>
+            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Productos <span style={{ color:'#212121' }}>(el inventario es opcional)</span></div>
             {form.productos_form.map((pf,i)=>{
               const prod = productos.find(p=>p.id===pf.producto_id)
               const descuento = prod ? calcularDescuentoStock(pf, prod, form.tanques_cantidad) : 0
               return (
                 <div key={i} style={{ marginBottom:8 }}>
                   <div style={{ display:'grid', gridTemplateColumns:'1.5fr .75fr .75fr', gap:6 }}>
-                    <select style={{ minWidth:0, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.producto_id} onChange={e=>{const prodSel=productos.find(p=>p.id===e.target.value); const np=[...form.productos_form];np[i].producto_id=e.target.value;np[i].unidad_uso=unidadUsoDefault(prodSel?.unidad);setForm(f=>({...f,productos_form:np}))}}>
-                      <option value="">Producto...</option>
-                      {productos.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
-                    </select>
+                    <div style={{ display:'grid', gap:5 }}>
+                      <select style={{ minWidth:0, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.producto_id} onChange={e=>{const prodSel=productos.find(p=>p.id===e.target.value); const np=[...form.productos_form];np[i].producto_id=e.target.value;np[i].producto_nombre=prodSel?.nombre || np[i].producto_nombre || '';np[i].unidad_uso=unidadUsoDefault(prodSel?.unidad);setForm(f=>({...f,productos_form:np}))}}>
+                        <option value="">Sin inventario</option>
+                        {productos.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
+                      </select>
+                      {!pf.producto_id && <input style={{ minWidth:0, padding:'9px 12px', borderRadius:12, border:'1px solid #d6dfd6', background:'#f7fbf7', fontSize:12, color:'#0a0a0a' }} value={pf.producto_nombre || ''} onChange={e=>{const np=[...form.productos_form];np[i].producto_nombre=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Escribir producto" />}
+                    </div>
                     <input style={{ minWidth:0, padding:'9px 12px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.cantidad} onChange={e=>{const np=[...form.productos_form];np[i].cantidad=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Cant." inputMode="decimal"/>
                     <select style={{ minWidth:0, padding:'9px 8px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:12, color:'#0a0a0a' }} value={pf.unidad_uso} onChange={e=>{const np=[...form.productos_form];np[i].unidad_uso=e.target.value;setForm(f=>({...f,productos_form:np}))}}>
                       {UNIDADES_USO.map(u => <option key={u} value={u}>{u}</option>)}
@@ -678,7 +694,7 @@ export default function Fumigaciones() {
                 </div>
               )
             })}
-            <button onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{producto_id:'',cantidad:'',unidad_uso:'g'}]}))} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #e8e6e2', background:'transparent', fontSize:12, color:'#9a9a9a', cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
+            <button onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{producto_id:'',producto_nombre:'',cantidad:'',unidad_uso:'g'}]}))} style={{ width:'100%', padding:9, borderRadius:12, border:'1px dashed #e8e6e2', background:'transparent', fontSize:12, color:'#9a9a9a', cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
             <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Notas</div>
             <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16, minHeight:60, resize:'vertical', boxSizing:'border-box' }} value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/>
             <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar registro'}</button>
