@@ -139,6 +139,7 @@ export default function Fumigaciones() {
   const [form, setForm] = useState(formVacio())
   const [saving, setSaving] = useState(false)
   const [filtro, setFiltro] = useState('todos')
+  const [mensajeExito, setMensajeExito] = useState('')
   const isGuest = Boolean(guestToken)
 
   useEffect(() => { fetchFumigaciones(); fetchCampos(); fetchProductos() }, [])
@@ -316,6 +317,8 @@ export default function Fumigaciones() {
 
   const guardar = async () => {
     if (!form.fecha || form.bloques_ids.length === 0) return
+    const bloquesGuardados = [...form.bloques_ids]
+    const eraEdicion = Boolean(form.id)
     setSaving(true)
     try {
       const avisarError = (mensaje) => {
@@ -361,6 +364,12 @@ export default function Fumigaciones() {
       await fetchFumigaciones()
       await fetchProductos()
       cerrarModal()
+      const codigos = bloquesGuardados
+        .map(bloqueId => bloques.find(b => b.id === bloqueId)?.codigo)
+        .filter(Boolean)
+        .map(codigo => `Bloque ${codigo}`)
+        .join(', ')
+      setMensajeExito(`${eraEdicion ? 'Fumigación actualizada' : 'Fumigación guardada'} y vinculada a ${codigos || `${bloquesGuardados.length} bloque(s)`}. Ya aparece en la lista general.`)
     } finally {
       setSaving(false)
     }
@@ -425,6 +434,12 @@ export default function Fumigaciones() {
       </div>
 
       <div style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
+        {mensajeExito && (
+          <div style={{ maxWidth:1220, margin:'0 auto 12px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, background:'#eaf6ec', color:'#176a25', border:'1px solid #c9e4ce', borderRadius:14, padding:'11px 13px', fontSize:12, fontWeight:600 }}>
+            <span>{mensajeExito}</span>
+            <button type="button" onClick={() => setMensajeExito('')} aria-label="Cerrar mensaje" style={{ border:'none', background:'transparent', color:'#176a25', cursor:'pointer', fontSize:16, lineHeight:1 }}>×</button>
+          </div>
+        )}
         {fechasOrdenadas.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin registros</div>
         ) : fechasOrdenadas.map(fecha => (

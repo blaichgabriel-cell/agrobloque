@@ -103,6 +103,7 @@ export default function FichaBloque() {
   const [showQr, setShowQr] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [qrError, setQrError] = useState('')
+  const [mensajeExito, setMensajeExito] = useState('')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -635,12 +636,17 @@ export default function FichaBloque() {
     if (!formFert.fecha) return
     const bloquesDestino = (formFert.bloques_ids || []).length ? formFert.bloques_ids : [id]
     setSavingFert(true)
-    await supabase.from('fertilizaciones').insert(bloquesDestino.map(bloqueId => ({
+    const { error } = await supabase.from('fertilizaciones').insert(bloquesDestino.map(bloqueId => ({
       bloque_id: bloqueId,
       fecha: formFert.fecha,
       notas: formFert.notas || null,
       soluciones: formFert.soluciones
     })))
+    if (error) {
+      setSavingFert(false)
+      if (typeof window !== 'undefined') window.alert(`No se pudo guardar la fertilización: ${error.message}`)
+      return
+    }
     await registrarAuditoria({
       accion: bloquesDestino.length > 1 ? 'Registro fertilizacion multiple' : 'Registro fertilizacion',
       modulo:'Bloque',
@@ -650,6 +656,12 @@ export default function FichaBloque() {
     })
     setSavingFert(false)
     setShowNuevaFertilizacion(false)
+    const codigos = bloquesDestino
+      .map(bloqueId => bloquesCampo.find(b => b.id === bloqueId)?.codigo || (bloqueId === id ? bloque?.codigo : null))
+      .filter(Boolean)
+      .map(codigo => `Bloque ${codigo}`)
+      .join(', ')
+    setMensajeExito(`Fertilización guardada y vinculada a ${codigos || `${bloquesDestino.length} bloque(s)`}. También aparece en Fertilizaciones generales.`)
     fetchData()
   }
 
@@ -803,6 +815,13 @@ export default function FichaBloque() {
           )}
         </div>
 
+        {mensajeExito && (
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, background:'#eaf6ec', color:'#176a25', border:'1px solid #c9e4ce', borderRadius:14, padding:'11px 13px', marginBottom:12, fontSize:12, fontWeight:600 }}>
+            <span>{mensajeExito}</span>
+            <button type="button" onClick={() => setMensajeExito('')} aria-label="Cerrar mensaje" style={{ border:'none', background:'transparent', color:'#176a25', cursor:'pointer', fontSize:16, lineHeight:1 }}>×</button>
+          </div>
+        )}
+
         <div style={{ background:'#fff', borderRadius:18, padding:12, marginBottom:12, border:'1px solid #e8e6e2' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:10 }}>
             <div>
@@ -826,7 +845,7 @@ export default function FichaBloque() {
             ['plantacion','Plantacion'],
             ['fertilizacion',`Fertilizacion (${fertilizaciones.length})`],
             ['cosechas',`Cosechas (${cosechasCiclo.length})`],
-            ['incidencias',`Incidencias (${incidencias.length})`],
+            ['incidencias',`Fumigaciones (${incidencias.length})`],
             ['fotos',`Fotos (${fotos.length})`],
             ['historial',`Historial (${historial.length})`],
           ].map(([k,v]) => (
@@ -1093,9 +1112,9 @@ export default function FichaBloque() {
         {/* INCIDENCIAS */}
         {seccion === 'incidencias' && (
           <>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:12 }}>Notas de fumigaciones registradas en este bloque</div>
+            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:12 }}>Fumigaciones registradas y vinculadas a este bloque</div>
             {incidencias.length === 0 ? (
-              <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin incidencias registradas</div>
+              <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin fumigaciones registradas</div>
             ) : incidencias.map((inc, i) => (
               <div key={i} onClick={() => setIncidenciaDetalle(inc)} style={{ background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:8, cursor:'pointer' }}>
                 <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
