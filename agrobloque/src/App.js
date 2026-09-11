@@ -175,6 +175,8 @@ function DesktopSidebar({ isGuest = false, role }) {
   const navigate = useNavigate()
   const location = useLocation()
   const tabs = filterTabsByRole(allTabs, role, isGuest)
+  const nombreUsuario = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
+  const inicialUsuario = nombreUsuario.charAt(0).toUpperCase()
   return (
     <div style={{
       width: SIDEBAR_WIDTH,
@@ -229,10 +231,10 @@ function DesktopSidebar({ isGuest = false, role }) {
       {/* Cerrar sesión */}
       <div style={{ padding: '16px 16px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px 16px', color: '#fff' }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#4f9e2f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>G</div>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#4f9e2f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{inicialUsuario}</div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>Gabriel</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>Administrador</div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>{nombreUsuario}</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{role?.label || 'Usuario'}</div>
           </div>
         </div>
         <div onClick={() => forceLocalSignOut()}
@@ -303,7 +305,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
             <Route path="/reportes" element={<ProtectedRoute role={role} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
             <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="auditoria"><Auditoria/></ProtectedRoute>}/>
-            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion/></ProtectedRoute>}/>
+            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role}/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
         </div>

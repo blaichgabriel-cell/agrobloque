@@ -131,7 +131,7 @@ const comprimirFotoPerfil = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
-export default function Configuracion() {
+export default function Configuracion({ role }) {
   const navigate = useNavigate()
   const fotoRef = useRef()
   const [modal, setModal] = useState(null)
@@ -150,6 +150,7 @@ export default function Configuracion() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [ultimoBackup, setUltimoBackup] = useState('')
+  const esAdmin = role?.rol === 'admin'
 
   useEffect(() => {
     fetchAll()
@@ -170,6 +171,7 @@ export default function Configuracion() {
       email: user.email,
       foto: typeof window !== 'undefined' ? (window.localStorage.getItem(FOTO_PERFIL_KEY) || '') : ''
     })
+    if (!esAdmin) return
     const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }, { data: inv }, { data: rolData }] = await Promise.all([
       supabase.from('campos').select('*').order('nombre'),
       supabase.from('cultivos').select('*').order('nombre'),
@@ -485,7 +487,7 @@ export default function Configuracion() {
     { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:'#176a25', bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false }) },
     { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:'#212121', bg:'#eeeeee', action: () => navigate('/auditoria') },
     { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Ultimo: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
-  ]
+  ].filter((_, index) => esAdmin || index === 0)
 
   return (
     <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>

@@ -70,7 +70,7 @@ export const normalizeRole = (roleRow, fallbackEmail = '') => {
   // Toni siempre recibe el perfil operativo, incluso sin una fila de roles.
   if (email === 'agrobloquetoni@gmail.com') {
     roleRow = { ...roleRow, email, nombre: 'Toni', rol: 'operador',
-      permisos: ALL_KEYS.filter(key => !['asistencia', 'configuracion'].includes(key)) }
+      permisos: [...ALL_KEYS.filter(key => key !== 'asistencia'), 'configuracion'] }
   } else if (!roleRow && email) {
     roleRow = { email, rol: 'admin', activo: true }
   }
@@ -102,7 +102,8 @@ export const moduleForPath = (path = '/') => {
 export const canAccessModule = (role, moduleKey) => {
   if (DISABLED_MODULES.includes(moduleKey)) return false
   if (!role) return false
-  if (['asistencia', 'configuracion'].includes(moduleKey) && role.rol !== 'admin') return false
+  if (moduleKey === 'asistencia' && role.rol !== 'admin') return false
+  if (moduleKey === 'configuracion' && role.rol !== 'admin' && role.email !== 'agrobloquetoni@gmail.com') return false
   if (!moduleKey || moduleKey === 'inicio') return true
   if (!role) return true
   if (role.rol === 'admin') return true

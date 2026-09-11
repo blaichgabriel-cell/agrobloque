@@ -111,6 +111,33 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
   const [produccion, setProduccion] = useState([])
   const [actividades, setActividades] = useState([])
   const [chart, setChart] = useState([])
+  const [pendientes, setPendientes] = useState({ campoId: null, items: [], total: 0, loading: true, error: false })
+  const puedeVerAgenda = canAccessModule(role, 'agenda')
+  const nombreUsuario = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
+
+  useEffect(() => {
+    let vigente = true
+    if (!campoActivo?.id || !puedeVerAgenda) return
+    const campoId = campoActivo.id
+    setPendientes({ campoId, items: [], total: 0, loading: true, error: false })
+    const cargar = async () => {
+      try {
+        const { data, count, error } = await supabase.from('tareas')
+          .select('id, descripcion, fecha_programada, tipo', { count: 'exact' })
+          .eq('campo_id', campoId)
+          .or('completada.eq.false,completada.is.null')
+          .order('fecha_programada', { ascending: true, nullsFirst: false })
+          .order('id', { ascending: true })
+          .limit(5)
+        if (error) throw error
+        if (vigente) setPendientes({ campoId, items: data || [], total: count ?? 0, loading: false, error: false })
+      } catch {
+        if (vigente) setPendientes({ campoId, items: [], total: 0, loading: false, error: true })
+      }
+    }
+    cargar()
+    return () => { vigente = false }
+  }, [campoActivo?.id, puedeVerAgenda])
 
   const hoy = useMemo(() => new Date().toISOString().split('T')[0], [])
   const mesDesde = useMemo(() => {
@@ -295,7 +322,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
     <div style={{ minHeight: '100vh', background: '#dfe3df', color: '#101511', padding: '30px 34px 36px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 32, letterSpacing: -1.2, lineHeight: 1.1 }}>Hola, Gabriel</h1>
+          <h1 style={{ margin: 0, fontSize: 32, letterSpacing: -1.2, lineHeight: 1.1 }}>Hola, {nombreUsuario}</h1>
           <div style={{ color: '#656b66', fontSize: 15, marginTop: 8 }}>
             Resumen general de {campoActivo?.nombre || 'El Sembrador'}
           </div>
@@ -364,6 +391,39 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
             </div>
           )}
         </Panel>
+        {puedeVerAgenda && (
+          <Panel title="Tareas pendientes" action="Ver agenda" onAction={() => navigate('/agenda')}>
+            {pendientes.loading || pendientes.campoId !== campoActivo?.id ? (
+              <EmptyState text="Cargando tareas pendientes..." />
+            ) : pendientes.error ? (
+              <div role="alert"><EmptyState text="No se pudieron cargar las tareas. Intentá consultar la agenda." /></div>
+            ) : pendientes.items.length === 0 ? (
+              <EmptyState text="Todo al día. No hay tareas pendientes en este campo." />
+            ) : (
+              <>
+                <div style={{ color: '#69706a', fontSize: 13, marginBottom: 8 }}>
+                  {pendientes.total} pendiente{pendientes.total === 1 ? '' : 's'} en este campo · Primero las más antiguas
+                </div>
+                {pendientes.items.map(t => {
+                  const ahora = new Date()
+                  const fechaHoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`
+                  const fecha = (t.fecha_programada || '').slice(0, 10)
+                  const vencida = fecha && fecha < fechaHoy
+                  const esHoy = fecha === fechaHoy
+                  return <Activity key={t.id} icon="ti-calendar"
+                    title={t.descripcion || 'Tarea pendiente'}
+                    date={formatFechaCorta(fecha)}
+                    tag={!fecha ? 'Sin fecha' : vencida ? 'Vencida' : esHoy ? 'Hoy' : 'Próxima'}
+                    color={vencida ? '#b93838' : esHoy ? '#a65b08' : '#176a25'}
+                    onClick={() => navigate('/agenda')} />
+                })}
+                {pendientes.total > pendientes.items.length && (
+                  <div style={{ color: '#69706a', fontSize: 12, marginTop: 12 }}>Mostrando 5 de {pendientes.total}. Consultá todas en la agenda.</div>
+                )}
+              </>
+            )}
+          </Panel>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 16, marginBottom: 16 }}>
