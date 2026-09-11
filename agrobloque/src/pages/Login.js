@@ -5,7 +5,7 @@ function LogoHS({ size = 80 }) {
   const fs = Math.round(size * 0.72)
   return (
     <div style={{ width:size, height:size, background:'#212121', borderRadius:Math.round(size*0.22), display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto' }}>
-      <span style={{ fontSize:fs, fontWeight:800, color:'#fff', letterSpacing:-2, lineHeight:1, fontFamily:"'Arial Black', 'Arial Bold', Arial, sans-serif" }}>HS</span>
+      <span style={{ fontSize:fs, fontWeight:800, color:'#fff', letterSpacing:-2, lineHeight:1, fontFamily:"'Arial Black', 'Arial Bold', Arial, sans-serif" }}>VS</span>
     </div>
   )
 }
@@ -36,7 +36,7 @@ export default function Login() {
       <div style={{ background:'#f9f8f6', borderRadius:20, padding:'40px 28px 32px', width:'100%', maxWidth:360, border:'0.5px solid #d0cdc8' }}>
         <div style={{ textAlign:'center', marginBottom:28 }}>
           <LogoHS size={80} />
-          <div style={{ fontSize:15, fontWeight:700, color:'#212121', marginBottom:2, marginTop:8, letterSpacing:-.2 }}>Horticultura El Sembrador</div>
+          <div style={{ fontSize:15, fontWeight:700, color:'#212121', marginBottom:2, marginTop:8, letterSpacing:-.2 }}>Verdulería El Sembrador</div>
           <div style={{ fontSize:11, color:'#888', letterSpacing:.5, textTransform:'uppercase' }}>Sistema de gestion agricola</div>
           <div style={{ fontSize:12, color:'#444444', marginTop:4, fontStyle:'italic' }}>Cosechando Confianza</div>
         </div>

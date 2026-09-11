@@ -81,9 +81,9 @@ export const imprimirHtml = (title, bodyHtml) => {
       <body>
         <div class="report-header">
           <div class="brand">
-            <div class="logo">HS</div>
+            <div class="logo">VS</div>
             <div>
-              <div class="brand-title">Horticultura El Sembrador</div>
+              <div class="brand-title">Verdulería El Sembrador</div>
               <div class="brand-sub">AgroBloque</div>
             </div>
           </div>

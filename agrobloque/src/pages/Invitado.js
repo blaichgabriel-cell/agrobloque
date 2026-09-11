@@ -126,7 +126,7 @@ function Shell({ children, campo, onRefresh, compact = false }) {
           <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
             {onRefresh && <button type="button" onClick={onRefresh} style={refreshBtn}>Actualizar</button>}
             <div style={{ width:compact ? 46 : 54, height:compact ? 46 : 54, borderRadius:16, background:'#0b0f0c', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:compact ? 19 : 22 }}>
-              HS
+              VS
             </div>
           </div>
         </header>

@@ -48,7 +48,7 @@ export function LogoHS({ size = 48 }) {
       lineHeight: 1,
       letterSpacing: -1,
     }}>
-      HS
+      VS
     </div>
   )
 }
@@ -196,10 +196,10 @@ function DesktopSidebar({ isGuest = false, role }) {
       <div style={{ padding: '0 24px 30px', marginBottom: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
           <div style={{ width: 48, height: 48, borderRadius: 14, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', color: '#fff', fontWeight: 900, fontSize: 24, letterSpacing: -2, fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif" }}>
-            HS
+            VS
           </div>
           <div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', letterSpacing: 1.1, textTransform: 'uppercase' }}>Horticultura</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', letterSpacing: 1.1, textTransform: 'uppercase' }}>Verdulería</div>
             <div style={{ fontSize: 17, color: '#fff', fontWeight: 800, letterSpacing: -0.2 }}>El Sembrador</div>
           </div>
         </div>
