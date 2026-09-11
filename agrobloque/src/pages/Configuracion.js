@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { forceLocalSignOut, supabase } from '../lib/supabase'
 import { descargarJson } from '../lib/exporters'
-import { ACTIONS } from '../lib/permissions'
+import { ACTIONS, DISABLED_MODULES } from '../lib/permissions'
 const PERMISOS_MODULOS = [
   { key: 'buscar', label: 'Buscar' },
   { key: 'alertas', label: 'Alertas' },
@@ -23,7 +23,7 @@ const PERMISOS_MODULOS = [
   { key: 'compradores', label: 'Compradores' },
   { key: 'auditoria', label: 'Auditoria' },
   { key: 'configuracion', label: 'Configuracion' },
-]
+].filter(m => !DISABLED_MODULES.includes(m.key))
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
@@ -427,7 +427,8 @@ export default function Configuracion() {
         email: form.email.trim().toLowerCase(),
         nombre: form.nombre || null,
         rol: form.rol,
-        permisos: Array.isArray(form.permisos) ? form.permisos : null,
+        permisos: (Array.isArray(form.permisos) && form.permisos.length ? form.permisos : PERMISOS_MODULOS.map(m => m.key))
+          .filter(key => !DISABLED_MODULES.includes(key) && (form.rol === 'admin' || !['asistencia', 'configuracion'].includes(key))),
         acciones: form.acciones && typeof form.acciones === 'object' ? form.acciones : null,
         activo: form.activo !== false,
         notas: form.notas || null,

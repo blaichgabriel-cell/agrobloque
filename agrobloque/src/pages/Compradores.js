@@ -34,7 +34,7 @@ export default function Compradores() {
   const fetchCompradores = async () => {
     const { data } = await supabase.from('compradores').select('*').order('nombre')
     setCompradores(data || [])
-    if (data?.length > 0) fetchHistorial(data)
+    setHistorial({})
   }
 
   const fetchHistorial = async (comps) => {
@@ -104,7 +104,7 @@ export default function Compradores() {
         {compradores.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>
             Sin compradores registrados.<br/>
-            <span style={{ fontSize:11 }}>Agrega compradores para asignarlos en cada venta.</span>
+            <span style={{ fontSize:11 }}>Agrega compradores para conservar sus datos de contacto.</span>
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
@@ -128,7 +128,7 @@ export default function Compradores() {
                       <div style={{ fontSize:10, color:'#9a9a9a' }}>{stats.operaciones} operaciones</div>
                     </>
                   ) : (
-                    <div style={{ fontSize:11, color:'#c0c0c0' }}>Sin historial</div>
+                    <div style={{ fontSize:11, color:'#c0c0c0' }}>Contacto</div>
                   )}
                 </div>
                 <i className={`ti ${isOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize:14, color:'#d0d0d0' }} aria-hidden="true"></i>

@@ -320,6 +320,7 @@ export default function App() {
   const [campoActivo, setCampoActivo] = useState(null)
   const [dataError, setDataError] = useState('')
   const [role, setRole] = useState(normalizeRole(null))
+  const [roleUserId, setRoleUserId] = useState(null)
   const guestPath = Boolean(guestToken)
 
   useEffect(() => {
@@ -367,13 +368,6 @@ export default function App() {
       } else {
         setSession(sesionActual)
         setDataError('')
-        const email = userData.user.email || ''
-        const { data: roleData } = await supabase
-          .from('app_user_roles')
-          .select('*')
-          .eq('email', email.toLowerCase())
-          .maybeSingle()
-        setRole(normalizeRole(roleData, email))
       }
       setLoading(false)
     }
@@ -389,6 +383,22 @@ export default function App() {
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setRole(normalizeRole(null))
+    setRoleUserId(null)
+    if (!session?.user?.id || guestPath) return
+    const cargarPermisos = async () => {
+      const email = session.user.email || ''
+      const { data, error } = await supabase.from('app_user_roles').select('*').eq('email', email.toLowerCase()).maybeSingle()
+      if (cancelled) return
+      setRole(error ? normalizeRole(null) : normalizeRole(data, email))
+      setRoleUserId(session.user.id)
+    }
+    cargarPermisos()
+    return () => { cancelled = true }
+  }, [session?.user?.id, guestPath])
 
   useEffect(() => {
     if (guestPath) return
@@ -488,7 +498,14 @@ export default function App() {
           <button onClick={() => forceLocalSignOut()} style={{ marginLeft: 10, border: 'none', borderRadius: 8, background: '#7a4a00', color: '#fff', padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Limpiar sesion</button>
         </div>
       )}
-      <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} />
+      {roleUserId !== session.user.id ? (
+        <div style={{ padding:40, textAlign:'center' }}>Cargando permisos...</div>
+      ) : !role.permisos.length ? (
+        <div style={{ padding:40, textAlign:'center' }}>
+          <p>Tu cuenta todavía no tiene acceso habilitado. Pedí al administrador que configure tus permisos.</p>
+          <button onClick={() => forceLocalSignOut()}>Cerrar sesión</button>
+        </div>
+      ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} />}
     </BrowserRouter>
   )
 }

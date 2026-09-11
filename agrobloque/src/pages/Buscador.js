@@ -43,7 +43,7 @@ export default function Buscador() {
       supabase.from('compradores').select('id, nombre, tipo, telefono').order('nombre'),
       supabase.from('tareas').select('id, descripcion, fecha_programada, completada, bloques(id, codigo)').order('fecha_programada', { ascending:false }),
       supabase.from('vivero_lotes').select('id, cultivo, variedad, fecha_siembra, estado').order('fecha_siembra', { ascending:false }),
-      supabase.from('contabilidad_movimientos').select('id, fecha, tipo, descripcion, categoria, monto').order('fecha', { ascending:false }),
+      Promise.resolve({ data: [] }),
     ])
 
     const lista = [

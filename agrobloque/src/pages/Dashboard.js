@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import DesktopDashboard from './DesktopDashboard'
-import { filterTabsByRole } from '../lib/permissions'
+import { filterTabsByRole, canAccessModule } from '../lib/permissions'
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
@@ -233,7 +233,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       ? supabase.from('plantaciones').select('id, bloque_id, densidad_plantas_m2, cultivos(nombre)').eq('activa', true).in('bloque_id', bloqueIds)
       : Promise.resolve({ data: [] })
 
-    const operariosQuery = isGuest
+    const operariosQuery = isGuest || !canAccessModule(role, 'asistencia')
       ? Promise.resolve({ data: [] })
       : supabase.from('operarios').select('id').eq('campo_id', campo.id)
 
@@ -261,19 +261,15 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
       bloqueIds.length > 0
         ? supabase.from('cosechas').select('id, fecha, kg_total, bloques(codigo)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
         : Promise.resolve({ data: [] }),
-      supabase.from('costos').select('id, tipo, descripcion, concepto, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
-      isGuest
-        ? Promise.resolve({ data: [] })
-        : supabase.from('asistencia').select('monto, fecha, operarios(campo_id, nombre)').gte('fecha', mesDesde),
+      Promise.resolve({ data: [] }),
+      Promise.resolve({ data: [] }),
       supabase
         .from('fumigaciones')
         .select('id, fecha, tipo, operario, bloques(codigo), fumigacion_productos(dosis, descuento_stock, productos(nombre, precio_unitario))')
         .eq('campo_id', campo.id)
         .gte('fecha', mesDesde)
         .order('fecha', { ascending: false }),
-      bloqueIds.length > 0
-        ? supabase.from('ventas').select('id, fecha, producto, kg_total, precio_kg, total, estado_cobro, bloque_id, compradores(nombre)').in('bloque_id', bloqueIds).order('fecha', { ascending: false }).limit(5)
-        : Promise.resolve({ data: [] }),
+      Promise.resolve({ data: [] }),
     ])
 
     const manual = (costosManuales || []).reduce((s, c) => s + (Number(c.monto) || 0), 0)
@@ -436,7 +432,7 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
 
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:10, marginTop:12 }}>
           <MetricCard title="Cultivos" value={stats.cultivos} sub="plantaciones" onClick={() => navigate('/mapa')} />
-          <MetricCard title={isGuest ? 'Acceso' : 'Operarios'} value={isGuest ? 'Ver' : stats.operarios} sub={isGuest ? 'invitado' : 'activos'} onClick={() => navigate(isGuest ? '/mapa' : '/asistencia')} />
+          <MetricCard title={canAccessModule(role, 'asistencia') ? 'Operarios' : 'Bloques'} value={canAccessModule(role, 'asistencia') ? stats.operarios : stats.bloques} sub="registrados" onClick={() => navigate(canAccessModule(role, 'asistencia') ? '/asistencia' : '/mapa')} />
           <MetricCard title="Stock" value={mobileData.productos} sub="productos" onClick={() => navigate('/inventario')} />
         </div>
 
@@ -448,14 +444,13 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
           <div style={{ display:'grid', gap:8 }}>
             {mobileData.actividades.length === 0 ? (
               <div style={{ color:'#737b74', fontSize:12, padding:'16px 0', textAlign:'center' }}>Sin movimientos recientes ni tareas pendientes.</div>
-            ) : mobileData.actividades.slice(0, 2).map(item => (
+            ) : filterTabsByRole(mobileData.actividades, role, isGuest).slice(0, 2).map(item => (
               <ActivityRow key={item.id} item={item} onClick={() => navigate(item.path)} />
             ))}
           </div>
         </section>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:12 }}>
-          <ResumenFinancieroMini onClick={() => navigate('/reportes')} />
           <ProduccionMini produccion={mobileData.produccion} onClick={() => navigate('/mapa')} />
         </div>
 

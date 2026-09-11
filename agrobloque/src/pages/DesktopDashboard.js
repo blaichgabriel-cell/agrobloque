@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { filterTabsByRole } from '../lib/permissions'
+import { filterTabsByRole, canAccessModule } from '../lib/permissions'
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 
@@ -152,7 +152,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
   const cargarDashboard = async (campo) => {
     setLoading(true)
 
-    const operariosQuery = isGuest
+    const operariosQuery = isGuest || !canAccessModule(role, 'asistencia')
       ? Promise.resolve({ data: [] })
       : supabase.from('operarios').select('id').eq('campo_id', campo.id)
 
@@ -197,17 +197,9 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         .in('bloque_id', bloqueIds)
       : { data: [] }
 
-    const { data: ventas } = bloqueIds.length > 0
-      ? await supabase
-        .from('ventas')
-        .select('id, producto, kg_total, precio_kg, total, monto_cobrado, estado_cobro, fecha, bloque_id, compradores(nombre)')
-        .gte('fecha', mesDesde)
-        .in('bloque_id', bloqueIds)
-      : { data: [] }
+    const ventas = []
 
-    const asistenciaQuery = isGuest
-      ? Promise.resolve({ data: [] })
-      : supabase.from('asistencia').select('monto, fecha, operarios(campo_id)').gte('fecha', mesDesde)
+    const asistenciaQuery = Promise.resolve({ data: [] })
 
     const fertilizacionesQuery = bloqueIds.length > 0
       ? supabase
@@ -220,7 +212,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       : Promise.resolve({ data: [] })
 
     const [{ data: costosManuales }, { data: asistencia }, { data: fumigaciones }, { data: planesNutricionales }] = await Promise.all([
-      supabase.from('costos').select('id, tipo, monto, fecha').eq('campo_id', campo.id).gte('fecha', mesDesde).order('fecha', { ascending: false }),
+      Promise.resolve({ data: [] }),
       asistenciaQuery,
       supabase
         .from('fumigaciones')
@@ -344,7 +336,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(180px, 1fr))', gap: 16, marginBottom: 18 }}>
         <Kpi icon="ti-plant" title="Bloques activos" value={loading ? '-' : stats.activos} sub={`de ${stats.bloques} totales`} dark />
         <Kpi icon="ti-plant" title="Cultivos activos" value={stats.cultivos} sub="plantaciones activas" />
-        {isGuest ? (
+        {isGuest || !canAccessModule(role, 'asistencia') ? (
           <Kpi icon="ti-eye" title="Modo invitado" value="Ver" sub="solo lectura" />
         ) : (
           <Kpi icon="ti-users" title="Operarios activos" value={stats.operarios} sub="en el campo" />
@@ -353,21 +345,6 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1.25fr', gap: 16, marginBottom: 16 }}>
-        <Panel title="Resumen financiero del mes" action="Ver costos" onAction={() => navigate('/costos')} wide>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
-            <Money title="Ventas del mes" value={finanzas.ingresos} />
-            <Money title="Cobrado" value={finanzas.cobrado} />
-            <Money title="Pendiente" value={finanzas.pendiente} />
-            <Money title="Gastos del mes" value={finanzas.costos} />
-          </div>
-          <div style={{ borderTop: '1px solid #ecefec', paddingTop: 14, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 270px', gap: 16, alignItems: 'stretch' }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 750, marginBottom: 8 }}>Ingresos vs. Costos</div>
-              <MiniChart data={chart} hasData={hayFinanzas} />
-            </div>
-            <CostBreakdown data={costBreakdown} total={finanzas.costos} />
-          </div>
-        </Panel>
 
         <Panel title="Produccion por cultivo" action="Ver mapa" onAction={() => navigate('/mapa')}>
           {produccion.length === 0 ? (
@@ -395,12 +372,11 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
             <EmptyState text="Sin movimientos recientes ni tareas pendientes." />
           ) : (
             <div>
-              {actividades.slice(0, 5).map(a => (
+              {filterTabsByRole(actividades, role, isGuest).slice(0, 5).map(a => (
                 <Activity key={a.id} icon={a.icon} title={a.title} date={a.date} tag={a.tag} color={a.color} onClick={() => navigate(a.path)} />
               ))}
             </div>
           )}
-          <button onClick={() => navigate('/historial')} style={linkRow}>Ver historial completo <i className="ti ti-chevron-right" /></button>
         </Panel>
 
         <Panel title="Accesos rapidos">
@@ -441,7 +417,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         <BottomStat dark icon="ti-stack-2" value={stats.bloquesTotal} label="Bloques totales en la base" />
         <BottomStat icon="ti-plant" value={stats.plantacionesTotal} label="Plantaciones registradas" />
         <BottomStat icon="ti-box" value={stats.productos} label="Productos en inventario" />
-        {isGuest ? (
+        {isGuest || !canAccessModule(role, 'asistencia') ? (
           <BottomStat icon="ti-eye" value="Ver" label="Acceso invitado de solo lectura" />
         ) : (
           <BottomStat icon="ti-users" value={stats.operarios} label="Operarios activos en el campo" />

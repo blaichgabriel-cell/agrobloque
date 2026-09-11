@@ -27,7 +27,8 @@ export const ACTIONS = [
   { key: 'delete', label: 'Borrar' },
 ]
 
-const ALL_KEYS = MODULES.map(m => m.key)
+export const DISABLED_MODULES = ['ventas', 'costos', 'contabilidad', 'cuentas_pagar', 'reportes', 'historial', 'auditoria']
+const ALL_KEYS = MODULES.map(m => m.key).filter(key => !DISABLED_MODULES.includes(key))
 const OPERADOR_KEYS = ALL_KEYS.filter(key => !['configuracion', 'auditoria'].includes(key))
 const LECTURA_KEYS = ALL_KEYS.filter(key => !['asistencia', 'cuentas_pagar', 'configuracion', 'auditoria'].includes(key))
 
@@ -44,11 +45,11 @@ export const ROLE_LABELS = {
 }
 
 export const DEFAULT_ROLE = {
-  rol: 'admin',
-  permisos: ALL_KEYS,
+  rol: 'lectura',
+  permisos: [],
   acciones: {},
-  canWrite: true,
-  label: ROLE_LABELS.admin,
+  canWrite: false,
+  label: ROLE_LABELS.lectura,
 }
 
 const normalizeActions = (acciones, permisos, rol) => {
@@ -58,21 +59,31 @@ const normalizeActions = (acciones, permisos, rol) => {
     const custom = acciones && typeof acciones === 'object' && Array.isArray(acciones[key])
       ? acciones[key].filter(a => validActions.includes(a))
       : null
-    acc[key] = custom && custom.length > 0 ? custom : defaults
+    acc[key] = custom !== null ? custom : defaults
     return acc
   }, {})
 }
 
 export const normalizeRole = (roleRow, fallbackEmail = '') => {
-  const rol = roleRow?.activo === false ? 'lectura' : (roleRow?.rol || 'admin')
+  const email = (fallbackEmail || roleRow?.email || '').trim().toLowerCase()
+  // Compatibilidad con las dos cuentas existentes del propietario.
+  // Toni siempre recibe el perfil operativo, incluso sin una fila de roles.
+  if (email === 'agrobloquetoni@gmail.com') {
+    roleRow = { ...roleRow, email, nombre: 'Toni', rol: 'operador',
+      permisos: ALL_KEYS.filter(key => !['asistencia', 'configuracion'].includes(key)) }
+  } else if (!roleRow && email) {
+    roleRow = { email, rol: 'admin', activo: true }
+  }
+  const habilitado = Boolean(roleRow && roleRow.activo !== false && ['admin', 'operador', 'lectura'].includes(roleRow.rol))
+  const rol = habilitado ? roleRow.rol : 'lectura'
   const base = rol === 'admin' ? ALL_KEYS : rol === 'operador' ? OPERADOR_KEYS : LECTURA_KEYS
   const custom = Array.isArray(roleRow?.permisos) ? roleRow.permisos : null
-  const permisos = custom && custom.length > 0 ? custom.filter(k => ALL_KEYS.includes(k)) : base
+  const permisos = !habilitado ? [] : (custom !== null ? custom.filter(k => ALL_KEYS.includes(k)) : base)
   const acciones = normalizeActions(roleRow?.acciones, permisos, rol)
 
   return {
     id: roleRow?.id || null,
-    email: (roleRow?.email || fallbackEmail || '').toLowerCase(),
+    email,
     nombre: roleRow?.nombre || '',
     rol,
     permisos,
@@ -89,6 +100,9 @@ export const moduleForPath = (path = '/') => {
 }
 
 export const canAccessModule = (role, moduleKey) => {
+  if (DISABLED_MODULES.includes(moduleKey)) return false
+  if (!role) return false
+  if (['asistencia', 'configuracion'].includes(moduleKey) && role.rol !== 'admin') return false
   if (!moduleKey || moduleKey === 'inicio') return true
   if (!role) return true
   if (role.rol === 'admin') return true
@@ -96,6 +110,7 @@ export const canAccessModule = (role, moduleKey) => {
 }
 
 export const canPerformAction = (role, moduleKey, action = 'view') => {
+  if (!canAccessModule(role, moduleKey)) return false
   if (!moduleKey || moduleKey === 'inicio') return true
   if (!role) return true
   if (role.rol === 'admin') return true
