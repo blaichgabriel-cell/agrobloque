@@ -77,7 +77,7 @@ function LogoHS({ size = 56 }) {
         letterSpacing: -2,
         lineHeight: 1,
         fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif",
-      }}>VS</span>
+      }}>AB</span>
     </div>
   )
 }
@@ -100,7 +100,7 @@ function WatermarkHS({ compact }) {
       }}
       aria-hidden="true"
     >
-      <text x="10" y="170" fontFamily="Georgia, 'Times New Roman', serif" fontSize="132" fontWeight="800" fill="#fff" letterSpacing="-9">VS</text>
+      <text x="10" y="170" fontFamily="Georgia, 'Times New Roman', serif" fontSize="132" fontWeight="800" fill="#fff" letterSpacing="-9">AB</text>
       <path d="M145 69c10-22 19-35 27-51 16 25 16 48-1 72-10 14-21 23-32 30 0-18 0-34 6-51z" fill="#fff"/>
       <path d="M119 86c-23-4-39-12-52-29 31-1 53 10 66 33 7 12 10 24 10 36-11-13-17-27-24-40z" fill="#fff"/>
       <path d="M187 91c18-19 39-27 66-25-8 28-26 45-53 52-15 4-29 4-42 1 9-8 18-16 29-28z" fill="#fff"/>
@@ -354,10 +354,10 @@ export default function Dashboard({ campoActivo, setCampoActivo, isGuest = false
             <LogoHS size={46} />
             <div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 3 }}>
-                Verdulería
+                AgroBloque
               </div>
               <div style={{ fontSize: 20, color: '#fff', fontWeight: 850, letterSpacing: -0.7, lineHeight: 1.05 }}>
-                El Sembrador
+                Gestión agrícola
               </div>
             </div>
           </div>

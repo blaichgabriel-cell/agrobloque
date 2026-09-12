@@ -1,6 +1,6 @@
 # AgroBloque
 
-Sistema de gestión agrícola — Verdulería El Sembrador
+Sistema de gestión agrícola simple y completa
 
 ## Setup
 
