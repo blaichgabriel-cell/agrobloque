@@ -139,12 +139,48 @@ export default function FichaBloque() {
     navigate(`/${modulo}?nuevo=1&campo=${encodeURIComponent(bloque.campo_id || '')}&bloque=${encodeURIComponent(id)}`)
   }
 
+  const archivoQr = () => {
+    // Convertir sin await mantiene activo el toque requerido por Safari para compartir.
+    const bytes = Uint8Array.from(atob(qrDataUrl.split(',')[1]), c => c.charCodeAt(0))
+    const nombre = `QR-${bloque.campos?.nombre || 'Campo'}-${bloque.codigo || id}.png`.replace(/[^a-zA-Z0-9._-]+/g, '-')
+    return new File([bytes], nombre, { type:'image/png' })
+  }
+
+  const compartirQr = async () => {
+    if (!qrDataUrl) return
+    setQrError('')
+    try {
+      const files = [archivoQr()]
+      if (!navigator.canShare?.({ files })) {
+        setQrError('Este navegador no permite compartir la imagen. Proba Descargar o mantené presionado el QR para guardarlo.')
+        return
+      }
+      await navigator.share({ files })
+    } catch (error) {
+      if (error.name !== 'AbortError') setQrError('No se pudo compartir el QR. Proba Descargar o mantené presionado el QR para guardarlo.')
+    }
+  }
+
   const descargarQr = () => {
     if (!qrDataUrl) return
-    const enlace = document.createElement('a')
-    enlace.href = qrDataUrl
-    enlace.download = `QR-${bloque.campos?.nombre || 'Campo'}-${bloque.codigo || id}.png`.replace(/[^a-zA-Z0-9._-]+/g, '-')
-    enlace.click()
+    setQrError('')
+    try {
+      const archivo = archivoQr()
+      const url = URL.createObjectURL(archivo)
+      const enlace = document.createElement('a')
+      enlace.href = url
+      enlace.download = archivo.name
+      document.body.appendChild(enlace)
+      try {
+        enlace.click()
+      } finally {
+        enlace.remove()
+        // Safari necesita tiempo para iniciar la lectura del archivo.
+        setTimeout(() => URL.revokeObjectURL(url), 60000)
+      }
+    } catch (error) {
+      setQrError('No se pudo iniciar la descarga. Proba Compartir / Guardar o mantené presionado el QR para guardarlo.')
+    }
   }
 
   const imprimirQr = () => {
@@ -1618,6 +1654,8 @@ export default function FichaBloque() {
               ? <img src={qrDataUrl} alt={`QR del bloque ${bloque.codigo}`} style={{ width:'100%', maxWidth:300, height:'auto', display:'block', margin:'0 auto 14px' }}/>
               : <div style={{ padding:50, color:'#8b928b', fontSize:13 }}>Generando QR...</div>}
             <div style={{ fontSize:12, color:'#687068', lineHeight:1.45, marginBottom:16 }}>Al escanear, abre directamente este bloque. Para cargar información se requiere iniciar sesión.</div>
+            {typeof navigator.share === 'function' && <button type="button" onClick={compartirQr} disabled={!qrDataUrl} style={{ width:'100%', padding:12, marginBottom:8, borderRadius:13, border:'none', background:'#176a25', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Compartir / Guardar QR</button>}
+            <div style={{ fontSize:12, color:'#687068', lineHeight:1.45, marginBottom:12 }}>En iPhone, usá Compartir / Guardar QR y elegí Guardar imagen o Guardar en Archivos. También podés mantener presionado el QR para ver las opciones disponibles.</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               <button type="button" onClick={descargarQr} disabled={!qrDataUrl} style={{ padding:12, borderRadius:13, border:'1px solid #d9ddd8', background:'#fff', color:'#212121', fontSize:13, fontWeight:700, cursor:'pointer' }}>Descargar</button>
               <button type="button" onClick={imprimirQr} disabled={!qrDataUrl} style={{ padding:12, borderRadius:13, border:'none', background:'#212121', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Imprimir etiqueta</button>
