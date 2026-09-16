@@ -95,7 +95,10 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
     ...data.tareas.slice(0, 3).map(t => ({ id: `t${t.id}`, title: t.descripcion || 'Tarea pendiente', sub: shortDate(t.fecha_programada), icon: 'ti-calendar', path: '/agenda', overdue: t.fecha_programada && t.fecha_programada < today })),
     ...(lowStock.length ? [{ id: 'stock', title: 'Stock bajo de insumos', sub: `${lowStock.length} productos · Inventario general`, icon: 'ti-box', path: '/inventario' }] : []),
   ]
-  const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
+  const nombreCuenta = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
+  const nombre = nombreCuenta.length > 22 || (!nombreCuenta.includes(' ') && nombreCuenta.length > 16)
+    ? 'equipo'
+    : nombreCuenta.split(' ')[0]
   const mayWork = availableWork(role, isGuest).length > 0
 
   return <div className="ag-overview">
@@ -106,7 +109,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
       {can('alertas') && <button className="ag-icon-button" aria-label="Ver alertas" onClick={() => navigate('/alertas')}><i className="ti ti-bell" /></button>}
       <span className="ag-top-date">{new Date(`${today}T12:00:00`).toLocaleDateString('es-PY', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
     </header>
-    <section className="ag-hero"><div><span className="ag-eyebrow">AgroBloque · {campoActivo?.nombre || 'Tu campo'}</span><h1>Hola, {nombre}</h1><p>Un campo bien gestionado,<br />siempre da buenos frutos.</p></div><span className="ag-hero-caption">El campo en control</span></section>
+    <section className="ag-hero"><div><span className="ag-eyebrow">AgroBloque · {campoActivo?.nombre || 'Tu campo'}</span><h1>Hola, {nombre}</h1><p>Un campo bien gestionado,<br />siempre da buenos frutos.</p></div><div className="ag-hero-actions"><span className="ag-hero-caption">El campo en control</span>{mayWork && <button className="ag-primary" onClick={() => setWork(true)}><i className="ti ti-plus" />Registrar trabajo</button>}</div></section>
     {(fieldsError || errors.length > 0) && <div className="ag-load-error" role="alert">No se pudo cargar parte del resumen. Los datos no disponibles se muestran con «—».<button onClick={() => setRetry(n => n + 1)}>Reintentar</button></div>}
     {!loading && !fieldsError && !campos.length && <div className="ag-empty">No hay campos disponibles para este usuario.</div>}
     <div className="ag-metrics">
@@ -130,7 +133,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
       </section>}
       {can('cosecha') && <section className="ag-panel ag-production"><div className="ag-section-heading"><div><h2>Producción de la semana</h2><span className="ag-muted">Últimos 7 días · kg cosechados</span></div><strong>{value('cosechas', `${number(week.reduce((s, d) => s + d.kg, 0))} kg`)}</strong></div>{loading || errors.includes('cosechas') || errors.includes('bloques') ? <div className="ag-empty">{loading ? 'Cargando producción…' : 'Producción no disponible.'}</div> : <ProductionChart days={week} />}</section>}
     </div><div className="ag-side-column">
-      {(can('agenda') || can('inventario')) && <section className="ag-panel"><div className="ag-section-heading"><h2>Requiere atención</h2>{can('alertas') && <button className="ag-text-button" onClick={() => navigate('/alertas')}>Ver alertas <i className="ti ti-chevron-right" /></button>}</div>{loading ? <div className="ag-empty">Cargando pendientes…</div> : notices.length ? notices.map(item => <button className={`ag-notice ${item.overdue ? 'is-overdue' : ''}`} key={item.id} onClick={() => navigate(item.path)}><i className={`ti ${item.icon}`} /><span><strong>{item.title}</strong><small>{item.sub}</small></span><i className="ti ti-chevron-right" /></button>) : <div className="ag-empty">{errors.includes('tareas') || errors.includes('productos') ? 'No se pudieron comprobar todos los pendientes.' : 'Sin tareas pendientes ni avisos de stock.'}</div>}</section>}
+      {(can('agenda') || can('inventario')) && <section className="ag-panel"><div className="ag-section-heading"><h2>Requiere atención</h2>{can('alertas') && <button className="ag-text-button" onClick={() => navigate('/alertas')}>Ver alertas <i className="ti ti-chevron-right" /></button>}</div>{loading ? <div className="ag-empty">Cargando pendientes…</div> : notices.length ? notices.map(item => <button className={`ag-notice ${item.overdue ? 'is-overdue' : ''}`} key={item.id} onClick={() => navigate(item.path)}><i className={`ti ${item.icon}`} /><span><strong>{item.title}</strong><small>{item.sub}</small></span><i className="ti ti-chevron-right" /></button>) : errors.includes('tareas') || errors.includes('productos') ? <div className="ag-empty">No se pudieron comprobar todos los pendientes.</div> : <div className="ag-all-clear"><i className="ti ti-circle-check" /><span><strong>Todo al día</strong><small>No hay tareas pendientes ni avisos de stock.</small></span></div>}</section>}
       <section className="ag-panel"><div className="ag-section-heading"><h2>Actividad reciente</h2></div>{loading ? <div className="ag-empty">Cargando actividad…</div> : recent.length ? recent.slice(0, 5).map(item => <button className="ag-activity" key={item.id} onClick={() => navigate(item.path)}><span className="ag-activity-icon"><i className={`ti ${item.icon}`} /></span><span><strong>{item.label}{item.block ? ` · ${data.bloques.find(b => b.id === item.block)?.codigo || ''}` : ''}</strong><small>{item.sub}</small></span><time>{shortDate(item.date)}</time></button>) : <div className="ag-empty">{errors.some(key => ['cosechas', 'fumigaciones', 'fertilizaciones'].includes(key)) ? 'No se pudo consultar toda la actividad.' : 'Sin registros recientes para mostrar.'}</div>}</section>
     </div></div>
     {work && <WorkActions role={role} isGuest={isGuest} onClose={() => setWork(false)} />}
