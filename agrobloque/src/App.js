@@ -95,7 +95,7 @@ const allTabs = [
 ]
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
-const SIDEBAR_WIDTH = 236
+const SIDEBAR_WIDTH = 224
 
 const getStoredCampoId = () => {
   if (typeof window === 'undefined') return null
@@ -180,7 +180,7 @@ function DesktopSidebar({ isGuest = false, role }) {
     { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
   ]
   return <aside className="ag-sidebar" aria-label="Navegación principal">
-    <div className="ag-brand"><span className="ag-brand-mark" aria-hidden="true">AB</span><div><strong>AgroBloque</strong><small>El campo en control</small></div></div>
+    <div className="ag-brand"><span className="ag-brand-mark" aria-hidden="true">AB<i className="ti ti-leaf" /></span><div><strong>AgroBloque</strong><small>El campo en control</small></div></div>
     <nav className="ag-sidebar-nav">{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><MenuIcon icon={tab.icon} size={20} color="currentColor" /><span>{tab.path === '/mapa' ? 'Bloques y mapa' : tab.label}</span></NavLink>)}</section>

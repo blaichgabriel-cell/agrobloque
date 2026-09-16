@@ -7,6 +7,15 @@ import WorkActions, { availableWork } from '../components/WorkActions'
 const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 const number = value => Number(value || 0).toLocaleString('es-PY', { maximumFractionDigits: 1 })
 const shortDate = value => value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString('es-PY', { day: 'numeric', month: 'short' }) : 'Sin fecha'
+const relativeDate = (value, today) => {
+  if (!value) return 'Sin fecha'
+  const date = value.slice(0, 10)
+  if (date === today) return 'Hoy'
+  const yesterday = new Date(`${today}T12:00:00`)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (date === dateKey(yesterday)) return 'Ayer'
+  return shortDate(value)
+}
 const empty = { bloques: [], plantas: [], cosechas: [], tareas: [], productos: [], operarios: [], fumigaciones: [], fertilizaciones: [] }
 
 export default function Overview({ campoActivo, setCampoActivo, isGuest = false, role }) {
@@ -19,6 +28,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
   const [retry, setRetry] = useState(0)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('todos')
+  const [sort, setSort] = useState('codigo')
   const [work, setWork] = useState(false)
   const today = dateKey(new Date())
   const month = `${today.slice(0, 7)}-01`
@@ -84,6 +94,18 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
   const shownBlocks = data.bloques.filter(block => {
     const crop = data.plantas.find(p => p.bloque_id === block.id)?.cultivos?.nombre || ''
     return `${block.codigo} ${crop}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()) && (filter === 'todos' || (filter === 'activos' ? block.activo : !block.activo))
+  }).sort((a, b) => {
+    if (sort === 'cultivo') {
+      const cropA = data.plantas.find(p => p.bloque_id === a.id)?.cultivos?.nombre || 'zzz'
+      const cropB = data.plantas.find(p => p.bloque_id === b.id)?.cultivos?.nombre || 'zzz'
+      return cropA.localeCompare(cropB, 'es') || String(a.codigo).localeCompare(String(b.codigo), 'es', { numeric: true })
+    }
+    if (sort === 'actividad') {
+      const dateA = recent.find(item => item.block === a.id || item.blocks?.includes(a.id))?.date || ''
+      const dateB = recent.find(item => item.block === b.id || item.blocks?.includes(b.id))?.date || ''
+      return dateB.localeCompare(dateA) || String(a.codigo).localeCompare(String(b.codigo), 'es', { numeric: true })
+    }
+    return String(a.codigo).localeCompare(String(b.codigo), 'es', { numeric: true })
   })
   const value = (key, result) => loading || errors.includes(key) || (['cosechas', 'plantas'].includes(key) && errors.includes('bloques')) ? '—' : result
   const week = Array.from({ length: 7 }, (_, i) => {
@@ -113,7 +135,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
     {(fieldsError || errors.length > 0) && <div className="ag-load-error" role="alert">No se pudo cargar parte del resumen. Los datos no disponibles se muestran con «—».<button onClick={() => setRetry(n => n + 1)}>Reintentar</button></div>}
     {!loading && !fieldsError && !campos.length && <div className="ag-empty">No hay campos disponibles para este usuario.</div>}
     <div className="ag-metrics">
-      {can('cosecha') && <Metric icon="ti-leaf" label="Producción del mes" value={value('cosechas', `${number(monthlyKg)} kg`)} detail={new Date(`${today}T12:00:00`).toLocaleDateString('es-PY', { month: 'long', year: 'numeric' })} />}
+      {can('cosecha') && <Metric icon="ti-leaf" label="Producción del mes" value={value('cosechas', monthlyKg > 0 ? `${number(monthlyKg)} kg` : 'Sin registros')} detail={new Date(`${today}T12:00:00`).toLocaleDateString('es-PY', { month: 'long', year: 'numeric' })} compact={monthlyKg <= 0} />}
       <Metric icon="ti-layout-grid" label="Bloques activos" value={value('bloques', active)} detail={`de ${value('bloques', data.bloques.length)} bloques`} />
       {!isGuest && can('asistencia') ? <Metric icon="ti-users" label="Personal registrado" value={value('operarios', data.operarios.length)} detail="Operarios del campo" /> : <Metric icon="ti-seeding" label="Plantaciones activas" value={value('plantas', data.plantas.length)} detail="En el campo seleccionado" />}
       {can('agenda') && <Metric icon="ti-clipboard-list" label="Tareas pendientes" value={value('tareas', data.tareas.length)} detail="Agenda del campo" warning={data.tareas.length > 0} />}
@@ -121,27 +143,28 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
     {mayWork && <div className="ag-register"><button className="ag-primary" onClick={() => setWork(true)}><i className="ti ti-plus" />Registrar trabajo</button></div>}
     <div className="ag-dashboard-columns"><div className="ag-main-column">
       {can('mapa') && <section className="ag-panel"><div className="ag-section-heading"><h2>Bloques</h2><button className="ag-text-button" onClick={() => navigate('/mapa')}>Ver mapa <i className="ti ti-chevron-right" /></button></div>
-        <div className="ag-block-tools"><label className="ag-block-search"><i className="ti ti-search" /><input aria-label="Buscar bloque o cultivo" placeholder="Buscar bloque o cultivo" value={query} onChange={e => setQuery(e.target.value)} /></label><select aria-label="Filtrar bloques" value={filter} onChange={e => setFilter(e.target.value)}><option value="todos">Todos los bloques</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option></select></div>
+        <div className="ag-block-tools"><label className="ag-block-search"><i className="ti ti-search" /><input aria-label="Buscar bloque o cultivo" placeholder="Buscar bloque o cultivo" value={query} onChange={e => setQuery(e.target.value)} /></label><select aria-label="Filtrar bloques" value={filter} onChange={e => setFilter(e.target.value)}><option value="todos">Todos los bloques</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option></select><select aria-label="Ordenar bloques" value={sort} onChange={e => setSort(e.target.value)}><option value="codigo">Orden: bloque</option><option value="cultivo">Orden: cultivo</option><option value="actividad">Actividad reciente</option></select></div>
         <div className="ag-block-table"><div className="ag-block-labels"><span>Bloque / Cultivo</span><span>Estado</span><span>Días</span><span>Última actividad</span><span /></div>
           {loading ? <div className="ag-empty" role="status">Cargando bloques…</div> : errors.includes('bloques') ? <div className="ag-empty">No se pudieron cargar los bloques.</div> : !shownBlocks.length ? <div className="ag-empty">{query || filter !== 'todos' ? 'No hay bloques que coincidan con el filtro.' : 'Todavía no hay bloques en este campo.'}</div> : shownBlocks.slice(0, 8).map(block => {
             const plant = data.plantas.find(p => p.bloque_id === block.id)
             const last = recent.find(item => item.block === block.id || item.blocks?.includes(block.id))
             const days = plant?.fecha_siembra ? Math.max(0, Math.floor((new Date(`${today}T12:00:00`) - new Date(`${plant.fecha_siembra.slice(0, 10)}T12:00:00`)) / 86400000)) : null
-            return <button className="ag-block-row" key={block.id} onClick={() => navigate(`/bloque/${block.id}`)}><span className="ag-block-identity"><strong>{block.codigo}</strong><span>{errors.includes('plantas') ? '—' : plant?.cultivos?.nombre || 'Sin plantación activa'}</span></span><span className={`ag-status ${block.activo ? '' : 'is-inactive'}`}><span />{block.activo ? 'Activo' : 'Inactivo'}</span><span className="ag-block-days">{days ?? '—'}</span><span className="ag-block-activity">{last ? `${last.label} · ${shortDate(last.date)}` : '—'}</span><i className="ti ti-chevron-right" /></button>
+            const status = !block.activo ? 'Inactivo' : plant ? 'En producción' : 'En preparación'
+            return <button className="ag-block-row" key={block.id} onClick={() => navigate(`/bloque/${block.id}`)}><span className="ag-block-identity"><strong>{block.codigo}</strong><span>{errors.includes('plantas') ? '—' : plant?.cultivos?.nombre || 'Sin cultivo activo'}</span></span><span className={`ag-status ${!block.activo ? 'is-inactive' : !plant ? 'is-preparing' : ''}`}><span />{status}</span><span className="ag-block-days">{days ?? '—'}</span><span className="ag-block-activity">{last ? `${last.label} · ${relativeDate(last.date, today)}` : 'Sin actividad reciente'}</span><i className="ti ti-chevron-right" /></button>
           })}</div>
         {shownBlocks.length > 8 && <button className="ag-text-button ag-more-blocks" onClick={() => navigate('/mapa')}>Ver los {shownBlocks.length} bloques en el mapa</button>}
       </section>}
       {can('cosecha') && <section className="ag-panel ag-production"><div className="ag-section-heading"><div><h2>Producción de la semana</h2><span className="ag-muted">Últimos 7 días · kg cosechados</span></div><strong>{value('cosechas', `${number(week.reduce((s, d) => s + d.kg, 0))} kg`)}</strong></div>{loading || errors.includes('cosechas') || errors.includes('bloques') ? <div className="ag-empty">{loading ? 'Cargando producción…' : 'Producción no disponible.'}</div> : <ProductionChart days={week} />}</section>}
     </div><div className="ag-side-column">
-      {(can('agenda') || can('inventario')) && <section className="ag-panel"><div className="ag-section-heading"><h2>Requiere atención</h2>{can('alertas') && <button className="ag-text-button" onClick={() => navigate('/alertas')}>Ver alertas <i className="ti ti-chevron-right" /></button>}</div>{loading ? <div className="ag-empty">Cargando pendientes…</div> : notices.length ? notices.map(item => <button className={`ag-notice ${item.overdue ? 'is-overdue' : ''}`} key={item.id} onClick={() => navigate(item.path)}><i className={`ti ${item.icon}`} /><span><strong>{item.title}</strong><small>{item.sub}</small></span><i className="ti ti-chevron-right" /></button>) : errors.includes('tareas') || errors.includes('productos') ? <div className="ag-empty">No se pudieron comprobar todos los pendientes.</div> : <div className="ag-all-clear"><i className="ti ti-circle-check" /><span><strong>Todo al día</strong><small>No hay tareas pendientes ni avisos de stock.</small></span></div>}</section>}
-      <section className="ag-panel"><div className="ag-section-heading"><h2>Actividad reciente</h2></div>{loading ? <div className="ag-empty">Cargando actividad…</div> : recent.length ? recent.slice(0, 5).map(item => <button className="ag-activity" key={item.id} onClick={() => navigate(item.path)}><span className="ag-activity-icon"><i className={`ti ${item.icon}`} /></span><span><strong>{item.label}{item.block ? ` · ${data.bloques.find(b => b.id === item.block)?.codigo || ''}` : ''}</strong><small>{item.sub}</small></span><time>{shortDate(item.date)}</time></button>) : <div className="ag-empty">{errors.some(key => ['cosechas', 'fumigaciones', 'fertilizaciones'].includes(key)) ? 'No se pudo consultar toda la actividad.' : 'Sin registros recientes para mostrar.'}</div>}</section>
+      {(can('agenda') || can('inventario')) && <section className="ag-panel"><div className="ag-section-heading"><h2>Requiere atención {notices.length > 0 && <span className="ag-count">{notices.length}</span>}</h2>{can('alertas') && <button className="ag-text-button" onClick={() => navigate('/alertas')}>Ver alertas <i className="ti ti-chevron-right" /></button>}</div>{loading ? <div className="ag-empty">Cargando pendientes…</div> : notices.length ? notices.map(item => <button className={`ag-notice ${item.overdue ? 'is-overdue' : ''}`} key={item.id} onClick={() => navigate(item.path)}><i className={`ti ${item.icon}`} /><span><strong>{item.title}</strong><small>{item.sub}</small></span><i className="ti ti-chevron-right" /></button>) : errors.includes('tareas') || errors.includes('productos') ? <div className="ag-empty">No se pudieron comprobar todos los pendientes.</div> : <div className="ag-all-clear"><i className="ti ti-circle-check" /><span><strong>Todo al día</strong><small>No hay tareas pendientes ni avisos de stock.</small></span></div>}</section>}
+      <section className="ag-panel"><div className="ag-section-heading"><h2>Actividad reciente</h2></div>{loading ? <div className="ag-empty">Cargando actividad…</div> : recent.length ? recent.slice(0, 5).map(item => <button className="ag-activity" key={item.id} onClick={() => navigate(item.path)}><span className="ag-activity-icon"><i className={`ti ${item.icon}`} /></span><span><strong>{item.label}{item.block ? ` · ${data.bloques.find(b => b.id === item.block)?.codigo || ''}` : ''}</strong><small>{item.sub}</small></span><time>{relativeDate(item.date, today)}</time></button>) : <div className="ag-empty">{errors.some(key => ['cosechas', 'fumigaciones', 'fertilizaciones'].includes(key)) ? 'No se pudo consultar toda la actividad.' : 'Sin registros recientes para mostrar.'}</div>}</section>
     </div></div>
     {work && <WorkActions role={role} isGuest={isGuest} onClose={() => setWork(false)} />}
   </div>
 }
 
-function Metric({ icon, label, value, detail, warning }) {
-  return <div className={`ag-metric ${warning ? 'is-warning' : ''}`}><span className="ag-metric-icon"><i className={`ti ${icon}`} /></span><div><span className="ag-metric-label">{label}</span><strong>{value}</strong><small>{detail}</small></div></div>
+function Metric({ icon, label, value, detail, warning, compact }) {
+  return <div className={`ag-metric ${warning ? 'is-warning' : ''} ${compact ? 'is-compact' : ''}`}><span className="ag-metric-icon"><i className={`ti ${icon}`} /></span><div><span className="ag-metric-label">{label}</span><strong>{value}</strong><small>{detail}</small></div></div>
 }
 
 function ProductionChart({ days }) {
