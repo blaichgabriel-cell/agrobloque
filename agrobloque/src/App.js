@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { forceLocalSignOut, guestToken, supabase } from './lib/supabase'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
+import Dashboard from './pages/Overview'
 import Mapa from './pages/Mapa'
 import FichaBloque from './pages/FichaBloque'
 import Configuracion from './pages/Configuracion'
@@ -95,7 +95,7 @@ const allTabs = [
 ]
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
-const SIDEBAR_WIDTH = 260
+const SIDEBAR_WIDTH = 236
 
 const getStoredCampoId = () => {
   if (typeof window === 'undefined') return null
@@ -172,82 +172,21 @@ function ScrollToTop() {
 }
 
 function DesktopSidebar({ isGuest = false, role }) {
-  const navigate = useNavigate()
-  const location = useLocation()
   const tabs = filterTabsByRole(allTabs, role, isGuest)
-  const nombreUsuario = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
-  const inicialUsuario = nombreUsuario.charAt(0).toUpperCase()
-  return (
-    <div style={{
-      width: SIDEBAR_WIDTH,
-      minHeight: '100vh',
-      background: 'linear-gradient(180deg, #080b0a 0%, #121512 52%, #080a09 100%)',
-      borderRight: '1px solid rgba(255,255,255,0.07)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '28px 0',
-      position: 'fixed',
-      left: 0,
-      top: 0,
-      bottom: 0,
-      zIndex: 100,
-    }}>
-      {/* Logo */}
-      <div style={{ padding: '0 24px 30px', marginBottom: 4 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', color: '#fff', fontWeight: 900, fontSize: 24, letterSpacing: -2, fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif" }}>
-            AB
-          </div>
-          <div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', letterSpacing: 1.1, textTransform: 'uppercase' }}>AgroBloque</div>
-            <div style={{ fontSize: 17, color: '#fff', fontWeight: 800, letterSpacing: -0.2 }}>Gestión agrícola</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Nav items */}
-      <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto' }}>
-        {tabs.map(t => {
-          const active = location.pathname === t.path
-          return (
-            <div key={t.path} onClick={() => navigate(t.path)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '12px 14px', borderRadius: 12, marginBottom: 5,
-                cursor: 'pointer',
-                background: active ? 'linear-gradient(90deg, rgba(123,192,67,0.22), rgba(255,255,255,0.07))' : 'transparent',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
-              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
-            >
-              <MenuIcon icon={t.icon} size={19} color={active ? '#7bc043' : 'rgba(255,255,255,0.86)'} />
-              <span style={{ fontSize: 15, fontWeight: active ? 700 : 500, color: active ? '#fff' : 'rgba(255,255,255,0.86)' }}>{t.label}</span>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Cerrar sesión */}
-      <div style={{ padding: '16px 16px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px 16px', color: '#fff' }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#4f9e2f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{inicialUsuario}</div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>{nombreUsuario}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{role?.label || 'Usuario'}</div>
-          </div>
-        </div>
-        <div onClick={() => forceLocalSignOut()}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, cursor: 'pointer' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <i className="ti ti-logout" style={{ fontSize: 17, color: '#ff8f8f' }} aria-hidden="true"></i>
-          <span style={{ fontSize: 13, color: '#c84040' }}>Cerrar sesión</span>
-        </div>
-      </div>
-    </div>
-  )
+  const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
+  const groups = [
+    { title: 'CAMPO', paths: ['/', '/mapa', '/agenda', '/vivero'] },
+    { title: 'OPERACIÓN', paths: ['/cosecha', '/fumigaciones', '/fertilizaciones', '/inventario', '/asistencia'] },
+    { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
+  ]
+  return <aside className="ag-sidebar" aria-label="Navegación principal">
+    <div className="ag-brand"><span className="ag-brand-mark" aria-hidden="true">AB</span><div><strong>AgroBloque</strong><small>El campo en control</small></div></div>
+    <nav className="ag-sidebar-nav">{groups.map(group => {
+      const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
+      return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><MenuIcon icon={tab.icon} size={20} color="currentColor" /><span>{tab.path === '/mapa' ? 'Bloques y mapa' : tab.label}</span></NavLink>)}</section>
+    })}</nav>
+    <div className="ag-sidebar-footer"><div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{isGuest ? 'Invitado · Solo lectura' : role?.label || 'Usuario'}</small></div></div><button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
+  </aside>
 }
 
 function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
@@ -262,7 +201,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   }, [])
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#dfe3df' : '#f2f1ef' }}>
+    <div className="ag-app" style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#dfe3df' : '#f2f1ef' }}>
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
       <div data-app-scroll style={{

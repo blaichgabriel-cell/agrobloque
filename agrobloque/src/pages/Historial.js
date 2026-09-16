@@ -7,11 +7,11 @@ const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
 const hoy = () => new Date().toISOString().slice(0, 10)
 
 const tipos = {
-  plantacion: { label:'Plantacion', icon:'ti-plant', color:'#176a25', bg:'#edf6ec' },
-  cosecha: { label:'Cosecha', icon:'ti-cut', color:'#212121', bg:'#eeeeee' },
+  plantacion: { label:'Plantacion', icon:'ti-plant', color:"#08603f", bg:'#edf6ec' },
+  cosecha: { label:'Cosecha', icon:'ti-cut', color:"#124e38", bg:'#eeeeee' },
   fumigacion: { label:'Fumigacion', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
   fertilizacion: { label:'Fertilizacion', icon:'ti-droplet', color:'#2980b9', bg:'#eaf4fb' },
-  vivero: { label:'Vivero', icon:'ti-seeding', color:'#176a25', bg:'#edf6ec' },
+  vivero: { label:'Vivero', icon:'ti-seeding', color:"#08603f", bg:'#edf6ec' },
   costo: { label:'Costo', icon:'ti-coin', color:'#c84040', bg:'#fff0f0' },
   tarea: { label:'Tarea', icon:'ti-calendar', color:'#8a6d10', bg:'#fff7dc' },
   contabilidad: { label:'Contabilidad', icon:'ti-calculator', color:'#185fa5', bg:'#e6f1fb' },
@@ -198,20 +198,20 @@ export default function Historial({ campoActivo }) {
   const resumen = tiposLista().map(t => ({ ...t, total:eventos.filter(e => e.tipo === t.key).length }))
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f2f1ef', padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
+    <div style={{ minHeight:'100vh', background:"#f6f8f7", padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
       <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 980, margin:'0 auto' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:16 }}>
           <div>
-            <div style={{ fontSize:12, color:'#8b928b' }}>Trazabilidad</div>
+            <div style={{ fontSize:12, color:"#697970" }}>Trazabilidad</div>
             <h1 style={{ margin:0, fontSize:24, letterSpacing:-0.6 }}>Historial completo</h1>
           </div>
           <div style={{ display:'flex', gap:8 }}>
             <button onClick={exportar} style={iconBtn}><i className="ti ti-download" style={{ fontSize:19 }} /></button>
-            <button onClick={imprimir} style={{ ...iconBtn, background:'#212121', color:'#fff' }}><i className="ti ti-printer" style={{ fontSize:19 }} /></button>
+            <button onClick={imprimir} style={{ ...iconBtn, background:"#124e38", color:'#fff' }}><i className="ti ti-printer" style={{ fontSize:19 }} /></button>
           </div>
         </div>
 
-        <div style={{ background:'#fff', borderRadius:20, padding:14, marginBottom:10, border:'1px solid #e8ece8' }}>
+        <div style={{ background:'#fff', borderRadius:8, padding:14, marginBottom:10, border:'1px solid #e8ece8' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
             <select value={campoSel?.id || ''} onChange={e => setCampoSel(campos.find(c => c.id === e.target.value))} style={inputStyle}>
               {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -230,23 +230,23 @@ export default function Historial({ campoActivo }) {
         </div>
 
         {loading ? (
-          <div style={{ textAlign:'center', padding:38, color:'#8b928b' }}>Armando historial...</div>
+          <div style={{ textAlign:'center', padding:38, color:"#697970" }}>Armando historial...</div>
         ) : visibles.length === 0 ? (
-          <div style={{ textAlign:'center', padding:38, color:'#8b928b', background:'#fff', borderRadius:20 }}>Sin movimientos para mostrar.</div>
+          <div style={{ textAlign:'center', padding:38, color:"#697970", background:'#fff', borderRadius:8 }}>Sin movimientos para mostrar.</div>
         ) : (
           <div style={{ display:'grid', gap:8 }}>
             {visibles.map((e, i) => {
               const t = tipos[e.tipo] || tipos.tarea
               return (
-                <div key={`${e.tipo}-${e.fecha}-${i}`} onClick={() => navigate(e.path)} style={{ background:'#fff', borderRadius:18, padding:'13px 14px', border:'1px solid #e8ece8', cursor:'pointer' }}>
+                <div key={`${e.tipo}-${e.fecha}-${i}`} onClick={() => navigate(e.path)} style={{ background:'#fff', borderRadius:8, padding:'13px 14px', border:'1px solid #e8ece8', cursor:'pointer' }}>
                   <div style={{ display:'grid', gridTemplateColumns:'42px 1fr auto', gap:12, alignItems:'center' }}>
-                    <span style={{ width:42, height:42, borderRadius:14, background:t.bg, color:t.color, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <span style={{ width:42, height:42, borderRadius:8, background:t.bg, color:t.color, display:'flex', alignItems:'center', justifyContent:'center' }}>
                       <i className={`ti ${t.icon}`} style={{ fontSize:21 }} />
                     </span>
                     <span style={{ minWidth:0 }}>
                       <span style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                         <strong style={{ fontSize:14 }}>{e.titulo}</strong>
-                        <span style={{ fontSize:10, color:t.color, background:t.bg, borderRadius:8, padding:'3px 7px', fontWeight:800 }}>{t.label}</span>
+                        <span style={{ fontSize:10, color:t.color, background:t.bg, borderRadius:8, padding:'3px 7px', fontWeight:700 }}>{t.label}</span>
                       </span>
                       <span style={{ display:'block', fontSize:12, color:'#687068', marginTop:4, lineHeight:1.35 }}>{e.fecha} - {e.detalle}</span>
                     </span>
@@ -268,7 +268,7 @@ function tiposLista() {
 
 function Chip({ active, label, onClick }) {
   return (
-    <button onClick={onClick} style={{ border:'none', borderRadius:999, background:active ? '#212121' : '#fff', color:active ? '#fff' : '#4f574f', padding:'8px 12px', fontSize:12, fontWeight:750, whiteSpace:'nowrap', cursor:'pointer' }}>
+    <button onClick={onClick} style={{ border:'none', borderRadius:999, background:active ? '#212121' : '#fff', color:active ? '#fff' : '#4f574f', padding:'8px 12px', fontSize:12, fontWeight:700, whiteSpace:'nowrap', cursor:'pointer' }}>
       {label}
     </button>
   )
@@ -278,7 +278,7 @@ const inputStyle = {
   width:'100%',
   minWidth:0,
   border:'1px solid #e4e7e2',
-  borderRadius:13,
+  borderRadius:8,
   background:'#fff',
   padding:'10px 12px',
   fontSize:13,
@@ -289,10 +289,10 @@ const inputStyle = {
 const iconBtn = {
   width:42,
   height:42,
-  borderRadius:14,
+  borderRadius:8,
   border:'1px solid #e8ece8',
   background:'#fff',
-  color:'#212121',
+  color:"#124e38",
   display:'flex',
   alignItems:'center',
   justifyContent:'center',

@@ -9,7 +9,7 @@ const normalizar = (v) => String(v || '')
 
 const card = {
   background: '#fff',
-  borderRadius: 18,
+  borderRadius: 8,
   padding: '14px 16px',
   marginBottom: 8,
   border: '1px solid #e8ece8',
@@ -116,38 +116,38 @@ export default function Buscador() {
   }, [items, q])
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f2f1ef', padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
+    <div style={{ minHeight:'100vh', background:"#f6f8f7", padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
       <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 900, margin:'0 auto' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-          <button onClick={() => navigate(-1)} style={{ width:40, height:40, borderRadius:14, border:'none', background:'#fff', cursor:'pointer' }}>
+          <button onClick={() => navigate(-1)} style={{ width:40, height:40, borderRadius:8, border:'none', background:'#fff', cursor:'pointer' }}>
             <i className="ti ti-arrow-left" style={{ fontSize:20 }} aria-hidden="true"></i>
           </button>
           <div>
-            <div style={{ fontSize:12, color:'#8b928b' }}>Busqueda global</div>
+            <div style={{ fontSize:12, color:"#697970" }}>Busqueda global</div>
             <h1 style={{ margin:0, fontSize:24, letterSpacing:-0.6 }}>Buscar en AgroBloque</h1>
           </div>
         </div>
 
-        <div style={{ background:'#fff', borderRadius:20, padding:12, marginBottom:14, border:'1px solid #e8ece8' }}>
+        <div style={{ background:'#fff', borderRadius:8, padding:12, marginBottom:14, border:'1px solid #e8ece8' }}>
           <div style={{ display:'grid', gridTemplateColumns:'26px 1fr', alignItems:'center', gap:8 }}>
-            <i className="ti ti-search" style={{ fontSize:22, color:'#176a25' }} aria-hidden="true"></i>
+            <i className="ti ti-search" style={{ fontSize:22, color:"#08603f" }} aria-hidden="true"></i>
             <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar A-1, tomate, comprador, abono, cosecha..."
               style={{ border:'none', outline:'none', fontSize:15, padding:'10px 4px', background:'transparent' }} />
           </div>
         </div>
 
         {loading ? (
-          <div style={{ textAlign:'center', padding:38, color:'#8b928b' }}>Cargando buscador...</div>
+          <div style={{ textAlign:'center', padding:38, color:"#697970" }}>Cargando buscador...</div>
         ) : resultados.length === 0 ? (
-          <div style={{ textAlign:'center', padding:38, color:'#8b928b', background:'#fff', borderRadius:20 }}>Sin resultados.</div>
+          <div style={{ textAlign:'center', padding:38, color:"#697970", background:'#fff', borderRadius:8 }}>Sin resultados.</div>
         ) : resultados.map((r, i) => (
           <div key={`${r.tipo}-${r.titulo}-${i}`} style={card} onClick={() => navigate(r.path)}>
             <div style={{ display:'grid', gridTemplateColumns:'42px 1fr 18px', gap:12, alignItems:'center' }}>
-              <span style={{ width:42, height:42, borderRadius:13, background:'#edf6ec', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <i className={`ti ${r.icon}`} style={{ fontSize:21, color:'#176a25' }} aria-hidden="true"></i>
+              <span style={{ width:42, height:42, borderRadius:8, background:"#edf7f1", display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <i className={`ti ${r.icon}`} style={{ fontSize:21, color:"#08603f" }} aria-hidden="true"></i>
               </span>
               <span style={{ minWidth:0 }}>
-                <span style={{ display:'block', fontSize:11, color:'#8b928b', textTransform:'uppercase', fontWeight:700 }}>{r.tipo}</span>
+                <span style={{ display:'block', fontSize:11, color:"#697970", textTransform:'uppercase', fontWeight:700 }}>{r.tipo}</span>
                 <strong style={{ display:'block', fontSize:15, color:'#111', marginTop:2 }}>{r.titulo}</strong>
                 <span style={{ display:'block', fontSize:12, color:'#687068', marginTop:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.sub}</span>
               </span>

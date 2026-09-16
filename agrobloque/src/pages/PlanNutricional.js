@@ -209,7 +209,7 @@ const buscarProductoInventario = (productos, recomendado) => {
 const estadoInventario = (producto) => {
   if (!producto) return { key: 'no_cargado', label: 'No cargado en inventario', color: '#8a5a00', bg: '#fff7e8' }
   if ((Number(producto.stock_actual) || 0) <= 0) return { key: 'sin_stock', label: 'Sin stock', color: '#c84040', bg: '#fff0f0' }
-  return { key: 'disponible', label: 'Disponible', color: '#176a25', bg: '#edf6ec' }
+  return { key: 'disponible', label: 'Disponible', color: "#08603f", bg: '#edf6ec' }
 }
 
 const resumenProductosAplicados = (productos = []) => {
@@ -276,7 +276,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   const estadoEc = !form.ec_final || !form.ec_objetivo
     ? { label:'Sin comparar EC', color:'#687068', bg:'#f7f8f6' }
     : Math.abs(diferenciaEc) <= 0.2
-      ? { label:'EC dentro del rango', color:'#176a25', bg:'#edf6ec' }
+      ? { label:'EC dentro del rango', color:"#08603f", bg:'#edf6ec' }
       : diferenciaEc > 0
         ? { label:`EC alta por ${fmt(diferenciaEc)}`, color:'#c84040', bg:'#fff0f0' }
         : { label:`EC baja por ${fmt(Math.abs(diferenciaEc))}`, color:'#8a5a00', bg:'#fff7e8' }
@@ -655,7 +655,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
         <section style={{ ...panel, padding:isMobile ? 16 : 22, minWidth:0 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
             <h2 style={{ margin:0, fontSize:18 }}>Carga del plan</h2>
-            <span style={{ fontSize:11, color:'#176a25', background:'#edf6ec', borderRadius:20, padding:'5px 9px' }}>{modo === 'asistente' ? 'Asistente IA' : 'Manual'}</span>
+            <span style={{ fontSize:11, color:"#08603f", background:"#edf7f1", borderRadius:8, padding:'5px 9px' }}>{modo === 'asistente' ? 'Asistente IA' : 'Manual'}</span>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr', gap:10 }}>
             <Input label="Fecha" type="date" value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
@@ -669,7 +669,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             <Select label="Objetivo" value={form.objetivo} onChange={objetivo => setForm(f => ({ ...f, objetivo }))}>
               {objetivos.map(o => <option key={o} value={o}>{o}</option>)}
             </Select>
-            <div style={{ gridColumn:'1 / -1', background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:14, padding:12, fontSize:12, lineHeight:1.45, color:'#4d544e' }}>
+            <div style={{ gridColumn:'1 / -1', background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:8, padding:12, fontSize:12, lineHeight:1.45, color:'#4d544e' }}>
               {guiaObjetivo(form.objetivo)}
             </div>
             <Input label="Tanque (L)" value={form.tanque_litros} onChange={tanque_litros => setForm(f => ({ ...f, tanque_litros }))} />
@@ -677,8 +677,8 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             <Input label="EC objetivo" value={form.ec_objetivo} onChange={ec_objetivo => setForm(f => ({ ...f, ec_objetivo }))} />
             <Input label="EC final / estimada" value={form.ec_final} onChange={ec_final => setForm(f => ({ ...f, ec_final }))} />
           </div>
-          <div style={{ marginTop:12, background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:14, padding:12 }}>
-            <div style={{ fontSize:12, color:'#4d544e', fontWeight:800, marginBottom:8 }}>
+          <div style={{ marginTop:12, background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:8, padding:12 }}>
+            <div style={{ fontSize:12, color:'#4d544e', fontWeight:700, marginBottom:8 }}>
               Bloques que reciben este plan ({bloquesSeleccionados.length})
             </div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
@@ -693,7 +693,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
                     borderRadius:999,
                     padding:'7px 10px',
                     fontSize:11,
-                    fontWeight:800,
+                    fontWeight:700,
                     cursor:'pointer',
                   }}>
                     {b.codigo}{cultivo ? ` - ${cultivo}` : ''}
@@ -705,11 +705,11 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
               La IA usa el bloque principal como referencia. Al guardar, se crea un registro para cada bloque seleccionado.
             </div>
           </div>
-          <div style={{ marginTop:12, background:estadoEc.bg, color:estadoEc.color, border:'1px solid rgba(0,0,0,0.06)', borderRadius:14, padding:12, fontSize:12, fontWeight:800 }}>
+          <div style={{ marginTop:12, background:estadoEc.bg, color:estadoEc.color, border:'1px solid rgba(0,0,0,0.06)', borderRadius:8, padding:12, fontSize:12, fontWeight:700 }}>
             {estadoEc.label}
           </div>
           {bloqueActivo && (
-            <div style={{ marginTop:12, background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:14, padding:12, fontSize:12, color:'#4d544e' }}>
+            <div style={{ marginTop:12, background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:8, padding:12, fontSize:12, color:'#4d544e' }}>
               Bloque seleccionado: <strong>{bloqueActivo.codigo}</strong>
             </div>
           )}
@@ -720,7 +720,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
               <button onClick={agregarProducto} style={smallBtn}>+ Producto</button>
             </div>
             {(form.productos || []).length === 0 ? (
-              <div style={{ color:'#8b928b', fontSize:13, background:'#f7f8f6', borderRadius:14, padding:14 }}>Sin productos cargados.</div>
+              <div style={{ color:"#697970", fontSize:13, background:'#f7f8f6', borderRadius:8, padding:14 }}>Sin productos cargados.</div>
             ) : form.productos.map((p, idx) => (
               <div key={idx} style={{ marginBottom:8 }}>
                 <div style={{ display:'grid', gridTemplateColumns:isVerySmall ? 'minmax(0, 1fr)' : isMobile ? 'minmax(0, 1fr) 76px 70px' : '1.5fr 80px 80px', gap:8, marginBottom:6 }}>
@@ -753,7 +753,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
           </div>
           <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Notas, advertencias o instrucciones..." style={{ ...field, width:'100%', minHeight:80, resize:'vertical', marginTop:10 }} />
           {aiError && (
-            <div style={{ marginTop:10, background:'#fff7e8', border:'1px solid #f1d7a7', color:'#855a10', borderRadius:12, padding:10, fontSize:12 }}>
+            <div style={{ marginTop:10, background:'#fff7e8', border:'1px solid #f1d7a7', color:'#855a10', borderRadius:8, padding:10, fontSize:12 }}>
               IA no disponible. Se uso la guia base para no dejarte sin recomendacion.
             </div>
           )}
@@ -767,25 +767,25 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
 
         <section style={{ ...panel, padding:isMobile ? 16 : 22, minWidth:0 }}>
           <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Plan sugerido</h2>
-          <div style={{ background:'#0f1410', color:'#fff', borderRadius:18, padding:18, marginBottom:14 }}>
+          <div style={{ background:'#0f1410', color:'#fff', borderRadius:8, padding:18, marginBottom:14 }}>
             <div style={{ fontSize:12, color:'rgba(255,255,255,0.62)', marginBottom:6 }}>Resumen</div>
-            <div style={{ fontSize:20, fontWeight:900 }}>{form.objetivo} {bloqueActivo ? `- ${bloqueActivo.codigo}` : ''}</div>
+            <div style={{ fontSize:20, fontWeight:700 }}>{form.objetivo} {bloqueActivo ? `- ${bloqueActivo.codigo}` : ''}</div>
             <div style={{ color:'rgba(255,255,255,0.72)', fontSize:13, marginTop:6 }}>Tanque {form.tanque_litros || 0} L · EC estimada {form.ec_final || '—'} mS/cm</div>
           </div>
           {(form.productos || []).map((p, idx) => (
             <div key={idx} style={{ borderBottom:'1px solid #eef0ee', padding:'10px 0' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
-                <span style={{ fontSize:13, fontWeight:750 }}>{p.producto || 'Producto sin definir'}</span>
+                <span style={{ fontSize:13, fontWeight:700 }}>{p.producto || 'Producto sin definir'}</span>
                 <strong style={{ fontSize:13 }}>{p.cantidad || 0} {p.unidad || ''}</strong>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', gap:10, marginTop:6, alignItems:'center' }}>
                 <span style={{ fontSize:11, color:'#69706a' }}>{p.nutrientes || p.motivo || 'Recomendacion nutricional'}</span>
                 <EstadoBadge estado={p.estado} />
               </div>
-              {p.producto_inventario && <div style={{ fontSize:11, color:'#8b928b', marginTop:4 }}>Coincide con inventario: {p.producto_inventario}</div>}
+              {p.producto_inventario && <div style={{ fontSize:11, color:"#697970", marginTop:4 }}>Coincide con inventario: {p.producto_inventario}</div>}
             </div>
           ))}
-          <div style={{ marginTop:14, background:'#fff7e8', border:'1px solid #f1d7a7', color:'#855a10', borderRadius:14, padding:12, fontSize:12 }}>
+          <div style={{ marginTop:14, background:'#fff7e8', border:'1px solid #f1d7a7', color:'#855a10', borderRadius:8, padding:12, fontSize:12 }}>
             Revisar conductividad antes de aplicar. La recomendacion queda editable antes de guardar.
           </div>
         </section>
@@ -794,7 +794,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
       <section style={{ ...panel, marginTop:18, padding:isMobile ? 16 : 22, minWidth:0 }}>
         <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Recetas guardadas</h2>
         {recetas.length === 0 ? (
-          <div style={{ color:'#8b928b', fontSize:13, padding:'10px 0' }}>Sin recetas guardadas en este dispositivo.</div>
+          <div style={{ color:"#697970", fontSize:13, padding:'10px 0' }}>Sin recetas guardadas en este dispositivo.</div>
         ) : recetas.map(receta => (
           <div key={receta.id} style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 110px 150px', gap:isMobile ? 8 : 12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
             <span>
@@ -815,17 +815,17 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
       <section style={{ ...panel, marginTop:18, padding:isMobile ? 16 : 22, minWidth:0 }}>
         <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Aplicaciones recientes</h2>
         {registros.length === 0 ? (
-          <div style={{ color:'#8b928b', fontSize:13, padding:'10px 0' }}>Sin registros de plan nutricional.</div>
+          <div style={{ color:"#697970", fontSize:13, padding:'10px 0' }}>Sin registros de plan nutricional.</div>
         ) : registros.map(r => (
           <div key={r.id} style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '110px 1fr 90px 90px 180px', gap:isMobile ? 7 : 12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
             <span style={{ fontSize:12, color:'#69706a' }}>{r.fecha}</span>
             <strong style={{ fontSize:13 }}>{r.bloques?.codigo || 'Sin bloque'} · {r.objetivo}</strong>
             <span style={{ fontSize:12, color:'#69706a' }}>{r.tanque_litros || '-'} L</span>
-            <span style={{ fontSize:12, fontWeight:800, color:'#176a25' }}>{r.ec_final ? `${r.ec_final} EC` : '-'}</span>
+            <span style={{ fontSize:12, fontWeight:700, color:"#08603f" }}>{r.ec_final ? `${r.ec_final} EC` : '-'}</span>
             {!isGuest && (
               <span style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
                 <button onClick={() => copiarRegistro(r)} style={miniAction}>Copiar</button>
-                <button onClick={() => aplicarHoy(r)} disabled={saving} style={{ ...miniAction, background:'#176a25', color:'#fff', borderColor:'#176a25' }}>Aplicar hoy</button>
+                <button onClick={() => aplicarHoy(r)} disabled={saving} style={{ ...miniAction, background:"#08603f", color:'#fff', borderColor:"#08603f" }}>Aplicar hoy</button>
               </span>
             )}
           </div>
@@ -838,14 +838,14 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
 const panel = {
   background:'#fff',
   border:'1px solid #e8ece8',
-  borderRadius:18,
+  borderRadius:8,
   padding:22,
-  boxShadow:'0 16px 34px rgba(29, 38, 29, 0.06)',
+  boxShadow:'none',
 }
 
 const field = {
   border:'1px solid #e1e6e1',
-  borderRadius:12,
+  borderRadius:8,
   background:'#fff',
   padding:'11px 12px',
   fontSize:13,
@@ -857,21 +857,21 @@ const btn = (bg, color) => ({
   border:'1px solid #dfe5df',
   background:bg,
   color,
-  borderRadius:12,
+  borderRadius:8,
   padding:'11px 15px',
   fontSize:13,
-  fontWeight:850,
+  fontWeight:700,
   cursor:'pointer',
 })
 
 const smallBtn = {
   border:'none',
-  background:'#edf6ec',
-  color:'#176a25',
-  borderRadius:10,
+  background:"#edf7f1",
+  color:"#08603f",
+  borderRadius:8,
   padding:'7px 10px',
   fontSize:12,
-  fontWeight:800,
+  fontWeight:700,
   cursor:'pointer',
 }
 
@@ -879,18 +879,18 @@ const miniAction = {
   border:'1px solid #dfe5df',
   background:'#fff',
   color:'#1d241f',
-  borderRadius:10,
+  borderRadius:8,
   padding:'7px 9px',
   fontSize:11,
-  fontWeight:800,
+  fontWeight:700,
   cursor:'pointer',
 }
 
 function Kpi({ label, value, icon }) {
   return (
     <div style={{ ...panel, minHeight:92, padding:16, display:'grid', gridTemplateColumns:'44px 1fr', gap:12, alignItems:'center' }}>
-      <span style={{ width:44, height:44, borderRadius:14, background:'#edf6ec', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <i className={`ti ${icon}`} style={{ fontSize:23, color:'#176a25' }} aria-hidden="true"></i>
+      <span style={{ width:44, height:44, borderRadius:8, background:"#edf7f1", display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <i className={`ti ${icon}`} style={{ fontSize:23, color:"#08603f" }} aria-hidden="true"></i>
       </span>
       <span>
         <span style={{ display:'block', fontSize:11, textTransform:'uppercase', color:'#69706a' }}>{label}</span>
@@ -903,7 +903,7 @@ function Kpi({ label, value, icon }) {
 function Input({ label, value, onChange, type = 'text' }) {
   return (
     <label style={{ display:'grid', gap:5 }}>
-      <span style={{ fontSize:11, color:'#69706a', textTransform:'uppercase', fontWeight:750 }}>{label}</span>
+      <span style={{ fontSize:11, color:'#69706a', textTransform:'uppercase', fontWeight:700 }}>{label}</span>
       <input type={type} value={value || ''} onChange={e => onChange(e.target.value)} style={field} />
     </label>
   )
@@ -912,7 +912,7 @@ function Input({ label, value, onChange, type = 'text' }) {
 function Select({ label, value, onChange, children }) {
   return (
     <label style={{ display:'grid', gap:5 }}>
-      <span style={{ fontSize:11, color:'#69706a', textTransform:'uppercase', fontWeight:750 }}>{label}</span>
+      <span style={{ fontSize:11, color:'#69706a', textTransform:'uppercase', fontWeight:700 }}>{label}</span>
       <select value={value || ''} onChange={e => onChange(e.target.value)} style={field}>{children}</select>
     </label>
   )
@@ -920,12 +920,12 @@ function Select({ label, value, onChange, children }) {
 
 function EstadoBadge({ estado }) {
   const info = estado === 'disponible'
-    ? { label:'Disponible', color:'#176a25', bg:'#edf6ec' }
+    ? { label:'Disponible', color:"#08603f", bg:'#edf6ec' }
     : estado === 'sin_stock'
       ? { label:'Sin stock', color:'#c84040', bg:'#fff0f0' }
       : { label:'No cargado', color:'#8a5a00', bg:'#fff7e8' }
   return (
-    <span style={{ flexShrink:0, borderRadius:999, padding:'4px 8px', background:info.bg, color:info.color, fontSize:10, fontWeight:850 }}>
+    <span style={{ flexShrink:0, borderRadius:999, padding:'4px 8px', background:info.bg, color:info.color, fontSize:10, fontWeight:700 }}>
       {info.label}
     </span>
   )

@@ -40,20 +40,20 @@ const CATEGORIAS = [
   { key:'Insecticida',   label:'Insecticidas',    icon:'ti-bug',       color:'#c84040', bg:'#fff0f0' },
   { key:'Fertilizante',  label:'Fertilizantes',   icon:'ti-droplet',   color:'#2980b9', bg:'#eaf4fb' },
   { key:'Foliar',        label:'Foliares',         icon:'ti-leaf',      color:'#2d8a4e', bg:'#edf7ed' },
-  { key:'Hidrosoluble',  label:'Hidrosolubles',    icon:'ti-flask',     color:'#212121', bg:'#eeeeee' },
-  { key:'Abono de base', label:'Abonos de base',  icon:'ti-garden-cart',color:'#212121',bg:'#eeeeee' },
+  { key:'Hidrosoluble',  label:'Hidrosolubles',    icon:'ti-flask',     color:"#124e38", bg:'#eeeeee' },
+  { key:'Abono de base', label:'Abonos de base',  icon:'ti-garden-cart',color:"#124e38",bg:'#eeeeee' },
   { key:'Otro',          label:'Otros',            icon:'ti-package',   color:'#555',   bg:'#f2f1ef' },
 ]
 
 function ModalConfirm({ mensaje, onConfirm, onCancel }) {
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#fff', borderRadius:20, padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:'#0a0a0a', marginBottom:8, textAlign:'center' }}>¿Eliminar producto?</div>
-        <div style={{ fontSize:13, color:'#9a9a9a', textAlign:'center', marginBottom:20 }}>{mensaje}</div>
+      <div style={{ background:'#fff', borderRadius:8, padding:'24px 20px', width:'100%', maxWidth:340 }}>
+        <div style={{ fontSize:15, fontWeight:600, color:"#182c25", marginBottom:8, textAlign:'center' }}>¿Eliminar producto?</div>
+        <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>{mensaje}</div>
         <div style={{ display:'flex', gap:8 }}>
-          <button onClick={onCancel} style={{ flex:1, padding:12, borderRadius:12, border:'1px solid #e8e6e2', background:'transparent', fontSize:13, color:'#9a9a9a', cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:12, border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
+          <button onClick={onCancel} style={{ flex:1, padding:12, borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
+          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:8, border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
         </div>
       </div>
     </div>
@@ -243,39 +243,39 @@ export default function Inventario() {
   const getStockBg = (p) => p.stock_actual <= 0 ? '#fff0f0' : p.stock_actual <= p.stock_minimo ? '#fff3e8' : '#eeeeee'
   const getStockPct = (p) => p.stock_minimo > 0 ? Math.min(100, Math.round((p.stock_actual / (p.stock_minimo * 3)) * 100)) : p.stock_actual > 0 ? 100 : 0
 
-  const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
+  const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
   const catActInfo = CATEGORIAS.find(c => c.key === categoriaActiva)
   const productosCat = categoriaActiva ? getProductosCat(categoriaActiva) : []
   const bajoStockTotal = productos.filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
       {confirmar && <ModalConfirm mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
       {/* Vista categorías */}
       {!categoriaActiva && (
         <>
-          <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+          <div style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
               <div>
-                <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Depósito</div>
-                <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Inventario</div>
+                <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Depósito</div>
+                <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Inventario</div>
               </div>
               <div style={{ display:'flex', gap:8 }}>
                 <button onClick={sincronizarAbonosManual} disabled={sincronizandoAbonos}
                   title="Sincronizar abonos de base"
-                  style={{ width:40, height:40, borderRadius:14, background: sincronizandoAbonos ? '#888' : '#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor: sincronizandoAbonos ? 'default' : 'pointer' }}>
-                  <i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} style={{ color:'#212121', fontSize:20 }} aria-hidden="true"></i>
+                  style={{ width:40, height:40, borderRadius:8, background: sincronizandoAbonos ? '#888' : '#fff', border:"1px solid #e2e9e5", display:'flex', alignItems:'center', justifyContent:'center', cursor: sincronizandoAbonos ? 'default' : 'pointer' }}>
+                  <i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} style={{ color:"#124e38", fontSize:20 }} aria-hidden="true"></i>
                 </button>
                 <button onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
-                  style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                  style={{ width:40, height:40, borderRadius:8, background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
                   <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
                 </button>
               </div>
             </div>
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
+            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:10 }}>{error}</div>}
             {bajoStockTotal > 0 && (
-              <div style={{ background:'#fff3e8', borderRadius:14, padding:'10px 14px', display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{ background:'#fff3e8', borderRadius:8, padding:'10px 14px', display:'flex', alignItems:'center', gap:8 }}>
                 <i className="ti ti-alert-triangle" style={{ color:'#e07b00', fontSize:16 }} aria-hidden="true"></i>
                 <div style={{ fontSize:12, fontWeight:500, color:'#c8700a' }}>{bajoStockTotal} producto{bajoStockTotal>1?'s':''} con stock bajo</div>
               </div>
@@ -290,15 +290,15 @@ export default function Inventario() {
               const badge = getBadge(cat.key)
               return (
                 <div key={cat.key} onClick={() => setCategoriaActiva(cat.key)}
-                  style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, display:'flex', alignItems:'center', gap:12, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
-                  <div style={{ width:44, height:44, borderRadius:14, background:cat.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, display:'flex', alignItems:'center', gap:12, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+                  <div style={{ width:44, height:44, borderRadius:8, background:cat.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     <i className={`ti ${cat.icon}`} style={{ fontSize:20, color:cat.color }} aria-hidden="true"></i>
                   </div>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{cat.label}</div>
-                    <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>{prods.length} producto{prods.length>1?'s':''}</div>
+                    <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{cat.label}</div>
+                    <div style={{ fontSize:11, color:"#697970", marginTop:2 }}>{prods.length} producto{prods.length>1?'s':''}</div>
                   </div>
-                  <div style={{ fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:20, background:badge.bg, color:badge.color }}>{badge.label}</div>
+                  <div style={{ fontSize:10, fontWeight:600, padding:'3px 10px', borderRadius:8, background:badge.bg, color:badge.color }}>{badge.label}</div>
                   <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
                 </div>
               )
@@ -311,20 +311,20 @@ export default function Inventario() {
       {/* Vista productos de categoría */}
       {categoriaActiva && catActInfo && (
         <>
-          <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+          <div style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
             <button onClick={() => setCategoriaActiva(null)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
-              <i className="ti ti-arrow-left" style={{ fontSize:18, color:'#212121' }} aria-hidden="true"></i>
-              <span style={{ fontSize:13, color:'#212121', fontWeight:500 }}>Inventario</span>
+              <i className="ti ti-arrow-left" style={{ fontSize:18, color:"#124e38" }} aria-hidden="true"></i>
+              <span style={{ fontSize:13, color:"#124e38", fontWeight:500 }}>Inventario</span>
             </button>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <div style={{ width:40, height:40, borderRadius:12, background:catActInfo.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ width:40, height:40, borderRadius:8, background:catActInfo.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <i className={`ti ${catActInfo.icon}`} style={{ fontSize:20, color:catActInfo.color }} aria-hidden="true"></i>
                 </div>
-                <div style={{ fontSize:22, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>{catActInfo.label}</div>
+                <div style={{ fontSize:22, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>{catActInfo.label}</div>
               </div>
               <button onClick={() => { setForm({ nombre:'', categoria_nombre:categoriaActiva, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
-                style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                style={{ width:40, height:40, borderRadius:8, background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
                 <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
               </button>
             </div>
@@ -332,26 +332,26 @@ export default function Inventario() {
 
           <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
             {productosCat.length === 0 ? (
-              <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin productos en esta categoría</div>
+              <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin productos en esta categoría</div>
             ) : (
               <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(320px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
               {productosCat.map(p => {
               const stockVisible = formatearStock(p.stock_actual, p.unidad)
               return (
-              <div key={p.id} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+              <div key={p.id} style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                 <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{p.nombre}</div>
-                    <div style={{ fontSize:10, color:'#9a9a9a', marginTop:2 }}>{p.principio_activo || '—'}</div>
+                    <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{p.nombre}</div>
+                    <div style={{ fontSize:10, color:"#697970", marginTop:2 }}>{p.principio_activo || '—'}</div>
                   </div>
                   <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:22, fontWeight:800, color: getStockColor(p) }}>{stockVisible.cantidad}</div>
-                    <div style={{ fontSize:9, color:'#9a9a9a' }}>{stockVisible.unidad}</div>
+                    <div style={{ fontSize:22, fontWeight:700, color: getStockColor(p) }}>{stockVisible.cantidad}</div>
+                    <div style={{ fontSize:9, color:"#697970" }}>{stockVisible.unidad}</div>
                   </div>
                 </div>
 
-                <div style={{ background:'#f2f1ef', borderRadius:20, height:6, overflow:'hidden', marginBottom:6 }}>
-                  <div style={{ height:'100%', background: getStockColor(p), borderRadius:20, width:`${getStockPct(p)}%`, transition:'width .3s' }}></div>
+                <div style={{ background:"#f6f8f7", borderRadius:8, height:6, overflow:'hidden', marginBottom:6 }}>
+                  <div style={{ height:'100%', background: getStockColor(p), borderRadius:8, width:`${getStockPct(p)}%`, transition:'width .3s' }}></div>
                 </div>
 
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
@@ -366,10 +366,10 @@ export default function Inventario() {
                 </div>
 
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <button onClick={() => ajustarStock(p.id, -1)} style={{ width:32, height:32, borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>−</button>
-                  <button onClick={() => ajustarStock(p.id, 1)} style={{ width:32, height:32, borderRadius:10, border:'1px solid #e8e6e2', background:'#f2f1ef', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>+</button>
-                  <button onClick={() => { setForm({...p, categoria_nombre: getCatNombre(p)}); setModal('form') }} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer', marginLeft:4 }}>Editar</button>
-                  <button onClick={() => eliminar(p.id, p.nombre)} style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                  <button onClick={() => ajustarStock(p.id, -1)} style={{ width:32, height:32, borderRadius:8, border:"1px solid #e2e9e5", background:"#f6f8f7", fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>−</button>
+                  <button onClick={() => ajustarStock(p.id, 1)} style={{ width:32, height:32, borderRadius:8, border:"1px solid #e2e9e5", background:"#f6f8f7", fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>+</button>
+                  <button onClick={() => { setForm({...p, categoria_nombre: getCatNombre(p)}); setModal('form') }} style={{ padding:'5px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:11, color:'#555', cursor:'pointer', marginLeft:4 }}>Editar</button>
+                  <button onClick={() => eliminar(p.id, p.nombre)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
                 </div>
               </div>
               )
@@ -387,15 +387,15 @@ export default function Inventario() {
       {/* Modal producto */}
       {modal === 'form' && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar producto' : 'Nuevo producto'}</div>
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
+          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id ? 'Editar producto' : 'Nuevo producto'}</div>
+            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:12 }}>{error}</div>}
 
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Categoría</div>
+            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Categoría</div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
               {CATEGORIAS.map(cat => (
                 <button key={cat.key} onClick={() => setForm(f => ({...f, categoria_nombre:cat.key}))}
-                  style={{ padding:'7px 14px', borderRadius:20, border:'1px solid #e8e6e2', fontSize:11, fontWeight:500, cursor:'pointer', background: form.categoria_nombre===cat.key ? '#212121' : '#fff', color: form.categoria_nombre===cat.key ? '#fff' : '#555' }}>
+                  style={{ padding:'7px 14px', borderRadius:8, border:"1px solid #e2e9e5", fontSize:11, fontWeight:500, cursor:'pointer', background: form.categoria_nombre===cat.key ? '#212121' : '#fff', color: form.categoria_nombre===cat.key ? '#fff' : '#555' }}>
                   {cat.label}
                 </button>
               ))}
@@ -410,23 +410,23 @@ export default function Inventario() {
               ['Notas', 'notas', 'text', 'Opcional'],
             ].map(([lbl, key, type, ph]) => (
               <div key={key}>
-                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>{lbl}</div>
+                <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>{lbl}</div>
                 <input style={inpStyle} type={type} value={form[key]||''} onChange={e => setForm(f => ({...f, [key]:e.target.value}))} placeholder={ph}/>
               </div>
             ))}
 
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Unidad</div>
+            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Unidad</div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:16 }}>
               {['kg','gramos','litros','cc','unidades'].map(u => (
                 <button key={u} onClick={() => setForm(f => ({...f, unidad:u}))}
-                  style={{ padding:'9px 14px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:12, fontWeight:500, cursor:'pointer', background: form.unidad===u ? '#212121' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>
+                  style={{ padding:'9px 14px', borderRadius:8, border:"1px solid #e2e9e5", fontSize:12, fontWeight:500, cursor:'pointer', background: form.unidad===u ? '#212121' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>
                   {u}
                 </button>
               ))}
             </div>
 
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={() => setModal(null)}>Cancelar</button>
+            <button style={{ width:'100%', padding:14, borderRadius:8, background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
+            <button style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModal(null)}>Cancelar</button>
           </div>
         </div>
       )}

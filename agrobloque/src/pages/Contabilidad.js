@@ -213,14 +213,14 @@ export default function Contabilidad() {
   const categorias = form.tipo === 'venta' ? categoriasVenta : categoriasCompra
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
       <div style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <div style={headerIcon}><i className="ti ti-calculator" style={{ fontSize:26, color:'#176a25' }} aria-hidden="true"></i></div>
+            <div style={headerIcon}><i className="ti ti-calculator" style={{ fontSize:26, color:"#08603f" }} aria-hidden="true"></i></div>
             <div>
-              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Balance independiente</div>
-              <div style={{ fontSize:24, fontWeight:850, color:'#0a0a0a', letterSpacing:-.5 }}>Contabilidad</div>
+              <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Balance independiente</div>
+              <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Contabilidad</div>
             </div>
           </div>
           <button onClick={() => abrirNuevo('compra')} style={addBtn}>
@@ -238,7 +238,7 @@ export default function Contabilidad() {
             <button onClick={exportarCsv} style={smallAction}>CSV</button>
             <button onClick={imprimirBalance} style={smallAction}>PDF</button>
             <button onClick={() => abrirNuevo('compra')} style={smallAction}>Compra</button>
-            <button onClick={() => abrirNuevo('venta')} style={{ ...smallAction, background:'#176a25', color:'#fff' }}>Venta</button>
+            <button onClick={() => abrirNuevo('venta')} style={{ ...smallAction, background:"#08603f", color:'#fff' }}>Venta</button>
           </div>
         </div>
 
@@ -256,7 +256,7 @@ export default function Contabilidad() {
               <div style={eyebrow}>Historial contable {anho}</div>
               <h2 style={sectionTitle}>Elegir mes</h2>
             </div>
-            <div style={{ fontSize:12, color:'#69706a', fontWeight:800 }}>{resumenMes.total} movimientos</div>
+            <div style={{ fontSize:12, color:'#69706a', fontWeight:700 }}>{resumenMes.total} movimientos</div>
           </div>
           <div style={monthGrid}>
             {resumen.porMes.map(m => {
@@ -264,7 +264,7 @@ export default function Contabilidad() {
               const tieneMovimientos = (m.compras + m.ventas) > 0
               return (
                 <button key={m.nombre} onClick={() => setMesSeleccionado(m.idx)} style={activo ? monthBtnActive : monthBtn}>
-                  <span style={{ fontWeight:900 }}>{m.nombre}</span>
+                  <span style={{ fontWeight:700 }}>{m.nombre}</span>
                   <span style={{ fontSize:10, color: activo ? 'rgba(255,255,255,0.68)' : tieneMovimientos ? '#176a25' : '#9a9f9a' }}>
                     {tieneMovimientos ? `Gs. ${fmtGs(m.balance)}` : 'Sin movimientos'}
                   </span>
@@ -280,7 +280,7 @@ export default function Contabilidad() {
               <div style={eyebrow}>Control de balance {anho}</div>
               <h2 style={sectionTitle}>Resumen mensual</h2>
             </div>
-            <i className="ti ti-table" style={{ fontSize:22, color:'#176a25' }} aria-hidden="true"></i>
+            <i className="ti ti-table" style={{ fontSize:22, color:"#08603f" }} aria-hidden="true"></i>
           </div>
 
           <div style={{ overflowX:'auto' }}>
@@ -299,7 +299,7 @@ export default function Contabilidad() {
                     <td style={td}>{m.nombre}</td>
                     <td style={tdRight}>Gs. {fmtGs(m.compras)}</td>
                     <td style={tdRight}>Gs. {fmtGs(m.ventas)}</td>
-                    <td style={{ ...tdRight, color: m.balance >= 0 ? '#176a25' : '#c84040', fontWeight:800 }}>Gs. {fmtGs(m.balance)}</td>
+                    <td style={{ ...tdRight, color: m.balance >= 0 ? '#176a25' : '#c84040', fontWeight:700 }}>Gs. {fmtGs(m.balance)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -345,7 +345,7 @@ export default function Contabilidad() {
       {modal && (
         <div style={overlay}>
           <div style={sheet}>
-            <div style={{ fontSize:19, fontWeight:850, marginBottom:16 }}>
+            <div style={{ fontSize:19, fontWeight:700, marginBottom:16 }}>
               {form.id ? 'Editar movimiento' : 'Nuevo movimiento'}
             </div>
 
@@ -379,9 +379,9 @@ function TotalCard({ label, value, tone }) {
   const bg = tone === 'dark' ? '#161a16' : '#fff'
   const color = tone === 'dark' ? '#fff' : tone === 'red' ? '#c84040' : '#176a25'
   return (
-    <div style={{ background:bg, borderRadius:16, padding:'14px 13px', border:'1px solid #e8ece8' }}>
+    <div style={{ background:bg, borderRadius:8, padding:'14px 13px', border:'1px solid #e8ece8' }}>
       <div style={{ fontSize:10, color: tone === 'dark' ? 'rgba(255,255,255,0.58)' : '#8a918b', textTransform:'uppercase', marginBottom:6 }}>{label}</div>
-      <div style={{ fontSize:18, fontWeight:900, color, letterSpacing:-0.3 }}>Gs. {fmtGs(value)}</div>
+      <div style={{ fontSize:18, fontWeight:700, color, letterSpacing:-0.3 }}>Gs. {fmtGs(value)}</div>
     </div>
   )
 }
@@ -396,7 +396,7 @@ function Movimiento({ mov, onEdit, onDelete }) {
       <div style={{ minWidth:0 }}>
         <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
           <strong style={{ fontSize:13, color:'#111611' }}>{mov.descripcion}</strong>
-          <span style={{ borderRadius:20, background: venta ? '#edf6ec' : '#fff0f0', color: venta ? '#176a25' : '#c84040', padding:'3px 7px', fontSize:10, fontWeight:800 }}>
+          <span style={{ borderRadius:8, background: venta ? '#edf6ec' : '#fff0f0', color: venta ? '#176a25' : '#c84040', padding:'3px 7px', fontSize:10, fontWeight:700 }}>
             {venta ? 'Venta' : 'Compra'}
           </span>
         </div>
@@ -446,8 +446,8 @@ function Empty({ text }) {
 const headerIcon = {
   width:46,
   height:46,
-  borderRadius:16,
-  background:'#edf6ec',
+  borderRadius:8,
+  background:"#edf7f1",
   display:'flex',
   alignItems:'center',
   justifyContent:'center',
@@ -457,8 +457,8 @@ const headerIcon = {
 const addBtn = {
   width:42,
   height:42,
-  borderRadius:14,
-  background:'#212121',
+  borderRadius:8,
+  background:"#124e38",
   border:'none',
   display:'flex',
   alignItems:'center',
@@ -470,17 +470,17 @@ const smallAction = {
   border:'none',
   background:'#fff',
   color:'#121512',
-  borderRadius:12,
+  borderRadius:8,
   padding:'0 12px',
   fontSize:12,
-  fontWeight:800,
+  fontWeight:700,
   cursor:'pointer',
 }
 
 const selectYear = {
   width:'100%',
   border:'1px solid #e1e5e1',
-  borderRadius:14,
+  borderRadius:8,
   background:'#fff',
   padding:'11px 12px',
   fontSize:13,
@@ -490,10 +490,10 @@ const selectYear = {
 const card = {
   background:'#fff',
   border:'1px solid #e8ece8',
-  borderRadius:20,
+  borderRadius:8,
   padding:16,
   marginBottom:10,
-  boxShadow:'0 12px 28px rgba(29, 38, 29, 0.05)',
+  boxShadow:'none',
 }
 
 const sectionHead = {
@@ -504,7 +504,7 @@ const sectionHead = {
   marginBottom:14,
 }
 
-const eyebrow = { fontSize:10, color:'#8a918b', textTransform:'uppercase', marginBottom:4, fontWeight:800 }
+const eyebrow = { fontSize:10, color:'#8a918b', textTransform:'uppercase', marginBottom:4, fontWeight:700 }
 const sectionTitle = { margin:0, fontSize:17, letterSpacing:-0.3 }
 
 const tabla = { width:'100%', minWidth:560, borderCollapse:'collapse', fontSize:12 }
@@ -512,7 +512,7 @@ const th = { textAlign:'left', padding:'10px 8px', color:'#6a716b', borderBottom
 const thRight = { ...th, textAlign:'right' }
 const td = { padding:'10px 8px', borderBottom:'1px solid #f0f2f0', color:'#111611' }
 const tdRight = { ...td, textAlign:'right' }
-const tf = { padding:'12px 8px', fontWeight:900, background:'#f5f7f5', borderTop:'1px solid #dfe5df' }
+const tf = { padding:'12px 8px', fontWeight:700, background:'#f5f7f5', borderTop:'1px solid #dfe5df' }
 const tfRight = { ...tf, textAlign:'right' }
 
 const monthGrid = {
@@ -525,7 +525,7 @@ const monthBtn = {
   border:'1px solid #e1e7e1',
   background:'#fff',
   color:'#111611',
-  borderRadius:13,
+  borderRadius:8,
   padding:'10px 11px',
   cursor:'pointer',
   display:'grid',
@@ -536,20 +536,20 @@ const monthBtn = {
 
 const monthBtnActive = {
   ...monthBtn,
-  background:'#176a25',
-  borderColor:'#176a25',
+  background:"#08603f",
+  borderColor:"#08603f",
   color:'#fff',
-  boxShadow:'0 10px 22px rgba(23,106,37,0.22)',
+  boxShadow:'none',
 }
 
-const segmented = { display:'flex', gap:4, background:'#eef0ee', padding:4, borderRadius:12 }
-const segBtn = { border:'none', borderRadius:9, background:'transparent', padding:'7px 9px', fontSize:11, fontWeight:800, color:'#737a74', cursor:'pointer' }
-const segActive = { ...segBtn, background:'#fff', color:'#111611', boxShadow:'0 4px 10px rgba(0,0,0,0.06)' }
+const segmented = { display:'flex', gap:4, background:'#eef0ee', padding:4, borderRadius:8 }
+const segBtn = { border:'none', borderRadius:9, background:'transparent', padding:'7px 9px', fontSize:11, fontWeight:700, color:'#737a74', cursor:'pointer' }
+const segActive = { ...segBtn, background:'#fff', color:'#111611', boxShadow:'none' }
 
 const iconPill = {
   width:42,
   height:42,
-  borderRadius:13,
+  borderRadius:8,
   display:'flex',
   alignItems:'center',
   justifyContent:'center',
@@ -584,17 +584,17 @@ const sheet = {
   maxWidth:520,
   maxHeight:'88vh',
   overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
-  background:'#f2f1ef',
+  background:"#f6f8f7",
   borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0',
   padding:'24px 20px 40px',
   boxSizing:'border-box',
 }
 
-const labelStyle = { fontSize:10, color:'#8a918b', marginBottom:6, fontWeight:800, textTransform:'uppercase' }
-const inputStyle = { width:'100%', boxSizing:'border-box', border:'1px solid #e1e5e1', borderRadius:12, padding:'11px 13px', fontSize:13, color:'#111611', background:'#fff', marginBottom:12 }
-const primaryBtn = { width:'100%', border:'none', borderRadius:14, background:'#161a16', color:'#fff', padding:14, fontSize:14, fontWeight:850, cursor:'pointer', marginTop:4 }
-const secondaryBtn = { width:'100%', border:'1px solid #dfe4df', borderRadius:14, background:'transparent', color:'#69706a', padding:12, fontSize:13, fontWeight:800, cursor:'pointer', marginTop:8 }
-const tipoBtn = { border:'1px solid #e1e5e1', borderRadius:13, background:'#fff', padding:12, fontSize:13, fontWeight:850, cursor:'pointer', color:'#4f5650' }
+const labelStyle = { fontSize:10, color:'#8a918b', marginBottom:6, fontWeight:700, textTransform:'uppercase' }
+const inputStyle = { width:'100%', boxSizing:'border-box', border:'1px solid #e1e5e1', borderRadius:8, padding:'11px 13px', fontSize:13, color:'#111611', background:'#fff', marginBottom:12 }
+const primaryBtn = { width:'100%', border:'none', borderRadius:8, background:'#161a16', color:'#fff', padding:14, fontSize:14, fontWeight:700, cursor:'pointer', marginTop:4 }
+const secondaryBtn = { width:'100%', border:'1px solid #dfe4df', borderRadius:8, background:'transparent', color:'#69706a', padding:12, fontSize:13, fontWeight:700, cursor:'pointer', marginTop:8 }
+const tipoBtn = { border:'1px solid #e1e5e1', borderRadius:8, background:'#fff', padding:12, fontSize:13, fontWeight:700, cursor:'pointer', color:'#4f5650' }
 const tipoActiveRed = { ...tipoBtn, background:'#c84040', borderColor:'#c84040', color:'#fff' }
-const tipoActiveGreen = { ...tipoBtn, background:'#176a25', borderColor:'#176a25', color:'#fff' }
-const errorBox = { background:'#fff3e8', color:'#a35f00', border:'1px solid #ffdda8', fontSize:12, padding:'9px 12px', borderRadius:12, marginBottom:12 }
+const tipoActiveGreen = { ...tipoBtn, background:"#08603f", borderColor:"#08603f", color:'#fff' }
+const errorBox = { background:'#fff3e8', color:'#a35f00', border:'1px solid #ffdda8', fontSize:12, padding:'9px 12px', borderRadius:8, marginBottom:12 }

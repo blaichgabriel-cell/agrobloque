@@ -34,8 +34,8 @@ const esDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 76
 
 function PermisosSelector({ permisos, onChange, ayuda }) {
   return (
-    <div style={{ background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:14, padding:12, marginBottom:12 }}>
-      <div style={{ fontSize:12, fontWeight:900, color:'#176a25', marginBottom:4, textTransform:'uppercase' }}>Modulos permitidos</div>
+    <div style={{ background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:8, padding:12, marginBottom:12 }}>
+      <div style={{ fontSize:12, fontWeight:700, color:"#08603f", marginBottom:4, textTransform:'uppercase' }}>Modulos permitidos</div>
       {ayuda && <div style={{ fontSize:11, color:'#687068', marginBottom:9, lineHeight:1.35 }}>{ayuda}</div>}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
         {PERMISOS_MODULOS.map(m => {
@@ -60,7 +60,7 @@ function PermisosSelector({ permisos, onChange, ayuda }) {
           )
         })}
       </div>
-      <div style={{ fontSize:11, color:'#8b928b', marginTop:6 }}>Si desmarcas un modulo, no aparece en el menu ni en accesos.</div>
+      <div style={{ fontSize:11, color:"#697970", marginTop:6 }}>Si desmarcas un modulo, no aparece en el menu ni en accesos.</div>
     </div>
   )
 }
@@ -76,14 +76,14 @@ function AccionesSelector({ permisos, acciones, rol, onChange }) {
       : ['view']
 
   return (
-    <div style={{ background:'#fff', border:'1px solid #e8ece8', borderRadius:14, padding:12, marginBottom:12 }}>
-      <div style={{ fontSize:12, fontWeight:900, color:'#176a25', marginBottom:4, textTransform:'uppercase' }}>Acciones permitidas</div>
+    <div style={{ background:'#fff', border:'1px solid #e8ece8', borderRadius:8, padding:12, marginBottom:12 }}>
+      <div style={{ fontSize:12, fontWeight:700, color:"#08603f", marginBottom:4, textTransform:'uppercase' }}>Acciones permitidas</div>
       <div style={{ fontSize:11, color:'#687068', marginBottom:9, lineHeight:1.35 }}>Define si este usuario puede ver, crear, editar o borrar en cada modulo permitido.</div>
       <div style={{ display:'grid', gap:7, maxHeight:240, overflowY:'auto', paddingRight:4 }}>
         {modulosActivos.map(m => {
           const actuales = Array.isArray(acciones?.[m.key]) ? acciones[m.key] : defaults
           return (
-            <div key={m.key} style={{ display:'grid', gridTemplateColumns:'115px repeat(4, 1fr)', gap:6, alignItems:'center', fontSize:11, borderBottom:'1px solid #f2f1ef', paddingBottom:6 }}>
+            <div key={m.key} style={{ display:'grid', gridTemplateColumns:'115px repeat(4, 1fr)', gap:6, alignItems:'center', fontSize:11, borderBottom:"1px solid #f6f8f7", paddingBottom:6 }}>
               <strong style={{ color:'#1d241f' }}>{m.label}</strong>
               {ACTIONS.map(a => (
                 <label key={a.key} style={{ display:'flex', alignItems:'center', gap:4, color:'#4d544e' }}>
@@ -246,7 +246,7 @@ export default function Configuracion({ role }) {
     }
   }
 
-  // --- PERFIL 
+  // --- PERFIL
 
   const guardarNombre = async () => {
     setLoading(true); setError(''); setSuccess('')
@@ -301,7 +301,7 @@ export default function Configuracion({ role }) {
     e.target.value = ''
   }
 
-  // --- OTROS 
+  // --- OTROS
 
   const guardarCultivo = async () => {
     if (!form.nombre) return; setLoading(true); setError('')
@@ -468,39 +468,39 @@ export default function Configuracion({ role }) {
     await fetchAll()
   }
 
-  const inp = { width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }
-  const saveBtn = (color = '#212121') => ({ width:'100%', padding:14, borderRadius:14, background: color, border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' })
-  const cancelBtn = { width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }
-  const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f2f1ef' }
-  const addBtn = { width:'100%', padding:12, borderRadius:14, border:'1px dashed #d4b89a', background:'#eeeeee', fontSize:13, color:'#212121', cursor:'pointer', marginTop:8, fontWeight:500 }
+  const inp = { width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
+  const saveBtn = (color = '#212121') => ({ width:'100%', padding:14, borderRadius:8, background: color, border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' })
+  const cancelBtn = { width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }
+  const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:"1px solid #f6f8f7" }
+  const addBtn = { width:'100%', padding:12, borderRadius:8, border:'1px dashed #d4b89a', background:'#eeeeee', fontSize:13, color:"#124e38", cursor:'pointer', marginTop:8, fontWeight:500 }
 
   const menuItems = [
     { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email }) },
     { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', action: () => abrir('campos') },
-    { icon:'ti-seeding', title:'Cultivos', sub: cultivos.length + ' cultivos', color:'#212121', bg:'#eeeeee', action: () => abrir('cultivos') },
+    { icon:'ti-seeding', title:'Cultivos', sub: cultivos.length + ' cultivos', color:"#124e38", bg:'#eeeeee', action: () => abrir('cultivos') },
     { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
-    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:'#212121', bg:'#eeeeee', action: () => abrir('abonos') },
-    { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:'#212121', bg:'#eeeeee', action: () => abrir('bloques') },
+    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:"#124e38", bg:'#eeeeee', action: () => abrir('abonos') },
+    { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:"#124e38", bg:'#eeeeee', action: () => abrir('bloques') },
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
-    { icon:'ti-receipt-2', title:'Cuentas a pagar', sub:'Creditos con proveedores', color:'#176a25', bg:'#edf6ec', action: () => navigate('/cuentas-pagar') },
-    { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:'#176a25', bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30', permisos: [] }) },
-    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:'#176a25', bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false }) },
-    { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:'#212121', bg:'#eeeeee', action: () => navigate('/auditoria') },
+    { icon:'ti-receipt-2', title:'Cuentas a pagar', sub:'Creditos con proveedores', color:"#08603f", bg:'#edf6ec', action: () => navigate('/cuentas-pagar') },
+    { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:"#08603f", bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30', permisos: [] }) },
+    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:"#08603f", bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false }) },
+    { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:"#124e38", bg:'#eeeeee', action: () => navigate('/auditoria') },
     { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Ultimo: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
   ].filter((_, index) => esAdmin || index === 0)
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
+    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
       <input type="file" accept="image/*" ref={fotoRef} style={{ display:'none' }} onChange={subirFotoPerfil} />
 
       <div style={{ padding:'24px 20px 16px' }}>
-        <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Sistema</div>
-        <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5, marginBottom:20 }}>Configuracion</div>
-        {error && !modal && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
-        {success && !modal && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{success}</div>}
+        <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Sistema</div>
+        <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5, marginBottom:20 }}>Configuracion</div>
+        {error && !modal && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:12 }}>{error}</div>}
+        {success && !modal && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:12 }}>{success}</div>}
 
         {/* Tarjeta de perfil rapida */}
-        <div style={{ background:'#212121', borderRadius:20, padding:'16px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:14 }}>
+        <div style={{ background:"#124e38", borderRadius:8, padding:'16px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:14 }}>
           <div style={{ position:'relative', flexShrink:0 }}>
             {perfil.foto ? (
               <img src={perfil.foto} alt="perfil"
@@ -512,7 +512,7 @@ export default function Configuracion({ role }) {
             )}
             <button onClick={() => fotoRef.current?.click()}
               style={{ position:'absolute', bottom:-2, right:-2, width:20, height:20, borderRadius:'50%', background:'#fff', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>
-              <i className="ti ti-camera" style={{ fontSize:11, color:'#212121' }} aria-hidden="true"></i>
+              <i className="ti ti-camera" style={{ fontSize:11, color:"#124e38" }} aria-hidden="true"></i>
             </button>
           </div>
           <div style={{ flex:1, minWidth:0 }}>
@@ -522,7 +522,7 @@ export default function Configuracion({ role }) {
             <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{perfil.email}</div>
           </div>
           <button onClick={() => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email })}
-            style={{ padding:'6px 12px', borderRadius:10, background:'rgba(255,255,255,0.12)', border:'none', fontSize:11, color:'rgba(255,255,255,0.8)', cursor:'pointer', flexShrink:0 }}>
+            style={{ padding:'6px 12px', borderRadius:8, background:'rgba(255,255,255,0.12)', border:'none', fontSize:11, color:'rgba(255,255,255,0.8)', cursor:'pointer', flexShrink:0 }}>
             Editar
           </button>
         </div>
@@ -530,18 +530,18 @@ export default function Configuracion({ role }) {
 
       <div style={{ padding:'0 14px 100px' }}>
         {menuItems.map((it, i) => (
-          <div key={i} onClick={it.action} style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
-            <div style={{ width:40, height:40, borderRadius:12, background: it.bg || '#f2f1ef', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <div key={i} onClick={it.action} style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
+            <div style={{ width:40, height:40, borderRadius:8, background: it.bg || '#f2f1ef', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <i className={`ti ${it.icon}`} style={{ fontSize:18, color: it.color || '#0a0a0a' }} aria-hidden="true"></i>
             </div>
             <div style={{ flex:1 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:'#0a0a0a' }}>{it.title}</div>
+              <div style={{ fontSize:14, fontWeight:600, color:"#182c25" }}>{it.title}</div>
               <div style={{ fontSize:11, color:'#b0b0b0', marginTop:2 }}>{it.sub}</div>
             </div>
             <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
           </div>
         ))}
-        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginTop:8, cursor:'pointer' }} onClick={() => forceLocalSignOut()}>
+        <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginTop:8, cursor:'pointer' }} onClick={() => forceLocalSignOut()}>
           <div style={{ fontSize:14, fontWeight:600, color:'#c84040', textAlign:'center' }}>Cerrar sesion</div>
         </div>
       </div>
@@ -562,7 +562,7 @@ export default function Configuracion({ role }) {
           boxSizing:'border-box',
         }}>
           <div style={{
-            background:'#f2f1ef',
+            background:"#f6f8f7",
             borderRadius: esDesktop() ? 24 : '24px 24px 0 0',
             width:'100%',
             maxWidth: esDesktop() ? 620 : 480,
@@ -572,17 +572,17 @@ export default function Configuracion({ role }) {
             boxShadow: esDesktop() ? '0 28px 70px rgba(0,0,0,0.28)' : 'none',
           }}>
 
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
-            {success && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{success}</div>}
+            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:12 }}>{error}</div>}
+            {success && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:12 }}>{success}</div>}
 
             {modal === 'invitados' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:8 }}>Invitados de solo lectura</div>
-              <div style={{ fontSize:12, color:'#8b928b', marginBottom:16 }}>El invitado entra con un link y no puede editar ni borrar datos.</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:8 }}>Invitados de solo lectura</div>
+              <div style={{ fontSize:12, color:"#697970", marginBottom:16 }}>El invitado entra con un link y no puede editar ni borrar datos.</div>
 
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Crear link</div>
+              <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Crear link</div>
                 <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del invitado"/>
-                <div style={{ fontSize:11, fontWeight:800, color:'#687068', margin:'2px 0 7px', textTransform:'uppercase' }}>Campo permitido</div>
+                <div style={{ fontSize:11, fontWeight:700, color:'#687068', margin:'2px 0 7px', textTransform:'uppercase' }}>Campo permitido</div>
                 <select style={inp} value={form.campo_id||''} onChange={e=>setForm(f=>({...f,campo_id:e.target.value}))}>
                   <option value="">Todos los campos</option>
                   {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -602,28 +602,28 @@ export default function Configuracion({ role }) {
               </div>
 
               {linkInvitado && (
-                <div style={{ background:'#edf6ec', border:'1px solid #cde6c8', borderRadius:16, padding:'12px 14px', marginBottom:12 }}>
-                  <div style={{ fontSize:11, color:'#176a25', fontWeight:800, marginBottom:6 }}>Link creado</div>
+                <div style={{ background:"#edf7f1", border:'1px solid #cde6c8', borderRadius:8, padding:'12px 14px', marginBottom:12 }}>
+                  <div style={{ fontSize:11, color:"#08603f", fontWeight:700, marginBottom:6 }}>Link creado</div>
                   <div style={{ fontSize:12, color:'#1d261d', wordBreak:'break-all', lineHeight:1.4, marginBottom:10 }}>{linkInvitado}</div>
                   <button style={saveBtn('#212121')} onClick={copiarLinkInvitado}>Copiar link</button>
                 </div>
               )}
 
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Links creados</div>
+              <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px' }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Links creados</div>
                 {invitados.length === 0 ? (
-                  <div style={{ fontSize:12, color:'#9a9a9a', padding:'8px 0' }}>Sin invitados creados.</div>
+                  <div style={{ fontSize:12, color:"#697970", padding:'8px 0' }}>Sin invitados creados.</div>
                 ) : invitados.map(inv => (
                   <div key={inv.id} style={listItem}>
                     <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>{inv.nombre}</div>
-                      <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#182c25" }}>{inv.nombre}</div>
+                      <div style={{ fontSize:11, color:"#697970", marginTop:2 }}>
                         {inv.campos?.nombre || 'Todos los campos'}  -  {inv.activo ? 'Activo' : 'Desactivado'}{inv.expires_at ? `  -  vence ${String(inv.expires_at).slice(0,10)}` : ''}
                       </div>
                     </div>
                     {inv.activo && (
                       <button onClick={() => desactivarInvitado(inv.id)}
-                        style={{ border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', borderRadius:10, padding:'7px 10px', fontSize:11, cursor:'pointer' }}>
+                        style={{ border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', borderRadius:8, padding:'7px 10px', fontSize:11, cursor:'pointer' }}>
                         Desactivar
                       </button>
                     )}
@@ -634,11 +634,11 @@ export default function Configuracion({ role }) {
 
             {/* -- CUENTA -- */}
             {modal === 'roles' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:8 }}>Usuarios y permisos</div>
-              <div style={{ fontSize:12, color:'#8b928b', marginBottom:16 }}>Registro interno de roles. Para dar acceso real, el usuario tambien debe existir en Supabase Authentication.</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:8 }}>Usuarios y permisos</div>
+              <div style={{ fontSize:12, color:"#697970", marginBottom:16 }}>Registro interno de roles. Para dar acceso real, el usuario tambien debe existir en Supabase Authentication.</div>
 
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>{form.id ? 'Editar usuario' : 'Agregar usuario'}</div>
+              <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>{form.id ? 'Editar usuario' : 'Agregar usuario'}</div>
                 <input style={inp} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="correo@empresa.com"/>
                 <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre"/>
                 <select style={inp} value={form.rol||'operador'} onChange={e=>setForm(f=>({...f,rol:e.target.value}))}>
@@ -657,7 +657,7 @@ export default function Configuracion({ role }) {
                   rol={form.rol || 'operador'}
                   onChange={acciones => setForm(f => ({ ...f, acciones }))}
                 />
-                <label style={{ display:'flex', alignItems:'center', gap:8, background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:14, padding:12, marginBottom:12, fontSize:12, color:'#1d241f' }}>
+                <label style={{ display:'flex', alignItems:'center', gap:8, background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:8, padding:12, marginBottom:12, fontSize:12, color:'#1d241f' }}>
                   <input type="checkbox" checked={Boolean(form.invitar_real)} onChange={e=>setForm(f=>({...f,invitar_real:e.target.checked}))}/>
                   Enviar invitacion real por email
                 </label>
@@ -665,19 +665,19 @@ export default function Configuracion({ role }) {
                 <button style={saveBtn('#176a25')} onClick={guardarRol} disabled={loading}>{loading ? 'Guardando...' : 'Guardar permiso'}</button>
               </div>
 
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px' }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Registrados</div>
+              <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px' }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Registrados</div>
                 {roles.length === 0 ? (
-                  <div style={{ fontSize:12, color:'#9a9a9a', padding:'8px 0' }}>Sin usuarios registrados.</div>
+                  <div style={{ fontSize:12, color:"#697970", padding:'8px 0' }}>Sin usuarios registrados.</div>
                 ) : roles.map(r => (
                   <div key={r.id} style={listItem}>
                     <div style={{ minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>{r.nombre || r.email}</div>
-                      <div style={{ fontSize:11, color:'#9a9a9a', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.email} - {r.rol}</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#182c25" }}>{r.nombre || r.email}</div>
+                      <div style={{ fontSize:11, color:"#697970", marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.email} - {r.rol}</div>
                     </div>
                     <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-                      <button style={{ padding:'5px 10px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, invitar_real:false })}>Editar</button>
-                      <button style={{ padding:'5px 10px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminarRol(r.id)}>Borrar</button>
+                      <button style={{ padding:'5px 10px', borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, invitar_real:false })}>Editar</button>
+                      <button style={{ padding:'5px 10px', borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminarRol(r.id)}>Borrar</button>
                     </div>
                   </div>
                 ))}
@@ -686,45 +686,45 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'cuenta' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Mi cuenta</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Mi cuenta</div>
 
               {/* Foto */}
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:24 }}>
                 <div style={{ position:'relative', marginBottom:10 }}>
                   {perfil.foto ? (
                     <img src={perfil.foto} alt="perfil"
-                      style={{ width:80, height:80, borderRadius:'50%', objectFit:'cover', border:'3px solid #e8e6e2' }}/>
+                      style={{ width:80, height:80, borderRadius:'50%', objectFit:'cover', border:"3px solid #e2e9e5" }}/>
                   ) : (
-                    <div style={{ width:80, height:80, borderRadius:'50%', background:'#e8e6e2', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <i className="ti ti-user" style={{ fontSize:36, color:'#9a9a9a' }} aria-hidden="true"></i>
+                    <div style={{ width:80, height:80, borderRadius:'50%', background:"#e2e9e5", display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <i className="ti ti-user" style={{ fontSize:36, color:"#697970" }} aria-hidden="true"></i>
                     </div>
                   )}
                   <button onClick={() => fotoRef.current?.click()}
-                    style={{ position:'absolute', bottom:0, right:0, width:26, height:26, borderRadius:'50%', background:'#212121', border:'2px solid #f2f1ef', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    style={{ position:'absolute', bottom:0, right:0, width:26, height:26, borderRadius:'50%', background:"#124e38", border:"2px solid #f6f8f7", cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
                     <i className="ti ti-camera" style={{ fontSize:13, color:'#fff' }} aria-hidden="true"></i>
                   </button>
                 </div>
-                <span style={{ fontSize:11, color:'#9a9a9a' }}>Toca la camara para cambiar la foto</span>
+                <span style={{ fontSize:11, color:"#697970" }}>Toca la camara para cambiar la foto</span>
               </div>
 
               {/* Nombre */}
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Nombre</div>
+              <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Nombre</div>
                 <input style={{ ...inp, marginBottom:8 }} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/>
                 <button style={saveBtn()} onClick={guardarNombre} disabled={loading}>{loading?'Guardando...':'Guardar nombre'}</button>
               </div>
 
               {/* Email */}
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Email</div>
+              <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Email</div>
                 <input style={{ ...inp, marginBottom:8 }} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/>
-                <div style={{ fontSize:11, color:'#9a9a9a', marginBottom:10 }}>Si cambias el email, recibiras un link de confirmacion</div>
+                <div style={{ fontSize:11, color:"#697970", marginBottom:10 }}>Si cambias el email, recibiras un link de confirmacion</div>
                 <button style={saveBtn('#1a5c2e')} onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
               </div>
 
               {/* Contrasena */}
-              <div style={{ background:'#fff', borderRadius:16, padding:'14px 16px', marginBottom:12 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:10, textTransform:'uppercase' }}>Contrasena</div>
+              <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Contrasena</div>
                 <input style={{ ...inp, marginBottom:8 }} type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contrasena"/>
                 <input style={{ ...inp, marginBottom:8 }} type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contrasena"/>
                 <button style={saveBtn('#c84040')} onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contrasena'}</button>
@@ -735,20 +735,20 @@ export default function Configuracion({ role }) {
 
             {/* -- CAMPOS -- */}
             {modal === 'campos' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Campos</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Campos</div>
               {campos.map(c => (<div key={c.id} style={listItem}><div style={{ fontSize:13, fontWeight:500 }}>{c.nombre}</div></div>))}
               <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
             {/* -- CULTIVOS -- */}
             {modal === 'cultivos' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Cultivos</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Cultivos</div>
               {cultivos.map(c => (
                 <div key={c.id} style={listItem}>
                   <div style={{ fontSize:13, fontWeight:500 }}>{c.nombre}</div>
                   <div style={{ display:'flex', gap:6 }}>
-                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
-                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('cultivos',c.id,'cultivos')}>Eliminar</button>
+                    <button style={{ padding:'5px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
+                    <button style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('cultivos',c.id,'cultivos')}>Eliminar</button>
                   </div>
                 </div>
               ))}
@@ -757,8 +757,8 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'editarCultivo' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
-              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
+              <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Nombre</div>
               <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morron"/>
               <button style={saveBtn()} onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
               <button style={cancelBtn} onClick={() => abrir('cultivos')}>Volver</button>
@@ -766,16 +766,16 @@ export default function Configuracion({ role }) {
 
             {/* -- OPERARIOS -- */}
             {modal === 'operarios' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Operarios</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Operarios</div>
               {campos.map(campo => (
                 <div key={campo.id}>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', padding:'10px 0 6px' }}>{campo.nombre}</div>
+                  <div style={{ fontSize:11, fontWeight:600, color:"#697970", padding:'10px 0 6px' }}>{campo.nombre}</div>
                   {operarios.filter(o => o.campo_id === campo.id).map(o => (
                     <div key={o.id} style={listItem}>
                       <div style={{ fontSize:13, fontWeight:500 }}>{o.nombre}</div>
                       <div style={{ display:'flex', gap:6 }}>
-                        <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
-                        <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('operarios',o.id,'operarios')}>Eliminar</button>
+                        <button style={{ padding:'5px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
+                        <button style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('operarios',o.id,'operarios')}>Eliminar</button>
                       </div>
                     </div>
                   ))}
@@ -786,8 +786,8 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'editarOperario' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar operario':'Nuevo operario'}</div>
-              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id?'Editar operario':'Nuevo operario'}</div>
+              <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Nombre</div>
               <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
               <button style={saveBtn()} onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
               <button style={cancelBtn} onClick={() => abrir('operarios')}>Volver</button>
@@ -795,13 +795,13 @@ export default function Configuracion({ role }) {
 
             {/* -- ABONOS -- */}
             {modal === 'abonos' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>Abonos de base</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Abonos de base</div>
               {abonos.map(a => (
                 <div key={a.id} style={listItem}>
                   <div style={{ fontSize:13, fontWeight:500 }}>{a.nombre}</div>
                   <div style={{ display:'flex', gap:6 }}>
-                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #e8e6e2', background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
-                    <button style={{ padding:'5px 12px', borderRadius:10, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('abonos',a.id,'abonos')}>Eliminar</button>
+                    <button style={{ padding:'5px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
+                    <button style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('abonos',a.id,'abonos')}>Eliminar</button>
                   </div>
                 </div>
               ))}
@@ -810,8 +810,8 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'editarAbono' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id?'Editar abono':'Nuevo abono'}</div>
-              <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Nombre</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id?'Editar abono':'Nuevo abono'}</div>
+              <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Nombre</div>
               <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
               <button style={saveBtn()} onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
               <button style={cancelBtn} onClick={() => abrir('abonos')}>Volver</button>
@@ -819,15 +819,15 @@ export default function Configuracion({ role }) {
 
             {/* -- BLOQUES -- */}
             {modal === 'bloques' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:6 }}>Tipo de bloques</div>
-              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Toca un bloque para cambiar si es invernadero o campo abierto</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:6 }}>Tipo de bloques</div>
+              <div style={{ fontSize:12, color:"#697970", marginBottom:20 }}>Toca un bloque para cambiar si es invernadero o campo abierto</div>
               {campos.map(campo => (
                 <div key={campo.id}>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', padding:'10px 0 6px' }}>{campo.nombre}</div>
+                  <div style={{ fontSize:11, fontWeight:600, color:"#697970", padding:'10px 0 6px' }}>{campo.nombre}</div>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
                     {bloques.filter(b => b.campo_id === campo.id).map(b => (
                       <div key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })}
-                        style={{ padding:'6px 12px', borderRadius:20, fontSize:11, fontWeight:500, cursor:'pointer', border:'1px solid #e8e6e2', background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
+                        style={{ padding:'6px 12px', borderRadius:8, fontSize:11, fontWeight:500, cursor:'pointer', border:"1px solid #e2e9e5", background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
                         {b.codigo}  -  {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
                       </div>
                     ))}
@@ -838,11 +838,11 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'editarBloque' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:6 }}>Bloque {form.codigo}</div>
-              <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:20 }}>Selecciona el tipo de este bloque</div>
+              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:6 }}>Bloque {form.codigo}</div>
+              <div style={{ fontSize:12, color:"#697970", marginBottom:20 }}>Selecciona el tipo de este bloque</div>
               <div style={{ display:'flex', gap:8, marginBottom:20 }}>
                 {['invernadero','campo_abierto'].map(t => (
-                  <button key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ flex:1, padding:14, borderRadius:14, border:'1px solid #e8e6e2', fontSize:13, fontWeight:600, cursor:'pointer', background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
+                  <button key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ flex:1, padding:14, borderRadius:8, border:"1px solid #e2e9e5", fontSize:13, fontWeight:600, cursor:'pointer', background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
                     {t === 'invernadero' ? 'Invernadero' : 'Campo abierto'}
                   </button>
                 ))}

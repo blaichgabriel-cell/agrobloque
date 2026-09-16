@@ -27,10 +27,10 @@ export default function NavBar() {
   return (
     <>
       {showMore && (
-        <div style={{ position:'fixed', bottom:64, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'#fff', borderTop:'0.5px solid #e8e6e2', padding:'12px 14px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, zIndex:40 }}>
+        <div style={{ position:'fixed', bottom:64, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'#fff', borderTop:"0.5px solid #e2e9e5", padding:'12px 14px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, zIndex:40 }}>
           {moreTabs.map(t => (
             <button key={t.path} onClick={() => { navigate(t.path); setShowMore(false) }}
-              style={{ padding:'10px 6px', borderRadius:14, border:'1px solid #e8e6e2', background: location.pathname===t.path ? '#A0785A' : '#f2f1ef', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+              style={{ padding:'10px 6px', borderRadius:8, border:"1px solid #e2e9e5", background: location.pathname===t.path ? '#A0785A' : '#f2f1ef', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
               <i className={`ti ${t.icon}`} style={{ fontSize:20, color: location.pathname===t.path ? '#fff' : '#555' }} aria-hidden="true"></i>
               <span style={{ fontSize:9, fontWeight:600, color: location.pathname===t.path ? '#fff' : '#555' }}>{t.label}</span>
             </button>
@@ -38,7 +38,7 @@ export default function NavBar() {
         </div>
       )}
 
-      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, display:'flex', borderTop:'0.5px solid #e8e6e2', background:'#f9f8f6', paddingBottom:'env(safe-area-inset-bottom,0px)', zIndex:50 }}>
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, display:'flex', borderTop:"0.5px solid #e2e9e5", background:'#f9f8f6', paddingBottom:'env(safe-area-inset-bottom,0px)', zIndex:50 }}>
         {mainTabs.map(t => {
           const active = location.pathname === t.path
           return (

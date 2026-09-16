@@ -107,27 +107,27 @@ export default function Mapa({ campoActivo }) {
     : bloques.filter(b => getCultivo(b) === filtro)
 
   if (!campoActivo) return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ fontSize:13, color:'#9a9a9a' }}>Seleccioná un campo desde el inicio</div>
+    <div style={{ background:"#f6f8f7", minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ fontSize:13, color:"#697970" }}>Seleccioná un campo desde el inicio</div>
     </div>
   )
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 0' : '24px 20px 0' }}>
+    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+      <div style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 0' : '24px 20px 0' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, marginBottom:14 }}>
           <div>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Campo activo</div>
-            <div style={{ fontSize:22, fontWeight:700, color:'#212121', letterSpacing:-.5 }}>{campoActivo?.nombre}</div>
+            <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Campo activo</div>
+            <div style={{ fontSize:22, fontWeight:700, color:"#124e38", letterSpacing:-.5 }}>{campoActivo?.nombre}</div>
           </div>
-          <button onClick={() => { setError(''); setModalBloque(true) }} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 }}>
+          <button onClick={() => { setError(''); setModalBloque(true) }} style={{ width:40, height:40, borderRadius:8, background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
-        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:10 }}>{error}</div>}
+        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:10 }}>{error}</div>}
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:8 }}>
           {[['todos','Todos'], ...cultivos.map(c => [c,c]), ['vacio','Sin cultivo']].map(([k,v]) => (
-            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:20, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#212121' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>
+            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:8, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#212121' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>
               {v}
             </button>
           ))}
@@ -136,9 +136,9 @@ export default function Mapa({ campoActivo }) {
 
       <div style={{ padding: isDesktop ? '18px 36px 100px' : '8px 14px 100px' }}>
         {loading ? (
-          <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Cargando bloques...</div>
+          <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Cargando bloques...</div>
         ) : bloquesFiltrados.length === 0 ? (
-          <div style={{ textAlign:'center', padding:40, color:'#9a9a9a', fontSize:13 }}>Sin bloques para mostrar</div>
+          <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin bloques para mostrar</div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(4, minmax(180px, 1fr))' : '1fr 1fr', gap: isDesktop ? 14 : 8 }}>
             {bloquesFiltrados.map(b => {
@@ -146,12 +146,12 @@ export default function Mapa({ campoActivo }) {
               const color = getColor(b)
               return (
                 <div key={b.id} onClick={() => navigate(`/bloque/${b.id}`)}
-                  style={{ background: color || '#fff', borderRadius:20, padding: isDesktop ? '18px 18px' : '14px 12px', cursor:'pointer', minHeight: isDesktop ? 120 : 90, display:'flex', flexDirection:'column', justifyContent:'space-between', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.06)' : 'none' }}>
+                  style={{ background: color || '#fff', borderRadius:8, padding: isDesktop ? '18px 18px' : '14px 12px', cursor:'pointer', minHeight: isDesktop ? 120 : 90, display:'flex', flexDirection:'column', justifyContent:'space-between', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.06)' : 'none' }}>
                   <div style={{ fontSize:10, fontWeight:600, color: cultivo ? 'rgba(255,255,255,0.55)' : '#c0c0c0', textTransform:'uppercase' }}>
                     {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
                   </div>
                   <div>
-                    <div style={{ fontSize:22, fontWeight:800, color: cultivo ? '#fff' : '#0a0a0a', letterSpacing:-.5 }}>{b.codigo}</div>
+                    <div style={{ fontSize:22, fontWeight:700, color: cultivo ? '#fff' : '#0a0a0a', letterSpacing:-.5 }}>{b.codigo}</div>
                     <div style={{ fontSize:10, color: cultivo ? 'rgba(255,255,255,0.75)' : '#c0c0c0', marginTop:2 }}>
                       {cultivo || 'Sin cultivo'}
                     </div>
@@ -166,37 +166,37 @@ export default function Mapa({ campoActivo }) {
 
       {modalBloque && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems: isDesktop ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && setModalBloque(false)}>
-          <div style={{ background:'#f2f1ef', borderRadius: isDesktop ? 24 : '24px 24px 0 0', width:'100%', maxWidth:440, padding:'24px 20px 38px', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:800, color:'#0a0a0a', marginBottom:4 }}>Agregar bloque</div>
-            <div style={{ fontSize:12, color:'#8b928b', marginBottom:18 }}>{campoActivo?.nombre}</div>
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:10, marginBottom:12 }}>{error}</div>}
+          <div style={{ background:"#f6f8f7", borderRadius: isDesktop ? 24 : '24px 24px 0 0', width:'100%', maxWidth:440, padding:'24px 20px 38px', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:4 }}>Agregar bloque</div>
+            <div style={{ fontSize:12, color:"#697970", marginBottom:18 }}>{campoActivo?.nombre}</div>
+            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:12 }}>{error}</div>}
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr', gap:10 }}>
               <div>
-                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Letra</div>
+                <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Letra</div>
                 <input value={formBloque.letra} maxLength={3} onChange={e => setFormBloque(f => ({ ...f, letra:e.target.value.toUpperCase().replace(/[^A-Z]/g, '') }))} style={inputBloque} placeholder="A" />
               </div>
               <div>
-                <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Número</div>
+                <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Número</div>
                 <input value={formBloque.numero} inputMode="numeric" onChange={e => setFormBloque(f => ({ ...f, numero:e.target.value.replace(/[^0-9]/g, '') }))} style={inputBloque} placeholder="Ej: 9" />
               </div>
             </div>
 
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Tipo</div>
+            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Tipo</div>
             <select value={formBloque.tipo} onChange={e => setFormBloque(f => ({ ...f, tipo:e.target.value }))} style={inputBloque}>
               <option value="invernadero">Invernadero</option>
               <option value="campo_abierto">Campo abierto</option>
             </select>
 
-            <div style={{ background:'#fff', borderRadius:14, padding:'12px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:12, color:'#8b928b' }}>Vista previa</span>
-              <strong style={{ fontSize:18, color:'#0a0a0a' }}>{`${(formBloque.letra || 'A').toUpperCase()}-${formBloque.numero || '?'}`}</strong>
+            <div style={{ background:'#fff', borderRadius:8, padding:'12px 14px', marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:12, color:"#697970" }}>Vista previa</span>
+              <strong style={{ fontSize:18, color:"#182c25" }}>{`${(formBloque.letra || 'A').toUpperCase()}-${formBloque.numero || '?'}`}</strong>
             </div>
 
-            <button onClick={guardarBloque} disabled={savingBloque} style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:800, color:'#fff', cursor:'pointer' }}>
+            <button onClick={guardarBloque} disabled={savingBloque} style={{ width:'100%', padding:14, borderRadius:8, background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }}>
               {savingBloque ? 'Guardando...' : 'Guardar bloque'}
             </button>
-            <button onClick={() => setModalBloque(false)} style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }}>
+            <button onClick={() => setModalBloque(false)} style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }}>
               Cancelar
             </button>
           </div>
@@ -209,11 +209,11 @@ export default function Mapa({ campoActivo }) {
 const inputBloque = {
   width:'100%',
   padding:'11px 14px',
-  borderRadius:12,
-  border:'1px solid #e8e6e2',
+  borderRadius:8,
+  border:"1px solid #e2e9e5",
   background:'#fff',
   fontSize:13,
-  color:'#0a0a0a',
+  color:"#182c25",
   marginBottom:12,
   boxSizing:'border-box',
 }

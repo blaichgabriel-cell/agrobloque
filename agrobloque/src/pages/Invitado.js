@@ -125,7 +125,7 @@ function Shell({ children, campo, onRefresh, compact = false }) {
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
             {onRefresh && <button type="button" onClick={onRefresh} style={refreshBtn}>Actualizar</button>}
-            <div style={{ width:compact ? 46 : 54, height:compact ? 46 : 54, borderRadius:16, background:'#0b0f0c', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:compact ? 19 : 22 }}>
+            <div style={{ width:compact ? 46 : 54, height:compact ? 46 : 54, borderRadius:8, background:'#0b0f0c', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:compact ? 19 : 22 }}>
               AB
             </div>
           </div>
@@ -139,7 +139,7 @@ function Shell({ children, campo, onRefresh, compact = false }) {
 function Card({ title, value, sub }) {
   return (
     <div style={panel}>
-      <div style={{ color:'#69706a', textTransform:'uppercase', fontSize:12, fontWeight:800 }}>{title}</div>
+      <div style={{ color:'#69706a', textTransform:'uppercase', fontSize:12, fontWeight:700 }}>{title}</div>
       <strong style={{ display:'block', fontSize:30, marginTop:8, lineHeight:1 }}>{value || 0}</strong>
       <div style={{ color:'#69706a', fontSize:13, marginTop:6 }}>{sub}</div>
     </div>
@@ -148,8 +148,8 @@ function Card({ title, value, sub }) {
 
 function Money({ label, value }) {
   return (
-    <div style={{ background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:14, padding:14 }}>
-      <div style={{ color:'#69706a', fontSize:13, fontWeight:750 }}>{label}</div>
+    <div style={{ background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:8, padding:14 }}>
+      <div style={{ color:'#69706a', fontSize:13, fontWeight:700 }}>{label}</div>
       <strong style={{ fontSize:22, marginTop:6, display:'block' }}>Gs. {fmtGs(value)}</strong>
     </div>
   )
@@ -162,7 +162,7 @@ function Row({ title, sub, right }) {
         <strong style={{ fontSize:15, display:'block', overflowWrap:'anywhere' }}>{title}</strong>
         <div style={{ color:'#69706a', fontSize:13, marginTop:4, overflowWrap:'anywhere' }}>{sub}</div>
       </div>
-      <div style={{ color:'#176a25', fontWeight:850, fontSize:13, textAlign:'right', maxWidth:150, overflowWrap:'anywhere' }}>{right}</div>
+      <div style={{ color:"#08603f", fontWeight:700, fontSize:13, textAlign:'right', maxWidth:150, overflowWrap:'anywhere' }}>{right}</div>
     </div>
   )
 }
@@ -172,15 +172,15 @@ function Empty({ text }) {
 }
 
 function SmallEmpty() {
-  return <div style={{ color:'#8b928b', textAlign:'center', padding:'24px 0', fontSize:13 }}>Sin datos para mostrar.</div>
+  return <div style={{ color:"#697970", textAlign:'center', padding:'24px 0', fontSize:13 }}>Sin datos para mostrar.</div>
 }
 
 const panel = {
   background:'#fff',
   border:'1px solid #e8ece8',
-  borderRadius:18,
+  borderRadius:8,
   padding:16,
-  boxShadow:'0 14px 32px rgba(29, 38, 29, 0.06)',
+  boxShadow:'none',
 }
 
 const head = {
@@ -198,22 +198,22 @@ const title = {
 }
 
 const badge = {
-  background:'#edf6ec',
-  color:'#176a25',
+  background:"#edf7f1",
+  color:"#08603f",
   borderRadius:999,
   padding:'6px 10px',
   fontSize:12,
-  fontWeight:800,
+  fontWeight:700,
   whiteSpace:'nowrap',
 }
 
 const refreshBtn = {
   border:'1px solid #dfe6dc',
   background:'#fff',
-  borderRadius:12,
+  borderRadius:8,
   padding:'10px 12px',
   fontSize:13,
-  fontWeight:800,
-  color:'#176a25',
+  fontWeight:700,
+  color:"#08603f",
   cursor:'pointer',
 }

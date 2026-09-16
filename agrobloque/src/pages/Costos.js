@@ -5,7 +5,7 @@ import { descargarCsv } from '../lib/exporters'
 import { registrarAuditoria } from '../lib/audit'
 
 const TIPOS_COSTO = [
-  { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:'#212121', bg:'#eeeeee' },
+  { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:"#124e38", bg:'#eeeeee' },
   { key:'combustible',          label:'Combustible',          icon:'ti-flame',       color:'#e07b00', bg:'#fff3e8' },
   { key:'herramientas',         label:'Herramientas',         icon:'ti-tool',        color:'#555',    bg:'#f2f1ef' },
   { key:'electricidad',         label:'Electricidad',         icon:'ti-bolt',        color:'#2980b9', bg:'#eaf4fb' },
@@ -139,51 +139,51 @@ export default function Costos({ campoActivo, isGuest = false }) {
   }
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh' }}>
-      <div style={{ background:'#f2f1ef', padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+      <div style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
           <div>
-            <div style={{ fontSize:12, color:'#9a9a9a', marginBottom:4 }}>Gastos</div>
-            <div style={{ fontSize:24, fontWeight:700, color:'#0a0a0a', letterSpacing:-.5 }}>Costos</div>
+            <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Gastos</div>
+            <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Costos</div>
           </div>
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={exportarCostos} style={{ width:40, height:40, borderRadius:14, background:'#fff', border:'1px solid #e8e6e2', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-              <i className="ti ti-download" style={{ color:'#212121', fontSize:19 }} aria-hidden="true"></i>
+            <button onClick={exportarCostos} style={{ width:40, height:40, borderRadius:8, background:'#fff', border:"1px solid #e2e9e5", display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <i className="ti ti-download" style={{ color:"#124e38", fontSize:19 }} aria-hidden="true"></i>
             </button>
             {!isGuest && (
-              <button onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:14, background:'#212121', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <button onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:8, background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
                 <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
               </button>
             )}
           </div>
         </div>
         {campos.length > 1 && (
-          <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4, marginBottom:12 }}>
+          <div style={{ display:'flex', gap:5, background:"#e2e9e5", borderRadius:8, padding:4, marginBottom:12 }}>
             {campos.map(c => (
-              <button key={c.id} onClick={() => setCampoSel(c)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoSel?.id===c.id ? '#212121' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
+              <button key={c.id} onClick={() => setCampoSel(c)} style={{ flex:1, padding:8, borderRadius:8, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoSel?.id===c.id ? '#212121' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
             ))}
           </div>
         )}
-        <div style={{ display:'flex', gap:5, background:'#e8e6e2', borderRadius:14, padding:4 }}>
+        <div style={{ display:'flex', gap:5, background:"#e2e9e5", borderRadius:8, padding:4 }}>
           {[['mes','Este mes'],['total','Historico']].map(([k,v]) => (
-            <button key={k} onClick={() => setPeriodo(k)} style={{ flex:1, padding:8, borderRadius:10, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
+            <button key={k} onClick={() => setPeriodo(k)} style={{ flex:1, padding:8, borderRadius:8, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
           ))}
         </div>
       </div>
 
       <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
-        <div style={{ background:'#212121', borderRadius:20, padding:'18px 20px', marginBottom:10 }}>
+        <div style={{ background:"#124e38", borderRadius:8, padding:'18px 20px', marginBottom:10 }}>
           <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:6 }}>Total costos · {periodo === 'mes' ? 'este mes' : 'historico'}</div>
-          <div style={{ fontSize:36, fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1 }}>Gs. {fmtGs(totalGeneral)}</div>
+          <div style={{ fontSize:36, fontWeight:700, color:'#fff', letterSpacing:-1, lineHeight:1 }}>Gs. {fmtGs(totalGeneral)}</div>
           <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', marginTop:4 }}>{campoSel?.nombre}</div>
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns: isDesktop ? '0.9fr 1.1fr' : '1fr', gap: isDesktop ? 12 : 0 }}>
-        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-          <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', marginBottom:12, textTransform:'uppercase' }}>Calculados automaticamente</div>
+        <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+          <div style={{ fontSize:11, fontWeight:600, color:"#697970", marginBottom:12, textTransform:'uppercase' }}>Calculados automaticamente</div>
           {[
             { icon:'ti-spray', color:'#e07b00', bg:'#fff3e8', label:'Agroquimicos', sub:'Desde fumigaciones registradas', val: costosAuto.agroquimicos },
-            ...(!isGuest ? [{ icon:'ti-users', color:'#212121', bg:'#eeeeee', label:'Jornales', sub:'Desde asistencia registrada', val: costosAuto.jornales }] : []),
+            ...(!isGuest ? [{ icon:'ti-users', color:"#124e38", bg:'#eeeeee', label:'Jornales', sub:'Desde asistencia registrada', val: costosAuto.jornales }] : []),
           ].map((item, i) => (
             <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom: i===0 ? '1px solid #f2f1ef' : 'none' }}>
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -191,37 +191,37 @@ export default function Costos({ campoActivo, isGuest = false }) {
                   <i className={`ti ${item.icon}`} style={{ fontSize:15, color:item.color }} aria-hidden="true"></i>
                 </div>
                 <div>
-                  <div style={{ fontSize:13, fontWeight:500, color:'#0a0a0a' }}>{item.label}</div>
-                  <div style={{ fontSize:10, color:'#9a9a9a' }}>{item.sub}</div>
+                  <div style={{ fontSize:13, fontWeight:500, color:"#182c25" }}>{item.label}</div>
+                  <div style={{ fontSize:10, color:"#697970" }}>{item.sub}</div>
                 </div>
               </div>
-              <div style={{ fontSize:14, fontWeight:700, color:'#0a0a0a' }}>{item.val > 0 ? `Gs. ${fmtGs(item.val)}` : '—'}</div>
+              <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{item.val > 0 ? `Gs. ${fmtGs(item.val)}` : '—'}</div>
             </div>
           ))}
         </div>
 
-        <div style={{ background:'#fff', borderRadius:20, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+        <div style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:10, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-            <div style={{ fontSize:11, fontWeight:600, color:'#9a9a9a', textTransform:'uppercase' }}>Costos manuales</div>
-            <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Gs. {fmtGs(totalManuales)}</div>
+            <div style={{ fontSize:11, fontWeight:600, color:"#697970", textTransform:'uppercase' }}>Costos manuales</div>
+            <div style={{ fontSize:13, fontWeight:700, color:"#182c25" }}>Gs. {fmtGs(totalManuales)}</div>
           </div>
           {costosManuales.length === 0 ? (
             <div style={{ fontSize:12, color:'#b0b0b0', textAlign:'center', padding:'12px 0' }}>Sin costos manuales registrados</div>
           ) : costosManuales.map(c => {
             const tipo = TIPOS_COSTO.find(t => t.key === c.tipo) || TIPOS_COSTO[5]
             return (
-              <div key={c.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid #f2f1ef' }}>
+              <div key={c.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:"1px solid #f6f8f7" }}>
                 <div style={{ width:32, height:32, borderRadius:9, background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   <i className={`ti ${tipo.icon}`} style={{ fontSize:14, color:tipo.color }} aria-hidden="true"></i>
                 </div>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:12, fontWeight:500, color:'#0a0a0a' }}>{c.descripcion || tipo.label}</div>
-                  <div style={{ fontSize:10, color:'#9a9a9a' }}>{c.fecha}{c.bloques?.codigo ? ' · ' + c.bloques.codigo : ''}</div>
+                  <div style={{ fontSize:12, fontWeight:500, color:"#182c25" }}>{c.descripcion || tipo.label}</div>
+                  <div style={{ fontSize:10, color:"#697970" }}>{c.fecha}{c.bloques?.codigo ? ' · ' + c.bloques.codigo : ''}</div>
                 </div>
-                <div style={{ fontSize:13, fontWeight:700, color:'#0a0a0a' }}>Gs. {fmtGs(c.monto)}</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"#182c25" }}>Gs. {fmtGs(c.monto)}</div>
                 {!isGuest && (
                   <>
-                    <button onClick={() => abrirEditar(c)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #e8e6e2', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                    <button onClick={() => abrirEditar(c)} style={{ width:28, height:28, borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
                       <i className="ti ti-pencil" style={{ fontSize:12, color:'#555' }} aria-hidden="true"></i>
                     </button>
                     <button onClick={() => eliminar(c.id)} style={{ width:28, height:28, borderRadius:8, border:'1px solid #ffcccc', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
@@ -239,36 +239,36 @@ export default function Costos({ campoActivo, isGuest = false }) {
 
       {modal && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:'#f2f1ef', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:'#0a0a0a', marginBottom:20 }}>{form.id ? 'Editar costo' : 'Nuevo costo'}</div>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:8 }}>Tipo</div>
+          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id ? 'Editar costo' : 'Nuevo costo'}</div>
+            <div style={{ fontSize:10, color:"#697970", marginBottom:8 }}>Tipo</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginBottom:14 }}>
               {TIPOS_COSTO.map(t => (
-                <button key={t.key} onClick={() => setForm(f => ({...f, tipo:t.key}))} style={{ padding:'10px 6px', borderRadius:12, border:'1px solid #e8e6e2', fontSize:10, fontWeight:500, cursor:'pointer', background: form.tipo===t.key ? '#212121' : '#fff', color: form.tipo===t.key ? '#fff' : '#555', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <button key={t.key} onClick={() => setForm(f => ({...f, tipo:t.key}))} style={{ padding:'10px 6px', borderRadius:8, border:"1px solid #e2e9e5", fontSize:10, fontWeight:500, cursor:'pointer', background: form.tipo===t.key ? '#212121' : '#fff', color: form.tipo===t.key ? '#fff' : '#555', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
                   <i className={`ti ${t.icon}`} style={{ fontSize:16 }} aria-hidden="true"></i>
                   {t.label}
                 </button>
               ))}
             </div>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Monto (Gs.) *</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
+            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Monto (Gs.) *</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }}
               type="text" inputMode="numeric" value={form.monto}
               onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setForm(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
               placeholder="Ej: 150.000"/>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Descripcion (opcional)</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
+            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Descripcion (opcional)</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }}
               type="text" value={form.descripcion} onChange={e => setForm(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Compra de plantines"/>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Fecha</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:12, boxSizing:'border-box' }}
+            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Fecha</div>
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }}
               type="date" value={form.fecha} onChange={e => setForm(f=>({...f,fecha:e.target.value}))}/>
-            <div style={{ fontSize:10, color:'#9a9a9a', marginBottom:6 }}>Bloque (opcional)</div>
-            <select style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1px solid #e8e6e2', background:'#fff', fontSize:13, color:'#0a0a0a', marginBottom:16 }}
+            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Bloque (opcional)</div>
+            <select style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:16 }}
               value={form.bloque_id} onChange={e => setForm(f=>({...f,bloque_id:e.target.value}))}>
               <option value="">Sin bloque especifico</option>
               {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
             </select>
-            <button style={{ width:'100%', padding:14, borderRadius:14, background:'#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar costo'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:14, background:'transparent', border:'1px solid #e8e6e2', fontSize:13, color:'#9a9a9a', cursor:'pointer', marginTop:8 }} onClick={cerrarModal}>Cancelar</button>
+            <button style={{ width:'100%', padding:14, borderRadius:8, background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar costo'}</button>
+            <button style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={cerrarModal}>Cancelar</button>
           </div>
         </div>
       )}

@@ -56,7 +56,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div style={{ maxWidth:480, margin:'0 auto', minHeight:'100vh', background:'#f2f1ef', position:'relative', paddingBottom:64 }}>
+      <div style={{ maxWidth:480, margin:'0 auto', minHeight:'100vh', background:"#f6f8f7", position:'relative', paddingBottom:64 }}>
         <Routes>
           <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo}/>}/>
           <Route path="/mapa" element={<Mapa campoActivo={campoActivo}/>}/>

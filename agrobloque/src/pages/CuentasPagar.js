@@ -14,10 +14,7 @@ const tiposMovimiento = [
 
 const hoy = () => new Date().toISOString().slice(0, 10)
 const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
-const parseGs = (v) => {
-  const limpio = String(v || '').replace(/[^\d-]/g, '')
-  return Number(limpio) || 0
-}
+const parseGs = (v) => Number(String(v || '').replace(/[^\d.-]/g, '')) || 0
 const signoMovimiento = (tipo) => tiposMovimiento.find(t => t.value === tipo)?.signo || 1
 
 const proveedorVacio = {
@@ -52,8 +49,6 @@ export default function CuentasPagar() {
   const [proveedorAbierto, setProveedorAbierto] = useState(null)
   const [filtro, setFiltro] = useState('todos')
   const [error, setError] = useState('')
-  const [modalError, setModalError] = useState('')
-  const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -108,7 +103,6 @@ export default function CuentasPagar() {
     setProveedorForm(proveedor || proveedorVacio)
     setModalProveedor(true)
     setError('')
-    setModalError('')
   }
 
   const abrirMovimiento = (movimiento = null, proveedorId = '') => {
@@ -118,17 +112,14 @@ export default function CuentasPagar() {
     )
     setModalMovimiento(true)
     setError('')
-    setModalError('')
   }
 
   const guardarProveedor = async () => {
     if (!proveedorForm.nombre.trim()) {
-      setModalError('Escribi el nombre del proveedor.')
+      setError('Escribi el nombre del proveedor.')
       return
     }
 
-    setSaving(true)
-    setModalError('')
     const payload = {
       nombre: proveedorForm.nombre.trim(),
       tipo: proveedorForm.tipo || 'Agropecuaria',
@@ -144,27 +135,20 @@ export default function CuentasPagar() {
       : supabase.from('proveedores_credito').insert(payload)
     const { error } = await query
 
-    if (error) {
-      console.error('Error guardando proveedor', error)
-      setModalError(`No se pudo guardar el proveedor: ${error.message}`)
-    }
+    if (error) setError('No se pudo guardar el proveedor.')
     else {
       setModalProveedor(false)
       setProveedorForm(proveedorVacio)
       await cargarDatos()
     }
-    setSaving(false)
   }
 
   const guardarMovimiento = async () => {
-    const monto = parseGs(movimientoForm.monto)
-    if (!movimientoForm.proveedor_id || !movimientoForm.concepto.trim() || monto <= 0) {
-      setModalError('Completa proveedor, concepto y monto. Si el monto tiene puntos, esta bien: ejemplo 1.000.000.')
+    if (!movimientoForm.proveedor_id || !movimientoForm.concepto.trim() || parseGs(movimientoForm.monto) <= 0) {
+      setError('Completa proveedor, concepto y monto.')
       return
     }
 
-    setSaving(true)
-    setModalError('')
     const payload = {
       proveedor_id: movimientoForm.proveedor_id,
       fecha: movimientoForm.fecha || hoy(),
@@ -173,7 +157,7 @@ export default function CuentasPagar() {
       categoria: movimientoForm.categoria || null,
       medio_pago: movimientoForm.medio_pago || null,
       comprobante: movimientoForm.comprobante || null,
-      monto,
+      monto: parseGs(movimientoForm.monto),
       notas: movimientoForm.notas || null,
     }
 
@@ -182,16 +166,12 @@ export default function CuentasPagar() {
       : supabase.from('proveedor_movimientos').insert(payload)
     const { error } = await query
 
-    if (error) {
-      console.error('Error guardando movimiento de proveedor', error)
-      setModalError(`No se pudo guardar el movimiento: ${error.message}`)
-    }
+    if (error) setError('No se pudo guardar el movimiento.')
     else {
       setModalMovimiento(false)
       setMovimientoForm(movimientoVacio)
       await cargarDatos()
     }
-    setSaving(false)
   }
 
   const eliminarProveedor = async (proveedor) => {
@@ -252,11 +232,11 @@ export default function CuentasPagar() {
   }
 
   return (
-    <div style={{ background:'#f2f1ef', minHeight:'100vh', padding:'32px 18px 90px' }}>
+    <div style={{ background:"#f6f8f7", minHeight:'100vh', padding:'32px 18px 90px' }}>
       <div style={{ maxWidth:1100, margin:'0 auto' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:14, marginBottom:18 }}>
           <div>
-            <div style={{ color:'#8b928b', fontSize:12 }}>Credito con proveedores</div>
+            <div style={{ color:"#697970", fontSize:12 }}>Credito con proveedores</div>
             <h1 style={{ margin:'4px 0 0', fontSize:28, letterSpacing:-0.8 }}>Cuentas a pagar</h1>
           </div>
           <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
@@ -299,7 +279,7 @@ export default function CuentasPagar() {
               <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:14, alignItems:'center' }}>
                 <button onClick={() => setProveedorAbierto(proveedorAbierto === p.id ? null : p.id)} style={{ border:'none', background:'transparent', textAlign:'left', cursor:'pointer', padding:0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <span style={iconPill}><i className="ti ti-building-store" style={{ fontSize:23, color:'#176a25' }} /></span>
+                    <span style={iconPill}><i className="ti ti-building-store" style={{ fontSize:23, color:"#08603f" }} /></span>
                     <span>
                       <strong style={{ fontSize:17 }}>{p.nombre}</strong>
                       <span style={{ display:'block', fontSize:12, color:'#7a817a', marginTop:3 }}>
@@ -328,9 +308,9 @@ export default function CuentasPagar() {
                   {p.notas && <div style={{ fontSize:13, color:'#4d544e', marginBottom:10, whiteSpace:'pre-wrap' }}>{p.notas}</div>}
                   <div style={{ display:'grid', gap:8 }}>
                     {p.movimientos.length === 0 ? (
-                      <div style={{ color:'#8b928b', fontSize:13 }}>Sin movimientos.</div>
+                      <div style={{ color:"#697970", fontSize:13 }}>Sin movimientos.</div>
                     ) : p.movimientos.map(m => (
-                      <div key={m.id} style={{ background:'#f7f8f6', borderRadius:14, padding:'10px 12px', display:'grid', gridTemplateColumns:'1fr auto', gap:10, alignItems:'center' }}>
+                      <div key={m.id} style={{ background:'#f7f8f6', borderRadius:8, padding:'10px 12px', display:'grid', gridTemplateColumns:'1fr auto', gap:10, alignItems:'center' }}>
                         <div>
                           <strong style={{ fontSize:14 }}>{m.concepto}</strong>
                           <div style={{ fontSize:12, color:'#788078', marginTop:3 }}>
@@ -360,7 +340,6 @@ export default function CuentasPagar() {
 
       {modalProveedor && (
         <Modal onClose={() => setModalProveedor(false)} title={proveedorForm.id ? 'Editar proveedor' : 'Nuevo proveedor'}>
-          {modalError && <div style={modalErrorBox}>{modalError}</div>}
           <input style={input} placeholder="Nombre de la agropecuaria/proveedor" value={proveedorForm.nombre || ''} onChange={e => setProveedorForm(f => ({ ...f, nombre:e.target.value }))} />
           <select style={input} value={proveedorForm.tipo || 'Agropecuaria'} onChange={e => setProveedorForm(f => ({ ...f, tipo:e.target.value }))}>
             {tiposProveedor.map(t => <option key={t}>{t}</option>)}
@@ -373,13 +352,12 @@ export default function CuentasPagar() {
             <input type="checkbox" checked={proveedorForm.activo !== false} onChange={e => setProveedorForm(f => ({ ...f, activo:e.target.checked }))} />
             Proveedor activo
           </label>
-          <button onClick={guardarProveedor} disabled={saving} style={{ ...greenBtn, width:'100%', opacity:saving ? 0.65 : 1 }}>{saving ? 'Guardando...' : 'Guardar proveedor'}</button>
+          <button onClick={guardarProveedor} style={{ ...greenBtn, width:'100%' }}>Guardar proveedor</button>
         </Modal>
       )}
 
       {modalMovimiento && (
         <Modal onClose={() => setModalMovimiento(false)} title={movimientoForm.id ? 'Editar movimiento' : 'Nuevo movimiento'}>
-          {modalError && <div style={modalErrorBox}>{modalError}</div>}
           <select style={input} value={movimientoForm.proveedor_id || ''} onChange={e => setMovimientoForm(f => ({ ...f, proveedor_id:e.target.value }))}>
             <option value="">Elegir proveedor</option>
             {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
@@ -404,7 +382,7 @@ export default function CuentasPagar() {
             <input style={input} placeholder="Factura/comprobante" value={movimientoForm.comprobante || ''} onChange={e => setMovimientoForm(f => ({ ...f, comprobante:e.target.value }))} />
           </div>
           <textarea style={{ ...input, minHeight:80 }} placeholder="Notas" value={movimientoForm.notas || ''} onChange={e => setMovimientoForm(f => ({ ...f, notas:e.target.value }))} />
-          <button onClick={guardarMovimiento} disabled={saving} style={{ ...greenBtn, width:'100%', opacity:saving ? 0.65 : 1 }}>{saving ? 'Guardando...' : 'Guardar movimiento'}</button>
+          <button onClick={guardarMovimiento} style={{ ...greenBtn, width:'100%' }}>Guardar movimiento</button>
         </Modal>
       )}
     </div>
@@ -423,7 +401,7 @@ function Stat({ title, value, sub, dark }) {
 
 function MiniTotal({ label, value }) {
   return (
-    <div style={{ background:'#f7f8f6', borderRadius:14, padding:12 }}>
+    <div style={{ background:'#f7f8f6', borderRadius:8, padding:12 }}>
       <div style={{ color:'#7a817a', fontSize:11, textTransform:'uppercase' }}>{label}</div>
       <strong style={{ fontSize:16, display:'block', marginTop:4 }}>{value}</strong>
     </div>
@@ -433,10 +411,10 @@ function MiniTotal({ label, value }) {
 function Modal({ title, children, onClose }) {
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:18 }}>
-      <div style={{ width:'100%', maxWidth:520, maxHeight:'90vh', overflowY:'auto', background:'#f2f1ef', borderRadius:24, padding:20, boxShadow:'0 24px 70px rgba(0,0,0,0.28)' }}>
+      <div style={{ width:'100%', maxWidth:520, maxHeight:'90vh', overflowY:'auto', background:"#f6f8f7", borderRadius:8, padding:20, boxShadow:'none' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
           <h2 style={{ margin:0, fontSize:22 }}>{title}</h2>
-          <button onClick={onClose} style={{ border:'1px solid #e3e3de', background:'#fff', borderRadius:12, width:36, height:36, cursor:'pointer' }}>x</button>
+          <button onClick={onClose} style={{ border:'1px solid #e3e3de', background:'#fff', borderRadius:8, width:36, height:36, cursor:'pointer' }}>x</button>
         </div>
         {children}
       </div>
@@ -447,14 +425,14 @@ function Modal({ title, children, onClose }) {
 const card = {
   background:'#fff',
   border:'1px solid #e8ece8',
-  borderRadius:18,
+  borderRadius:8,
   padding:16,
-  boxShadow:'0 14px 34px rgba(24, 32, 24, 0.05)',
+  boxShadow:'none',
 }
 
 const empty = {
   ...card,
-  color:'#8b928b',
+  color:"#697970",
   textAlign:'center',
   padding:26,
 }
@@ -462,8 +440,8 @@ const empty = {
 const iconPill = {
   width:46,
   height:46,
-  borderRadius:14,
-  background:'#edf6ec',
+  borderRadius:8,
+  background:"#edf7f1",
   display:'flex',
   alignItems:'center',
   justifyContent:'center',
@@ -472,7 +450,7 @@ const iconPill = {
 const input = {
   width:'100%',
   border:'1px solid #e2e5df',
-  borderRadius:13,
+  borderRadius:8,
   padding:'12px 13px',
   background:'#fff',
   fontSize:14,
@@ -483,36 +461,36 @@ const input = {
 const smallBtn = {
   border:'1px solid #e0e4df',
   background:'#fff',
-  borderRadius:13,
+  borderRadius:8,
   padding:'10px 13px',
-  fontWeight:800,
+  fontWeight:700,
   cursor:'pointer',
 }
 
 const darkBtn = {
   border:'none',
-  background:'#212121',
+  background:"#124e38",
   color:'#fff',
-  borderRadius:13,
+  borderRadius:8,
   padding:'11px 15px',
-  fontWeight:850,
+  fontWeight:700,
   cursor:'pointer',
 }
 
 const greenBtn = {
   border:'none',
-  background:'#176a25',
+  background:"#08603f",
   color:'#fff',
-  borderRadius:13,
+  borderRadius:8,
   padding:'11px 15px',
-  fontWeight:850,
+  fontWeight:700,
   cursor:'pointer',
 }
 
 const miniBtn = {
   border:'1px solid #dfe5df',
   background:'#fff',
-  borderRadius:10,
+  borderRadius:8,
   padding:'7px 10px',
   fontSize:12,
   cursor:'pointer',
@@ -530,32 +508,22 @@ const chip = {
   borderRadius:999,
   padding:'8px 13px',
   fontSize:12,
-  fontWeight:750,
+  fontWeight:700,
   cursor:'pointer',
   color:'#727872',
 }
 
 const activeChip = {
   ...chip,
-  background:'#212121',
+  background:"#124e38",
   color:'#fff',
 }
 
 const errorBox = {
   background:'#fff0f0',
   color:'#b52828',
-  borderRadius:14,
+  borderRadius:8,
   padding:'12px 14px',
   fontSize:13,
   marginBottom:14,
-}
-
-const modalErrorBox = {
-  background:'#fff0f0',
-  color:'#b52828',
-  border:'1px solid #ffd6d6',
-  borderRadius:13,
-  padding:'10px 12px',
-  fontSize:13,
-  marginBottom:12,
 }

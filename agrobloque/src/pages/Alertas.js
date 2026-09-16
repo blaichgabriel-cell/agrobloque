@@ -11,7 +11,7 @@ const diasEntre = (fecha) => {
 const severidad = {
   alta: { color:'#c84040', bg:'#fff0f0', icon:'ti-alert-triangle' },
   media: { color:'#e07b00', bg:'#fff4e8', icon:'ti-alert-circle' },
-  baja: { color:'#176a25', bg:'#edf6ec', icon:'ti-info-circle' },
+  baja: { color:"#08603f", bg:'#edf6ec', icon:'ti-info-circle' },
 }
 
 export default function Alertas() {
@@ -162,14 +162,14 @@ export default function Alertas() {
   }), [alertas])
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f2f1ef', padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
+    <div style={{ minHeight:'100vh', background:"#f6f8f7", padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
       <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 900, margin:'0 auto' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:16 }}>
           <div>
-            <div style={{ fontSize:12, color:'#8b928b' }}>Control operativo</div>
+            <div style={{ fontSize:12, color:"#697970" }}>Control operativo</div>
             <h1 style={{ margin:0, fontSize:24, letterSpacing:-0.6 }}>Alertas inteligentes</h1>
           </div>
-          <button onClick={cargar} style={{ width:42, height:42, borderRadius:14, border:'none', background:'#212121', color:'#fff', cursor:'pointer' }}>
+          <button onClick={cargar} style={{ width:42, height:42, borderRadius:8, border:'none', background:"#124e38", color:'#fff', cursor:'pointer' }}>
             <i className="ti ti-refresh" style={{ fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
@@ -181,15 +181,15 @@ export default function Alertas() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign:'center', padding:38, color:'#8b928b' }}>Calculando alertas...</div>
+          <div style={{ textAlign:'center', padding:38, color:"#697970" }}>Calculando alertas...</div>
         ) : alertas.length === 0 ? (
-          <div style={{ textAlign:'center', padding:38, color:'#176a25', background:'#fff', borderRadius:20 }}>Todo tranquilo por ahora.</div>
+          <div style={{ textAlign:'center', padding:38, color:"#08603f", background:'#fff', borderRadius:8 }}>Todo tranquilo por ahora.</div>
         ) : alertas.map((a, i) => {
           const s = severidad[a.tipo] || severidad.baja
           return (
-            <div key={`${a.titulo}-${i}`} onClick={() => navigate(a.path)} style={{ background:'#fff', borderRadius:18, padding:'14px 16px', marginBottom:8, border:'1px solid #e8ece8', cursor:'pointer', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+            <div key={`${a.titulo}-${i}`} onClick={() => navigate(a.path)} style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:8, border:'1px solid #e8ece8', cursor:'pointer', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
               <div style={{ display:'grid', gridTemplateColumns:'44px 1fr 18px', gap:12, alignItems:'center' }}>
-                <span style={{ width:44, height:44, borderRadius:14, background:s.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <span style={{ width:44, height:44, borderRadius:8, background:s.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <i className={`ti ${s.icon}`} style={{ fontSize:22, color:s.color }} aria-hidden="true"></i>
                 </span>
                 <span>
@@ -208,9 +208,9 @@ export default function Alertas() {
 
 function Stat({ label, value, color }) {
   return (
-    <div style={{ background:'#fff', borderRadius:18, padding:'14px', border:'1px solid #e8ece8' }}>
-      <div style={{ fontSize:11, color:'#8b928b', textTransform:'uppercase', fontWeight:800 }}>{label}</div>
-      <div style={{ fontSize:28, fontWeight:900, color, lineHeight:1.1, marginTop:4 }}>{value}</div>
+    <div style={{ background:'#fff', borderRadius:8, padding:'14px', border:'1px solid #e8ece8' }}>
+      <div style={{ fontSize:11, color:"#697970", textTransform:'uppercase', fontWeight:700 }}>{label}</div>
+      <div style={{ fontSize:28, fontWeight:700, color, lineHeight:1.1, marginTop:4 }}>{value}</div>
     </div>
   )
 }
