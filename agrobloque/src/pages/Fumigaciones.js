@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { guestToken, supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
+import { ajustarStockSeguro } from '../lib/inventory'
 
 const TIPOS = {
   fumigacion: { label:'Fumigacion', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
@@ -263,10 +264,7 @@ export default function Fumigaciones() {
     }, {})
 
     for (const item of Object.values(devoluciones)) {
-      await supabase
-        .from('productos')
-        .update({ stock_actual: item.stock_actual + item.devolver })
-        .eq('id', item.producto_id)
+      await ajustarStockSeguro({ productoId:item.producto_id, delta:item.devolver, tipo:'devolucion_fumigacion', modulo:'Fumigaciones', referenciaId:id, detalle:'Edicion o anulacion de aplicacion', stockActual:item.stock_actual })
     }
   }
 
@@ -311,10 +309,7 @@ export default function Fumigaciones() {
       if (!prod) continue
       const descuento = calcularDescuentoStock(p, prod, form.tanques_cantidad)
       if (!descuento || descuento <= 0) continue
-      await supabase
-        .from('productos')
-        .update({ stock_actual: Math.max(0, Number(prod.stock_actual) - descuento) })
-        .eq('id', p.producto_id)
+      await ajustarStockSeguro({ productoId:p.producto_id, delta:-descuento, tipo:'consumo_fumigacion', modulo:'Fumigaciones', referenciaId:fumigacionId, detalle:form.tipo || 'fumigacion', stockActual:prod.stock_actual })
     }
   }
 

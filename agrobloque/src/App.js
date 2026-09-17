@@ -171,6 +171,19 @@ function ScrollToTop() {
   return null
 }
 
+function ConnectionStatus() {
+  const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine)
+  useEffect(() => {
+    const conectar = () => setOnline(true)
+    const desconectar = () => setOnline(false)
+    window.addEventListener('online', conectar)
+    window.addEventListener('offline', desconectar)
+    return () => { window.removeEventListener('online', conectar); window.removeEventListener('offline', desconectar) }
+  }, [])
+  if (online) return null
+  return <div className="ag-offline"><i className="ti ti-wifi-off" /> Sin conexión. No cierres la aplicación hasta recuperar internet.</div>
+}
+
 function DesktopSidebar({ isGuest = false, role }) {
   const tabs = filterTabsByRole(allTabs, role, isGuest)
   const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
@@ -202,6 +215,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
 
   return (
     <div className="ag-app" style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#dfe3df' : '#f2f1ef' }}>
+      <ConnectionStatus />
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
       <div data-app-scroll style={{

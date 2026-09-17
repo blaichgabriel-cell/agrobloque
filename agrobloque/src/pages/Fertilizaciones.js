@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
+import { ajustarStockSeguro } from '../lib/inventory'
 
 const UNIDADES = ['kg', 'g', 'cc', 'ml', 'L', 'unidad']
 const hoy = () => new Date().toISOString().split('T')[0]
@@ -11,7 +12,21 @@ const sumarDias = (fecha, dias) => {
   base.setDate(base.getDate() + dias)
   return base.toISOString().split('T')[0]
 }
-const plantasDelBloque = (bloque) => Number(bloque?.plantaciones?.find?.(p => p.activa)?.densidad_plantas_m2 || 0)
+const fechasDelPlan = (inicio, fin, frecuencia, diaSemana) => {
+  const fechas = []
+  if (!inicio || !fin) return fechas
+  const actual = new Date(`${inicio}T12:00:00`)
+  const limite = new Date(`${fin}T12:00:00`)
+  while (actual <= limite) {
+    if (frecuencia === 'diaria' || actual.getDay() === Number(diaSemana)) fechas.push(actual.toISOString().split('T')[0])
+    actual.setDate(actual.getDate() + 1)
+  }
+  return fechas
+}
+const plantasDelBloque = (bloque) => {
+  const plantacion = bloque?.plantaciones?.find?.(p => p.activa)
+  return Number(plantacion?.cantidad_plantas ?? plantacion?.densidad_plantas_m2 ?? 0)
+}
 
 const normalizarUnidad = (unidad = '') => {
   const u = String(unidad).trim().toLowerCase()
@@ -308,14 +323,17 @@ export default function Fertilizaciones({ campoActivo }) {
       .order('nombre')
     setProductos(productosData || [])
 
-    let queryBloques = supabase
-      .from('bloques')
-      .select('id, codigo, campo_id, activo, plantaciones(id, activa, densidad_plantas_m2, cultivos(nombre))')
-      .eq('activo', true)
-      .order('codigo')
-
-    if (campoActivo?.id) queryBloques = queryBloques.eq('campo_id', campoActivo.id)
-    const { data: bloquesData, error: bloquesError } = await queryBloques
+    const consultarBloques = (conCantidad = true) => {
+      const camposPlantacion = conCantidad ? 'id, activa, cantidad_plantas, densidad_plantas_m2, cultivos(nombre)' : 'id, activa, densidad_plantas_m2, cultivos(nombre)'
+      let query = supabase.from('bloques').select(`id, codigo, campo_id, activo, plantaciones(${camposPlantacion})`).eq('activo', true).order('codigo')
+      if (campoActivo?.id) query = query.eq('campo_id', campoActivo.id)
+      return query
+    }
+    let bloquesResult = await consultarBloques(true)
+    if (bloquesResult.error && `${bloquesResult.error.message || ''}`.toLowerCase().includes('cantidad_plantas')) {
+      bloquesResult = await consultarBloques(false)
+    }
+    const { data: bloquesData, error: bloquesError } = bloquesResult
     if (bloquesError) {
       setError(`No se pudieron cargar los bloques: ${bloquesError.message}`)
       return
@@ -459,9 +477,21 @@ export default function Fertilizaciones({ campoActivo }) {
           notas: form.notas || null,
         }
       })
-      const { error: planError } = await supabase.from('fertilizacion_planes').insert(planesNuevos)
+      const { data:planesGuardados, error: planError } = await supabase.from('fertilizacion_planes').insert(planesNuevos).select('id, bloque_id, campo_id, nombre, fecha_inicio, fecha_fin, frecuencia, dia_semana')
       setSaving(false)
       if (planError) return setError(`No se pudo guardar el plan: ${planError.message}`)
+      const tareasPlan = (planesGuardados || []).flatMap(plan => fechasDelPlan(plan.fecha_inicio, plan.fecha_fin, plan.frecuencia, plan.dia_semana).map(fecha => ({
+        tipo:'fertiriego',
+        descripcion:`Aplicar plan: ${plan.nombre}`,
+        fecha_programada:fecha,
+        campo_id:plan.campo_id || null,
+        bloque_id:plan.bloque_id || null,
+        completada:false,
+      })))
+      if (tareasPlan.length) {
+        const { error:tareasError } = await supabase.from('tareas').insert(tareasPlan)
+        if (tareasError) setError(`El plan se guardó, pero no se pudieron crear sus tareas: ${tareasError.message}`)
+      }
       setModal(false)
       setSuccess(`Plan ${form.frecuencia === 'diaria' ? 'diario' : 'semanal'} guardado correctamente.`)
       await cargarDatos()
@@ -527,10 +557,15 @@ export default function Fertilizaciones({ campoActivo }) {
         .eq('id', productoId)
         .single()
       if (!prodActual) continue
-      await supabase
-        .from('productos')
-        .update({ stock_actual: Math.max(0, Number(prodActual.stock_actual) - descuento) })
-        .eq('id', productoId)
+      await ajustarStockSeguro({
+        productoId,
+        delta:-descuento,
+        tipo:'consumo_fertilizacion',
+        modulo:'Fertilizaciones',
+        referenciaId:form.plan_id || form.fecha,
+        detalle:`${bloquesDestino.length} bloque(s)`,
+        stockActual:prodActual.stock_actual,
+      })
     }
 
     if (form.plan_id) {

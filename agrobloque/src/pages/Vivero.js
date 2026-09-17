@@ -276,18 +276,30 @@ export default function Vivero() {
         .eq('bloque_id', trasForm.bloque_id)
         .eq('activa', true)
 
-      const { data: plantacion, error: plantacionError } = await supabase
+      let plantacionResult = await supabase
         .from('plantaciones')
         .insert({
           bloque_id: trasForm.bloque_id,
           cultivo_id: cultivoId,
           notas: detalle.variedad ? `Variedad: ${detalle.variedad}` : null,
           fecha_siembra: trasForm.fecha_real_trasplante,
-          densidad_plantas_m2: trasForm.cantidad_plantas || null,
+          cantidad_plantas: trasForm.cantidad_plantas ? Math.round(num(trasForm.cantidad_plantas)) : null,
           activa: true,
         })
         .select('id')
         .single()
+
+      if (plantacionResult.error && `${plantacionResult.error.message || ''}`.toLowerCase().includes('cantidad_plantas')) {
+        plantacionResult = await supabase.from('plantaciones').insert({
+          bloque_id:trasForm.bloque_id,
+          cultivo_id:cultivoId,
+          notas:detalle.variedad ? `Variedad: ${detalle.variedad}` : null,
+          fecha_siembra:trasForm.fecha_real_trasplante,
+          densidad_plantas_m2:trasForm.cantidad_plantas || null,
+          activa:true,
+        }).select('id').single()
+      }
+      const { data:plantacion, error:plantacionError } = plantacionResult
 
       if (plantacionError) throw plantacionError
 

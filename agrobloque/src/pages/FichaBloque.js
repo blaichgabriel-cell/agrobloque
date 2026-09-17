@@ -320,7 +320,7 @@ export default function FichaBloque() {
       cultivo_id: cultivo?.id || '',
       variedad_texto: plantacionActiva?.notas?.replace('Variedad: ','') || '',
       fecha_siembra: plantacionActiva?.fecha_siembra || '',
-      cantidad_plantas: plantacionActiva?.densidad_plantas_m2 || '',
+      cantidad_plantas: plantacionActiva?.cantidad_plantas ?? plantacionActiva?.densidad_plantas_m2 ?? '',
       abonos_ids: abIds,
       abonos_cantidades: abCants
     })
@@ -366,16 +366,31 @@ export default function FichaBloque() {
     }))
   }
 
+  const guardarPlantacionCompatible = async (payload, plantacionId = null) => {
+    const ejecutar = (datos) => plantacionId
+      ? supabase.from('plantaciones').update(datos).eq('id', plantacionId).select().single()
+      : supabase.from('plantaciones').insert(datos).select().single()
+    let resultado = await ejecutar(payload)
+    const texto = `${resultado.error?.message || ''} ${resultado.error?.details || ''}`.toLowerCase()
+    if (resultado.error && (texto.includes('cantidad_plantas') || resultado.error.code === 'PGRST204')) {
+      const { cantidad_plantas, ...compatibilidad } = payload
+      resultado = await ejecutar({ ...compatibilidad, densidad_plantas_m2:cantidad_plantas || null })
+    }
+    if (resultado.error) throw resultado.error
+    return resultado.data
+  }
+
   const guardarNuevaPlantacion = async () => {
     if (!form.cultivo_id || !form.fecha_siembra) return
     setSaving(true)
     if (plantacionActiva) await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
-    const { data: nueva } = await supabase.from('plantaciones').insert({
+    const nueva = await guardarPlantacionCompatible({
       bloque_id: id, cultivo_id: form.cultivo_id,
       notas: form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null,
       fecha_siembra: form.fecha_siembra,
-      densidad_plantas_m2: form.cantidad_plantas || null, activa: true
-    }).select().single()
+      cantidad_plantas: form.cantidad_plantas ? Math.round(Number(form.cantidad_plantas)) : null,
+      activa: true
+    })
     if (nueva && form.abonos_ids.length > 0) {
       await supabase.from('plantacion_abonos').insert(
         form.abonos_ids.map(ab => ({
@@ -394,12 +409,12 @@ export default function FichaBloque() {
   const guardarEditarPlantacion = async () => {
     if (!plantacionActiva || !form.cultivo_id || !form.fecha_siembra) return
     setSaving(true)
-    await supabase.from('plantaciones').update({
+    await guardarPlantacionCompatible({
       cultivo_id: form.cultivo_id,
       notas: form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null,
       fecha_siembra: form.fecha_siembra,
-      densidad_plantas_m2: form.cantidad_plantas || null
-    }).eq('id', plantacionActiva.id)
+      cantidad_plantas: form.cantidad_plantas ? Math.round(Number(form.cantidad_plantas)) : null,
+    }, plantacionActiva.id)
     await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionActiva.id)
     if (form.abonos_ids.length > 0) {
       await supabase.from('plantacion_abonos').insert(
@@ -741,8 +756,9 @@ export default function FichaBloque() {
   }
 
   const totalKgCiclo = cosechasCiclo.reduce((s, c) => s + Number(c.kg_total), 0)
-  const kgPorPlanta = plantacionActiva?.densidad_plantas_m2 && totalKgCiclo > 0
-    ? (totalKgCiclo / Number(plantacionActiva.densidad_plantas_m2)).toFixed(2)
+  const cantidadPlantasActiva = Number(plantacionActiva?.cantidad_plantas ?? plantacionActiva?.densidad_plantas_m2 ?? 0)
+  const kgPorPlanta = cantidadPlantasActiva && totalKgCiclo > 0
+    ? (totalKgCiclo / cantidadPlantasActiva).toFixed(2)
     : null
   const totalMuertes = muertes.reduce((s, m) => s + Number(m.cantidad), 0)
 
@@ -831,7 +847,7 @@ export default function FichaBloque() {
               ['Cultivo', historialDetalle.cultivos?.nombre || '-'],
               ['Variedad', getVariedad(historialDetalle) || '-'],
               ['Fecha siembra', historialDetalle.fecha_siembra || '-'],
-              ['Plantas', historialDetalle.densidad_plantas_m2 ? `${Number(historialDetalle.densidad_plantas_m2).toLocaleString('es-PY')}` : '-'],
+              ['Plantas', (historialDetalle.cantidad_plantas ?? historialDetalle.densidad_plantas_m2) ? `${Number(historialDetalle.cantidad_plantas ?? historialDetalle.densidad_plantas_m2).toLocaleString('es-PY')}` : '-'],
             ].map(([k,v]) => (
               <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:"1px solid #f6f8f7" }}>
                 <div style={{ fontSize:12, color:"#697970" }}>{k}</div>
@@ -937,7 +953,7 @@ export default function FichaBloque() {
                     ['Variedad', getVariedad(plantacionActiva) || '-'],
                     ['Fecha siembra', plantacionActiva.fecha_siembra || '-'],
                     ['Dias en campo', diasDesde(plantacionActiva.fecha_siembra) !== null ? `${diasDesde(plantacionActiva.fecha_siembra)} dias` : '-'],
-                    ['Cantidad de plantas', plantacionActiva.densidad_plantas_m2 ? `${Number(plantacionActiva.densidad_plantas_m2).toLocaleString('es-PY')} plantas` : '-'],
+                    ['Cantidad de plantas', cantidadPlantasActiva ? `${cantidadPlantasActiva.toLocaleString('es-PY')} plantas` : '-'],
                   ].map(([k,v]) => (
                     <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:"1px solid #f6f8f7" }}>
                       <div style={{ fontSize:12, color:"#697970" }}>{k}</div>

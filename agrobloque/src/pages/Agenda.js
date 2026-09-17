@@ -14,11 +14,11 @@ function ModalConfirm({ onConfirm, onCancel }) {
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div style={{ background:'#fff', borderRadius:8, padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:"#182c25", marginBottom:8, textAlign:'center' }}>¿Eliminar tarea?</div>
-        <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>Esta acción no se puede deshacer.</div>
+        <div style={{ fontSize:15, fontWeight:600, color:"#182c25", marginBottom:8, textAlign:'center' }}>¿Cancelar tarea?</div>
+        <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>La tarea se conservará en el historial.</div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={onCancel} style={{ flex:1, padding:12, borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:8, border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
+          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:8, border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Cancelar tarea</button>
         </div>
       </div>
     </div>
@@ -69,7 +69,11 @@ export default function Agenda() {
 
   const eliminarTarea = (id) => {
     setConfirmar({ fn: async () => {
-      await supabase.from('tareas').delete().eq('id', id)
+      const { error } = await supabase.from('tareas').update({ anulada:true, anulada_at:new Date().toISOString() }).eq('id', id)
+      if (error && `${error.message || ''}`.toLowerCase().includes('anulada')) {
+        const tarea = tareas.find(t => t.id === id)
+        await supabase.from('tareas').update({ completada:true, fecha_completada:hoy, descripcion:`[Cancelada] ${tarea?.descripcion || ''}` }).eq('id', id)
+      }
       setConfirmar(null); fetchTareas()
     }})
   }
@@ -82,6 +86,7 @@ export default function Agenda() {
   })
 
   const getBadge = (t) => {
+    if (t.anulada || String(t.descripcion || '').startsWith('[Cancelada]')) return { label:'Cancelada', bg:'#f2f1ef', color:'#697970' }
     if (t.completada) return { label:'Completada', bg:'#eeeeee', color:"#124e38" }
     if (t.fecha_programada < hoy) return { label:'Vencida', bg:'#fff0f0', color:'#c84040' }
     if (t.fecha_programada === hoy) return { label:'Hoy', bg:'#fff3e8', color:'#c8700a' }
@@ -132,14 +137,15 @@ export default function Agenda() {
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:10, borderTop:"1px solid #f6f8f7" }}>
                 <div style={{ fontSize:10, color:'#b0b0b0' }}>{t.fecha_programada}</div>
                 <div style={{ display:'flex', gap:6 }}>
-                  {!t.completada && (
+                  {!t.completada && !t.anulada && (
                     <button onClick={() => completarTarea(t.id)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #d4b89a', background:'transparent', fontSize:11, fontWeight:500, color:"#124e38", cursor:'pointer' }}>
                       ✓ Completar
                     </button>
                   )}
-                  <button onClick={() => eliminarTarea(t.id)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:11, fontWeight:500, color:'#c84040', cursor:'pointer' }}>
-                    Eliminar
+                  {!t.anulada && <button onClick={() => eliminarTarea(t.id)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:11, fontWeight:500, color:'#c84040', cursor:'pointer' }}>
+                    Cancelar
                   </button>
+                  }
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
+import { ajustarStockSeguro } from '../lib/inventory'
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
@@ -64,6 +65,7 @@ export default function Inventario() {
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [productos, setProductos] = useState([])
   const [categorias, setCategorias] = useState([])
+  const [movimientos, setMovimientos] = useState([])
   const [categoriaActiva, setCategoriaActiva] = useState(null)
   const [modal, setModal] = useState(null)
   const [confirmar, setConfirmar] = useState(null)
@@ -72,7 +74,7 @@ export default function Inventario() {
   const [sincronizandoAbonos, setSincronizandoAbonos] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => { fetchProductos(); fetchCategorias() }, [])
+  useEffect(() => { fetchProductos(); fetchCategorias(); fetchMovimientos() }, [])
 
   const asegurarCategoriaProducto = async () => {
     const { data: existente } = await supabase
@@ -168,6 +170,11 @@ export default function Inventario() {
     setCategorias(data || [])
   }
 
+  const fetchMovimientos = async () => {
+    const { data, error:movError } = await supabase.from('inventario_movimientos').select('id, cantidad, stock_nuevo, tipo, modulo, detalle, created_at, productos(nombre, unidad)').order('created_at', { ascending:false }).limit(12)
+    if (!movError) setMovimientos(data || [])
+  }
+
   const getCatNombre = (p) => p.categorias_producto?.nombre || 'Otro'
 
   const getProductosCat = (catKey) => productos.filter(p => getCatNombre(p) === catKey)
@@ -226,9 +233,14 @@ export default function Inventario() {
   const ajustarStock = async (id, delta) => {
     const p = productos.find(x => x.id === id)
     if (!p) return
-    await supabase.from('productos').update({ stock_actual: Math.max(0, Number(p.stock_actual) + delta) }).eq('id', id)
-    await registrarAuditoria({ accion:'Ajusto stock', modulo:'Inventario', tabla:'productos', registroId:id, detalle:`${p.nombre}: ${delta > 0 ? '+' : ''}${delta}` })
-    fetchProductos()
+    setError('')
+    try {
+      await ajustarStockSeguro({ productoId:id, delta, tipo:'ajuste_manual', modulo:'Inventario', referenciaId:id, detalle:p.nombre, stockActual:p.stock_actual })
+      await registrarAuditoria({ accion:'Ajusto stock', modulo:'Inventario', tabla:'productos', registroId:id, detalle:`${p.nombre}: ${delta > 0 ? '+' : ''}${delta}` })
+      await Promise.all([fetchProductos(), fetchMovimientos()])
+    } catch (e) {
+      setError(`No se pudo ajustar el stock: ${e.message || 'error desconocido'}`)
+    }
   }
 
   const eliminar = (id, nombre) => {
@@ -381,7 +393,15 @@ export default function Inventario() {
       )}
 
       <div style={{ padding: isDesktop ? '0 36px 100px' : '0 14px 100px' }}>
-        <NotasPanel modulo="inventario" titulo="Blog de notas de inventario" />
+        {movimientos.length > 0 && <section style={{ background:'#fff', border:'1px solid #e2e9e5', borderRadius:8, padding:18, marginBottom:16 }}>
+          <div style={{ fontSize:18, fontWeight:700, color:'#182c25', marginBottom:12 }}>Movimientos recientes</div>
+          {movimientos.map(m => <div key={m.id} style={{ display:'grid', gridTemplateColumns:isDesktop ? '1fr auto auto' : '1fr auto', gap:10, padding:'10px 0', borderTop:'1px solid #eef1ee', alignItems:'center' }}>
+            <div><strong style={{ fontSize:13 }}>{m.productos?.nombre || 'Producto'}</strong><div style={{ fontSize:11, color:'#697970', marginTop:3 }}>{m.detalle || m.modulo || m.tipo}</div></div>
+            <strong style={{ color:Number(m.cantidad) >= 0 ? '#08603f' : '#c84040', fontSize:13 }}>{Number(m.cantidad) >= 0 ? '+' : ''}{fmtNumero(m.cantidad)} {m.productos?.unidad || ''}</strong>
+            {isDesktop && <time style={{ fontSize:11, color:'#8a948b' }}>{new Date(m.created_at).toLocaleString('es-PY')}</time>}
+          </div>)}
+        </section>}
+        <NotasPanel modulo="inventario" titulo="Notas del inventario" />
       </div>
 
       {/* Modal producto */}

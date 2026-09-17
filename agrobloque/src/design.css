@@ -15,6 +15,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .ag-app input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='color']):focus, .ag-app select:focus, .ag-app textarea:focus { border-color: #4c8b70 !important; box-shadow: 0 0 0 3px #0b684018 !important; outline: none; }
 .ag-app h1, .ag-app h2, .ag-app h3 { text-wrap: balance; }
 .ag-app { background: var(--ag-canvas) !important; }
+.ag-offline { position:fixed; z-index:500; left:50%; top:14px; transform:translateX(-50%); display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:8px; background:#1f1f1f; color:#fff; font-size:12px; font-weight:700; box-shadow:0 12px 28px rgba(0,0,0,.22); }
 .ag-app [data-app-scroll] { background: var(--ag-canvas) !important; }
 .ag-app input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='color']), .ag-app select, .ag-app textarea { border-radius: 6px !important; min-height: 42px; line-height: 1.4; }
 .ag-app input::placeholder, .ag-app textarea::placeholder { color: #788780; opacity: 1; }
