@@ -6,6 +6,12 @@ const UNIDADES = ['kg', 'g', 'cc', 'ml', 'L', 'unidad']
 const hoy = () => new Date().toISOString().split('T')[0]
 const fmtNum = (n) => Number(n || 0).toLocaleString('es-PY')
 const fmtFecha = (fecha) => fecha ? new Date(`${fecha}T00:00:00`).toLocaleDateString('es-PY') : '-'
+const sumarDias = (fecha, dias) => {
+  const base = fecha ? new Date(`${fecha}T12:00:00`) : new Date()
+  base.setDate(base.getDate() + dias)
+  return base.toISOString().split('T')[0]
+}
+const plantasDelBloque = (bloque) => Number(bloque?.plantaciones?.find?.(p => p.activa)?.densidad_plantas_m2 || 0)
 
 const normalizarUnidad = (unidad = '') => {
   const u = String(unidad).trim().toLowerCase()
@@ -70,7 +76,10 @@ const card = {
 const productoTexto = (producto) => {
   const nombre = producto?.nombre || 'Producto'
   const cantidad = producto?.cantidad ? `${producto.cantidad} ${producto.unidad || ''}`.trim() : ''
-  return cantidad ? `${nombre} (${cantidad})` : nombre
+  const dosis = producto?.modo === 'por_planta' && producto?.dosis_por_planta
+    ? ` · ${producto.dosis_por_planta} ${producto.unidad_dosis || producto.unidad || ''}/planta`
+    : ''
+  return cantidad ? `${nombre} (${cantidad}${dosis})` : nombre
 }
 
 const resumenSoluciones = (soluciones = []) => soluciones
@@ -98,7 +107,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
     const letras = ['A', 'B', 'C', 'D', 'E', 'F']
     const usadas = form.soluciones.map(s => s.nombre)
     const nombre = letras.find(l => !usadas.includes(l)) || `S${form.soluciones.length + 1}`
-    setForm(f => ({ ...f, soluciones: [...f.soluciones, { nombre, productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }] }))
+    setForm(f => ({ ...f, soluciones: [...f.soluciones, { nombre, productos: [{ nombre: '', cantidad: '', unidad: 'kg', modo: 'por_tanque' }] }] }))
   }
 
   const actualizarSolucion = (si, campo, valor) => {
@@ -116,7 +125,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
   const agregarProducto = (si) => {
     setForm(f => {
       const soluciones = [...f.soluciones]
-      soluciones[si] = { ...soluciones[si], productos: [...soluciones[si].productos, { nombre: '', cantidad: '', unidad: 'kg' }] }
+      soluciones[si] = { ...soluciones[si], productos: [...soluciones[si].productos, { nombre: '', cantidad: '', unidad: 'kg', modo: 'por_tanque' }] }
       return { ...f, soluciones }
     })
   }
@@ -129,7 +138,15 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
       if (campo === 'producto_id') {
         const prod = productos.find(p => p.id === valor)
         actual.nombre = prod?.nombre || ''
-        actual.unidad = prod?.unidad || actual.unidad || 'kg'
+        const unidadStock = normalizarUnidad(prod?.unidad || '')
+        actual.unidad = actual.modo === 'por_planta'
+          ? (unidadStock === 'kg' || unidadStock === 'g' ? 'g' : unidadStock === 'L' || unidadStock === 'cc' ? 'ml' : prod?.unidad || actual.unidad || 'g')
+          : prod?.unidad || actual.unidad || 'kg'
+      }
+      if (campo === 'modo' && valor === 'por_planta') {
+        const prod = productos.find(p => p.id === actual.producto_id)
+        const unidadStock = normalizarUnidad(prod?.unidad || '')
+        actual.unidad = unidadStock === 'kg' || unidadStock === 'g' ? 'g' : unidadStock === 'L' || unidadStock === 'cc' ? 'ml' : actual.unidad || 'g'
       }
       productosSol[pi] = actual
       soluciones[si] = { ...soluciones[si], productos: productosSol }
@@ -164,8 +181,9 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           {form.tipo === 'plan' && form.frecuencia === 'semanal' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Dia<select value={form.dia_semana ?? 1} onChange={e => setForm(f => ({ ...f, dia_semana:e.target.value }))} style={inputBase}>{['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'].map((d,i) => <option key={d} value={i}>{d}</option>)}</select></label>}
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>
             {form.tipo === 'plan' ? 'Fecha de inicio' : 'Fecha'}
-            <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value }))} style={inputBase} />
+            <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(e.target.value, 6) } : {}) }))} style={inputBase} />
           </label>
+          {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Fecha final<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} style={inputBase} /></label>}
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} style={inputBase} /></label>
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} style={inputBase} /></label>
           {form.plan_id && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} style={inputBase}><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
@@ -186,7 +204,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                     cursor:'pointer',
                     fontWeight:700,
                   }}>
-                    {b.codigo}{cultivo ? ` - ${cultivo}` : ''}
+                    {b.codigo}{cultivo ? ` - ${cultivo}` : ''}{plantasDelBloque(b) ? ` · ${fmtNum(plantasDelBloque(b))} plantas` : ''}
                   </button>
                 )
               })}
@@ -207,7 +225,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
               </div>
               <div style={{ display:'grid', gap:8 }}>
                 {sol.productos.map((p, pi) => (
-                  <div key={pi} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 120px 110px 38px', gap:8, alignItems:'center' }}>
+                  <div key={pi} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 138px 120px 94px 38px', gap:8, alignItems:'center' }}>
                     <div style={{ display:'grid', gap:6 }}>
                       <select value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)} style={inputBase}>
                         <option value="">Sin inventario</option>
@@ -215,13 +233,20 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                       </select>
                       {!p.producto_id && <input value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Escribir producto" style={{ ...inputBase, background:'#f7fbf7', borderColor:'#d6dfd6' }} />}
                     </div>
-                    <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)} placeholder="Cantidad" type="number" step="0.01" style={inputBase} />
+                    <select value={p.modo || 'por_tanque'} onChange={e => actualizarProducto(si, pi, 'modo', e.target.value)} style={inputBase}>
+                      <option value="por_tanque">Por tanque</option>
+                      <option value="por_planta">Por planta</option>
+                    </select>
+                    <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)} placeholder={p.modo === 'por_planta' ? 'Dosis/planta' : 'Cantidad'} type="number" min="0" step="0.01" style={inputBase} />
                     <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} style={inputBase}>
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
                     <button onClick={() => eliminarProducto(si, pi)} disabled={sol.productos.length === 1} style={{ border:'none', background:'#f2efeb', borderRadius:8, height:38, cursor: sol.productos.length === 1 ? 'not-allowed' : 'pointer' }}>
                       <i className="ti ti-trash" />
                     </button>
+                    {p.modo === 'por_planta' && <div style={{ gridColumn:'1 / -1', background:'#edf7f1', borderRadius:8, padding:'8px 10px', color:'#08603f', fontSize:12 }}>
+                      <strong>Total calculado:</strong> {fmtNum((form.bloques_ids || []).reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0) * Number(p.cantidad || 0))} {p.unidad || 'g'} para {fmtNum((form.bloques_ids || []).reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0))} plantas.
+                    </div>}
                   </div>
                 ))}
               </div>
@@ -263,6 +288,7 @@ export default function Fertilizaciones({ campoActivo }) {
     plan_id: '',
     estado: 'completa',
     fecha: hoy(),
+    fecha_fin: sumarDias(hoy(), 6),
     nombre_plan: '',
     frecuencia: 'semanal',
     dia_semana: '1',
@@ -270,7 +296,7 @@ export default function Fertilizaciones({ campoActivo }) {
     tanques_cantidad: '1',
     bloques_ids: [],
     notas: '',
-    soluciones: [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg' }] }],
+    soluciones: [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
   })
 
   const cargarDatos = async () => {
@@ -284,7 +310,7 @@ export default function Fertilizaciones({ campoActivo }) {
 
     let queryBloques = supabase
       .from('bloques')
-      .select('id, codigo, campo_id, activo, plantaciones(id, activa, cultivos(nombre))')
+      .select('id, codigo, campo_id, activo, plantaciones(id, activa, densidad_plantas_m2, cultivos(nombre))')
       .eq('activo', true)
       .order('codigo')
 
@@ -343,6 +369,7 @@ export default function Fertilizaciones({ campoActivo }) {
 
   const totalBloquesAplicados = useMemo(() => new Set(registros.map(r => r.bloque_id)).size, [registros])
   const ultimaFecha = registros[0]?.fecha
+  const planesVigentes = useMemo(() => planes.filter(plan => !plan.fecha_fin || plan.fecha_fin >= hoy()), [planes])
 
   const abrirModal = (tipo = 'aplicacion') => {
     setForm({
@@ -350,6 +377,7 @@ export default function Fertilizaciones({ campoActivo }) {
       plan_id: '',
       estado: 'completa',
       fecha: hoy(),
+      fecha_fin: sumarDias(hoy(), 6),
       nombre_plan: '',
       frecuencia: 'semanal',
       dia_semana: '1',
@@ -357,7 +385,7 @@ export default function Fertilizaciones({ campoActivo }) {
       tanques_cantidad: '1',
       bloques_ids: bloques.length === 1 ? [bloques[0].id] : [],
       notas: '',
-      soluciones: [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg' }] }],
+      soluciones: [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
     })
     setModal(true)
   }
@@ -373,26 +401,34 @@ export default function Fertilizaciones({ campoActivo }) {
           .filter(p => p.producto_id || p.nombre || p.cantidad)
           .map(p => {
             const prod = productos.find(x => x.id === p.producto_id)
-            const descuentoStock = prod ? convertirAStock(p.cantidad, p.unidad || prod.unidad, prod.unidad) : null
             return {
               producto_id: p.producto_id || null,
               nombre: prod?.nombre || p.nombre || '',
               cantidad:p.cantidad || '',
               unidad:p.unidad || prod?.unidad || 'kg',
-              descuento_stock: descuentoStock === null ? null : descuentoStock,
+              modo:p.modo || 'por_tanque',
+              unidad_stock:prod?.unidad || null,
             }
           })
       }))
       .filter(sol => sol.productos.length > 0)
 
     if (!form.fecha) return setError('Elegir una fecha.')
+    if (form.tipo === 'plan' && !form.fecha_fin) return setError('Elegir la fecha final del plan.')
+    if (form.tipo === 'plan' && form.fecha_fin < form.fecha) return setError('La fecha final no puede ser anterior a la fecha de inicio.')
     if (!bloquesDestino.length) return setError('Elegir al menos un bloque.')
     if (!solucionesLimpias.length) return setError('Agregar al menos un producto.')
     if (solucionesLimpias.flatMap(sol => sol.productos).some(p => !p.producto_id && !p.nombre?.trim())) {
       return setError('Escribir el nombre del producto o elegirlo desde inventario.')
     }
-    if (solucionesLimpias.flatMap(sol => sol.productos).some(p => p.producto_id && p.descuento_stock === null)) {
+    if (solucionesLimpias.flatMap(sol => sol.productos).some(p => p.producto_id && convertirAStock(p.cantidad, p.unidad || p.unidad_stock, p.unidad_stock) === null)) {
       return setError('Hay una unidad que no coincide con el inventario. Usa kg/g para productos en kg o L/cc/ml para liquidos.')
+    }
+    const bloquesSinPlantas = bloquesDestino
+      .map(id => bloques.find(b => b.id === id))
+      .filter(b => !plantasDelBloque(b))
+    if (solucionesLimpias.flatMap(sol => sol.productos).some(p => p.modo === 'por_planta') && bloquesSinPlantas.length) {
+      return setError(`Falta cargar la cantidad de plantas en: ${bloquesSinPlantas.map(b => b?.codigo || 'bloque').join(', ')}.`)
     }
 
     const tanqueLitros = Math.max(0, Number(form.tanque_litros) || 0)
@@ -413,12 +449,13 @@ export default function Fertilizaciones({ campoActivo }) {
           nombre: form.nombre_plan?.trim() || `${cultivo || 'Cultivo'} - ${form.frecuencia === 'diaria' ? 'diario' : 'semanal'}`,
           activo: true,
           fecha_inicio: form.fecha,
+          fecha_fin: form.fecha_fin,
           frecuencia: form.frecuencia || 'semanal',
           dia_semana: form.frecuencia === 'semanal' ? Number(form.dia_semana) : null,
           tanque_litros: tanqueLitros,
           tanques_cantidad: tanquesCantidad,
           litros_preparados: tanqueLitros * tanquesCantidad,
-          soluciones: solucionesLimpias,
+          soluciones: solucionesLimpias.map(sol => ({ ...sol, productos:sol.productos.map(({ unidad_stock, ...p }) => p) })),
           notas: form.notas || null,
         }
       })
@@ -432,18 +469,36 @@ export default function Fertilizaciones({ campoActivo }) {
     }
 
     setSaving(true)
-    const payloads = bloquesDestino.map(bloque_id => ({
-      bloque_id,
-      plantacion_id: bloques.find(b => b.id === bloque_id)?.plantaciones?.find(p => p.activa)?.id || null,
-      plan_id: form.plan_id || null,
-      fecha: form.fecha,
-      tanque_litros: tanqueLitros,
-      tanques_cantidad: form.estado === 'suspendida' ? 0 : tanquesCantidad,
-      estado: form.estado || 'completa',
-      dosis_alcance: 'por_tanque',
-      notas: form.notas || null,
-      soluciones: solucionesLimpias,
+    const solucionesPorBloque = (bloque) => solucionesLimpias.map(sol => ({
+      nombre:sol.nombre,
+      productos:sol.productos.map(p => {
+        const { unidad_stock, ...producto } = p
+        if (p.modo !== 'por_planta') return producto
+        const total = Number(p.cantidad || 0) * plantasDelBloque(bloque)
+        return {
+          ...producto,
+          cantidad:total,
+          dosis_por_planta:Number(p.cantidad || 0),
+          unidad_dosis:p.unidad,
+          plantas_calculadas:plantasDelBloque(bloque),
+        }
+      }),
     }))
+    const payloads = bloquesDestino.map(bloque_id => {
+      const bloque = bloques.find(b => b.id === bloque_id)
+      return {
+        bloque_id,
+        plantacion_id: bloque?.plantaciones?.find(p => p.activa)?.id || null,
+        plan_id: form.plan_id || null,
+        fecha: form.fecha,
+        tanque_litros: tanqueLitros,
+        tanques_cantidad: form.estado === 'suspendida' ? 0 : tanquesCantidad,
+        estado: form.estado || 'completa',
+        dosis_alcance: solucionesLimpias.some(sol => sol.productos.some(p => p.modo === 'por_planta')) ? 'por_planta' : 'por_tanque',
+        notas: form.notas || null,
+        soluciones: solucionesPorBloque(bloque),
+      }
+    })
 
     const { error: insertError } = await supabase.from('fertilizaciones').insert(payloads)
     setSaving(false)
@@ -452,14 +507,18 @@ export default function Fertilizaciones({ campoActivo }) {
       return
     }
 
-    const descuentos = solucionesLimpias
-      .flatMap(sol => sol.productos)
-      .reduce((acc, p) => {
-        const cantidad = (Number(p.descuento_stock) || 0) * (form.estado === 'suspendida' ? 0 : tanquesCantidad)
-        if (!p.producto_id || cantidad <= 0) return acc
-        acc[p.producto_id] = (acc[p.producto_id] || 0) + cantidad
-        return acc
-      }, {})
+    const descuentos = {}
+    if (form.estado !== 'suspendida') {
+      solucionesLimpias.flatMap(sol => sol.productos).forEach(p => {
+        if (!p.producto_id) return
+        const cantidadUso = p.modo === 'por_planta'
+          ? Number(p.cantidad || 0) * bloquesDestino.reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0)
+          : Number(p.cantidad || 0) * tanquesCantidad
+        const cantidadStock = convertirAStock(cantidadUso, p.unidad, p.unidad_stock)
+        if (!cantidadStock || cantidadStock <= 0) return
+        descuentos[p.producto_id] = (descuentos[p.producto_id] || 0) + cantidadStock
+      })
+    }
 
     for (const [productoId, descuento] of Object.entries(descuentos)) {
       const { data: prodActual } = await supabase
@@ -483,7 +542,7 @@ export default function Fertilizaciones({ campoActivo }) {
         litros_aplicados: form.estado === 'suspendida' ? 0 : tanqueLitros * tanquesCantidad,
         tanques_aplicados: form.estado === 'suspendida' ? 0 : tanquesCantidad,
         estado: form.estado || 'completa',
-        productos: solucionesLimpias,
+        productos: payloads[0]?.soluciones || [],
         notas: form.notas || null,
       })
       if (seguimientoError) setError(`La fertilizacion se guardo, pero fallo el seguimiento del plan: ${seguimientoError.message}`)
@@ -510,6 +569,7 @@ export default function Fertilizaciones({ campoActivo }) {
       plan_id: plan.id,
       estado: 'completa',
       fecha: hoy(),
+      fecha_fin: plan.fecha_fin || sumarDias(hoy(), 6),
       nombre_plan: '',
       frecuencia: plan.frecuencia || 'semanal',
       dia_semana: String(plan.dia_semana ?? 1),
@@ -519,7 +579,7 @@ export default function Fertilizaciones({ campoActivo }) {
       notas: `Aplicacion del plan ${plan.nombre}. ${plan.notas || ''}`.trim(),
       soluciones: Array.isArray(plan.soluciones) && plan.soluciones.length
         ? plan.soluciones
-        : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg' }] }],
+        : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
     })
     setModal(true)
   }
@@ -578,12 +638,12 @@ export default function Fertilizaciones({ campoActivo }) {
 
         {schemaPlanesDisponible && (
           <div style={{ ...card, padding:18, marginBottom:18 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}><div><div style={{ color:'#8a948b', fontSize:12 }}>PROGRAMACION</div><h2 style={{ margin:'3px 0 0', fontSize:20 }}>Planes activos</h2></div><span style={{ background:"#edf7f1", color:"#08603f", borderRadius:999, padding:'5px 10px', fontSize:12, fontWeight:700 }}>{planes.length}</span></div>
-            {planes.length === 0 ? <div style={{ padding:'18px 0 4px', color:'#8a948b', fontSize:13 }}>Todavia no hay planes recurrentes.</div> : planes.map((plan, index) => {
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}><div><div style={{ color:'#8a948b', fontSize:12 }}>PROGRAMACION</div><h2 style={{ margin:'3px 0 0', fontSize:20 }}>Planes activos</h2></div><span style={{ background:"#edf7f1", color:"#08603f", borderRadius:999, padding:'5px 10px', fontSize:12, fontWeight:700 }}>{planesVigentes.length}</span></div>
+            {planesVigentes.length === 0 ? <div style={{ padding:'18px 0 4px', color:'#8a948b', fontSize:13 }}>Todavia no hay planes vigentes.</div> : planesVigentes.map((plan, index) => {
               const tanques = Number(plan.tanques_cantidad) || 1
               const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
               const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los dias' : `Cada ${['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][Number(plan.dia_semana)] || 'semana'}`
-              return <div key={plan.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', gap:10, alignItems:'center', padding:'14px 0', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong style={{ fontSize:14 }}>{plan.nombre}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div></div><div><strong style={{ color:"#08603f", fontSize:13 }}>{frecuencia}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div style={{ display:'flex', gap:7 }}><button onClick={() => registrarDesdePlan(plan)} style={{ ...btnNegro, background:"#08603f", padding:'9px 12px' }}>Registrar hoy</button><button onClick={() => pausarPlan(plan)} disabled={saving} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#80580e', borderRadius:8, padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Pausar</button></div></div>
+              return <div key={plan.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', gap:10, alignItems:'center', padding:'14px 0', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong style={{ fontSize:14 }}>{plan.nombre}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div style={{ color:'#8a948b', fontSize:12, marginTop:4 }}>{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong style={{ color:"#08603f", fontSize:13 }}>{frecuencia}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div style={{ display:'flex', gap:7 }}><button onClick={() => registrarDesdePlan(plan)} style={{ ...btnNegro, background:"#08603f", padding:'9px 12px' }}>Registrar hoy</button><button onClick={() => pausarPlan(plan)} disabled={saving} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#80580e', borderRadius:8, padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Pausar</button></div></div>
             })}
           </div>
         )}

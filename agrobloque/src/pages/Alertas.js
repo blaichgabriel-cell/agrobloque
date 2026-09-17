@@ -38,7 +38,7 @@ export default function Alertas() {
       supabase.from('plantaciones').select('id, fecha_siembra, activa, bloques(id, codigo), cultivos(nombre)').eq('activa', true),
       supabase.from('vivero_lotes').select('id, cultivo, variedad, fecha_siembra, fecha_trasplante_estimada, estado').order('fecha_siembra', { ascending:false }),
       supabase.from('fumigaciones').select('id, fecha, campo_id, fumigacion_bloques(bloque_id, bloques(id, codigo)), fumigacion_productos(productos(nombre, carencia_dias))').order('fecha', { ascending:false }),
-      supabase.from('fertilizacion_planes').select('id, nombre, fecha_inicio, bloque_id, bloques(codigo), fertilizacion_plan_aplicaciones(fecha)').eq('activo', true),
+      supabase.from('fertilizacion_planes').select('id, nombre, fecha_inicio, fecha_fin, bloque_id, bloques(codigo), fertilizacion_plan_aplicaciones(fecha)').eq('activo', true),
       supabase.from('fertilizaciones').select('id, fecha, bloque_id, bloques(codigo)').order('fecha', { ascending:false }).limit(250),
     ])
 
@@ -77,6 +77,7 @@ export default function Alertas() {
     })
 
     ;(planesFertilizacion || []).forEach(plan => {
+      if (plan.fecha_fin && plan.fecha_fin < new Date().toISOString().split('T')[0]) return
       const aplicaciones = plan.fertilizacion_plan_aplicaciones || []
       const ultima = aplicaciones
         .map(a => a.fecha)
