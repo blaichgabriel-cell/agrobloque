@@ -108,7 +108,7 @@ export default function Vivero() {
     }
 
     setError('')
-    setLotes(data || [])
+    setLotes((data || []).filter(l => !l.archivado))
   }
 
   const fetchBloques = async () => {
@@ -125,7 +125,7 @@ export default function Vivero() {
       .select('*')
       .eq('lote_id', loteId)
       .order('fecha', { ascending: false })
-    setTratamientos(data || [])
+    setTratamientos((data || []).filter(t => !t.anulado))
   }
 
   const abrirNuevo = () => {
@@ -197,10 +197,9 @@ export default function Vivero() {
   }
 
   const eliminarLote = async (id) => {
-    if (!window.confirm('Eliminar este lote de vivero?')) return
-    await supabase.from('vivero_tratamientos').delete().eq('lote_id', id)
-    await supabase.from('vivero_lotes').delete().eq('id', id)
-    await registrarAuditoria({ accion:'Elimino lote de vivero', modulo:'Vivero', tabla:'vivero_lotes', registroId:id })
+    if (!window.confirm('¿Archivar este lote de vivero? El historial se conservará.')) return
+    await supabase.from('vivero_lotes').update({ archivado:true, updated_at:new Date().toISOString() }).eq('id', id)
+    await registrarAuditoria({ accion:'Archivo lote de vivero', modulo:'Vivero', tabla:'vivero_lotes', registroId:id })
     setDetalle(null)
     fetchLotes()
   }
@@ -208,7 +207,7 @@ export default function Vivero() {
   const guardarTratamiento = async () => {
     if (!detalle || !tratForm.fecha || !tratForm.tipo.trim()) return
     setSaving(true)
-    const { error } = await supabase.from('vivero_tratamientos').insert({
+    const payload = {
       lote_id: detalle.id,
       fecha: tratForm.fecha,
       tipo: tratForm.tipo,
@@ -216,14 +215,28 @@ export default function Vivero() {
       dosis: tratForm.dosis || null,
       responsable: tratForm.responsable || null,
       notas: tratForm.notas || null,
-    })
+      updated_at:new Date().toISOString(),
+    }
+    const { error } = tratForm.id ? await supabase.from('vivero_tratamientos').update(payload).eq('id', tratForm.id) : await supabase.from('vivero_tratamientos').insert(payload)
     if (!error) {
-      await registrarAuditoria({ accion:'Registro tratamiento de vivero', modulo:'Vivero', tabla:'vivero_tratamientos', registroId:detalle.id, detalle:tratForm.tipo })
+      await registrarAuditoria({ accion:tratForm.id ? 'Edito tratamiento de vivero' : 'Registro tratamiento de vivero', modulo:'Vivero', tabla:'vivero_tratamientos', registroId:tratForm.id || detalle.id, detalle:tratForm.tipo })
       setTratForm(tratamientoInicial)
       setModalTratamiento(false)
       fetchTratamientos(detalle.id)
     } else setError('No se pudo guardar el tratamiento.')
     setSaving(false)
+  }
+
+  const editarTratamiento = (t) => {
+    setTratForm({ id:t.id, fecha:t.fecha || hoy(), tipo:t.tipo || '', producto:t.producto || '', dosis:t.dosis || '', responsable:t.responsable || '', notas:t.notas || '' })
+    setModalTratamiento(true)
+  }
+
+  const anularTratamiento = async (t) => {
+    if (!window.confirm('¿Anular este tratamiento? El historial se conservará.')) return
+    await supabase.from('vivero_tratamientos').update({ anulado:true, anulado_at:new Date().toISOString(), anulado_motivo:'Anulado por el usuario', updated_at:new Date().toISOString() }).eq('id', t.id)
+    await registrarAuditoria({ accion:'Anulo tratamiento de vivero', modulo:'Vivero', tabla:'vivero_tratamientos', registroId:t.id, detalle:t.tipo })
+    fetchTratamientos(detalle.id)
   }
 
   const obtenerOCrearCultivo = async (nombreCultivo) => {
@@ -430,7 +443,7 @@ export default function Vivero() {
 
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
               <div style={{ fontSize:15, fontWeight:700 }}>Tratamientos</div>
-              <button onClick={() => setModalTratamiento(true)} style={{ border:'none', borderRadius:8, background:'#1a5c2e', color:'#fff', padding:'8px 10px', fontSize:12, fontWeight:700 }}>+ Tratamiento</button>
+              <button onClick={() => { setTratForm(tratamientoInicial); setModalTratamiento(true) }} style={{ border:'none', borderRadius:8, background:'#1a5c2e', color:'#fff', padding:'8px 10px', fontSize:12, fontWeight:700 }}>+ Tratamiento</button>
             </div>
             {tratamientos.length === 0 ? (
               <div style={{ color:"#697970", fontSize:13, marginBottom:14 }}>Sin tratamientos registrados.</div>
@@ -439,6 +452,7 @@ export default function Vivero() {
                 <div style={{ fontSize:13, fontWeight:700 }}>{t.tipo}</div>
                 <div style={{ fontSize:11, color:"#697970", marginTop:2 }}>{t.fecha}{t.producto ? ` · ${t.producto}` : ''}{t.dosis ? ` · ${t.dosis}` : ''}</div>
                 {t.notas && <div style={{ fontSize:12, marginTop:6 }}>{t.notas}</div>}
+                <div style={{ display:'flex', gap:6, marginTop:8 }}><button onClick={() => editarTratamiento(t)} style={{ ...secondaryBtn, width:'auto', padding:'6px 10px', margin:0 }}>Editar</button><button onClick={() => anularTratamiento(t)} style={{ ...dangerBtn, width:'auto', padding:'6px 10px', margin:0 }}>Anular</button></div>
               </div>
             ))}
 
@@ -484,14 +498,14 @@ export default function Vivero() {
       {modalTratamiento && (
         <div style={overlay}>
           <div style={sheet}>
-            <div style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>Nuevo tratamiento</div>
+            <div style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>{tratForm.id ? 'Editar tratamiento' : 'Nuevo tratamiento'}</div>
             <Field label="Fecha *" type="date" value={tratForm.fecha} onChange={v => setTratForm(f => ({ ...f, fecha:v }))} />
             <Field label="Tipo *" value={tratForm.tipo} onChange={v => setTratForm(f => ({ ...f, tipo:v }))} placeholder="Ej: fungicida, fertilizante, enraizante" />
             <Field label="Producto" value={tratForm.producto} onChange={v => setTratForm(f => ({ ...f, producto:v }))} />
             <Field label="Dosis" value={tratForm.dosis} onChange={v => setTratForm(f => ({ ...f, dosis:v }))} />
             <Field label="Responsable" value={tratForm.responsable} onChange={v => setTratForm(f => ({ ...f, responsable:v }))} />
             <Field label="Notas" textarea value={tratForm.notas} onChange={v => setTratForm(f => ({ ...f, notas:v }))} />
-            <button onClick={guardarTratamiento} disabled={saving} style={primaryBtn}>{saving ? 'Guardando...' : 'Guardar tratamiento'}</button>
+            <button onClick={guardarTratamiento} disabled={saving} style={primaryBtn}>{saving ? 'Guardando...' : tratForm.id ? 'Guardar cambios' : 'Guardar tratamiento'}</button>
             <button onClick={() => setModalTratamiento(false)} style={secondaryBtn}>Cancelar</button>
           </div>
         </div>

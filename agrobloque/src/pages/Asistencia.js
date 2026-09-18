@@ -130,7 +130,7 @@ export default function Asistencia() {
       return
     }
     const { data } = await supabase.from('adelantos').select('*').in('operario_id', ids).order('fecha', { ascending: false })
-    setAdelantos(data || [])
+    setAdelantos((data || []).filter(a => !a.anulado))
   }
 
   const getKey = (operario_id, fecha) => `${operario_id}_${fecha}`
@@ -264,7 +264,7 @@ export default function Asistencia() {
   }
 
   const eliminarAdelanto = async (id) => {
-    await supabase.from('adelantos').delete().eq('id', id)
+    await supabase.from('adelantos').update({ anulado:true, anulado_at:new Date().toISOString(), anulado_motivo:'Anulado por el usuario', updated_at:new Date().toISOString() }).eq('id', id)
     fetchAdelantos(operarios)
   }
 

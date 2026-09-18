@@ -183,7 +183,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
         <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:'#8a948b' }}>{form.tipo === 'plan' ? 'Programacion reutilizable' : 'Aplicacion real'}</div>
-            <h2 style={{ margin:'2px 0 0', fontSize:24 }}>{form.tipo === 'plan' ? 'Nuevo plan recurrente' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
+            <h2 style={{ margin:'2px 0 0', fontSize:24 }}>{form.tipo === 'plan' ? (form.edit_plan_id ? 'Editar plan recurrente' : 'Nuevo plan recurrente') : form.edit_grupo ? 'Corregir fertilización' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
           </div>
           <button onClick={onClose} style={{ border:'none', background:'#fff', borderRadius:8, width:40, height:40, cursor:'pointer' }}>
             <i className="ti ti-x" style={{ fontSize:20 }} />
@@ -279,7 +279,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 
         <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:16 }}>
           <button onClick={onClose} style={{ border:'1px solid #e3e0db', background:'#fff', borderRadius:8, padding:'11px 14px', fontWeight:700, cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onSave} disabled={saving} style={{ ...btnNegro, opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : form.tipo === 'plan' ? 'Guardar plan recurrente' : 'Guardar aplicacion'}</button>
+          <button onClick={onSave} disabled={saving} style={{ ...btnNegro, opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : form.tipo === 'plan' ? (form.edit_plan_id ? 'Guardar cambios' : 'Guardar plan recurrente') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
         </div>
       </div>
     </div>
@@ -298,6 +298,8 @@ export default function Fertilizaciones({ campoActivo }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [detalle, setDetalle] = useState(null)
+  const [motivoAnulacion, setMotivoAnulacion] = useState('')
   const [form, setForm] = useState({
     tipo: 'aplicacion',
     plan_id: '',
@@ -378,15 +380,16 @@ export default function Fertilizaciones({ campoActivo }) {
   const grupos = useMemo(() => {
     const mapa = new Map()
     registros.forEach(r => {
-      const key = `${r.fecha || ''}|${r.created_at || r.id}|${JSON.stringify(r.soluciones || [])}|${r.notas || ''}|${r.tanque_litros || ''}|${r.tanques_cantidad || ''}`
-      if (!mapa.has(key)) mapa.set(key, { fecha:r.fecha, created_at:r.created_at, notas:r.notas, soluciones:r.soluciones || [], tanque_litros:r.tanque_litros, tanques_cantidad:r.tanques_cantidad, estado:r.estado, items:[] })
+      const key = r.grupo_id || `${r.fecha || ''}|${r.created_at || r.id}|${JSON.stringify(r.soluciones || [])}|${r.notas || ''}|${r.tanque_litros || ''}|${r.tanques_cantidad || ''}`
+      if (!mapa.has(key)) mapa.set(key, { key, grupo_id:r.grupo_id, fecha:r.fecha, created_at:r.created_at, notas:r.notas, soluciones:r.soluciones || [], tanque_litros:r.tanque_litros, tanques_cantidad:r.tanques_cantidad, estado:r.estado, anulada:r.anulada, items:[] })
       mapa.get(key).items.push(r)
     })
     return Array.from(mapa.values()).sort((a, b) => `${b.fecha || ''}${b.created_at || ''}`.localeCompare(`${a.fecha || ''}${a.created_at || ''}`))
   }, [registros])
 
-  const totalBloquesAplicados = useMemo(() => new Set(registros.map(r => r.bloque_id)).size, [registros])
-  const ultimaFecha = registros[0]?.fecha
+  const registrosActivos = useMemo(() => registros.filter(r => !r.anulada), [registros])
+  const totalBloquesAplicados = useMemo(() => new Set(registrosActivos.map(r => r.bloque_id)).size, [registrosActivos])
+  const ultimaFecha = registrosActivos[0]?.fecha
   const planesVigentes = useMemo(() => planes.filter(plan => !plan.fecha_fin || plan.fecha_fin >= hoy()), [planes])
 
   const abrirModal = (tipo = 'aplicacion') => {
@@ -406,6 +409,78 @@ export default function Fertilizaciones({ campoActivo }) {
       soluciones: [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
     })
     setModal(true)
+  }
+
+  const abrirEditarAplicacion = (grupo) => {
+    const soluciones = (grupo.soluciones || []).map(sol => ({
+      ...sol,
+      productos:(sol.productos || []).map(p => ({
+        ...p,
+        cantidad:p.modo === 'por_planta' && p.dosis_por_planta ? String(p.dosis_por_planta) : String(p.cantidad || ''),
+        unidad:p.modo === 'por_planta' ? (p.unidad_dosis || p.unidad || 'g') : (p.unidad || 'kg'),
+      })),
+    }))
+    setForm({
+      tipo:'aplicacion', edit_ids:grupo.items.map(i => i.id), edit_grupo:grupo,
+      plan_id:grupo.items[0]?.plan_id || '', estado:grupo.estado || 'completa', fecha:grupo.fecha || hoy(),
+      fecha_fin:sumarDias(hoy(), 6), nombre_plan:'', frecuencia:'semanal', dia_semana:'1',
+      tanque_litros:String(grupo.tanque_litros || 200), tanques_cantidad:String(grupo.tanques_cantidad || 1),
+      bloques_ids:grupo.items.map(i => i.bloque_id), notas:grupo.notas || '',
+      soluciones:soluciones.length ? soluciones : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
+    })
+    setDetalle(null)
+    setModal(true)
+  }
+
+  const repetirAplicacion = (grupo) => {
+    abrirEditarAplicacion(grupo)
+    setForm(f => ({ ...f, edit_ids:undefined, edit_grupo:undefined, plan_id:'', fecha:hoy(), notas:f.notas ? `Repetición: ${f.notas}` : 'Repetición de aplicación' }))
+  }
+
+  const abrirEditarPlan = (plan) => {
+    setForm({
+      tipo:'plan', edit_plan_id:plan.id, plan_id:'', estado:'completa', fecha:plan.fecha_inicio || hoy(),
+      fecha_fin:plan.fecha_fin || sumarDias(hoy(), 6), nombre_plan:plan.nombre || '', frecuencia:plan.frecuencia || 'semanal',
+      dia_semana:String(plan.dia_semana ?? 1), tanque_litros:String(plan.tanque_litros || 200),
+      tanques_cantidad:String(plan.tanques_cantidad || 1), bloques_ids:[plan.bloque_id], notas:plan.notas || '',
+      soluciones:Array.isArray(plan.soluciones) && plan.soluciones.length ? plan.soluciones : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
+    })
+    setModal(true)
+  }
+
+  const devolverInventarioGrupo = async (grupo, motivo = 'Correccion de fertilizacion') => {
+    const totales = {}
+    const solucionesBase = grupo.items[0]?.soluciones || grupo.soluciones || []
+    solucionesBase.flatMap(sol => sol.productos || []).filter(p => p.modo !== 'por_planta').forEach(p => {
+      if (!p.producto_id) return
+      const prod = productos.find(x => x.id === p.producto_id)
+      const convertido = convertirAStock(Number(p.cantidad || 0) * Number(grupo.tanques_cantidad || 1), p.unidad, prod?.unidad)
+      if (convertido) totales[p.producto_id] = (totales[p.producto_id] || 0) + convertido
+    })
+    grupo.items.forEach(item => (item.soluciones || []).flatMap(sol => sol.productos || []).filter(p => p.modo === 'por_planta').forEach(p => {
+      if (!p.producto_id) return
+      const prod = productos.find(x => x.id === p.producto_id)
+      const convertido = convertirAStock(p.cantidad, p.unidad, prod?.unidad)
+      if (convertido) totales[p.producto_id] = (totales[p.producto_id] || 0) + convertido
+    }))
+    for (const [productoId, cantidad] of Object.entries(totales)) {
+      const prod = productos.find(x => x.id === productoId)
+      await ajustarStockSeguro({ productoId, delta:cantidad, tipo:'devolucion_fertilizacion', modulo:'Fertilizaciones', referenciaId:grupo.grupo_id || grupo.items[0]?.id, detalle:motivo, stockActual:prod?.stock_actual || 0 })
+    }
+  }
+
+  const anularAplicacion = async (grupo) => {
+    const motivo = motivoAnulacion.trim()
+    if (!motivo) return setError('Escribí el motivo de la anulación.')
+    setSaving(true); setError(''); setSuccess('')
+    try {
+      const { error:anularError } = await supabase.from('fertilizaciones').update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:motivo.trim(), updated_at:new Date().toISOString() }).in('id', grupo.items.map(i => i.id))
+      if (anularError) throw anularError
+      await devolverInventarioGrupo(grupo, motivo.trim())
+      await registrarAuditoria({ accion:'Anulo fertilizacion', modulo:'Fertilizaciones', tabla:'fertilizaciones', registroId:grupo.grupo_id || grupo.items[0]?.id || '', detalle:motivo.trim() })
+      setDetalle(null); setMotivoAnulacion(''); setSuccess('Aplicación anulada y productos devueltos al inventario.'); await cargarDatos()
+    } catch (e) { setError(`No se pudo anular: ${e.message || 'error desconocido'}`) }
+    setSaving(false)
   }
 
   const guardar = async () => {
@@ -477,7 +552,14 @@ export default function Fertilizaciones({ campoActivo }) {
           notas: form.notas || null,
         }
       })
-      const { data:planesGuardados, error: planError } = await supabase.from('fertilizacion_planes').insert(planesNuevos).select('id, bloque_id, campo_id, nombre, fecha_inicio, fecha_fin, frecuencia, dia_semana')
+      let planResult
+      if (form.edit_plan_id) {
+        planResult = await supabase.from('fertilizacion_planes').update({ ...planesNuevos[0], updated_at:new Date().toISOString() }).eq('id', form.edit_plan_id).select('id, bloque_id, campo_id, nombre, fecha_inicio, fecha_fin, frecuencia, dia_semana')
+        await supabase.from('tareas').update({ anulada:true, cancelada:true, anulada_motivo:'Plan reprogramado', updated_at:new Date().toISOString() }).eq('origen_tipo', 'fertilizacion_plan').eq('origen_id', form.edit_plan_id).eq('completada', false)
+      } else {
+        planResult = await supabase.from('fertilizacion_planes').insert(planesNuevos).select('id, bloque_id, campo_id, nombre, fecha_inicio, fecha_fin, frecuencia, dia_semana')
+      }
+      const { data:planesGuardados, error: planError } = planResult
       setSaving(false)
       if (planError) return setError(`No se pudo guardar el plan: ${planError.message}`)
       const tareasPlan = (planesGuardados || []).flatMap(plan => fechasDelPlan(plan.fecha_inicio, plan.fecha_fin, plan.frecuencia, plan.dia_semana).map(fecha => ({
@@ -487,18 +569,31 @@ export default function Fertilizaciones({ campoActivo }) {
         campo_id:plan.campo_id || null,
         bloque_id:plan.bloque_id || null,
         completada:false,
+        origen_tipo:'fertilizacion_plan',
+        origen_id:plan.id,
       })))
       if (tareasPlan.length) {
         const { error:tareasError } = await supabase.from('tareas').insert(tareasPlan)
         if (tareasError) setError(`El plan se guardó, pero no se pudieron crear sus tareas: ${tareasError.message}`)
       }
       setModal(false)
-      setSuccess(`Plan ${form.frecuencia === 'diaria' ? 'diario' : 'semanal'} guardado correctamente.`)
+      setSuccess(form.edit_plan_id ? 'Plan actualizado y tareas futuras reprogramadas.' : `Plan ${form.frecuencia === 'diaria' ? 'diario' : 'semanal'} guardado correctamente.`)
       await cargarDatos()
       return
     }
 
     setSaving(true)
+    if (form.edit_grupo) {
+      try {
+        const { error:reemplazoError } = await supabase.from('fertilizaciones').update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:'Reemplazada por edición', updated_at:new Date().toISOString() }).in('id', form.edit_ids || [])
+        if (reemplazoError) throw reemplazoError
+        await devolverInventarioGrupo(form.edit_grupo, 'Edición de fertilización')
+      } catch (e) {
+        setSaving(false)
+        return setError(`No se pudo preparar la edición: ${e.message || 'error desconocido'}`)
+      }
+    }
+    const grupoId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null
     const solucionesPorBloque = (bloque) => solucionesLimpias.map(sol => ({
       nombre:sol.nombre,
       productos:sol.productos.map(p => {
@@ -518,6 +613,7 @@ export default function Fertilizaciones({ campoActivo }) {
       const bloque = bloques.find(b => b.id === bloque_id)
       return {
         bloque_id,
+        grupo_id:grupoId,
         plantacion_id: bloque?.plantaciones?.find(p => p.activa)?.id || null,
         plan_id: form.plan_id || null,
         fecha: form.fecha,
@@ -592,7 +688,7 @@ export default function Fertilizaciones({ campoActivo }) {
     })
 
     setModal(false)
-    setSuccess(form.plan_id ? 'Aplicacion del plan registrada correctamente.' : 'Fertilizacion guardada correctamente.')
+    setSuccess(form.edit_grupo ? 'Fertilización corregida correctamente.' : form.plan_id ? 'Aplicacion del plan registrada correctamente.' : 'Fertilizacion guardada correctamente.')
     cargarDatos()
   }
 
@@ -651,7 +747,7 @@ export default function Fertilizaciones({ campoActivo }) {
         <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap:12, marginBottom:18 }}>
           <div style={{ ...card, padding:18, background:'#1f1f1f', color:'#fff' }}>
             <div style={{ fontSize:11, color:'#b9beb7' }}>APLICACIONES</div>
-            <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(registros.length)}</div>
+            <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(registrosActivos.length)}</div>
             <div style={{ fontSize:12, color:'#cdd2cc' }}>registros guardados</div>
           </div>
           <div style={{ ...card, padding:18 }}>
@@ -678,7 +774,7 @@ export default function Fertilizaciones({ campoActivo }) {
               const tanques = Number(plan.tanques_cantidad) || 1
               const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
               const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los dias' : `Cada ${['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][Number(plan.dia_semana)] || 'semana'}`
-              return <div key={plan.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', gap:10, alignItems:'center', padding:'14px 0', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong style={{ fontSize:14 }}>{plan.nombre}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div style={{ color:'#8a948b', fontSize:12, marginTop:4 }}>{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong style={{ color:"#08603f", fontSize:13 }}>{frecuencia}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div style={{ display:'flex', gap:7 }}><button onClick={() => registrarDesdePlan(plan)} style={{ ...btnNegro, background:"#08603f", padding:'9px 12px' }}>Registrar hoy</button><button onClick={() => pausarPlan(plan)} disabled={saving} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#80580e', borderRadius:8, padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Pausar</button></div></div>
+              return <div key={plan.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', gap:10, alignItems:'center', padding:'14px 0', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong style={{ fontSize:14 }}>{plan.nombre}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div style={{ color:'#8a948b', fontSize:12, marginTop:4 }}>{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong style={{ color:"#08603f", fontSize:13 }}>{frecuencia}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div style={{ display:'flex', gap:7, flexWrap:'wrap' }}><button onClick={() => registrarDesdePlan(plan)} style={{ ...btnNegro, background:"#08603f", padding:'9px 12px' }}>Registrar hoy</button><button onClick={() => abrirEditarPlan(plan)} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#1f1f1f', borderRadius:8, padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Editar</button><button onClick={() => pausarPlan(plan)} disabled={saving} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#80580e', borderRadius:8, padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Pausar</button></div></div>
             })}
           </div>
         )}
@@ -692,7 +788,7 @@ export default function Fertilizaciones({ campoActivo }) {
           {grupos.length === 0 ? (
             <div style={{ padding:38, textAlign:'center', color:'#8a948b' }}>Sin fertilizaciones registradas.</div>
           ) : grupos.map((g, idx) => (
-            <div key={`${g.fecha}-${idx}`} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '130px 1fr 1.4fr', gap:12, padding:'16px', borderBottom: idx === grupos.length - 1 ? 'none' : '1px solid #f0ede8', alignItems:'start' }}>
+            <div key={g.key || `${g.fecha}-${idx}`} onClick={() => setDetalle(g)} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '130px 1fr 1.4fr', gap:12, padding:'16px', borderBottom: idx === grupos.length - 1 ? 'none' : '1px solid #f0ede8', alignItems:'start', cursor:'pointer', opacity:g.anulada ? .58 : 1, background:g.anulada ? '#faf8f5' : '#fff' }}>
               <div style={{ fontWeight:700 }}>{fmtFecha(g.fecha)}</div>
               <div>
                 <div style={{ fontWeight:700 }}>{g.items.length} bloque{g.items.length === 1 ? '' : 's'}</div>
@@ -700,7 +796,7 @@ export default function Fertilizaciones({ campoActivo }) {
               </div>
               <div>
                 <div style={{ fontSize:13, lineHeight:1.45 }}>{resumenSoluciones(g.soluciones) || 'Sin productos detallados'}</div>
-                {g.tanque_litros && <div style={{ marginTop:7, color:"#08603f", fontSize:12, fontWeight:700 }}>{g.tanques_cantidad || 1} tanque{Number(g.tanques_cantidad || 1) === 1 ? '' : 's'} × {fmtNum(g.tanque_litros)} L = {fmtNum(Number(g.tanque_litros) * Number(g.tanques_cantidad || 1))} L · {g.estado || 'completa'}</div>}
+                {g.tanque_litros && <div style={{ marginTop:7, color:g.anulada ? '#a33' : "#08603f", fontSize:12, fontWeight:700 }}>{g.anulada ? 'ANULADA · ' : ''}{g.tanques_cantidad || 1} tanque{Number(g.tanques_cantidad || 1) === 1 ? '' : 's'} × {fmtNum(g.tanque_litros)} L = {fmtNum(Number(g.tanque_litros) * Number(g.tanques_cantidad || 1))} L · {g.estado || 'completa'}</div>}
                 {g.notas && <div style={{ marginTop:8, color:'#687068', fontSize:13 }}>{g.notas}</div>}
               </div>
             </div>
@@ -718,6 +814,18 @@ export default function Fertilizaciones({ campoActivo }) {
           onSave={guardar}
           saving={saving}
         />
+      )}
+      {detalle && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:260, display:'grid', placeItems:'center', padding:16 }} onClick={() => setDetalle(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ width:'100%', maxWidth:620, background:'#fff', borderRadius:10, padding:22, maxHeight:'88vh', overflowY:'auto' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><div style={{ fontSize:12, color:'#8a948b' }}>DETALLE DE APLICACIÓN</div><h2 style={{ margin:'4px 0' }}>{fmtFecha(detalle.fecha)}</h2></div><button onClick={() => setDetalle(null)} style={{ border:0, background:'#f2efeb', width:38, height:38, borderRadius:8, cursor:'pointer' }}><i className="ti ti-x" /></button></div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'16px 0' }}><div style={{ background:'#f6f8f7', padding:13, borderRadius:8 }}><small style={{ color:'#687068' }}>Bloques</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div style={{ background:'#f6f8f7', padding:13, borderRadius:8 }}><small style={{ color:'#687068' }}>Preparación</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
+            <div style={{ fontSize:13, lineHeight:1.6, padding:'13px 0', borderTop:'1px solid #ece9e3', borderBottom:'1px solid #ece9e3' }}>{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
+            {detalle.notas && <div style={{ marginTop:14, color:'#687068' }}>{detalle.notas}</div>}
+            {!detalle.anulada && <><div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:18 }}><button onClick={() => abrirEditarAplicacion(detalle)} style={btnNegro}>Editar</button><button onClick={() => repetirAplicacion(detalle)} style={{ ...btnNegro, background:'#08603f' }}>Repetir hoy</button></div><div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid #ece9e3' }}><label style={{ display:'grid', gap:6, fontSize:12, fontWeight:700, color:'#687068' }}>Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" style={inputBase} /></label><button onClick={() => anularAplicacion(detalle)} disabled={saving} style={{ marginTop:9, border:'1px solid #ffd1d1', background:'#fff', color:'#b52525', borderRadius:8, padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>Anular y devolver inventario</button></div></>}
+            {detalle.anulada && <div style={{ marginTop:16, color:'#a33', fontWeight:700 }}>Esta aplicación está anulada.</div>}
+          </div>
+        </div>
       )}
     </div>
   )

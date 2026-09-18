@@ -167,7 +167,7 @@ export default function Cosecha() {
       .select('*, bloques(codigo, campos(nombre), plantaciones(cultivos(nombre), activa, created_at, fecha_siembra))')
       .order('fecha', { ascending: false })
     if (error) setError('Error al cargar cosechas')
-    else setCosechas(data || [])
+    else setCosechas((data || []).filter(c => !c.anulada))
   }
   const fetchBloques = async (campo_id) => {
     const { data } = await supabase.from('bloques')
@@ -290,8 +290,8 @@ export default function Cosecha() {
 
   const eliminar = (id) => {
     setConfirmar({ fn: async () => {
-      await supabase.from('cosechas').delete().eq('id', id)
-      await registrarAuditoria({ accion:'Elimino cosecha', modulo:'Cosecha', tabla:'cosechas', registroId:id })
+      await supabase.from('cosechas').update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:'Anulada por el usuario', updated_at:new Date().toISOString() }).eq('id', id)
+      await registrarAuditoria({ accion:'Anulo cosecha', modulo:'Cosecha', tabla:'cosechas', registroId:id })
       setConfirmar(null); setDetalle(null); fetchCosechas()
     }})
   }

@@ -33,7 +33,8 @@ export default function Agenda() {
   const [filtro, setFiltro] = useState('pendientes')
   const [modal, setModal] = useState(false)
   const [confirmar, setConfirmar] = useState(null)
-  const [form, setForm] = useState({ tipo:'fumigacion', descripcion:'', fecha_programada:'', campo_id:'', bloque_id:'' })
+  const vacio = { id:'', tipo:'fumigacion', descripcion:'', fecha_programada:'', campo_id:'', bloque_id:'', prioridad:'normal', responsable:'' }
+  const [form, setForm] = useState(vacio)
   const [saving, setSaving] = useState(false)
   const hoy = new Date().toISOString().split('T')[0]
 
@@ -57,9 +58,22 @@ export default function Agenda() {
   const guardarTarea = async () => {
     if (!form.descripcion || !form.fecha_programada) return
     setSaving(true)
-    await supabase.from('tareas').insert({ tipo:form.tipo, descripcion:form.descripcion, fecha_programada:form.fecha_programada, campo_id:form.campo_id||null, bloque_id:form.bloque_id||null, completada:false })
+    const payload = { tipo:form.tipo, descripcion:form.descripcion, fecha_programada:form.fecha_programada, campo_id:form.campo_id||null, bloque_id:form.bloque_id||null, prioridad:form.prioridad || 'normal', responsable:form.responsable || null, updated_at:new Date().toISOString() }
+    const { error } = form.id ? await supabase.from('tareas').update(payload).eq('id', form.id) : await supabase.from('tareas').insert({ ...payload, completada:false })
+    if (error) { setSaving(false); return }
     await fetchTareas(); setSaving(false); setModal(false)
-    setForm({ tipo:'fumigacion', descripcion:'', fecha_programada:'', campo_id:'', bloque_id:'' })
+    setForm(vacio)
+  }
+
+  const editarTarea = async (t) => {
+    setForm({ id:t.id, tipo:t.tipo || 'otro', descripcion:t.descripcion || '', fecha_programada:t.fecha_programada || '', campo_id:t.campo_id || '', bloque_id:t.bloque_id || '', prioridad:t.prioridad || 'normal', responsable:t.responsable || '' })
+    if (t.campo_id) await fetchBloques(t.campo_id)
+    setModal(true)
+  }
+
+  const reabrirTarea = async (id) => {
+    await supabase.from('tareas').update({ completada:false, fecha_completada:null, anulada:false, cancelada:false, anulada_at:null, anulada_motivo:null, updated_at:new Date().toISOString() }).eq('id', id)
+    fetchTareas()
   }
 
   const completarTarea = async (id) => {
@@ -103,7 +117,7 @@ export default function Agenda() {
             <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Planificación</div>
             <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Agenda</div>
           </div>
-          <button onClick={() => setModal(true)} style={{ width:40, height:40, borderRadius:8, background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+          <button onClick={() => { setForm(vacio); setModal(true) }} style={{ width:40, height:40, borderRadius:8, background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
@@ -137,6 +151,7 @@ export default function Agenda() {
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:10, borderTop:"1px solid #f6f8f7" }}>
                 <div style={{ fontSize:10, color:'#b0b0b0' }}>{t.fecha_programada}</div>
                 <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={() => editarTarea(t)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #d9ded9', background:'transparent', fontSize:11, color:'#343a36', cursor:'pointer' }}>Editar</button>
                   {!t.completada && !t.anulada && (
                     <button onClick={() => completarTarea(t.id)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #d4b89a', background:'transparent', fontSize:11, fontWeight:500, color:"#124e38", cursor:'pointer' }}>
                       ✓ Completar
@@ -146,6 +161,7 @@ export default function Agenda() {
                     Cancelar
                   </button>
                   }
+                  {(t.completada || t.anulada) && <button onClick={() => reabrirTarea(t.id)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #d4b89a', background:'transparent', fontSize:11, color:'#124e38', cursor:'pointer' }}>Reabrir</button>}
                 </div>
               </div>
             </div>
@@ -159,7 +175,7 @@ export default function Agenda() {
       {modal && (
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
           <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Nueva tarea</div>
+            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id ? 'Editar tarea' : 'Nueva tarea'}</div>
             <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Tipo</div>
             <select style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} value={form.tipo} onChange={e => setForm(f => ({...f, tipo:e.target.value}))}>
               {Object.entries(TIPOS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -168,6 +184,7 @@ export default function Agenda() {
             <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, minHeight:80, resize:'vertical' }} value={form.descripcion} onChange={e => setForm(f => ({...f, descripcion:e.target.value}))} placeholder="Ej: Fumigar bloques A-2 y A-3"/>
             <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Fecha *</div>
             <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} type="date" value={form.fecha_programada} onChange={e => setForm(f => ({...f, fecha_programada:e.target.value}))}/>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}><div><div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Prioridad</div><select style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, marginBottom:12 }} value={form.prioridad || 'normal'} onChange={e => setForm(f => ({...f, prioridad:e.target.value}))}><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option></select></div><div><div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Responsable</div><input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, marginBottom:12, boxSizing:'border-box' }} value={form.responsable || ''} onChange={e => setForm(f => ({...f, responsable:e.target.value}))} placeholder="Opcional" /></div></div>
             <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Campo (opcional)</div>
             <select style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} value={form.campo_id} onChange={e => { setForm(f => ({...f, campo_id:e.target.value, bloque_id:''})); if(e.target.value) fetchBloques(e.target.value) }}>
               <option value="">Todos los campos</option>
@@ -181,7 +198,7 @@ export default function Agenda() {
               </select>
             </>}
             <button style={{ width:'100%', padding:14, borderRadius:8, background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarTarea} disabled={saving}>
-              {saving ? 'Guardando...' : 'Guardar tarea'}
+              {saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar tarea'}
             </button>
             <button style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
           </div>

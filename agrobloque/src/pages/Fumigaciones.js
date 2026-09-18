@@ -165,7 +165,7 @@ export default function Fumigaciones() {
     const { data } = await supabase.from('fumigaciones')
       .select('*, campos(nombre), fumigacion_bloques(bloque_id, cultivo_snapshot, plantacion_id_snapshot, bloques(codigo, plantaciones(id, activa, cultivos(nombre)))), fumigacion_productos(*, productos(nombre, unidad, carencia_dias))')
       .order('fecha', { ascending:false })
-    setFumigaciones(data || [])
+    setFumigaciones((data || []).filter(f => !f.anulada))
   }
 
   const fetchCampos = async () => {
@@ -386,8 +386,8 @@ export default function Fumigaciones() {
   const eliminar = (id) => {
     setConfirmar({ fn: async () => {
       await devolverStockFumigacion(id)
-      await supabase.from('fumigaciones').delete().eq('id', id)
-      await registrarAuditoria({ accion:'Elimino fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:id })
+      await supabase.from('fumigaciones').update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:'Anulada por el usuario', updated_at:new Date().toISOString() }).eq('id', id)
+      await registrarAuditoria({ accion:'Anulo fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:id })
       setConfirmar(null); setDetalle(null); fetchFumigaciones(); fetchProductos()
     }})
   }
