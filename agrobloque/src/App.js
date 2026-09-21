@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNaviga
 import { forceLocalSignOut, guestToken, supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Dashboard from './pages/Overview'
-import Mapa from './pages/Mapa'
+import Mapa from './pages/MapaProfesional'
 import FichaBloque from './pages/FichaBloque'
 import Configuracion from './pages/Configuracion'
 import Agenda from './pages/Agenda'
@@ -187,6 +187,17 @@ function ConnectionStatus() {
 function DesktopSidebar({ isGuest = false, role }) {
   const tabs = filterTabsByRole(allTabs, role, isGuest)
   const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
+  const [alertCount, setAlertCount] = useState(0)
+  useEffect(() => {
+    if (!canAccessModule(role, 'alertas')) return
+    Promise.all([
+      supabase.from('tareas').select('id', { count:'exact', head:true }).eq('completada', false).eq('anulada', false),
+      supabase.from('productos').select('id,stock_actual,stock_minimo').eq('activo', true),
+    ]).then(([tareas, productos]) => {
+      const stock = (productos.data || []).filter(p => Number(p.stock_actual) <= 0 || (Number(p.stock_minimo) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo))).length
+      setAlertCount(Number(tareas.count || 0) + stock)
+    }).catch(() => {})
+  }, [role?.email])
   const groups = [
     { title: 'CAMPO', paths: ['/', '/mapa', '/agenda', '/vivero'] },
     { title: 'OPERACIÓN', paths: ['/cosecha', '/fumigaciones', '/fertilizaciones', '/inventario', '/asistencia'] },
@@ -196,9 +207,9 @@ function DesktopSidebar({ isGuest = false, role }) {
     <div className="ag-brand"><span className="ag-brand-mark" aria-hidden="true">AB<i className="ti ti-leaf" /></span><div><strong>AgroBloque</strong><small>El campo en control</small></div></div>
     <nav className="ag-sidebar-nav">{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
-      return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><MenuIcon icon={tab.icon} size={20} color="currentColor" /><span>{tab.path === '/mapa' ? 'Bloques y mapa' : tab.label}</span></NavLink>)}</section>
+      return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><MenuIcon icon={tab.icon} size={20} color="currentColor" /><span>{tab.path === '/mapa' ? 'Bloques y mapa' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
     })}</nav>
-    <div className="ag-sidebar-footer"><div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{isGuest ? 'Invitado · Solo lectura' : role?.label || 'Usuario'}</small></div></div><button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
+    <div className="ag-sidebar-footer">{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
   </aside>
 }
 
@@ -348,7 +359,8 @@ export default function App() {
       const email = session.user.email || ''
       const { data, error } = await supabase.from('app_user_roles').select('*').eq('email', email.toLowerCase()).maybeSingle()
       if (cancelled) return
-      setRole(error ? normalizeRole(null) : normalizeRole(data, email))
+      const perfilNombre = session.user.user_metadata?.nombre || session.user.user_metadata?.full_name || session.user.user_metadata?.name || ''
+      setRole(error ? { ...normalizeRole(null, email), nombre:perfilNombre } : normalizeRole({ ...data, nombre:perfilNombre || data?.nombre }, email))
       setRoleUserId(session.user.id)
     }
     cargarPermisos()

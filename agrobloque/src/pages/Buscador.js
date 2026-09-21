@@ -34,6 +34,9 @@ export default function Buscador() {
       { data: compradores },
       { data: tareas },
       { data: vivero },
+      { data: operarios },
+      { data: fumigaciones },
+      { data: fertilizaciones },
       { data: contabilidad },
     ] = await Promise.all([
       supabase.from('bloques').select('id, codigo, campos(nombre)').order('codigo'),
@@ -43,6 +46,9 @@ export default function Buscador() {
       supabase.from('compradores').select('id, nombre, tipo, telefono').order('nombre'),
       supabase.from('tareas').select('id, descripcion, fecha_programada, completada, bloques(id, codigo)').order('fecha_programada', { ascending:false }),
       supabase.from('vivero_lotes').select('id, cultivo, variedad, fecha_siembra, estado').order('fecha_siembra', { ascending:false }),
+      supabase.from('operarios').select('id, nombre, campos(nombre)').order('nombre'),
+      supabase.from('fumigaciones').select('id, fecha, tipo, operario, fumigacion_bloques(bloques(id,codigo)), fumigacion_productos(productos(nombre))').eq('anulada', false).order('fecha', { ascending:false }).limit(150),
+      supabase.from('fertilizaciones').select('id, fecha, soluciones, bloques(id,codigo)').eq('anulada', false).order('fecha', { ascending:false }).limit(150),
       Promise.resolve({ data: [] }),
     ])
 
@@ -96,6 +102,9 @@ export default function Buscador() {
         icon: 'ti-plant-2',
         path: '/vivero',
       })),
+      ...(operarios || []).map(o => ({ tipo:'Operario', titulo:o.nombre, sub:`Personal de campo · ${o.campos?.nombre || 'Sin campo'}`, icon:'ti-user', path:'/asistencia' })),
+      ...(fumigaciones || []).map(f => ({ tipo:'Fumigación', titulo:`${f.tipo || 'Aplicación'} · ${(f.fumigacion_bloques || []).map(b => b.bloques?.codigo).filter(Boolean).join(', ') || 'Sin bloque'}`, sub:`${f.fecha || ''} · ${(f.fumigacion_productos || []).map(p => p.productos?.nombre).filter(Boolean).join(' + ') || 'Sin producto'}${f.operario ? ` · ${f.operario}` : ''}`, icon:'ti-spray', path:'/fumigaciones' })),
+      ...(fertilizaciones || []).map(f => ({ tipo:'Fertilización', titulo:`Bloque ${f.bloques?.codigo || '-'}`, sub:`${f.fecha || ''} · ${(f.soluciones || []).flatMap(s => s.productos || []).map(p => p.nombre).filter(Boolean).join(' + ') || 'Aplicación'}`, icon:'ti-leaf', path:'/fertilizaciones' })),
       ...(contabilidad || []).map(m => ({
         tipo: 'Contabilidad',
         titulo: m.descripcion || m.categoria || m.tipo,
