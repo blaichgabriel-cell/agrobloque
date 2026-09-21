@@ -360,7 +360,9 @@ export default function App() {
       const { data, error } = await supabase.from('app_user_roles').select('*').eq('email', email.toLowerCase()).maybeSingle()
       if (cancelled) return
       const perfilNombre = session.user.user_metadata?.nombre || session.user.user_metadata?.full_name || session.user.user_metadata?.name || ''
-      setRole(error ? { ...normalizeRole(null, email), nombre:perfilNombre } : normalizeRole({ ...data, nombre:perfilNombre || data?.nombre }, email))
+      const filaRol = data ? { ...data, nombre:perfilNombre || data.nombre } : null
+      const rolNormalizado = normalizeRole(error ? null : filaRol, email)
+      setRole(perfilNombre ? { ...rolNormalizado, nombre:perfilNombre } : rolNormalizado)
       setRoleUserId(session.user.id)
     }
     cargarPermisos()
