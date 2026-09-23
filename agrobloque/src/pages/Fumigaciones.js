@@ -1,3 +1,4 @@
+import { Modal, FormHeading, Notice, Skeleton } from '../components/UI'
 import React, { useState, useEffect } from 'react'
 import { guestToken, supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
@@ -97,16 +98,16 @@ const normalizarOperarios = (texto = '') =>
 
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#fff', borderRadius:8, padding:'24px 20px', width:'100%', maxWidth:340 }}>
+    <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+      <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'24px 20px', width:'100%', maxWidth:340 }}>
         <div style={{ fontSize:15, fontWeight:600, color:"#182c25", marginBottom:8, textAlign:'center' }}>Eliminar registro</div>
         <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>Esta accion no se puede deshacer.</div>
         <div style={{ display:'flex', gap:8 }}>
-          <button onClick={onCancel} style={{ flex:1, padding:12, borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:8, border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
+          <button className="ag-small-action" onClick={onCancel} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
+          <button className="ag-small-action" onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -116,7 +117,7 @@ const formatFechaLabel = (fecha) => {
 }
 
 export default function Fumigaciones() {
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [fumigaciones, setFumigaciones] = useState([])
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
@@ -141,6 +142,8 @@ export default function Fumigaciones() {
   const [saving, setSaving] = useState(false)
   const [filtro, setFiltro] = useState('todos')
   const [mensajeExito, setMensajeExito] = useState('')
+  const [formError, setFormError] = useState('')
+  const [loading, setLoading] = useState(true)
   const isGuest = Boolean(guestToken)
 
   useEffect(() => { fetchFumigaciones(); fetchCampos(); fetchProductos() }, [])
@@ -162,10 +165,13 @@ export default function Fumigaciones() {
   }, [])
 
   const fetchFumigaciones = async () => {
-    const { data } = await supabase.from('fumigaciones')
+    setLoading(true)
+    const { data, error } = await supabase.from('fumigaciones')
       .select('*, campos(nombre), fumigacion_bloques(bloque_id, cultivo_snapshot, plantacion_id_snapshot, bloques(codigo, plantaciones(id, activa, cultivos(nombre)))), fumigacion_productos(*, productos(nombre, unidad, carencia_dias))')
       .order('fecha', { ascending:false })
-    setFumigaciones((data || []).filter(f => !f.anulada))
+    if (error) setFormError('No se pudieron cargar las fumigaciones. Intentá nuevamente.')
+    else setFumigaciones((data || []).filter(f => !f.anulada))
+    setLoading(false)
   }
 
   const fetchCampos = async () => {
@@ -314,12 +320,13 @@ export default function Fumigaciones() {
   }
 
   const guardar = async () => {
+    setFormError('')
     if (!form.fecha || form.bloques_ids.length === 0) return
     const usaProductosLibres = form.productos_form.some(p => !p.producto_id && p.producto_nombre?.trim())
     if (usaProductosLibres) {
       const { error: soporteError } = await supabase.from('fumigacion_productos').select('producto_nombre').limit(1)
       if (soporteError) {
-        if (typeof window !== 'undefined') window.alert('Primero hay que activar en Supabase el soporte para productos sin inventario.')
+        setFormError('No se pudo guardar el producto sin inventario. Consultá al administrador para habilitar este tipo de registro.')
         return
       }
     }
@@ -328,8 +335,8 @@ export default function Fumigaciones() {
     setSaving(true)
     try {
       const avisarError = (mensaje) => {
-        if (typeof window !== 'undefined') window.alert(mensaje)
-        else console.error(mensaje)
+        setFormError(mensaje)
+        console.error(mensaje)
       }
       const payload = {
         campo_id: form.campo_id || null,
@@ -377,7 +384,7 @@ export default function Fumigaciones() {
         .join(', ')
       setMensajeExito(`${eraEdicion ? 'Fumigación actualizada' : 'Fumigación guardada'} y vinculada a ${codigos || `${bloquesGuardados.length} bloque(s)`}. Ya aparece en la lista general.`)
     } catch (error) {
-      if (typeof window !== 'undefined') window.alert(`No se pudo completar la fumigación: ${error?.message || 'error desconocido'}`)
+      setFormError(`No se pudo completar la fumigación: ${error?.message || 'error desconocido'}`)
     } finally {
       setSaving(false)
     }
@@ -419,43 +426,44 @@ export default function Fumigaciones() {
   const fechasOrdenadas = Object.keys(porFecha).sort((a, b) => b.localeCompare(a))
 
   return (
-    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
-      <div style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+      <div className="ag-page-header" style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Control fitosanitario</div>
-            <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Fumigaciones</div>
+            <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Fumigaciones</div>
           </div>
           {!isGuest && (
-            <button onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:8, background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+            <button aria-label="Agregar registro" onClick={abrirNuevo} style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
               <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
             </button>
           )}
         </div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:4 }}>
           {[['todos','Todos'],['fumigacion','Fumigacion'],['fertiriego','Fertiriego'],['foliar','Foliar']].map(([k,v]) => (
-            <button key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:8, border:'none', fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#212121' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>{v}</button>
+            <button className="ag-small-action" key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:'var(--ag-radius)', border:'none', fontSize:12, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#212121' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>{v}</button>
           ))}
         </div>
       </div>
 
-      <div style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
+      <div className="ag-page-body" style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
+        <Notice tone="error">{!modal && formError}</Notice>
         {mensajeExito && (
-          <div style={{ maxWidth:1220, margin:'0 auto 12px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, background:'#eaf6ec', color:"#08603f", border:'1px solid #c9e4ce', borderRadius:8, padding:'11px 13px', fontSize:12, fontWeight:600 }}>
+          <div style={{ maxWidth:1220, margin:'0 auto 12px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, background:'#eaf6ec', color:"#08603f", border:'1px solid #c9e4ce', borderRadius:'var(--ag-radius)', padding:'11px 13px', fontSize:12, fontWeight:600 }}>
             <span>{mensajeExito}</span>
             <button type="button" onClick={() => setMensajeExito('')} aria-label="Cerrar mensaje" style={{ border:'none', background:'transparent', color:"#08603f", cursor:'pointer', fontSize:16, lineHeight:1 }}>×</button>
           </div>
         )}
-        {fechasOrdenadas.length === 0 ? (
+        {loading ? <Skeleton rows={4} label="Cargando aplicaciones" /> : fechasOrdenadas.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin registros</div>
         ) : fechasOrdenadas.map(fecha => (
           <div key={fecha}>
             {/* Separador de fecha */}
             <div style={{ display:'flex', alignItems:'center', gap:10, margin:'16px 0 8px' }}>
               <div style={{ height:1, flex:1, background:'#e0ddd8' }}></div>
-              <div style={{ fontSize:11, fontWeight:600, color:"#124e38", textTransform:'capitalize', whiteSpace:'nowrap' }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#124e38", textTransform:'capitalize', whiteSpace:'nowrap' }}>
                 {formatFechaLabel(fecha)}
               </div>
               <div style={{ height:1, flex:1, background:'#e0ddd8' }}></div>
@@ -469,24 +477,24 @@ export default function Fumigaciones() {
               const tanques = f.tanques_cantidad && f.tanque_litros ? `${fmtCantidad(f.tanques_cantidad)} tanque${Number(f.tanques_cantidad) === 1 ? '' : 's'} x ${fmtCantidad(f.tanque_litros)} L` : ''
 
               return (
-                <div key={f.id} onClick={() => setDetalle(f)} style={{ background:'#fff', borderRadius:8, padding: isDesktop ? '16px 18px' : '14px 16px', marginBottom: isDesktop ? 10 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+                <div className="ag-surface" key={f.id} onClick={() => setDetalle(f)} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding: isDesktop ? '16px 18px' : '14px 16px', marginBottom: isDesktop ? 10 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <div style={{ width:38, height:38, borderRadius:8, background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <div style={{ width:38, height:38, borderRadius:'var(--ag-radius)', background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                       <i className={`ti ${tipo.icon}`} style={{ fontSize:18, color:tipo.color }} aria-hidden="true"></i>
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
-                        <span style={{ fontSize:10, fontWeight:600, color:tipo.color, background:tipo.bg, padding:'2px 8px', borderRadius:8 }}>{tipo.label}</span>
-                        {f.campos?.nombre && <span style={{ fontSize:10, color:"#697970" }}>{f.campos.nombre}</span>}
-                        {tanques && <span style={{ fontSize:10, color:"#697970" }}>· {tanques}</span>}
-                        {carencia && <span style={{ fontSize:9, fontWeight:600, padding:'2px 7px', borderRadius:6, background:'#fff3e8', color:'#c8700a' }}>{carencia}d carencia</span>}
+                        <span style={{ fontSize:12, fontWeight:600, color:tipo.color, background:tipo.bg, padding:'2px 8px', borderRadius:'var(--ag-radius)' }}>{tipo.label}</span>
+                        {f.campos?.nombre && <span style={{ fontSize:12, color:"#697970" }}>{f.campos.nombre}</span>}
+                        {tanques && <span style={{ fontSize:12, color:"#697970" }}>· {tanques}</span>}
+                        {carencia && <span style={{ fontSize:12, fontWeight:600, padding:'2px 7px', borderRadius:6, background:'#fff3e8', color:'#c8700a' }}>{carencia}d carencia</span>}
                       </div>
                       {nombresProductos && (
                         <div style={{ fontSize:13, fontWeight:600, color:"#182c25", marginBottom:2 }}>{nombresProductos}</div>
                       )}
                       <div style={{ display:'flex', gap:8 }}>
-                        {bloquesCodes && <div style={{ fontSize:11, color:"#697970" }}>Bloques: {bloquesCodes}</div>}
-                        {f.operario && <div style={{ fontSize:11, color:"#697970" }}>· {f.operario}</div>}
+                        {bloquesCodes && <div style={{ fontSize:12, color:"#697970" }}>Bloques: {bloquesCodes}</div>}
+                        {f.operario && <div style={{ fontSize:12, color:"#697970" }}>· {f.operario}</div>}
                       </div>
                     </div>
                     <i className="ti ti-chevron-right" style={{ fontSize:14, color:'#d0d0d0' }} aria-hidden="true"></i>
@@ -501,7 +509,7 @@ export default function Fumigaciones() {
 
       {/* Detalle */}
       {detalle && (
-        <div style={{
+        <Modal onClose={() => setDetalle(null)} label="Fumigaciones" style={{
           position:'fixed',
           top:0,
           left:0,
@@ -513,7 +521,7 @@ export default function Fumigaciones() {
           alignItems: isDesktop ? 'center' : 'flex-end',
           justifyContent:'center',
           padding: isDesktop ? '24px' : 0,
-          overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
+          overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
         }} onClick={e => e.target===e.currentTarget && setDetalle(null)}>
           <div style={{
             background:"#f6f8f7",
@@ -522,7 +530,7 @@ export default function Fumigaciones() {
             maxWidth:480,
             padding:'24px 20px 40px',
             maxHeight: isDesktop ? 'calc(100vh - 96px)' : '85vh',
-            overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
+            overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
             boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
           }}>
             {(() => {
@@ -531,20 +539,20 @@ export default function Fumigaciones() {
               const carencia = getCarencia(detalle)
               return <>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
-                  <div style={{ width:40, height:40, borderRadius:8, background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <div style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
                     <i className={`ti ${tipo.icon}`} style={{ fontSize:18, color:tipo.color }} aria-hidden="true"></i>
                   </div>
                   <div>
                     <div style={{ fontSize:18, fontWeight:700, color:"#182c25" }}>{tipo.label}</div>
-                    <div style={{ fontSize:11, color:"#697970" }}>{detalle.campos?.nombre} · {detalle.fecha}</div>
+                    <div style={{ fontSize:12, color:"#697970" }}>{detalle.campos?.nombre} · {detalle.fecha}</div>
                   </div>
                   {carencia && (
-                    <div style={{ marginLeft:'auto', padding:'4px 12px', borderRadius:8, background:'#fff3e8', fontSize:11, fontWeight:600, color:'#c8700a' }}>
+                    <div style={{ marginLeft:'auto', padding:'4px 12px', borderRadius:'var(--ag-radius)', background:'#fff3e8', fontSize:12, fontWeight:600, color:'#c8700a' }}>
                       {carencia} dias carencia
                     </div>
                   )}
                 </div>
-                <div style={{ background:'#fff', borderRadius:8, padding:'12px 16px', marginBottom:10 }}>
+                <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'12px 16px', marginBottom:10 }}>
                   {[
                     ['Fecha', detalle.fecha],
                     detalle.operario && ['Operario', detalle.operario],
@@ -559,8 +567,8 @@ export default function Fumigaciones() {
                   ))}
                 </div>
                 {detalle.fumigacion_productos?.length > 0 && (
-                  <div style={{ background:'#fff', borderRadius:8, padding:'12px 16px', marginBottom:10 }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:"#697970", marginBottom:8 }}>PRODUCTOS USADOS</div>
+                  <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'12px 16px', marginBottom:10 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:8 }}>PRODUCTOS USADOS</div>
                     {detalle.fumigacion_productos.map(fp => (
                       <div key={fp.id} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:"1px solid #f6f8f7" }}>
                         <div style={{ fontSize:13, color:"#182c25" }}>{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</div>
@@ -569,18 +577,18 @@ export default function Fumigaciones() {
                     ))}
                   </div>
                 )}
-                {!isGuest && <button onClick={() => abrirEditar(detalle)} style={{ width:'100%', padding:12, borderRadius:8, border:'none', background:"#124e38", fontSize:13, fontWeight:700, color:'#fff', cursor:'pointer', marginBottom:8 }}>Editar registro</button>}
-                {!isGuest && <button onClick={() => eliminar(detalle.id)} style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginBottom:8 }}>Eliminar registro</button>}
-                <button onClick={() => setDetalle(null)} style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer' }}>Cerrar</button>
+                {!isGuest && <button className="ag-small-action" onClick={() => abrirEditar(detalle)} style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'none', background:"#124e38", fontSize:13, fontWeight:700, color:'#fff', cursor:'pointer', marginBottom:8 }}>Editar registro</button>}
+                {!isGuest && <button className="ag-small-action" onClick={() => eliminar(detalle.id)} style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginBottom:8 }}>Eliminar registro</button>}
+                <button className="ag-small-action" onClick={() => setDetalle(null)} style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer' }}>Cerrar</button>
               </>
             })()}
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal nuevo */}
       {modal && (
-        <div style={{
+        <Modal busy={saving} onClose={cerrarModal} label="Registrar aplicación" style={{
           position:'fixed',
           top:0,
           left:0,
@@ -592,7 +600,7 @@ export default function Fumigaciones() {
           alignItems: isDesktop ? 'center' : 'flex-end',
           justifyContent:'center',
           padding: isDesktop ? '24px' : 0,
-          overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
+          overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
         }}>
           <div style={{
             background:"#f6f8f7",
@@ -601,87 +609,90 @@ export default function Fumigaciones() {
             maxWidth:480,
             padding:'24px 20px 40px',
             maxHeight: isDesktop ? 'calc(100vh - 96px)' : '90vh',
-            overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
+            overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
             boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
           }}>
             <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id ? 'Editar registro' : 'Nuevo registro'}</div>
-            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Tipo</div>
+            <Notice tone="error">{formError}</Notice><FormHeading number="01" detail="Tipo de trabajo y ubicación">Aplicación</FormHeading>
+            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Tipo</div>
             <div style={{ display:'flex', gap:6, marginBottom:12 }}>
               {Object.entries(TIPOS).map(([k,v]) => (
-                <button key={k} onClick={() => setForm(f=>({...f,tipo:k}))} style={{ flex:1, padding:9, borderRadius:8, border:"1px solid #e2e9e5", fontSize:11, fontWeight:600, cursor:'pointer', background: form.tipo===k ? '#212121' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
+                <button className="ag-small-action" key={k} onClick={() => setForm(f=>({...f,tipo:k}))} style={{ flex:1, padding:9, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:12, fontWeight:600, cursor:'pointer', background: form.tipo===k ? '#212121' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
               ))}
             </div>
-            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Fecha *</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }} type="date" value={form.fecha} onChange={e=>setForm(f=>({...f,fecha:e.target.value}))}/>
-            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Campo</div>
-            <select style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} value={form.campo_id} onChange={e=>{setForm(f=>({...f,campo_id:e.target.value,bloques_ids:[]}));fetchBloques(e.target.value)}}>
+            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Fecha *
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }} type="date" value={form.fecha} onChange={e=>setForm(f=>({...f,fecha:e.target.value}))}/></label>
+            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Campo
+            <select style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} value={form.campo_id} onChange={e=>{setForm(f=>({...f,campo_id:e.target.value,bloques_ids:[]}));fetchBloques(e.target.value)}}>
               <option value="">Selecciona campo...</option>
               {campos.map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
+            </select></label>
             {bloques.length > 0 && <>
-              <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Bloques tratados *</div>
+              <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Bloques tratados *</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
                 {bloques.map(b=>{
                   const cultivo = getCultivoBloque(b)
                   const activo = form.bloques_ids.includes(b.id)
                   return (
-                    <div key={b.id} onClick={()=>toggleBloque(b.id)} style={{ padding:'7px 12px', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', background: activo ? '#212121' : '#fff', color: activo ? '#fff' : '#555', border:"1px solid #e2e9e5", minWidth:78 }}>
+                    <div key={b.id} onClick={()=>toggleBloque(b.id)} style={{ padding:'7px 12px', borderRadius:'var(--ag-radius)', fontSize:12, fontWeight:600, cursor:'pointer', background: activo ? '#212121' : '#fff', color: activo ? '#fff' : '#555', border:"1px solid #e2e9e5", minWidth:78 }}>
                       <div>{b.codigo}</div>
-                      <div style={{ fontSize:10, fontWeight:500, opacity: activo ? 0.78 : 0.7, marginTop:2 }}>{cultivo || 'Sin cultivo'}</div>
+                      <div style={{ fontSize:12, fontWeight:500, opacity: activo ? 0.78 : 0.7, marginTop:2 }}>{cultivo || 'Sin cultivo'}</div>
                     </div>
                   )
                 })}
               </div>
             </>}
             {operarios.length > 0 && <>
-              <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Operarios</div>
+              <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Operarios</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:6 }}>
                 {operarios.map(o => {
                   const activo = form.operarios_nombres?.includes(o.nombre) || normalizarOperarios(form.operario).includes(o.nombre)
                   return (
-                    <button key={o.id} type="button" onClick={() => toggleOperario(o.nombre)} style={{ padding:'7px 12px', borderRadius:8, border:"1px solid #e2e9e5", background: activo ? '#212121' : '#fff', color: activo ? '#fff' : '#555', fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                    <button className="ag-small-action" key={o.id} type="button" onClick={() => toggleOperario(o.nombre)} style={{ padding:'7px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background: activo ? '#212121' : '#fff', color: activo ? '#fff' : '#555', fontSize:12, fontWeight:600, cursor:'pointer' }}>
                       {o.nombre}
                     </button>
                   )
                 })}
               </div>
-              <div style={{ fontSize:10, color:"#697970", marginBottom:12 }}>Podes seleccionar uno o varios.</div>
+              <div style={{ fontSize:12, color:"#697970", marginBottom:12 }}>Podes seleccionar uno o varios.</div>
             </>}
+            <FormHeading number="02" detail="Volumen preparado para esta aplicación">Preparación</FormHeading>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12 }}>
               <div>
-                <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Cantidad de tanques</div>
-                <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", boxSizing:'border-box' }} type="number" min="0" value={form.tanques_cantidad} onChange={e=>setForm(f=>({...f,tanques_cantidad:e.target.value}))} placeholder="Ej: 3"/>
+                <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Cantidad de tanques
+                <input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", boxSizing:'border-box' }} type="number" min="0" value={form.tanques_cantidad} onChange={e=>setForm(f=>({...f,tanques_cantidad:e.target.value}))} placeholder="Ej: 3"/></label>
               </div>
               <div>
-                <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Litros por tanque</div>
-                <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", boxSizing:'border-box' }} type="number" min="0" value={form.tanque_litros} onChange={e=>setForm(f=>({...f,tanque_litros:e.target.value}))} placeholder="Ej: 20"/>
+                <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Litros por tanque
+                <input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", boxSizing:'border-box' }} type="number" min="0" value={form.tanque_litros} onChange={e=>setForm(f=>({...f,tanque_litros:e.target.value}))} placeholder="Ej: 20"/></label>
               </div>
             </div>
             {form.tanques_cantidad && form.tanque_litros && (
-              <div style={{ fontSize:11, color:'#555', margin:'-6px 0 12px', paddingLeft:4 }}>
+              <div style={{ fontSize:12, color:'#555', margin:'-6px 0 12px', paddingLeft:4 }}>
                 Total preparado: {fmtCantidad((Number(form.tanques_cantidad) || 0) * (Number(form.tanque_litros) || 0))} L
               </div>
             )}
-            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Productos <span style={{ color:"#124e38" }}>(el inventario es opcional)</span></div>
+            <FormHeading number="03" detail="Cantidad, unidad y efecto sobre el stock">Productos utilizados</FormHeading>
+            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Productos <span style={{ color:"#124e38" }}>(el inventario es opcional)</span></div>
             {form.productos_form.map((pf,i)=>{
               const prod = productos.find(p=>p.id===pf.producto_id)
               const descuento = prod ? calcularDescuentoStock(pf, prod, form.tanques_cantidad) : 0
               return (
                 <div key={i} style={{ marginBottom:8 }}>
-                  <div style={{ display:'grid', gridTemplateColumns:'1.5fr .75fr .75fr', gap:6 }}>
+                  <div className="ag-product-row" style={{ display:'grid', gridTemplateColumns:'1.5fr .75fr .75fr', gap:6 }}>
                     <div style={{ display:'grid', gap:5 }}>
-                      <select style={{ minWidth:0, padding:'9px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }} value={pf.producto_id} onChange={e=>{const prodSel=productos.find(p=>p.id===e.target.value); const np=[...form.productos_form];np[i].producto_id=e.target.value;np[i].producto_nombre=prodSel?.nombre || np[i].producto_nombre || '';np[i].unidad_uso=unidadUsoDefault(prodSel?.unidad);setForm(f=>({...f,productos_form:np}))}}>
+                      <select style={{ minWidth:0, padding:'9px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }} value={pf.producto_id} onChange={e=>{const prodSel=productos.find(p=>p.id===e.target.value); const np=[...form.productos_form];np[i].producto_id=e.target.value;np[i].producto_nombre=prodSel?.nombre || np[i].producto_nombre || '';np[i].unidad_uso=unidadUsoDefault(prodSel?.unidad);setForm(f=>({...f,productos_form:np}))}}>
                         <option value="">Sin inventario</option>
                         {productos.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
                       </select>
-                      {!pf.producto_id && <input style={{ minWidth:0, padding:'9px 12px', borderRadius:8, border:'1px solid #d6dfd6', background:'#f7fbf7', fontSize:12, color:"#182c25" }} value={pf.producto_nombre || ''} onChange={e=>{const np=[...form.productos_form];np[i].producto_nombre=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Escribir producto" />}
+                      {!pf.producto_id && <input style={{ minWidth:0, padding:'9px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #d6dfd6', background:'#f7fbf7', fontSize:12, color:"#182c25" }} value={pf.producto_nombre || ''} onChange={e=>{const np=[...form.productos_form];np[i].producto_nombre=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Escribir producto" />}
                     </div>
-                    <input style={{ minWidth:0, padding:'9px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }} value={pf.cantidad} onChange={e=>{const np=[...form.productos_form];np[i].cantidad=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Cant." inputMode="decimal"/>
-                    <select style={{ minWidth:0, padding:'9px 8px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }} value={pf.unidad_uso} onChange={e=>{const np=[...form.productos_form];np[i].unidad_uso=e.target.value;setForm(f=>({...f,productos_form:np}))}}>
+                    <input style={{ minWidth:0, padding:'9px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }} value={pf.cantidad} onChange={e=>{const np=[...form.productos_form];np[i].cantidad=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Cant." inputMode="decimal"/>
+                    <select style={{ minWidth:0, padding:'9px 8px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }} value={pf.unidad_uso} onChange={e=>{const np=[...form.productos_form];np[i].unidad_uso=e.target.value;setForm(f=>({...f,productos_form:np}))}}>
                       {UNIDADES_USO.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
                   </div>
-                  {prod && <div style={{ fontSize:10, color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#212121', marginTop:3, paddingLeft:4 }}>
+                  {prod && <div style={{ fontSize:12, color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#212121', marginTop:3, paddingLeft:4 }}>
                     Stock: {formatearStock(prod.stock_actual, prod.unidad)}
                     {descuento === null ? ' · medida incompatible con el stock' : descuento > 0 ? ` · descuenta ${formatearStock(descuento, prod.unidad)}` : ''}
                     {prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}
@@ -689,13 +700,13 @@ export default function Fumigaciones() {
                 </div>
               )
             })}
-            <button onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{producto_id:'',producto_nombre:'',cantidad:'',unidad_uso:'g'}]}))} style={{ width:'100%', padding:9, borderRadius:8, border:"1px dashed #e2e9e5", background:'transparent', fontSize:12, color:"#697970", cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
-            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Notas</div>
-            <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:16, minHeight:60, resize:'vertical', boxSizing:'border-box' }} value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/>
-            <button style={{ width:'100%', padding:14, borderRadius:8, background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar registro'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={cerrarModal}>Cancelar</button>
+            <button className="ag-small-action" onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{producto_id:'',producto_nombre:'',cantidad:'',unidad_uso:'g'}]}))} style={{ width:'100%', padding:9, borderRadius:'var(--ag-radius)', border:"1px dashed #e2e9e5", background:'transparent', fontSize:12, color:"#697970", cursor:'pointer', marginBottom:12 }}>+ Agregar producto</button>
+            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Notas
+            <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:16, minHeight:60, resize:'vertical', boxSizing:'border-box' }} value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/></label>
+            <button className="ag-form-submit" style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar registro'}</button>
+            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={cerrarModal}>Cancelar</button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

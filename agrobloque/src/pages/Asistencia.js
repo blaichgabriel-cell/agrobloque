@@ -1,3 +1,4 @@
+import { Modal } from '../components/UI'
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
@@ -36,7 +37,7 @@ const getCampoGuardado = () => {
 }
 
 export default function Asistencia() {
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [campoActivo, setCampoActivo] = useState(null)
   const [campos, setCampos] = useState([])
   const [operarios, setOperarios] = useState([])
@@ -307,28 +308,28 @@ export default function Asistencia() {
   }
 
   return (
-    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
-      <div style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+      <div className="ag-page-header" style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Control semanal</div>
-        <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5, marginBottom:16 }}>Asistencia y pagos</div>
-        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:10 }}>{error}</div>}
-        <div style={{ display:'flex', gap:5, background:"#e2e9e5", borderRadius:8, padding:4, marginBottom:16 }}>
+        <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5, marginBottom:16 }}>Asistencia y pagos</div>
+        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:10 }}>{error}</div>}
+        <div style={{ display:'flex', gap:5, background:"#e2e9e5", borderRadius:'var(--ag-radius)', padding:4, marginBottom:16 }}>
           {campos.map(c => (
-            <button key={c.id} onClick={() => seleccionarCampo(c)} style={{ flex:1, padding:8, borderRadius:8, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#212121' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }}>
+            <button className="ag-small-action" key={c.id} onClick={() => seleccionarCampo(c)} style={{ flex:1, padding:8, borderRadius:'var(--ag-radius)', fontSize:12, fontWeight:600, border:'none', cursor:'pointer', background: campoActivo?.id===c.id ? '#212121' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }}>
               {c.nombre}
             </button>
           ))}
         </div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <button onClick={() => setSemanaOffset(o => o-1)} style={{ padding:'7px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25", cursor:'pointer' }}>← Anterior</button>
+          <button className="ag-small-action" onClick={() => setSemanaOffset(o => o-1)} style={{ padding:'7px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25", cursor:'pointer' }}>← Anterior</button>
           <div style={{ fontSize:12, fontWeight:600, color:"#182c25" }}>{formatLabel(lunes)} — {formatLabel(new Date(lunes.getTime() + 5*86400000))}</div>
-          <button onClick={() => setSemanaOffset(o => o+1)} style={{ padding:'7px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25", cursor:'pointer' }}>Siguiente →</button>
+          <button className="ag-small-action" onClick={() => setSemanaOffset(o => o+1)} style={{ padding:'7px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25", cursor:'pointer' }}>Siguiente →</button>
         </div>
       </div>
 
-      <div style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
+      <div className="ag-page-body" style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
         {operarios.map(op => (
-          <div key={op.id} style={{ background:'#fff', borderRadius:8, marginBottom:10, overflow:'hidden', boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+          <div key={op.id} style={{ background:'#fff', borderRadius:'var(--ag-radius)', marginBottom:10, overflow:'hidden', boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderBottom:"1px solid #f6f8f7" }}>
               <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{op.nombre}</div>
               <div style={{ fontSize:14, fontWeight:700, color:"#124e38" }}>Gs. {fmtGs(getTotalSemana(op.id))}</div>
@@ -336,38 +337,38 @@ export default function Asistencia() {
             <div style={{ display:'flex', padding:'12px 14px', gap:4 }}>
               {DIAS.map((dia, i) => (
                 <div key={dia} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                  <div style={{ fontSize:10, color:"#697970", fontWeight:500 }}>{DIAS_CORTO[i]}</div>
+                  <label className="ag-field-label" style={{ fontSize:12, color:"#697970", fontWeight:500 }}>{DIAS_CORTO[i]}
                   <input
                     type="text" inputMode="numeric"
                     value={getMonto(op.id, diasFechas[i])}
                     onChange={e => handleChange(op.id, diasFechas[i], i, e.target.value)}
                     placeholder="0"
-                    style={{ width:'100%', padding:'6px 2px', borderRadius:8, border:"1px solid #e2e9e5", background:"#f6f8f7", fontSize:11, color:"#182c25", textAlign:'center' }}
-                  />
+                    style={{ width:'100%', padding:'6px 2px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:"#f6f8f7", fontSize:12, color:"#182c25", textAlign:'center' }}
+                  /></label>
                 </div>
               ))}
             </div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderTop:"1px solid #f6f8f7" }}>
-              <button onClick={() => setModalHistorial(op)} style={{ fontSize:11, color:"#697970", background:'none', border:'none', cursor:'pointer' }}>
+              <button onClick={() => setModalHistorial(op)} style={{ fontSize:12, color:"#697970", background:'none', border:'none', cursor:'pointer' }}>
                 Adelantos pendientes: <span style={{ color: getTotalAdelantos(op.id) > 0 ? '#c84040' : '#9a9a9a', fontWeight:600 }}>Gs. {fmtGs(getTotalAdelantos(op.id))}</span> →
               </button>
-              <button onClick={() => setModalAdelanto(op)} style={{ padding:'5px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:11, fontWeight:500, color:"#182c25", cursor:'pointer' }}>+ Adelanto</button>
+              <button className="ag-small-action" onClick={() => setModalAdelanto(op)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, fontWeight:500, color:"#182c25", cursor:'pointer' }}>+ Adelanto</button>
             </div>
           </div>
         ))}
 
-        <div style={{ background:"#124e38", borderRadius:8, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div style={{ background:"#124e38", borderRadius:'var(--ag-radius)', padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>Total semanal del campo</div>
           <div style={{ fontSize:20, fontWeight:700, color:'#fff', letterSpacing:-.5 }}>Gs. {fmtGs(getTotalGeneral())}</div>
         </div>
 
-        <div style={{ background:'#fff', borderRadius:8, padding:'16px', marginTop:12, marginBottom:12 }}>
+        <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'16px', marginTop:12, marginBottom:12 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:12 }}>
             <div>
               <div style={{ fontSize:15, fontWeight:700, color:"#182c25" }}>Trabajos realizados</div>
-              <div style={{ fontSize:11, color:"#697970", marginTop:2 }}>Bitacora diaria vinculada a la asistencia</div>
+              <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>Bitacora diaria vinculada a la asistencia</div>
             </div>
-            <button onClick={guardarNotaDia} disabled={savingNota} style={{ border:'none', background:"#08603f", color:'#fff', borderRadius:8, padding:'9px 13px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+            <button className="ag-small-action" onClick={guardarNotaDia} disabled={savingNota} style={{ border:'none', background:"#08603f", color:'#fff', borderRadius:'var(--ag-radius)', padding:'9px 13px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
               {savingNota ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
@@ -377,13 +378,13 @@ export default function Asistencia() {
               const activo = fechaNotaActual === fecha
               const tieneNota = Boolean((notasDia[fecha]?.trabajos || '').trim())
               return (
-                <button key={dia} onClick={() => setFechaNotaActiva(fecha)} style={{
+                <button className="ag-small-action" key={dia} onClick={() => setFechaNotaActiva(fecha)} style={{
                   border:"1px solid #e2e9e5",
                   background: activo ? '#212121' : tieneNota ? '#edf6ec' : '#f8f8f6',
                   color: activo ? '#fff' : tieneNota ? '#176a25' : '#687068',
-                  borderRadius:8,
+                  borderRadius:'var(--ag-radius)',
                   padding:'9px 4px',
-                  fontSize:11,
+                  fontSize:12,
                   fontWeight:700,
                   cursor:'pointer',
                 }}>
@@ -396,7 +397,7 @@ export default function Asistencia() {
             value={notasDia[fechaNotaActual]?.trabajos || ''}
             onChange={e => actualizarNotaDia(e.target.value)}
             placeholder="Ej: limpieza de canteros, riego, cosecha parcial, preparación de sustrato..."
-            style={{ width:'100%', minHeight:92, resize:'vertical', border:"1px solid #e2e9e5", borderRadius:8, background:'#f8f8f6', padding:12, fontSize:13, color:"#182c25", lineHeight:1.45 }}
+            style={{ width:'100%', minHeight:92, resize:'vertical', border:"1px solid #e2e9e5", borderRadius:'var(--ag-radius)', background:'#f8f8f6', padding:12, fontSize:13, color:"#182c25", lineHeight:1.45 }}
           />
         </div>
         <NotasPanel modulo="asistencia" titulo="Blog de notas de asistencia" />
@@ -404,87 +405,87 @@ export default function Asistencia() {
 
       {/* Modal historial adelantos */}
       {modalHistorial && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'80vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+        <Modal onClose={() => setModalHistorial(null)} label="Asistencia" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
+          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'80vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:4 }}>Adelantos — {modalHistorial.nombre}</div>
             <div style={{ fontSize:12, color:"#697970", marginBottom:20 }}>Pendiente: Gs. {fmtGs(getTotalAdelantos(modalHistorial.id))} | Pagados: Gs. {fmtGs(getTotalAdelantosPagados(modalHistorial.id))}</div>
             {getAdelantosOperario(modalHistorial.id).length === 0 ? (
               <div style={{ textAlign:'center', color:"#697970", fontSize:13, padding:'20px 0' }}>Sin adelantos registrados</div>
             ) : <>
-              {getAdelantosPendientesOperario(modalHistorial.id).length > 0 && <div style={{ fontSize:11, fontWeight:700, color:'#8a4d00', textTransform:'uppercase', letterSpacing:.5, margin:'4px 2px 8px' }}>Pendientes</div>}
+              {getAdelantosPendientesOperario(modalHistorial.id).length > 0 && <div style={{ fontSize:12, fontWeight:700, color:'#8a4d00', textTransform:'uppercase', letterSpacing:.5, margin:'4px 2px 8px' }}>Pendientes</div>}
               {getAdelantosPendientesOperario(modalHistorial.id).map(a => (
-              <div key={a.id} style={{ background:'#fff', borderRadius:8, padding:'12px 14px', marginBottom:8 }}>
+              <div className="ag-surface" key={a.id} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:8 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                   <div style={{ fontSize:13, fontWeight:600, color: esAdelantoPagado(a) ? '#9a9a9a' : '#0a0a0a' }}>
                     Gs. {fmtGs(a.monto)}
-                    {esAdelantoPagado(a) && <span style={{ fontSize:10, color:'#1E5631', background:'#edf7ed', padding:'1px 6px', borderRadius:6, marginLeft:6 }}>Pagado</span>}
+                    {esAdelantoPagado(a) && <span style={{ fontSize:12, color:'#1E5631', background:'#edf7ed', padding:'1px 6px', borderRadius:6, marginLeft:6 }}>Pagado</span>}
                   </div>
-                  <div style={{ fontSize:11, color:"#697970" }}>{a.fecha}</div>
+                  <div style={{ fontSize:12, color:"#697970" }}>{a.fecha}</div>
                 </div>
-                {esAdelantoPagado(a) && <div style={{ fontSize:11, color:'#1E5631', marginBottom:6 }}>{getFechaPagoAdelanto(a) ? `Pagado: ${getFechaPagoAdelanto(a)}` : 'Pagado'}</div>}
-                {limpiarMarcaPagado(a.descripcion || '') && <div style={{ fontSize:11, color:"#697970", marginBottom:8 }}>{limpiarMarcaPagado(a.descripcion || '')}</div>}
+                {esAdelantoPagado(a) && <div style={{ fontSize:12, color:'#1E5631', marginBottom:6 }}>{getFechaPagoAdelanto(a) ? `Pagado: ${getFechaPagoAdelanto(a)}` : 'Pagado'}</div>}
+                {limpiarMarcaPagado(a.descripcion || '') && <div style={{ fontSize:12, color:"#697970", marginBottom:8 }}>{limpiarMarcaPagado(a.descripcion || '')}</div>}
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                  <button onClick={() => abrirEditarAdelanto(a)} style={{ padding:'5px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:11, color:"#182c25", cursor:'pointer' }}>Editar</button>
-                  <button onClick={() => marcarPagado(a)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #c8ddc8', background:'transparent', fontSize:11, color:'#1E5631', cursor:'pointer' }}>✓ Marcar pagado</button>
-                  <button onClick={() => eliminarAdelanto(a.id)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                  <button className="ag-small-action" onClick={() => abrirEditarAdelanto(a)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, color:"#182c25", cursor:'pointer' }}>Editar</button>
+                  <button className="ag-small-action" onClick={() => marcarPagado(a)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #c8ddc8', background:'transparent', fontSize:12, color:'#1E5631', cursor:'pointer' }}>✓ Marcar pagado</button>
+                  <button className="ag-small-action" onClick={() => eliminarAdelanto(a.id)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
                 </div>
               </div>
               ))}
-              {getAdelantosPagadosOperario(modalHistorial.id).length > 0 && <div style={{ fontSize:11, fontWeight:700, color:'#1E5631', textTransform:'uppercase', letterSpacing:.5, margin:'18px 2px 8px' }}>Historial de pagados</div>}
+              {getAdelantosPagadosOperario(modalHistorial.id).length > 0 && <div style={{ fontSize:12, fontWeight:700, color:'#1E5631', textTransform:'uppercase', letterSpacing:.5, margin:'18px 2px 8px' }}>Historial de pagados</div>}
               {getAdelantosPagadosOperario(modalHistorial.id).map(a => (
-                <div key={a.id} style={{ background:'#edf7ed', border:'1px solid #d6ead6', borderRadius:8, padding:'12px 14px', marginBottom:8 }}>
+                <div key={a.id} style={{ background:'#edf7ed', border:'1px solid #d6ead6', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:8 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:4 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:'#1E5631' }}>Gs. {fmtGs(a.monto)} <span style={{ fontSize:10, background:'#fff', padding:'2px 7px', borderRadius:7, marginLeft:5 }}>Pagado</span></div>
-                    <div style={{ fontSize:11, color:'#6e8b72' }}>{a.fecha}</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#1E5631' }}>Gs. {fmtGs(a.monto)} <span style={{ fontSize:12, background:'#fff', padding:'2px 7px', borderRadius:7, marginLeft:5 }}>Pagado</span></div>
+                    <div style={{ fontSize:12, color:'#6e8b72' }}>{a.fecha}</div>
                   </div>
-                  <div style={{ fontSize:11, color:'#1E5631', marginBottom:4 }}>{getFechaPagoAdelanto(a) ? `Pagado el ${getFechaPagoAdelanto(a)}` : 'Pago registrado'}</div>
-                  {limpiarMarcaPagado(a.descripcion || '') && <div style={{ fontSize:11, color:'#6e8b72' }}>{limpiarMarcaPagado(a.descripcion || '')}</div>}
+                  <div style={{ fontSize:12, color:'#1E5631', marginBottom:4 }}>{getFechaPagoAdelanto(a) ? `Pagado el ${getFechaPagoAdelanto(a)}` : 'Pago registrado'}</div>
+                  {limpiarMarcaPagado(a.descripcion || '') && <div style={{ fontSize:12, color:'#6e8b72' }}>{limpiarMarcaPagado(a.descripcion || '')}</div>}
                 </div>
               ))}
             </>}
-            <button style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModalHistorial(null)}>Cerrar</button>
+            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModalHistorial(null)}>Cerrar</button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal editar adelanto */}
       {modalEditarAdelanto && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:110, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
+        <Modal onClose={() => setModalEditarAdelanto(null)} label="Asistencia" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:110, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
+          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
             <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:4 }}>Editar adelanto</div>
             <div style={{ fontSize:12, color:"#697970", marginBottom:20 }}>{modalHistorial?.nombre || ''}</div>
-            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Monto (Gs.)</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }}
+            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Monto (Gs.)
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }}
               type="text" inputMode="numeric" value={formEditarAdelanto.monto}
               onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setFormEditarAdelanto(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
-              placeholder="Ej: 50.000"/>
-            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Descripcion (opcional)</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:16, boxSizing:'border-box' }}
-              type="text" value={formEditarAdelanto.descripcion} onChange={e => setFormEditarAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/>
-            <button style={{ width:'100%', padding:14, borderRadius:8, background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarEdicionAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar cambios'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModalEditarAdelanto(null)}>Cancelar</button>
+              placeholder="Ej: 50.000"/></label>
+            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Descripcion (opcional)
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:16, boxSizing:'border-box' }}
+              type="text" value={formEditarAdelanto.descripcion} onChange={e => setFormEditarAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/></label>
+            <button className="ag-small-action" style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarEdicionAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar cambios'}</button>
+            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModalEditarAdelanto(null)}>Cancelar</button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal nuevo adelanto */}
       {modalAdelanto && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
+        <Modal onClose={() => setModalAdelanto(null)} label="Asistencia" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
+          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
             <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:4 }}>Registrar adelanto</div>
             <div style={{ fontSize:12, color:"#697970", marginBottom:20 }}>{modalAdelanto.nombre}</div>
-            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Monto (Gs.)</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }}
+            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Monto (Gs.)
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }}
               type="text" inputMode="numeric" value={formAdelanto.monto}
               onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setFormAdelanto(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
-              placeholder="Ej: 50.000"/>
-            <div style={{ fontSize:10, color:"#697970", marginBottom:6 }}>Descripción (opcional)</div>
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:16, boxSizing:'border-box' }}
-              type="text" value={formAdelanto.descripcion} onChange={e => setFormAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/>
-            <button style={{ width:'100%', padding:14, borderRadius:8, background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar adelanto'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModalAdelanto(null)}>Cancelar</button>
+              placeholder="Ej: 50.000"/></label>
+            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Descripción (opcional)
+            <input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:16, boxSizing:'border-box' }}
+              type="text" value={formAdelanto.descripcion} onChange={e => setFormAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/></label>
+            <button className="ag-small-action" style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar adelanto'}</button>
+            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModalAdelanto(null)}>Cancelar</button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

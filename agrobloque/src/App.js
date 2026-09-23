@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { forceLocalSignOut, guestToken, supabase } from './lib/supabase'
+import { Skeleton } from './components/UI'
 import Login from './pages/Login'
 import Dashboard from './pages/Overview'
 import Mapa from './pages/MapaProfesional'
@@ -214,12 +215,12 @@ function DesktopSidebar({ isGuest = false, role }) {
 }
 
 function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768)
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1100)
   const location = useLocation()
   const dashboardDesktop = isDesktop && location.pathname === '/'
 
   useEffect(() => {
-    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    const handler = () => setIsDesktop(window.innerWidth >= 1100)
     window.addEventListener('resize', handler)
     return () => window.removeEventListener('resize', handler)
   }, [])
@@ -242,7 +243,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
         scrollBehavior: 'auto',
       }}>
         <div style={{
-          maxWidth: dashboardDesktop ? 'none' : (isDesktop ? 1280 : 480),
+          maxWidth: dashboardDesktop ? 'none' : (isDesktop ? 1440 : 1080),
           width: '100%',
           margin: dashboardDesktop ? 0 : '0 auto',
           minHeight: '100vh',
@@ -441,7 +442,7 @@ export default function App() {
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#f0ede8' }}>
       <div style={{ textAlign:'center' }}>
         <LogoHS size={56} />
-        <div style={{ color:'#888', fontSize:13, marginTop:12 }}>Cargando...</div>
+        <Skeleton rows={2} label="Abriendo AgroBloque" />
       </div>
     </div>
   )
@@ -468,7 +469,7 @@ export default function App() {
         </div>
       )}
       {roleUserId !== session.user.id ? (
-        <div style={{ padding:40, textAlign:'center' }}>Cargando permisos...</div>
+        <Skeleton rows={3} label="Cargando tu espacio de trabajo" />
       ) : !role.permisos.length ? (
         <div style={{ padding:40, textAlign:'center' }}>
           <p>Tu cuenta todavía no tiene acceso habilitado. Pedí al administrador que configure tus permisos.</p>

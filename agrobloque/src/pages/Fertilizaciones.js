@@ -1,3 +1,4 @@
+import { Modal, FormHeading, Notice, Skeleton } from '../components/UI'
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
@@ -64,7 +65,7 @@ function useViewportWidth() {
 const inputBase = {
   width: '100%',
   border: '1px solid #e3e0db',
-  borderRadius: 8,
+  borderRadius:'var(--ag-radius)',
   padding: '11px 12px',
   boxSizing: 'border-box',
   background: '#fff',
@@ -75,7 +76,7 @@ const btnNegro = {
   border: 'none',
   background: '#1f1f1f',
   color: '#fff',
-  borderRadius: 8,
+  borderRadius:'var(--ag-radius)',
   padding: '11px 14px',
   fontWeight: 700,
   cursor: 'pointer',
@@ -84,7 +85,7 @@ const btnNegro = {
 const card = {
   background: '#fff',
   border: "1px solid #e2e9e5",
-  borderRadius: 8,
+  borderRadius:'var(--ag-radius)',
   boxShadow: 'none',
 }
 
@@ -106,7 +107,7 @@ const resumenSoluciones = (soluciones = []) => soluciones
   .filter(Boolean)
   .join(' | ')
 
-function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave, saving }) {
+function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave, saving, error }) {
   const width = useViewportWidth()
   const isMobile = width < 720
   const alternarBloque = (bloqueId) => {
@@ -178,18 +179,19 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
   }
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:250, display:'flex', justifyContent:'center', alignItems:'flex-start', padding:'34px 16px', overflowY:'auto' }}>
-      <div style={{ width:'100%', maxWidth:900, background:'#f7f6f3', borderRadius:8, padding:20, boxShadow:'none' }}>
+    <Modal busy={saving} onClose={onClose} label="Registrar fertilización" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:250, display:'flex', justifyContent:'center', alignItems:'flex-start', padding:'34px 16px', overflowY:'auto' }}>
+      <div style={{ width:'100%', maxWidth:900, background:'#f7f6f3', borderRadius:'var(--ag-radius)', padding:20, boxShadow:'none' }}>
         <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:'#8a948b' }}>{form.tipo === 'plan' ? 'Programacion reutilizable' : 'Aplicacion real'}</div>
             <h2 style={{ margin:'2px 0 0', fontSize:24 }}>{form.tipo === 'plan' ? (form.edit_plan_id ? 'Editar plan recurrente' : 'Nuevo plan recurrente') : form.edit_grupo ? 'Corregir fertilización' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
           </div>
-          <button onClick={onClose} style={{ border:'none', background:'#fff', borderRadius:8, width:40, height:40, cursor:'pointer' }}>
+          <button aria-label="Cerrar" onClick={onClose} style={{ border:'none', background:'#fff', borderRadius:'var(--ag-radius)', width:40, height:40, cursor:'pointer' }}>
             <i className="ti ti-x" style={{ fontSize:20 }} />
           </button>
         </div>
 
+        <Notice tone="error">{error}</Notice><FormHeading number="01" detail="Fecha, preparación y bloques seleccionados">Datos de la aplicación</FormHeading>
         <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap:10, marginBottom:14 }}>
           {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre del plan<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Tomate produccion" style={inputBase} /></label>}
           {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Frecuencia<select value={form.frecuencia || 'semanal'} onChange={e => setForm(f => ({ ...f, frecuencia:e.target.value }))} style={inputBase}><option value="diaria">Todos los dias</option><option value="semanal">Una vez por semana</option></select></label>}
@@ -202,7 +204,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} style={inputBase} /></label>
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} style={inputBase} /></label>
           {form.plan_id && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} style={inputBase}><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
-          <div style={{ display:'grid', alignContent:'center', background:"#edf7f1", border:'1px solid #d6e8d4', borderRadius:8, padding:'10px 12px' }}><span style={{ fontSize:11, color:'#69706a' }}>VOLUMEN TOTAL</span><strong style={{ fontSize:18, color:"#08603f" }}>{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>
+          <div style={{ display:'grid', alignContent:'center', background:"#edf7f1", border:'1px solid #d6e8d4', borderRadius:'var(--ag-radius)', padding:'10px 12px' }}><span style={{ fontSize:12, color:'#69706a' }}>VOLUMEN TOTAL</span><strong style={{ fontSize:18, color:"#08603f" }}>{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>
           <div style={{ display:'grid', gap:8, gridColumn:'1 / -1' }}>
             <div style={{ fontSize:12, color:'#687068', fontWeight:700 }}>Bloques</div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
@@ -210,7 +212,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                 const activo = (form.bloques_ids || []).includes(b.id)
                 const cultivo = b.plantaciones?.find?.(p => p.activa)?.cultivos?.nombre
                 return (
-                  <button key={b.id} onClick={() => alternarBloque(b.id)} style={{
+                  <button className="ag-small-action" key={b.id} onClick={() => alternarBloque(b.id)} style={{
                     border: activo ? '1px solid #1f1f1f' : '1px solid #e3e0db',
                     background: activo ? '#1f1f1f' : '#fff',
                     color: activo ? '#fff' : '#343a36',
@@ -228,6 +230,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           </div>
         </div>
 
+        <FormHeading number="02" detail="Cantidades y unidades por solución">Preparación de soluciones</FormHeading>
         <div style={{ fontSize:12, fontWeight:700, color:"#08603f", margin:'2px 0 9px' }}>Las cantidades siguientes son por cada tanque.</div>
         <div style={{ display:'grid', gap:12 }}>
           {form.soluciones.map((sol, si) => (
@@ -235,7 +238,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
               <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', marginBottom:10 }}>
                 <input value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solucion A" style={{ ...inputBase, maxWidth:180, fontWeight:700 }} />
                 {form.soluciones.length > 1 && (
-                  <button onClick={() => eliminarSolucion(si)} style={{ border:'1px solid #ffd1d1', background:'#fff', color:'#d42f2f', borderRadius:8, padding:'9px 11px', cursor:'pointer' }}>Eliminar</button>
+                  <button className="ag-small-action" onClick={() => eliminarSolucion(si)} style={{ border:'1px solid #ffd1d1', background:'#fff', color:'#d42f2f', borderRadius:'var(--ag-radius)', padding:'9px 11px', cursor:'pointer' }}>Eliminar</button>
                 )}
               </div>
               <div style={{ display:'grid', gap:8 }}>
@@ -256,21 +259,21 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                     <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} style={inputBase}>
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
-                    <button onClick={() => eliminarProducto(si, pi)} disabled={sol.productos.length === 1} style={{ border:'none', background:'#f2efeb', borderRadius:8, height:38, cursor: sol.productos.length === 1 ? 'not-allowed' : 'pointer' }}>
+                    <button aria-label="Eliminar" onClick={() => eliminarProducto(si, pi)} disabled={sol.productos.length === 1} style={{ border:'none', background:'#f2efeb', borderRadius:'var(--ag-radius)', height:38, cursor: sol.productos.length === 1 ? 'not-allowed' : 'pointer' }}>
                       <i className="ti ti-trash" />
                     </button>
-                    {p.modo === 'por_planta' && <div style={{ gridColumn:'1 / -1', background:'#edf7f1', borderRadius:8, padding:'8px 10px', color:'#08603f', fontSize:12 }}>
+                    {p.modo === 'por_planta' && <div style={{ gridColumn:'1 / -1', background:'#edf7f1', borderRadius:'var(--ag-radius)', padding:'8px 10px', color:'#08603f', fontSize:12 }}>
                       <strong>Total calculado:</strong> {fmtNum((form.bloques_ids || []).reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0) * Number(p.cantidad || 0))} {p.unidad || 'g'} para {fmtNum((form.bloques_ids || []).reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0))} plantas.
                     </div>}
                   </div>
                 ))}
               </div>
-              <button onClick={() => agregarProducto(si)} style={{ marginTop:10, border:'1px solid #e3e0db', background:'#fff', borderRadius:8, padding:'9px 12px', fontWeight:700, cursor:'pointer' }}>+ Producto</button>
+              <button className="ag-small-action" onClick={() => agregarProducto(si)} style={{ marginTop:10, border:'1px solid #e3e0db', background:'#fff', borderRadius:'var(--ag-radius)', padding:'9px 12px', fontWeight:700, cursor:'pointer' }}>+ Producto</button>
             </div>
           ))}
         </div>
 
-        <button onClick={agregarSolucion} style={{ marginTop:12, border:'1px solid #e3e0db', background:'#fff', borderRadius:8, padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>+ Solucion</button>
+        <button className="ag-small-action" onClick={agregarSolucion} style={{ marginTop:12, border:'1px solid #e3e0db', background:'#fff', borderRadius:'var(--ag-radius)', padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>+ Solucion</button>
 
         <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, marginTop:14 }}>
           Notas
@@ -278,17 +281,17 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
         </label>
 
         <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:16 }}>
-          <button onClick={onClose} style={{ border:'1px solid #e3e0db', background:'#fff', borderRadius:8, padding:'11px 14px', fontWeight:700, cursor:'pointer' }}>Cancelar</button>
+          <button className="ag-small-action" onClick={onClose} style={{ border:'1px solid #e3e0db', background:'#fff', borderRadius:'var(--ag-radius)', padding:'11px 14px', fontWeight:700, cursor:'pointer' }}>Cancelar</button>
           <button onClick={onSave} disabled={saving} style={{ ...btnNegro, opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : form.tipo === 'plan' ? (form.edit_plan_id ? 'Guardar cambios' : 'Guardar plan recurrente') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
 export default function Fertilizaciones({ campoActivo }) {
   const width = useViewportWidth()
-  const isMobile = width < 760
+  const isMobile = width < 1100
   const [bloques, setBloques] = useState([])
   const [productos, setProductos] = useState([])
   const [registros, setRegistros] = useState([])
@@ -298,6 +301,7 @@ export default function Fertilizaciones({ campoActivo }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(true)
   const [detalle, setDetalle] = useState(null)
   const [motivoAnulacion, setMotivoAnulacion] = useState('')
   const [form, setForm] = useState({
@@ -317,6 +321,8 @@ export default function Fertilizaciones({ campoActivo }) {
   })
 
   const cargarDatos = async () => {
+    setLoading(true)
+    try {
     setError('')
     const { data: productosData } = await supabase
       .from('productos')
@@ -371,6 +377,8 @@ export default function Fertilizaciones({ campoActivo }) {
     const planesResult = await queryPlanes
     setPlanes(planesResult.data || [])
     setSchemaPlanesDisponible(!planesResult.error)
+    } catch (e) { setError('No se pudo cargar la información. Intentá nuevamente.') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => {
@@ -727,9 +735,9 @@ export default function Fertilizaciones({ campoActivo }) {
   }
 
   return (
-    <div style={{ padding:'38px clamp(16px, 4vw, 48px)', minHeight:'100vh', background:"#f6f8f7" }}>
+    <div className="ag-page" style={{ padding:'38px clamp(16px, 4vw, 48px)', minHeight:'100vh', background:"#f6f8f7" }}>
       <div style={{ maxWidth:1220, margin:'0 auto' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:18, marginBottom:20 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:18, marginBottom:20 }}>
           <div>
             <div style={{ color:'#8a948b', fontSize:13 }}>Aplicaciones reales</div>
             <h1 style={{ margin:'5px 0 0', fontSize:30, lineHeight:1.05 }}>Fertilizaciones</h1>
@@ -740,28 +748,28 @@ export default function Fertilizaciones({ campoActivo }) {
           </div>
         </div>
 
-        {error && <div style={{ background:'#fff1f1', border:'1px solid #ffd6d6', color:'#b52525', borderRadius:8, padding:'12px 14px', marginBottom:12, fontSize:13 }}>{error}</div>}
-        {success && <div style={{ background:'#edf8ee', border:'1px solid #cce5ce', color:"#08603f", borderRadius:8, padding:'12px 14px', marginBottom:12, fontSize:13 }}>{success}</div>}
-        {!schemaPlanesDisponible && <div style={{ background:'#fff7e8', border:'1px solid #efd49f', color:'#80580e', borderRadius:8, padding:'12px 14px', marginBottom:12, fontSize:13 }}>Los planes diarios y semanales se habilitaran despues de ejecutar el SQL preparado para Supabase.</div>}
+        {error && <div style={{ background:'#fff1f1', border:'1px solid #ffd6d6', color:'#b52525', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:12, fontSize:13 }}>{error}</div>}
+        {success && <div style={{ background:'#edf8ee', border:'1px solid #cce5ce', color:"#08603f", borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:12, fontSize:13 }}>{success}</div>}
+        {!schemaPlanesDisponible && <div style={{ background:'#fff7e8', border:'1px solid #efd49f', color:'#80580e', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:12, fontSize:13 }}>Los planes diarios y semanales se habilitaran despues de ejecutar el SQL preparado para Supabase.</div>}
 
         <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap:12, marginBottom:18 }}>
           <div style={{ ...card, padding:18, background:'#1f1f1f', color:'#fff' }}>
-            <div style={{ fontSize:11, color:'#b9beb7' }}>APLICACIONES</div>
+            <div style={{ fontSize:12, color:'#b9beb7' }}>APLICACIONES</div>
             <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(registrosActivos.length)}</div>
             <div style={{ fontSize:12, color:'#cdd2cc' }}>registros guardados</div>
           </div>
           <div style={{ ...card, padding:18 }}>
-            <div style={{ fontSize:11, color:'#8a948b' }}>BLOQUES APLICADOS</div>
+            <div style={{ fontSize:12, color:'#8a948b' }}>BLOQUES APLICADOS</div>
             <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(totalBloquesAplicados)}</div>
             <div style={{ fontSize:12, color:'#8a948b' }}>con fertilizacion</div>
           </div>
           <div style={{ ...card, padding:18 }}>
-            <div style={{ fontSize:11, color:'#8a948b' }}>ULTIMA FECHA</div>
+            <div style={{ fontSize:12, color:'#8a948b' }}>ULTIMA FECHA</div>
             <div style={{ fontSize:22, fontWeight:700 }}>{ultimaFecha ? fmtFecha(ultimaFecha) : '-'}</div>
             <div style={{ fontSize:12, color:'#8a948b' }}>ultima aplicacion</div>
           </div>
           <div style={{ ...card, padding:18 }}>
-            <div style={{ fontSize:11, color:'#8a948b' }}>BLOQUES ACTIVOS</div>
+            <div style={{ fontSize:12, color:'#8a948b' }}>BLOQUES ACTIVOS</div>
             <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(bloques.length)}</div>
             <div style={{ fontSize:12, color:'#8a948b' }}>disponibles</div>
           </div>
@@ -774,7 +782,7 @@ export default function Fertilizaciones({ campoActivo }) {
               const tanques = Number(plan.tanques_cantidad) || 1
               const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
               const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los dias' : `Cada ${['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][Number(plan.dia_semana)] || 'semana'}`
-              return <div key={plan.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', gap:10, alignItems:'center', padding:'14px 0', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong style={{ fontSize:14 }}>{plan.nombre}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div style={{ color:'#8a948b', fontSize:12, marginTop:4 }}>{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong style={{ color:"#08603f", fontSize:13 }}>{frecuencia}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div style={{ display:'flex', gap:7, flexWrap:'wrap' }}><button onClick={() => registrarDesdePlan(plan)} style={{ ...btnNegro, background:"#08603f", padding:'9px 12px' }}>Registrar hoy</button><button onClick={() => abrirEditarPlan(plan)} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#1f1f1f', borderRadius:8, padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Editar</button><button onClick={() => pausarPlan(plan)} disabled={saving} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#80580e', borderRadius:8, padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Pausar</button></div></div>
+              return <div key={plan.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', gap:10, alignItems:'center', padding:'14px 0', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong style={{ fontSize:14 }}>{plan.nombre}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div style={{ color:'#8a948b', fontSize:12, marginTop:4 }}>{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong style={{ color:"#08603f", fontSize:13 }}>{frecuencia}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div style={{ display:'flex', gap:7, flexWrap:'wrap' }}><button className="ag-small-action" onClick={() => registrarDesdePlan(plan)} style={{ ...btnNegro, background:"#08603f", padding:'9px 12px' }}>Registrar hoy</button><button className="ag-small-action" onClick={() => abrirEditarPlan(plan)} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#1f1f1f', borderRadius:'var(--ag-radius)', padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Editar</button><button className="ag-small-action" onClick={() => pausarPlan(plan)} disabled={saving} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#80580e', borderRadius:'var(--ag-radius)', padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Pausar</button></div></div>
             })}
           </div>
         )}
@@ -785,7 +793,7 @@ export default function Fertilizaciones({ campoActivo }) {
             <div>BLOQUES</div>
             <div>DETALLE</div>
           </div>
-          {grupos.length === 0 ? (
+          {loading ? <Skeleton rows={4} label="Cargando fertilizaciones" /> : grupos.length === 0 ? (
             <div style={{ padding:38, textAlign:'center', color:'#8a948b' }}>Sin fertilizaciones registradas.</div>
           ) : grupos.map((g, idx) => (
             <div key={g.key || `${g.fecha}-${idx}`} onClick={() => setDetalle(g)} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '130px 1fr 1.4fr', gap:12, padding:'16px', borderBottom: idx === grupos.length - 1 ? 'none' : '1px solid #f0ede8', alignItems:'start', cursor:'pointer', opacity:g.anulada ? .58 : 1, background:g.anulada ? '#faf8f5' : '#fff' }}>
@@ -813,19 +821,20 @@ export default function Fertilizaciones({ campoActivo }) {
           onClose={() => setModal(false)}
           onSave={guardar}
           saving={saving}
+          error={error}
         />
       )}
       {detalle && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:260, display:'grid', placeItems:'center', padding:16 }} onClick={() => setDetalle(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ width:'100%', maxWidth:620, background:'#fff', borderRadius:10, padding:22, maxHeight:'88vh', overflowY:'auto' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><div style={{ fontSize:12, color:'#8a948b' }}>DETALLE DE APLICACIÓN</div><h2 style={{ margin:'4px 0' }}>{fmtFecha(detalle.fecha)}</h2></div><button onClick={() => setDetalle(null)} style={{ border:0, background:'#f2efeb', width:38, height:38, borderRadius:8, cursor:'pointer' }}><i className="ti ti-x" /></button></div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'16px 0' }}><div style={{ background:'#f6f8f7', padding:13, borderRadius:8 }}><small style={{ color:'#687068' }}>Bloques</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div style={{ background:'#f6f8f7', padding:13, borderRadius:8 }}><small style={{ color:'#687068' }}>Preparación</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
+        <Modal onClose={() => setDetalle(null)} label="Fertilizaciones" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:260, display:'grid', placeItems:'center', padding:16 }} onClick={() => setDetalle(null)}>
+          <div className="ag-surface" onClick={e => e.stopPropagation()} style={{ width:'100%', maxWidth:620, background:'#fff', borderRadius:10, padding:22, maxHeight:'88vh', overflowY:'auto' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><div style={{ fontSize:12, color:'#8a948b' }}>DETALLE DE APLICACIÓN</div><h2 style={{ margin:'4px 0' }}>{fmtFecha(detalle.fecha)}</h2></div><button aria-label="Cerrar" onClick={() => setDetalle(null)} style={{ border:0, background:'#f2efeb', width:38, height:38, borderRadius:'var(--ag-radius)', cursor:'pointer' }}><i className="ti ti-x" /></button></div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'16px 0' }}><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Bloques</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Preparación</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
             <div style={{ fontSize:13, lineHeight:1.6, padding:'13px 0', borderTop:'1px solid #ece9e3', borderBottom:'1px solid #ece9e3' }}>{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
             {detalle.notas && <div style={{ marginTop:14, color:'#687068' }}>{detalle.notas}</div>}
-            {!detalle.anulada && <><div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:18 }}><button onClick={() => abrirEditarAplicacion(detalle)} style={btnNegro}>Editar</button><button onClick={() => repetirAplicacion(detalle)} style={{ ...btnNegro, background:'#08603f' }}>Repetir hoy</button></div><div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid #ece9e3' }}><label style={{ display:'grid', gap:6, fontSize:12, fontWeight:700, color:'#687068' }}>Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" style={inputBase} /></label><button onClick={() => anularAplicacion(detalle)} disabled={saving} style={{ marginTop:9, border:'1px solid #ffd1d1', background:'#fff', color:'#b52525', borderRadius:8, padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>Anular y devolver inventario</button></div></>}
+            {!detalle.anulada && <><div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:18 }}><button onClick={() => abrirEditarAplicacion(detalle)} style={btnNegro}>Editar</button><button onClick={() => repetirAplicacion(detalle)} style={{ ...btnNegro, background:'#08603f' }}>Repetir hoy</button></div><div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid #ece9e3' }}><label style={{ display:'grid', gap:6, fontSize:12, fontWeight:700, color:'#687068' }}>Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" style={inputBase} /></label><button className="ag-small-action" onClick={() => anularAplicacion(detalle)} disabled={saving} style={{ marginTop:9, border:'1px solid #ffd1d1', background:'#fff', color:'#b52525', borderRadius:'var(--ag-radius)', padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>Anular y devolver inventario</button></div></>}
             {detalle.anulada && <div style={{ marginTop:16, color:'#a33', fontWeight:700 }}>Esta aplicación está anulada.</div>}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
