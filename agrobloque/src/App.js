@@ -208,7 +208,7 @@ function DesktopSidebar({ isGuest = false, role }) {
     <div className="ag-brand"><span className="ag-brand-mark" aria-hidden="true">AB<i className="ti ti-leaf" /></span><div><strong>AgroBloque</strong><small>El campo en control</small></div></div>
     <nav className="ag-sidebar-nav">{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
-      return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><MenuIcon icon={tab.icon} size={20} color="currentColor" /><span>{tab.path === '/mapa' ? 'Bloques y mapa' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
+      return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><MenuIcon icon={tab.icon} size={20} color="currentColor" /><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
     })}</nav>
     <div className="ag-sidebar-footer">{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
   </aside>
@@ -226,7 +226,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   }, [])
 
   return (
-    <div className="ag-app" style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#dfe3df' : '#f2f1ef' }}>
+    <div className="ag-app" style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#f6f8f5' : '#f2f1ef' }}>
       <ConnectionStatus />
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
@@ -235,7 +235,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
         marginLeft: isDesktop ? SIDEBAR_WIDTH : 0,
         height: '100vh',
         minHeight: '100vh',
-        background: dashboardDesktop ? '#dfe3df' : '#f2f1ef',
+        background: dashboardDesktop ? '#f6f8f5' : '#f2f1ef',
         paddingBottom: isDesktop ? 0 : 64,
         maxWidth: isDesktop ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100%',
         overflowY: 'auto',
