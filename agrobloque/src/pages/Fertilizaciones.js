@@ -111,6 +111,7 @@ const resumenSoluciones = (soluciones = []) => soluciones
 function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave, saving, error }) {
   const width = useViewportWidth()
   const isMobile = width < 720
+  const esSemana = form.tipo === 'plan' || form.es_semanal
   const alternarBloque = (bloqueId) => {
     setForm(f => {
       const actuales = new Set(f.bloques_ids || [])
@@ -184,8 +185,8 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
       <div style={{ width:'100%', maxWidth:900, background:'#f7f6f3', borderRadius:'var(--ag-radius)', padding:20, boxShadow:'none' }}>
         <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', marginBottom:16 }}>
           <div>
-            <div style={{ fontSize:12, color:'#8a948b' }}>{form.tipo === 'plan' ? 'Registro semanal por bloques' : 'Aplicacion puntual'}</div>
-            <h2 style={{ margin:'2px 0 0', fontSize:24 }}>{form.tipo === 'plan' ? (form.edit_plan_id ? 'Corregir fertilización semanal' : 'Nueva fertilización semanal') : form.edit_grupo ? 'Corregir fertilización' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
+            <div style={{ fontSize:12, color:'#8a948b' }}>{esSemana ? 'Registro semanal por bloques' : 'Aplicacion puntual'}</div>
+            <h2 style={{ margin:'2px 0 0', fontSize:24 }}>{esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar fertilización semanal' : 'Nueva fertilización semanal') : form.edit_grupo ? 'Corregir fertilización' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
           </div>
           <button aria-label="Cerrar" onClick={onClose} style={{ border:'none', background:'#fff', borderRadius:'var(--ag-radius)', width:40, height:40, cursor:'pointer' }}>
             <i className="ti ti-x" style={{ fontSize:20 }} />
@@ -194,12 +195,12 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 
         <Notice tone="error">{error}</Notice><FormHeading number="01" detail="Fecha, preparación y bloques seleccionados">Datos de la aplicación</FormHeading>
         <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap:10, marginBottom:14 }}>
-          {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" style={inputBase} /></label>}
+          {esSemana && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" style={inputBase} /></label>}
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>
-            {form.tipo === 'plan' ? 'Inicio de la semana' : 'Fecha'}
+            {esSemana ? 'Inicio de la semana' : 'Fecha'}
             <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(e.target.value, 6) } : {}) }))} style={inputBase} />
           </label>
-          {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} style={inputBase} /></label>}
+          {esSemana && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} style={inputBase} /></label>}
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} style={inputBase} /></label>
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} style={inputBase} /></label>
           {form.plan_id && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} style={inputBase}><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
@@ -225,7 +226,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                 )
               })}
             </div>
-            <div style={{ fontSize:12, color:'#8a948b' }}>{(form.bloques_ids || []).length} bloques seleccionados. {form.tipo === 'plan' ? 'Al guardar, la semana queda registrada en el historial de cada bloque.' : 'Se guarda un registro por bloque.'}</div>
+            <div style={{ fontSize:12, color:'#8a948b' }}>{(form.bloques_ids || []).length} bloques seleccionados. {esSemana ? 'Al guardar, la semana queda registrada en el historial de cada bloque.' : 'Se guarda un registro por bloque.'}</div>
           </div>
         </div>
 
@@ -282,7 +283,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 
         <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:16 }}>
           <button className="ag-small-action" onClick={onClose} style={{ border:'1px solid #e3e0db', background:'#fff', borderRadius:'var(--ag-radius)', padding:'11px 14px', fontWeight:700, cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onSave} disabled={saving} style={{ ...btnNegro, opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : form.tipo === 'plan' ? (form.edit_plan_id ? 'Guardar corrección' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
+          <button onClick={onSave} disabled={saving} style={{ ...btnNegro, opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios de la semana' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
         </div>
       </div>
     </Modal>
@@ -372,7 +373,7 @@ export default function Fertilizaciones({ campoActivo }) {
     }
     setRegistros(fertData || [])
 
-    let queryPlanes = supabase.from('fertilizacion_planes').select('*, bloques(codigo), plantaciones(id, cultivos(nombre))').eq('activo', true).order('created_at', { ascending:false })
+    let queryPlanes = supabase.from('fertilizacion_planes').select('*, bloques(codigo), plantaciones(id, cultivos(nombre))').order('created_at', { ascending:false })
     if (campoActivo?.id) queryPlanes = queryPlanes.eq('campo_id', campoActivo.id)
     const planesResult = await queryPlanes
     setPlanes(planesResult.data || [])
@@ -398,7 +399,7 @@ export default function Fertilizaciones({ campoActivo }) {
   const registrosActivos = useMemo(() => registros.filter(r => !r.anulada), [registros])
   const totalBloquesAplicados = useMemo(() => new Set(registrosActivos.map(r => r.bloque_id)).size, [registrosActivos])
   const ultimaFecha = registrosActivos[0]?.fecha
-  const planesVigentes = useMemo(() => planes.filter(plan => !plan.fecha_fin || plan.fecha_fin >= hoy()), [planes])
+  const planesVigentes = useMemo(() => planes.filter(plan => plan.activo !== false && (!plan.fecha_fin || plan.fecha_fin >= hoy())), [planes])
 
   const abrirModal = (tipo = 'aplicacion') => {
     setForm({
@@ -420,6 +421,8 @@ export default function Fertilizaciones({ campoActivo }) {
   }
 
   const abrirEditarAplicacion = (grupo) => {
+    const idsPlanes = [...new Set(grupo.items.map(item => item.plan_id).filter(Boolean))]
+    const planVinculado = planes.find(plan => idsPlanes.includes(plan.id))
     const soluciones = (grupo.soluciones || []).map(sol => ({
       ...sol,
       productos:(sol.productos || []).map(p => ({
@@ -429,9 +432,9 @@ export default function Fertilizaciones({ campoActivo }) {
       })),
     }))
     setForm({
-      tipo:'aplicacion', edit_ids:grupo.items.map(i => i.id), edit_grupo:grupo,
+      tipo:'aplicacion', es_semanal:idsPlanes.length > 0, edit_plan_ids:idsPlanes, edit_ids:grupo.items.map(i => i.id), edit_grupo:grupo,
       plan_id:grupo.items[0]?.plan_id || '', estado:grupo.estado || 'completa', fecha:grupo.fecha || hoy(),
-      fecha_fin:sumarDias(hoy(), 6), nombre_plan:'', frecuencia:'semanal', dia_semana:'1',
+      fecha_fin:planVinculado?.fecha_fin || sumarDias(grupo.fecha || hoy(), 6), nombre_plan:planVinculado?.nombre || '', frecuencia:'semanal', dia_semana:'1',
       tanque_litros:String(grupo.tanque_litros || 200), tanques_cantidad:String(grupo.tanques_cantidad || 1),
       bloques_ids:grupo.items.map(i => i.bloque_id), notas:grupo.notas || '',
       soluciones:soluciones.length ? soluciones : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
@@ -728,7 +731,30 @@ export default function Fertilizaciones({ campoActivo }) {
       })
     }
 
-    if (form.plan_id) {
+    if (form.es_semanal && form.edit_plan_ids?.length) {
+      await Promise.all(form.edit_plan_ids.map((planId, index) => {
+        const bloqueId = bloquesDestino[index] || bloquesDestino[0]
+        const bloque = bloques.find(b => b.id === bloqueId)
+        return supabase.from('fertilizacion_planes').update({
+          bloque_id:bloqueId,
+          campo_id:campoActivo?.id || bloque?.campo_id || null,
+          plantacion_id:bloque?.plantaciones?.find(p => p.activa)?.id || null,
+          nombre:form.nombre_plan?.trim() || 'Fertilización semanal',
+          fecha_inicio:form.fecha,
+          fecha_fin:form.fecha_fin || sumarDias(form.fecha, 6),
+          frecuencia:'semanal',
+          tanque_litros:tanqueLitros,
+          tanques_cantidad:tanquesCantidad,
+          litros_preparados:tanqueLitros * tanquesCantidad,
+          soluciones:solucionesLimpias.map(sol => ({ ...sol, productos:sol.productos.map(({ unidad_stock, ...p }) => p) })),
+          notas:form.notas || null,
+          activo:false,
+          updated_at:new Date().toISOString(),
+        }).eq('id', planId)
+      }))
+    }
+
+    if (form.plan_id && !form.edit_grupo) {
       const { error: seguimientoError } = await supabase.from('fertilizacion_plan_aplicaciones').insert({
         plan_id: form.plan_id,
         bloque_id: bloquesDestino[0],
@@ -752,7 +778,7 @@ export default function Fertilizaciones({ campoActivo }) {
     })
 
     setModal(false)
-    setSuccess(form.edit_grupo ? 'Fertilización corregida correctamente.' : form.plan_id ? 'Aplicacion del plan registrada correctamente.' : 'Fertilizacion guardada correctamente.')
+    setSuccess(form.edit_grupo ? (form.es_semanal ? 'Fertilización semanal actualizada en todos sus bloques.' : 'Fertilización corregida correctamente.') : form.plan_id ? 'Aplicacion del plan registrada correctamente.' : 'Fertilizacion guardada correctamente.')
     cargarDatos()
   }
 
@@ -906,11 +932,11 @@ export default function Fertilizaciones({ campoActivo }) {
       {detalle && (
         <Modal onClose={() => setDetalle(null)} label="Fertilizaciones" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:260, display:'grid', placeItems:'center', padding:16 }} onClick={() => setDetalle(null)}>
           <div className="ag-surface" onClick={e => e.stopPropagation()} style={{ width:'100%', maxWidth:620, background:'#fff', borderRadius:10, padding:22, maxHeight:'88vh', overflowY:'auto' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><div style={{ fontSize:12, color:'#8a948b' }}>DETALLE DE APLICACIÓN</div><h2 style={{ margin:'4px 0' }}>{fmtFecha(detalle.fecha)}</h2></div><button aria-label="Cerrar" onClick={() => setDetalle(null)} style={{ border:0, background:'#f2efeb', width:38, height:38, borderRadius:'var(--ag-radius)', cursor:'pointer' }}><i className="ti ti-x" /></button></div>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><div style={{ fontSize:12, color:'#8a948b' }}>{detalle.items.some(i => i.plan_id) ? 'FERTILIZACIÓN SEMANAL' : 'DETALLE DE APLICACIÓN'}</div><h2 style={{ margin:'4px 0' }}>{fmtFecha(detalle.fecha)}</h2></div><button aria-label="Cerrar" onClick={() => setDetalle(null)} style={{ border:0, background:'#f2efeb', width:38, height:38, borderRadius:'var(--ag-radius)', cursor:'pointer' }}><i className="ti ti-x" /></button></div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'16px 0' }}><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Bloques</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Preparación</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
             <div style={{ fontSize:13, lineHeight:1.6, padding:'13px 0', borderTop:'1px solid #ece9e3', borderBottom:'1px solid #ece9e3' }}>{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
             {detalle.notas && <div style={{ marginTop:14, color:'#687068' }}>{detalle.notas}</div>}
-            {!detalle.anulada && <><div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:18 }}><button onClick={() => abrirEditarAplicacion(detalle)} style={btnNegro}>Editar</button><button onClick={() => repetirAplicacion(detalle)} style={{ ...btnNegro, background:'#08603f' }}>Repetir hoy</button></div><div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid #ece9e3' }}><label style={{ display:'grid', gap:6, fontSize:12, fontWeight:700, color:'#687068' }}>Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" style={inputBase} /></label><button className="ag-small-action" onClick={() => anularAplicacion(detalle)} disabled={saving} style={{ marginTop:9, border:'1px solid #ffd1d1', background:'#fff', color:'#b52525', borderRadius:'var(--ag-radius)', padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>Anular y devolver inventario</button></div></>}
+            {!detalle.anulada && <><div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:18 }}><button onClick={() => abrirEditarAplicacion(detalle)} style={btnNegro}>{detalle.items.some(i => i.plan_id) ? 'Editar semana completa' : 'Editar'}</button>{!detalle.items.some(i => i.plan_id) && <button onClick={() => repetirAplicacion(detalle)} style={{ ...btnNegro, background:'#08603f' }}>Repetir hoy</button>}</div><div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid #ece9e3' }}><label style={{ display:'grid', gap:6, fontSize:12, fontWeight:700, color:'#687068' }}>Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" style={inputBase} /></label><button className="ag-small-action" onClick={() => anularAplicacion(detalle)} disabled={saving} style={{ marginTop:9, border:'1px solid #ffd1d1', background:'#fff', color:'#b52525', borderRadius:'var(--ag-radius)', padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>Anular y devolver inventario</button></div></>}
             {detalle.anulada && <div style={{ marginTop:16, color:'#a33', fontWeight:700 }}>Esta aplicación está anulada.</div>}
           </div>
         </Modal>
