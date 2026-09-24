@@ -11,6 +11,20 @@ const diasDesde = (fecha) => {
 }
 const fmtGs = (n) => Math.round(Number(n)||0).toLocaleString('es-PY')
 const fmtKg = (n) => { const num=Number(n)||0; return num%1===0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY',{minimumFractionDigits:1,maximumFractionDigits:2}) }
+const MARCA_FIN_SEMANA = /\s*\[\[semana_fin:(\d{4}-\d{2}-\d{2})\]\]\s*/
+const notasFertilizacionVisibles = (notas = '') => String(notas || '').replace(MARCA_FIN_SEMANA, '').trim()
+const sumarDiasFecha = (fecha, dias) => {
+  const valor = new Date(`${fecha}T12:00:00`)
+  valor.setDate(valor.getDate() + dias)
+  return valor.toISOString().split('T')[0]
+}
+const fechaCorta = (fecha) => fecha ? new Date(`${fecha}T12:00:00`).toLocaleDateString('es-PY', { day:'numeric', month:'short', year:'numeric' }) : '-'
+const rangoFertilizacion = (fertilizacion) => {
+  if (!fertilizacion?.plan_id) return fertilizacion?.fecha || '-'
+  const finMarcado = String(fertilizacion.notas || '').match(MARCA_FIN_SEMANA)?.[1]
+  const fin = finMarcado || sumarDiasFecha(fertilizacion.fecha, 6)
+  return `${fechaCorta(fertilizacion.fecha)} al ${fechaCorta(fin)}`
+}
 const fmtAbonoPlantacion = (abono) => {
   if (!abono?.cantidad) return '-'
   const unidad = abono.unidad || 'kg'
@@ -791,7 +805,7 @@ export default function FichaBloque() {
             <span style={{ fontSize:13, color:"#124e38", fontWeight:500 }}>Fertilizacion</span>
           </button>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
-            <div style={{ fontSize:22, fontWeight:700, color:"#182c25" }}>{fertDetalle.fecha}</div>
+            <div style={{ fontSize:22, fontWeight:700, color:"#182c25" }}>{rangoFertilizacion(fertDetalle)}</div>
             {esMasReciente && <span style={{ fontSize:12, fontWeight:700, padding:'3px 10px', borderRadius:'var(--ag-radius)', background:'#1a5c2e', color:'#fff' }}>ACTUAL</span>}
             {esAnterior && <span style={{ fontSize:12, fontWeight:700, padding:'3px 10px', borderRadius:'var(--ag-radius)', background:"#e2e9e5", color:'#555' }}>ANTERIOR</span>}
           </div>
@@ -811,10 +825,10 @@ export default function FichaBloque() {
               ))}
             </div>
           ))}
-          {fertDetalle.notas && (
+          {notasFertilizacionVisibles(fertDetalle.notas) && (
             <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px', marginBottom:10 }}>
               <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>NOTAS</div>
-              <div style={{ fontSize:13, color:"#182c25" }}>{fertDetalle.notas}</div>
+              <div style={{ fontSize:13, color:"#182c25" }}>{notasFertilizacionVisibles(fertDetalle.notas)}</div>
             </div>
           )}
           <button className="ag-small-action" onClick={() => navigate(`/fertilizaciones?editar=${encodeURIComponent(fertDetalle.grupo_id || fertDetalle.id)}`)}
@@ -1109,7 +1123,7 @@ export default function FichaBloque() {
                     <div onClick={() => setFertDetalle(fertilizaciones[0])}
                       style={{ background:'#1a5c2e', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:16, cursor:'pointer' }}>
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
-                        <div style={{ fontSize:16, fontWeight:700, color:'#fff' }}>{fertilizaciones[0].fecha}</div>
+                        <div style={{ fontSize:16, fontWeight:700, color:'#fff' }}>{rangoFertilizacion(fertilizaciones[0])}</div>
                         <i className="ti ti-chevron-right" style={{ fontSize:16, color:'rgba(255,255,255,0.4)' }} aria-hidden="true"></i>
                       </div>
                       {(fertilizaciones[0].soluciones || []).map((sol, si) => (
@@ -1120,8 +1134,8 @@ export default function FichaBloque() {
                           </div>
                         </div>
                       ))}
-                      {fertilizaciones[0].notas && (
-                        <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', marginTop:8, fontStyle:'italic' }}>{fertilizaciones[0].notas}</div>
+                      {notasFertilizacionVisibles(fertilizaciones[0].notas) && (
+                        <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', marginTop:8, fontStyle:'italic' }}>{notasFertilizacionVisibles(fertilizaciones[0].notas)}</div>
                       )}
                     </div>
                   </>
@@ -1134,7 +1148,7 @@ export default function FichaBloque() {
                     <div className="ag-surface" onClick={() => setFertDetalle(fertilizaciones[1])}
                       style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:16, cursor:'pointer' }}>
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
-                        <div style={{ fontSize:15, fontWeight:700, color:"#182c25" }}>{fertilizaciones[1].fecha}</div>
+                        <div style={{ fontSize:15, fontWeight:700, color:"#182c25" }}>{rangoFertilizacion(fertilizaciones[1])}</div>
                         <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
                       </div>
                       {(fertilizaciones[1].soluciones || []).map((sol, si) => (
@@ -1157,7 +1171,7 @@ export default function FichaBloque() {
                       <div className="ag-surface" key={fert.id} onClick={() => setFertDetalle(fert)}
                         style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:8, display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
                         <div style={{ flex:1 }}>
-                          <div style={{ fontSize:13, fontWeight:600, color:"#182c25" }}>{fert.fecha}</div>
+                          <div style={{ fontSize:13, fontWeight:600, color:"#182c25" }}>{rangoFertilizacion(fert)}</div>
                           <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>
                             {(fert.soluciones || []).length} solucion{(fert.soluciones || []).length !== 1 ? 'es' : ''}  -  {(fert.soluciones || []).reduce((s,sol) => s + (sol.productos||[]).length, 0)} productos
                           </div>

@@ -9,6 +9,16 @@ const UNIDADES = ['kg', 'g', 'cc', 'ml', 'L', 'unidad']
 const hoy = () => new Date().toISOString().split('T')[0]
 const fmtNum = (n) => Number(n || 0).toLocaleString('es-PY')
 const fmtFecha = (fecha) => fecha ? new Date(`${fecha}T00:00:00`).toLocaleDateString('es-PY') : '-'
+const MARCA_FIN_SEMANA = /\s*\[\[semana_fin:(\d{4}-\d{2}-\d{2})\]\]\s*/
+const notasVisibles = (notas = '') => String(notas || '').replace(MARCA_FIN_SEMANA, '').trim()
+const finSemanaRegistro = (registro) => {
+  const marcada = String(registro?.notas || '').match(MARCA_FIN_SEMANA)?.[1]
+  return marcada || (registro?.plan_id && registro?.fecha ? sumarDias(registro.fecha, 6) : '')
+}
+const rangoSemana = (registro) => {
+  const fin = finSemanaRegistro(registro)
+  return fin ? `${fmtFecha(registro.fecha)} al ${fmtFecha(fin)}` : fmtFecha(registro.fecha)
+}
 const sumarDias = (fecha, dias) => {
   const base = fecha ? new Date(`${fecha}T12:00:00`) : new Date()
   base.setDate(base.getDate() + dias)
@@ -442,9 +452,9 @@ export default function Fertilizaciones({ campoActivo }) {
     setForm({
       tipo:'aplicacion', es_semanal:idsPlanes.length > 0, edit_plan_ids:idsPlanes, edit_ids:grupo.items.map(i => i.id), edit_grupo:grupo,
       plan_id:grupo.items[0]?.plan_id || '', estado:grupo.estado || 'completa', fecha:grupo.fecha || hoy(),
-      fecha_fin:planVinculado?.fecha_fin || sumarDias(grupo.fecha || hoy(), 6), nombre_plan:planVinculado?.nombre || '', frecuencia:'semanal', dia_semana:'1',
+      fecha_fin:finSemanaRegistro(grupo.items[0]) || planVinculado?.fecha_fin || sumarDias(grupo.fecha || hoy(), 6), nombre_plan:planVinculado?.nombre || '', frecuencia:'semanal', dia_semana:'1',
       tanque_litros:String(grupo.tanque_litros || 200), tanques_cantidad:String(grupo.tanques_cantidad || 1),
-      bloques_ids:grupo.items.map(i => i.bloque_id), notas:grupo.notas || '',
+      bloques_ids:grupo.items.map(i => i.bloque_id), notas:notasVisibles(grupo.notas || ''),
       soluciones:soluciones.length ? soluciones : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
     })
     setDetalle(null)
@@ -613,7 +623,7 @@ export default function Fertilizaciones({ campoActivo }) {
           }
         }),
       }))
-      const notasSemana = [form.nombre_plan?.trim() && `Semana: ${form.nombre_plan.trim()}`, form.notas].filter(Boolean).join(' · ') || null
+      const notasSemana = `${[form.nombre_plan?.trim() && `Semana: ${form.nombre_plan.trim()}`, form.notas].filter(Boolean).join(' · ')} [[semana_fin:${form.fecha_fin}]]`.trim()
       const aplicacionesSemana = bloquesDestino.map(bloque_id => {
         const bloque = bloques.find(b => b.id === bloque_id)
         return {
@@ -711,7 +721,7 @@ export default function Fertilizaciones({ campoActivo }) {
         tanques_cantidad: form.estado === 'suspendida' ? 0 : tanquesCantidad,
         estado: form.estado || 'completa',
         dosis_alcance: solucionesLimpias.some(sol => sol.productos.some(p => p.modo === 'por_planta')) ? 'por_planta' : 'por_tanque',
-        notas: form.notas || null,
+        notas: form.es_semanal ? `${notasVisibles(form.notas)} [[semana_fin:${form.fecha_fin || sumarDias(form.fecha, 6)}]]`.trim() : (form.notas || null),
         soluciones: solucionesPorBloque(bloque),
       }
     })
@@ -894,7 +904,7 @@ export default function Fertilizaciones({ campoActivo }) {
             <div style={{ padding:38, textAlign:'center', color:'#8a948b' }}>Sin fertilizaciones registradas.</div>
           ) : grupos.map((g, idx) => (
             <div key={g.key || `${g.fecha}-${idx}`} onClick={() => setDetalle(g)} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '130px 1fr 1.4fr', gap:12, padding:'16px', borderBottom: idx === grupos.length - 1 ? 'none' : '1px solid #f0ede8', alignItems:'start', cursor:'pointer', opacity:g.anulada ? .58 : 1, background:g.anulada ? '#faf8f5' : '#fff' }}>
-              <div style={{ fontWeight:700 }}>{fmtFecha(g.fecha)}</div>
+              <div style={{ fontWeight:700 }}>{g.items.some(i => i.plan_id) ? rangoSemana(g.items[0]) : fmtFecha(g.fecha)}</div>
               <div>
                 <div style={{ fontWeight:700 }}>{g.items.length} bloque{g.items.length === 1 ? '' : 's'}</div>
                 <div style={{ color:'#687068', fontSize:13 }}>{g.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div>
@@ -902,7 +912,7 @@ export default function Fertilizaciones({ campoActivo }) {
               <div>
                 <div style={{ fontSize:13, lineHeight:1.45 }}>{resumenSoluciones(g.soluciones) || 'Sin productos detallados'}</div>
                 {g.tanque_litros && <div style={{ marginTop:7, color:g.anulada ? '#a33' : "#08603f", fontSize:12, fontWeight:700 }}>{g.anulada ? 'ANULADA · ' : ''}{g.tanques_cantidad || 1} tanque{Number(g.tanques_cantidad || 1) === 1 ? '' : 's'} × {fmtNum(g.tanque_litros)} L = {fmtNum(Number(g.tanque_litros) * Number(g.tanques_cantidad || 1))} L · {g.estado || 'completa'}</div>}
-                {g.notas && <div style={{ marginTop:8, color:'#687068', fontSize:13 }}>{g.notas}</div>}
+                {notasVisibles(g.notas) && <div style={{ marginTop:8, color:'#687068', fontSize:13 }}>{notasVisibles(g.notas)}</div>}
               </div>
             </div>
           ))}
@@ -924,10 +934,10 @@ export default function Fertilizaciones({ campoActivo }) {
       {detalle && (
         <Modal onClose={() => setDetalle(null)} label="Fertilizaciones" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:260, display:'grid', placeItems:'center', padding:16 }} onClick={() => setDetalle(null)}>
           <div className="ag-surface" onClick={e => e.stopPropagation()} style={{ width:'100%', maxWidth:620, background:'#fff', borderRadius:10, padding:22, maxHeight:'88vh', overflowY:'auto' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><div style={{ fontSize:12, color:'#8a948b' }}>{detalle.items.some(i => i.plan_id) ? 'FERTILIZACIÓN SEMANAL' : 'DETALLE DE APLICACIÓN'}</div><h2 style={{ margin:'4px 0' }}>{fmtFecha(detalle.fecha)}</h2></div><button aria-label="Cerrar" onClick={() => setDetalle(null)} style={{ border:0, background:'#f2efeb', width:38, height:38, borderRadius:'var(--ag-radius)', cursor:'pointer' }}><i className="ti ti-x" /></button></div>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><div style={{ fontSize:12, color:'#8a948b' }}>{detalle.items.some(i => i.plan_id) ? 'FERTILIZACIÓN SEMANAL' : 'DETALLE DE APLICACIÓN'}</div><h2 style={{ margin:'4px 0' }}>{detalle.items.some(i => i.plan_id) ? rangoSemana(detalle.items[0]) : fmtFecha(detalle.fecha)}</h2></div><button aria-label="Cerrar" onClick={() => setDetalle(null)} style={{ border:0, background:'#f2efeb', width:38, height:38, borderRadius:'var(--ag-radius)', cursor:'pointer' }}><i className="ti ti-x" /></button></div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'16px 0' }}><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Bloques</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Preparación</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
             <div style={{ fontSize:13, lineHeight:1.6, padding:'13px 0', borderTop:'1px solid #ece9e3', borderBottom:'1px solid #ece9e3' }}>{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
-            {detalle.notas && <div style={{ marginTop:14, color:'#687068' }}>{detalle.notas}</div>}
+            {notasVisibles(detalle.notas) && <div style={{ marginTop:14, color:'#687068' }}>{notasVisibles(detalle.notas)}</div>}
             {!detalle.anulada && <><div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:18 }}><button onClick={() => abrirEditarAplicacion(detalle)} style={btnNegro}>{detalle.items.some(i => i.plan_id) ? 'Editar semana completa' : 'Editar'}</button>{!detalle.items.some(i => i.plan_id) && <button onClick={() => repetirAplicacion(detalle)} style={{ ...btnNegro, background:'#08603f' }}>Repetir hoy</button>}</div><div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid #ece9e3' }}><label style={{ display:'grid', gap:6, fontSize:12, fontWeight:700, color:'#687068' }}>Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" style={inputBase} /></label><button className="ag-small-action" onClick={() => anularAplicacion(detalle)} disabled={saving} style={{ marginTop:9, border:'1px solid #ffd1d1', background:'#fff', color:'#b52525', borderRadius:'var(--ag-radius)', padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>Anular y devolver inventario</button></div></>}
             {detalle.anulada && <div style={{ marginTop:16, color:'#a33', fontWeight:700 }}>Esta aplicación está anulada.</div>}
           </div>
