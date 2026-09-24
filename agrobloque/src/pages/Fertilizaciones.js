@@ -756,27 +756,50 @@ export default function Fertilizaciones({ campoActivo }) {
     cargarDatos()
   }
 
-  const registrarDesdePlan = (plan) => {
+  const registrarDesdePlan = async (plan) => {
     setError('')
-    setSuccess(`Revisa la cantidad realmente preparada para “${plan.nombre}” y guarda la aplicacion.`)
-    setForm({
-      tipo: 'aplicacion',
-      plan_id: plan.id,
-      estado: 'completa',
-      fecha: hoy(),
-      fecha_fin: plan.fecha_fin || sumarDias(hoy(), 6),
-      nombre_plan: '',
-      frecuencia: plan.frecuencia || 'semanal',
-      dia_semana: String(plan.dia_semana ?? 1),
-      tanque_litros: String(plan.tanque_litros || 200),
-      tanques_cantidad: String(plan.tanques_cantidad || 1),
-      bloques_ids: [plan.bloque_id],
-      notas: `Aplicacion del plan ${plan.nombre}. ${plan.notas || ''}`.trim(),
-      soluciones: Array.isArray(plan.soluciones) && plan.soluciones.length
-        ? plan.soluciones
-        : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
-    })
-    setModal(true)
+    setSuccess('')
+    setSaving(true)
+    const bloque = bloques.find(b => b.id === plan.bloque_id)
+    const tanquesCantidad = Math.max(1, Number(plan.tanques_cantidad) || 1)
+    const tanqueLitros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanquesCantidad) || 0
+    const soluciones = (Array.isArray(plan.soluciones) ? plan.soluciones : []).map(sol => ({
+      ...sol,
+      productos:(sol.productos || []).map(p => p.modo === 'por_planta' ? {
+        ...p,
+        cantidad:Number(p.cantidad || 0) * plantasDelBloque(bloque),
+        dosis_por_planta:Number(p.cantidad || 0),
+        unidad_dosis:p.unidad,
+        plantas_calculadas:plantasDelBloque(bloque),
+      } : p),
+    }))
+    const payload = {
+      bloque_id:plan.bloque_id,
+      plantacion_id:bloque?.plantaciones?.find(p => p.activa)?.id || plan.plantacion_id || null,
+      plan_id:plan.id,
+      fecha:hoy(),
+      tanque_litros:tanqueLitros,
+      tanques_cantidad:tanquesCantidad,
+      estado:'completa',
+      dosis_alcance:soluciones.some(sol => sol.productos?.some(p => p.modo === 'por_planta')) ? 'por_planta' : 'por_tanque',
+      notas:[`Semana: ${plan.nombre}`, plan.notas].filter(Boolean).join(' · '),
+      soluciones,
+    }
+    const { error:insertError } = await supabase.from('fertilizaciones').insert(payload)
+    if (insertError) { setSaving(false); return setError(`No se pudo registrar la semana: ${insertError.message}`) }
+    for (const p of (plan.soluciones || []).flatMap(sol => sol.productos || [])) {
+      if (!p.producto_id) continue
+      const producto = productos.find(item => item.id === p.producto_id)
+      const cantidadUso = p.modo === 'por_planta' ? Number(p.cantidad || 0) * plantasDelBloque(bloque) : Number(p.cantidad || 0) * tanquesCantidad
+      const descuento = convertirAStock(cantidadUso, p.unidad, producto?.unidad)
+      if (producto && descuento > 0) await ajustarStockSeguro({ productoId:p.producto_id, delta:-descuento, tipo:'consumo_fertilizacion', modulo:'Fertilizaciones', referenciaId:plan.id, detalle:`Semana ${plan.nombre}`, stockActual:producto.stock_actual })
+    }
+    await supabase.from('fertilizacion_plan_aplicaciones').insert({ plan_id:plan.id, bloque_id:plan.bloque_id, plantacion_id:payload.plantacion_id, fecha:payload.fecha, litros_aplicados:tanqueLitros * tanquesCantidad, tanques_aplicados:tanquesCantidad, estado:'completa', productos:soluciones, notas:payload.notas })
+    await supabase.from('fertilizacion_planes').update({ activo:false, updated_at:new Date().toISOString() }).eq('id', plan.id)
+    await registrarAuditoria({ accion:'Finalizo plan semanal anterior', modulo:'Fertilizaciones', tabla:'fertilizaciones', registroId:plan.id, detalle:`Bloque ${bloque?.codigo || ''}` })
+    setSaving(false)
+    setSuccess(`Semana “${plan.nombre}” registrada en el bloque ${bloque?.codigo || ''}.`)
+    await cargarDatos()
   }
 
   const pausarPlan = async (plan) => {
@@ -838,7 +861,7 @@ export default function Fertilizaciones({ campoActivo }) {
               const tanques = Number(plan.tanques_cantidad) || 1
               const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
               const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los dias' : `Cada ${['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][Number(plan.dia_semana)] || 'semana'}`
-              return <div key={plan.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', gap:10, alignItems:'center', padding:'14px 0', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong style={{ fontSize:14 }}>{plan.nombre}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div style={{ color:'#8a948b', fontSize:12, marginTop:4 }}>{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong style={{ color:"#08603f", fontSize:13 }}>{frecuencia}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div style={{ display:'flex', gap:7, flexWrap:'wrap' }}><button className="ag-small-action" onClick={() => registrarDesdePlan(plan)} style={{ ...btnNegro, background:"#08603f", padding:'9px 12px' }}>Registrar hoy</button><button className="ag-small-action" onClick={() => abrirEditarPlan(plan)} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#1f1f1f', borderRadius:'var(--ag-radius)', padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Editar</button><button className="ag-small-action" onClick={() => pausarPlan(plan)} disabled={saving} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#80580e', borderRadius:'var(--ag-radius)', padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Pausar</button></div></div>
+              return <div key={plan.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', gap:10, alignItems:'center', padding:'14px 0', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong style={{ fontSize:14 }}>{plan.nombre}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div style={{ color:'#8a948b', fontSize:12, marginTop:4 }}>{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong style={{ color:"#08603f", fontSize:13 }}>{frecuencia}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div style={{ display:'flex', gap:7, flexWrap:'wrap' }}><button className="ag-small-action" onClick={() => registrarDesdePlan(plan)} disabled={saving} style={{ ...btnNegro, background:"#08603f", padding:'9px 12px' }}>Finalizar semana</button><button className="ag-small-action" onClick={() => abrirEditarPlan(plan)} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#1f1f1f', borderRadius:'var(--ag-radius)', padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Editar</button><button className="ag-small-action" onClick={() => pausarPlan(plan)} disabled={saving} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#80580e', borderRadius:'var(--ag-radius)', padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Pausar</button></div></div>
             })}
           </div>
         )}
