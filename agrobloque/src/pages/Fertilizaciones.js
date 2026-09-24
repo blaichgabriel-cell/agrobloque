@@ -184,8 +184,8 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
       <div style={{ width:'100%', maxWidth:900, background:'#f7f6f3', borderRadius:'var(--ag-radius)', padding:20, boxShadow:'none' }}>
         <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', marginBottom:16 }}>
           <div>
-            <div style={{ fontSize:12, color:'#8a948b' }}>{form.tipo === 'plan' ? 'Programacion reutilizable' : 'Aplicacion real'}</div>
-            <h2 style={{ margin:'2px 0 0', fontSize:24 }}>{form.tipo === 'plan' ? (form.edit_plan_id ? 'Editar plan recurrente' : 'Nuevo plan recurrente') : form.edit_grupo ? 'Corregir fertilización' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
+            <div style={{ fontSize:12, color:'#8a948b' }}>{form.tipo === 'plan' ? 'Registro semanal por bloques' : 'Aplicacion puntual'}</div>
+            <h2 style={{ margin:'2px 0 0', fontSize:24 }}>{form.tipo === 'plan' ? (form.edit_plan_id ? 'Corregir fertilización semanal' : 'Nueva fertilización semanal') : form.edit_grupo ? 'Corregir fertilización' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
           </div>
           <button aria-label="Cerrar" onClick={onClose} style={{ border:'none', background:'#fff', borderRadius:'var(--ag-radius)', width:40, height:40, cursor:'pointer' }}>
             <i className="ti ti-x" style={{ fontSize:20 }} />
@@ -194,14 +194,12 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 
         <Notice tone="error">{error}</Notice><FormHeading number="01" detail="Fecha, preparación y bloques seleccionados">Datos de la aplicación</FormHeading>
         <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap:10, marginBottom:14 }}>
-          {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre del plan<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Tomate produccion" style={inputBase} /></label>}
-          {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Frecuencia<select value={form.frecuencia || 'semanal'} onChange={e => setForm(f => ({ ...f, frecuencia:e.target.value }))} style={inputBase}><option value="diaria">Todos los dias</option><option value="semanal">Una vez por semana</option></select></label>}
-          {form.tipo === 'plan' && form.frecuencia === 'semanal' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Dia<select value={form.dia_semana ?? 1} onChange={e => setForm(f => ({ ...f, dia_semana:e.target.value }))} style={inputBase}>{['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'].map((d,i) => <option key={d} value={i}>{d}</option>)}</select></label>}
+          {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" style={inputBase} /></label>}
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>
-            {form.tipo === 'plan' ? 'Fecha de inicio' : 'Fecha'}
+            {form.tipo === 'plan' ? 'Inicio de la semana' : 'Fecha'}
             <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(e.target.value, 6) } : {}) }))} style={inputBase} />
           </label>
-          {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Fecha final<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} style={inputBase} /></label>}
+          {form.tipo === 'plan' && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} style={inputBase} /></label>}
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} style={inputBase} /></label>
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} style={inputBase} /></label>
           {form.plan_id && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} style={inputBase}><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
@@ -227,7 +225,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                 )
               })}
             </div>
-            <div style={{ fontSize:12, color:'#8a948b' }}>{(form.bloques_ids || []).length} bloques seleccionados. {form.tipo === 'plan' ? 'Se crea un plan para cada plantacion activa.' : 'Se guarda un registro por bloque.'}</div>
+            <div style={{ fontSize:12, color:'#8a948b' }}>{(form.bloques_ids || []).length} bloques seleccionados. {form.tipo === 'plan' ? 'Al guardar, la semana queda registrada en el historial de cada bloque.' : 'Se guarda un registro por bloque.'}</div>
           </div>
         </div>
 
@@ -284,7 +282,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 
         <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:16 }}>
           <button className="ag-small-action" onClick={onClose} style={{ border:'1px solid #e3e0db', background:'#fff', borderRadius:'var(--ag-radius)', padding:'11px 14px', fontWeight:700, cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onSave} disabled={saving} style={{ ...btnNegro, opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : form.tipo === 'plan' ? (form.edit_plan_id ? 'Guardar cambios' : 'Guardar plan recurrente') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
+          <button onClick={onSave} disabled={saving} style={{ ...btnNegro, opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : form.tipo === 'plan' ? (form.edit_plan_id ? 'Guardar corrección' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
         </div>
       </div>
     </Modal>
@@ -570,24 +568,80 @@ export default function Fertilizaciones({ campoActivo }) {
         planResult = await supabase.from('fertilizacion_planes').insert(planesNuevos).select('id, bloque_id, campo_id, nombre, fecha_inicio, fecha_fin, frecuencia, dia_semana')
       }
       const { data:planesGuardados, error: planError } = planResult
-      setSaving(false)
-      if (planError) return setError(`No se pudo guardar el plan: ${planError.message}`)
-      const tareasPlan = (planesGuardados || []).flatMap(plan => fechasDelPlan(plan.fecha_inicio, plan.fecha_fin, plan.frecuencia, plan.dia_semana).map(fecha => ({
-        tipo:'fertiriego',
-        descripcion:`Aplicar plan: ${plan.nombre}`,
-        fecha_programada:fecha,
-        campo_id:plan.campo_id || null,
-        bloque_id:plan.bloque_id || null,
-        completada:false,
-        origen_tipo:'fertilizacion_plan',
-        origen_id:plan.id,
-      })))
-      if (tareasPlan.length) {
-        const { error:tareasError } = await supabase.from('tareas').insert(tareasPlan)
-        if (tareasError) setError(`El plan se guardó, pero no se pudieron crear sus tareas: ${tareasError.message}`)
+      if (planError) { setSaving(false); return setError(`No se pudo guardar la semana: ${planError.message}`) }
+      const planesCreados = planesGuardados || []
+      const planPorBloque = new Map(planesCreados.map(plan => [plan.bloque_id, plan]))
+      const grupoId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null
+      const solucionesPorBloque = (bloque) => solucionesLimpias.map(sol => ({
+        nombre:sol.nombre,
+        productos:sol.productos.map(p => {
+          const { unidad_stock, ...producto } = p
+          if (p.modo !== 'por_planta') return producto
+          return {
+            ...producto,
+            cantidad:Number(p.cantidad || 0) * plantasDelBloque(bloque),
+            dosis_por_planta:Number(p.cantidad || 0),
+            unidad_dosis:p.unidad,
+            plantas_calculadas:plantasDelBloque(bloque),
+          }
+        }),
+      }))
+      const notasSemana = [form.nombre_plan?.trim() && `Semana: ${form.nombre_plan.trim()}`, form.notas].filter(Boolean).join(' · ') || null
+      const aplicacionesSemana = bloquesDestino.map(bloque_id => {
+        const bloque = bloques.find(b => b.id === bloque_id)
+        return {
+          bloque_id,
+          grupo_id:grupoId,
+          plantacion_id:bloque?.plantaciones?.find(p => p.activa)?.id || null,
+          plan_id:planPorBloque.get(bloque_id)?.id || null,
+          fecha:form.fecha,
+          tanque_litros:tanqueLitros,
+          tanques_cantidad:tanquesCantidad,
+          estado:'completa',
+          dosis_alcance:solucionesLimpias.some(sol => sol.productos.some(p => p.modo === 'por_planta')) ? 'por_planta' : 'por_tanque',
+          notas:notasSemana,
+          soluciones:solucionesPorBloque(bloque),
+        }
+      })
+      const { error:aplicacionError } = await supabase.from('fertilizaciones').insert(aplicacionesSemana)
+      if (aplicacionError) {
+        setSaving(false)
+        setError(`La semana se creó, pero no se pudo guardar en los bloques: ${aplicacionError.message}`)
+        return
       }
+
+      const descuentos = {}
+      solucionesLimpias.flatMap(sol => sol.productos).forEach(p => {
+        if (!p.producto_id) return
+        const cantidadUso = p.modo === 'por_planta'
+          ? Number(p.cantidad || 0) * bloquesDestino.reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0)
+          : Number(p.cantidad || 0) * tanquesCantidad
+        const cantidadStock = convertirAStock(cantidadUso, p.unidad, p.unidad_stock)
+        if (cantidadStock > 0) descuentos[p.producto_id] = (descuentos[p.producto_id] || 0) + cantidadStock
+      })
+      for (const [productoId, descuento] of Object.entries(descuentos)) {
+        const { data:prodActual } = await supabase.from('productos').select('stock_actual').eq('id', productoId).single()
+        if (prodActual) await ajustarStockSeguro({ productoId, delta:-descuento, tipo:'consumo_fertilizacion', modulo:'Fertilizaciones', referenciaId:grupoId || form.fecha, detalle:`Semana aplicada en ${bloquesDestino.length} bloque(s)`, stockActual:prodActual.stock_actual })
+      }
+
+      if (planesCreados.length) {
+        await supabase.from('fertilizacion_plan_aplicaciones').insert(planesCreados.map(plan => ({
+          plan_id:plan.id,
+          bloque_id:plan.bloque_id,
+          plantacion_id:bloques.find(b => b.id === plan.bloque_id)?.plantaciones?.find(p => p.activa)?.id || null,
+          fecha:form.fecha,
+          litros_aplicados:tanqueLitros * tanquesCantidad,
+          tanques_aplicados:tanquesCantidad,
+          estado:'completa',
+          productos:aplicacionesSemana.find(item => item.bloque_id === plan.bloque_id)?.soluciones || [],
+          notas:notasSemana,
+        })))
+        await supabase.from('fertilizacion_planes').update({ activo:false, updated_at:new Date().toISOString() }).in('id', planesCreados.map(plan => plan.id))
+      }
+      await registrarAuditoria({ accion:'Registro fertilizacion semanal', modulo:'Fertilizaciones', tabla:'fertilizaciones', registroId:grupoId || '', detalle:`${bloquesDestino.length} bloques · ${form.fecha} a ${form.fecha_fin}` })
+      setSaving(false)
       setModal(false)
-      setSuccess(form.edit_plan_id ? 'Plan actualizado y tareas futuras reprogramadas.' : `Plan ${form.frecuencia === 'diaria' ? 'diario' : 'semanal'} guardado correctamente.`)
+      setSuccess(`Fertilización semanal guardada en ${bloquesDestino.length} bloque${bloquesDestino.length === 1 ? '' : 's'}. Ya aparece en cada historial.`)
       await cargarDatos()
       return
     }
@@ -745,8 +799,8 @@ export default function Fertilizaciones({ campoActivo }) {
             <h1 style={{ margin:'5px 0 0', fontSize:30, lineHeight:1.05 }}>Fertilizaciones</h1>
           </div>
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible} style={{ ...btnNegro, background:'#fff', color:"#08603f", border:'1px solid #dbe6da', opacity:schemaPlanesDisponible ? 1 : .55 }}><i className="ti ti-calendar-repeat" style={{ marginRight:7 }} />Nuevo plan</button>
-            <button onClick={() => abrirModal('aplicacion')} style={{ ...btnNegro }}><i className="ti ti-plus" style={{ marginRight:7 }} />Aplicacion</button>
+            <button onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible} style={{ ...btnNegro, background:'#fff', color:"#08603f", border:'1px solid #dbe6da', opacity:schemaPlanesDisponible ? 1 : .55 }}><i className="ti ti-calendar-week" style={{ marginRight:7 }} />Fertilización semanal</button>
+            <button onClick={() => abrirModal('aplicacion')} style={{ ...btnNegro }}><i className="ti ti-plus" style={{ marginRight:7 }} />Aplicación puntual</button>
           </div>
         </div>
 
