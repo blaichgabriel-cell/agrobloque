@@ -817,6 +817,11 @@ export default function FichaBloque() {
               <div style={{ fontSize:13, color:"#182c25" }}>{fertDetalle.notas}</div>
             </div>
           )}
+          <button className="ag-small-action" onClick={() => navigate(`/fertilizaciones?editar=${encodeURIComponent(fertDetalle.grupo_id || fertDetalle.id)}`)}
+            style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'none', background:'#1a5c2e', fontSize:13, fontWeight:700, color:'#fff', cursor:'pointer', marginTop:8 }}>
+            <i className="ti ti-pencil" style={{ marginRight:7 }} aria-hidden="true"></i>
+            {fertDetalle.plan_id ? 'Editar semana completa' : 'Editar fertilización'}
+          </button>
           <button className="ag-small-action" onClick={() => setConfirmarElimFert(fertDetalle.id)}
             style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginTop:8 }}>
             Eliminar este registro

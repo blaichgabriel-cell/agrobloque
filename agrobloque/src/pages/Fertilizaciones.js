@@ -1,5 +1,5 @@
 import { Modal, FormHeading, Notice, Skeleton } from '../components/UI'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
 import { ajustarStockSeguro } from '../lib/inventory'
@@ -304,6 +304,7 @@ export default function Fertilizaciones({ campoActivo }) {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(true)
   const [detalle, setDetalle] = useState(null)
+  const edicionUrlProcesada = useRef(false)
   const [motivoAnulacion, setMotivoAnulacion] = useState('')
   const [form, setForm] = useState({
     tipo: 'aplicacion',
@@ -442,6 +443,17 @@ export default function Fertilizaciones({ campoActivo }) {
     setDetalle(null)
     setModal(true)
   }
+
+  useEffect(() => {
+    if (edicionUrlProcesada.current || loading || !grupos.length || typeof window === 'undefined') return
+    const editarId = new URLSearchParams(window.location.search).get('editar')
+    if (!editarId) return
+    const grupo = grupos.find(item => item.grupo_id === editarId || item.items.some(registro => registro.id === editarId))
+    if (!grupo) return
+    edicionUrlProcesada.current = true
+    abrirEditarAplicacion(grupo)
+    window.history.replaceState({}, '', window.location.pathname)
+  }, [grupos, loading])
 
   const repetirAplicacion = (grupo) => {
     abrirEditarAplicacion(grupo)
