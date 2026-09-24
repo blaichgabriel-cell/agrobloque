@@ -4,6 +4,7 @@ import { guestToken, supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { ajustarStockSeguro } from '../lib/inventory'
+import { incluirSeleccionados, productoCorrespondeAplicacion } from '../lib/productCategories'
 
 const TIPOS = {
   fumigacion: { label:'Fumigacion', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
@@ -191,7 +192,7 @@ export default function Fumigaciones() {
   }
 
   const fetchProductos = async () => {
-    const { data } = await supabase.from('productos').select('*').eq('activo', true).order('nombre')
+    const { data } = await supabase.from('productos').select('*, categorias_producto(nombre)').eq('activo', true).order('nombre')
     setProductos(data || [])
   }
 
@@ -617,7 +618,7 @@ export default function Fumigaciones() {
             <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Tipo</div>
             <div style={{ display:'flex', gap:6, marginBottom:12 }}>
               {Object.entries(TIPOS).map(([k,v]) => (
-                <button className="ag-small-action" key={k} onClick={() => setForm(f=>({...f,tipo:k}))} style={{ flex:1, padding:9, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:12, fontWeight:600, cursor:'pointer', background: form.tipo===k ? '#212121' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
+                <button className="ag-small-action" key={k} onClick={() => setForm(f=>f.tipo === k ? f : ({...f,tipo:k,productos_form:f.productos_form.map(p => ({ ...p, producto_id:'', producto_nombre:p.producto_id ? '' : p.producto_nombre }))}))} style={{ flex:1, padding:9, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:12, fontWeight:600, cursor:'pointer', background: form.tipo===k ? '#212121' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
               ))}
             </div>
             <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Fecha *
@@ -673,7 +674,7 @@ export default function Fumigaciones() {
               </div>
             )}
             <FormHeading number="03" detail="Cantidad, unidad y efecto sobre el stock">Productos utilizados</FormHeading>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Productos <span style={{ color:"#124e38" }}>(el inventario es opcional)</span></div>
+            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Productos <span style={{ color:"#124e38" }}>(filtrados según el tipo de aplicación)</span></div>
             {form.productos_form.map((pf,i)=>{
               const prod = productos.find(p=>p.id===pf.producto_id)
               const descuento = prod ? calcularDescuentoStock(pf, prod, form.tanques_cantidad) : 0
@@ -683,8 +684,9 @@ export default function Fumigaciones() {
                     <div style={{ display:'grid', gap:5 }}>
                       <select style={{ minWidth:0, padding:'9px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }} value={pf.producto_id} onChange={e=>{const prodSel=productos.find(p=>p.id===e.target.value); const np=[...form.productos_form];np[i].producto_id=e.target.value;np[i].producto_nombre=prodSel?.nombre || np[i].producto_nombre || '';np[i].unidad_uso=unidadUsoDefault(prodSel?.unidad);setForm(f=>({...f,productos_form:np}))}}>
                         <option value="">Sin inventario</option>
-                        {productos.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
+                        {incluirSeleccionados(productos, p => productoCorrespondeAplicacion(p, form.tipo), [pf.producto_id]).map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
                       </select>
+                      {productos.filter(p => productoCorrespondeAplicacion(p, form.tipo)).length === 0 && !pf.producto_id && <div style={{ fontSize:11, color:'#8a6b33', lineHeight:1.35 }}>No hay productos clasificados para esta aplicación. Clasificalos primero en Inventario.</div>}
                       {!pf.producto_id && <input style={{ minWidth:0, padding:'9px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #d6dfd6', background:'#f7fbf7', fontSize:12, color:"#182c25" }} value={pf.producto_nombre || ''} onChange={e=>{const np=[...form.productos_form];np[i].producto_nombre=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Escribir producto" />}
                     </div>
                     <input style={{ minWidth:0, padding:'9px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }} value={pf.cantidad} onChange={e=>{const np=[...form.productos_form];np[i].cantidad=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Cant." inputMode="decimal"/>

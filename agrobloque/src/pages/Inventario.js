@@ -40,6 +40,8 @@ const formatearCantidadConUnidad = (cantidad, unidad) => {
 const CATEGORIAS = [
   { key:'Fungicida',     label:'Fungicidas',      icon:'ti-shield',    color:'#e07b00', bg:'#fff3e8' },
   { key:'Insecticida',   label:'Insecticidas',    icon:'ti-bug',       color:'#c84040', bg:'#fff0f0' },
+  { key:'Herbicida',     label:'Herbicidas',      icon:'ti-plant',     color:'#8a5a32', bg:'#f7f1ea' },
+  { key:'Coadyuvante',   label:'Coadyuvantes',    icon:'ti-flask-2',   color:'#6c5aa8', bg:'#f1eff9' },
   { key:'Fertilizante',  label:'Fertilizantes',   icon:'ti-droplet',   color:'#2980b9', bg:'#eaf4fb' },
   { key:'Foliar',        label:'Foliares',         icon:'ti-leaf',      color:'#2d8a4e', bg:'#edf7ed' },
   { key:'Hidrosoluble',  label:'Hidrosolubles',    icon:'ti-flask',     color:"#124e38", bg:'#eeeeee' },

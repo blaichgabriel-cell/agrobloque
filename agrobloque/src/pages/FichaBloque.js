@@ -214,7 +214,7 @@ export default function FichaBloque() {
     }
 
     const { data: plantas } = await supabase.from('plantaciones')
-      .select('*, cultivos(nombre)').eq('bloque_id', id).order('created_at', { ascending: false })
+      .select('*, cultivos(nombre), plantacion_abonos(*, abonos(nombre))').eq('bloque_id', id).order('created_at', { ascending: false })
     if (plantas) {
       const activa = plantas.find(p => p.activa) || null
       setPlantacionActiva(activa)
@@ -855,6 +855,15 @@ export default function FichaBloque() {
                 <div style={{ fontSize:12, fontWeight:500, color:"#182c25" }}>{v}</div>
               </div>
             ))}
+          </div>
+          <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:10 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Abonos de base utilizados</div>
+            {(historialDetalle.plantacion_abonos || []).length > 0 ? historialDetalle.plantacion_abonos.map(abono => (
+              <div key={abono.id || abono.abono_id} style={{ display:'flex', justifyContent:'space-between', gap:16, padding:'9px 0', borderBottom:"1px solid #f6f8f7" }}>
+                <div style={{ fontSize:13, fontWeight:600, color:"#182c25" }}>{abono.abonos?.nombre || 'Abono'}</div>
+                <div style={{ fontSize:12, color:"#697970", textAlign:'right' }}>{fmtAbonoPlantacion(abono)}</div>
+              </div>
+            )) : <div style={{ fontSize:13, color:"#697970" }}>No se registraron abonos de base en este ciclo.</div>}
           </div>
           <button className="ag-small-action" onClick={() => eliminarHistorial(historialDetalle.id)}
             style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer' }}>

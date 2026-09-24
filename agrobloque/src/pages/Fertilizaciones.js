@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
 import { ajustarStockSeguro } from '../lib/inventory'
+import { esProductoFertilizacion, incluirSeleccionados } from '../lib/productCategories'
 
 const UNIDADES = ['kg', 'g', 'cc', 'ml', 'L', 'unidad']
 const hoy = () => new Date().toISOString().split('T')[0]
@@ -247,8 +248,9 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                     <div style={{ display:'grid', gap:6 }}>
                       <select value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)} style={inputBase}>
                         <option value="">Sin inventario</option>
-                        {productos.map(prod => <option key={prod.id} value={prod.id}>{prod.nombre} - stock {fmtNum(prod.stock_actual)} {prod.unidad || ''}</option>)}
+                        {incluirSeleccionados(productos, esProductoFertilizacion, [p.producto_id]).map(prod => <option key={prod.id} value={prod.id}>{prod.nombre} - stock {fmtNum(prod.stock_actual)} {prod.unidad || ''}</option>)}
                       </select>
+                      {productos.filter(esProductoFertilizacion).length === 0 && !p.producto_id && <div style={{ fontSize:11, color:'#8a6b33', lineHeight:1.35 }}>No hay fertilizantes clasificados. Revisá la categoría del producto en Inventario.</div>}
                       {!p.producto_id && <input value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Escribir producto" style={{ ...inputBase, background:'#f7fbf7', borderColor:'#d6dfd6' }} />}
                     </div>
                     <select value={p.modo || 'por_tanque'} onChange={e => actualizarProducto(si, pi, 'modo', e.target.value)} style={inputBase}>
@@ -326,7 +328,7 @@ export default function Fertilizaciones({ campoActivo }) {
     setError('')
     const { data: productosData } = await supabase
       .from('productos')
-      .select('id, nombre, unidad, stock_actual, stock_minimo, activo')
+      .select('id, nombre, unidad, stock_actual, stock_minimo, activo, categorias_producto(nombre)')
       .eq('activo', true)
       .order('nombre')
     setProductos(productosData || [])
