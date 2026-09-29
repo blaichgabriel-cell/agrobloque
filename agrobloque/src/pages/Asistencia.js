@@ -48,6 +48,9 @@ export default function Asistencia() {
   const [modalAdelanto, setModalAdelanto] = useState(null)
   const [modalHistorial, setModalHistorial] = useState(null)
   const [modalEditarAdelanto, setModalEditarAdelanto] = useState(null)
+  const [modalPersonal, setModalPersonal] = useState(false)
+  const [nombrePersonal, setNombrePersonal] = useState('')
+  const [savingPersonal, setSavingPersonal] = useState(false)
   const [formAdelanto, setFormAdelanto] = useState({ monto:'', descripcion:'' })
   const [formEditarAdelanto, setFormEditarAdelanto] = useState({ monto:'', descripcion:'' })
   const [notasDia, setNotasDia] = useState({})
@@ -88,9 +91,50 @@ export default function Asistencia() {
   }
 
   const fetchOperarios = async () => {
-    const { data } = await supabase.from('operarios').select('*').eq('campo_id', campoActivo.id).order('orden', { ascending: true })
+    const { data, error } = await supabase.from('operarios').select('*').eq('campo_id', campoActivo.id).eq('activo', true).order('orden', { ascending: true })
+    if (error) {
+      setError(`No se pudo cargar la lista de personal: ${error.message}`)
+      return
+    }
     setOperarios(data || [])
     if (data) fetchAdelantos(data)
+  }
+
+  const agregarPersonal = async () => {
+    const nombre = nombrePersonal.trim()
+    if (!nombre || !campoActivo) return
+    setSavingPersonal(true)
+    setError('')
+    try {
+      const siguienteOrden = operarios.reduce((max, o) => Math.max(max, Number(o.orden) || 0), 0) + 1
+      const { error } = await supabase.from('operarios').insert({
+        nombre,
+        campo_id: campoActivo.id,
+        orden: siguienteOrden,
+        activo: true,
+      })
+      if (error) throw error
+      setNombrePersonal('')
+      await fetchOperarios()
+    } catch (e) {
+      setError(`No se pudo agregar a ${nombre}: ${e.message || 'error sin detalle'}`)
+    }
+    setSavingPersonal(false)
+  }
+
+  const sacarPersonal = async (operario) => {
+    const confirmado = typeof window === 'undefined' || window.confirm(`¿Sacar a ${operario.nombre} de la lista de asistencia?\n\nSus asistencias, adelantos y pagos anteriores se conservarán.`)
+    if (!confirmado) return
+    setSavingPersonal(true)
+    setError('')
+    try {
+      const { error } = await supabase.from('operarios').update({ activo:false }).eq('id', operario.id)
+      if (error) throw error
+      await fetchOperarios()
+    } catch (e) {
+      setError(`No se pudo sacar a ${operario.nombre}: ${e.message || 'error sin detalle'}`)
+    }
+    setSavingPersonal(false)
   }
 
   const fetchRegistros = async () => {
@@ -311,7 +355,10 @@ export default function Asistencia() {
     <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
       <div className="ag-page-header" style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Control semanal</div>
-        <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5, marginBottom:16 }}>Asistencia y pagos</div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:16 }}>
+          <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Asistencia y pagos</div>
+          <button className="ag-small-action" onClick={() => setModalPersonal(true)} disabled={!campoActivo} style={{ flexShrink:0, padding:'9px 13px', borderRadius:'var(--ag-radius)', border:'none', background:'#124e38', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>+ Personal</button>
+        </div>
         {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:10 }}>{error}</div>}
         <div style={{ display:'flex', gap:5, background:"#e2e9e5", borderRadius:'var(--ag-radius)', padding:4, marginBottom:16 }}>
           {campos.map(c => (
@@ -402,6 +449,31 @@ export default function Asistencia() {
         </div>
         <NotasPanel modulo="asistencia" titulo="Blog de notas de asistencia" />
       </div>
+
+      {modalPersonal && (
+        <Modal onClose={() => setModalPersonal(false)} label="Administrar personal" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
+          <div style={{ background:'#f6f8f7', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 32px', maxHeight:'85vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#182c25', marginBottom:4 }}>Personal de {campoActivo?.nombre}</div>
+            <div style={{ fontSize:12, color:'#697970', marginBottom:18 }}>Agregá personas nuevas o sacá de la lista a quienes ya no trabajan aquí.</div>
+            <label className="ag-field-label" style={{ display:'block', fontSize:12, fontWeight:600, color:'#697970', marginBottom:6 }}>Nombre y apellido</label>
+            <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+              <input autoFocus style={{ flex:1, minWidth:0, padding:'11px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #d8e1dc', background:'#fff', fontSize:13, color:'#182c25' }} value={nombrePersonal} onChange={e => setNombrePersonal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') agregarPersonal() }} placeholder="Ej: Juan Pérez" />
+              <button className="ag-small-action" onClick={agregarPersonal} disabled={savingPersonal || !nombrePersonal.trim()} style={{ padding:'10px 14px', borderRadius:'var(--ag-radius)', border:'none', background:'#124e38', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', opacity: savingPersonal || !nombrePersonal.trim() ? .55 : 1 }}>{savingPersonal ? 'Guardando...' : 'Agregar'}</button>
+            </div>
+            <div style={{ fontSize:12, fontWeight:700, color:'#697970', textTransform:'uppercase', letterSpacing:.4, marginBottom:8 }}>En la lista ({operarios.length})</div>
+            {operarios.length === 0 ? (
+              <div style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'18px 14px', color:'#697970', fontSize:13, textAlign:'center' }}>Todavía no hay personal en este campo.</div>
+            ) : operarios.map(op => (
+              <div key={op.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, background:'#fff', borderRadius:'var(--ag-radius)', padding:'11px 12px', marginBottom:7 }}>
+                <span style={{ minWidth:0, fontSize:13, fontWeight:600, color:'#182c25', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{op.nombre}</span>
+                <button className="ag-small-action" onClick={() => sacarPersonal(op)} disabled={savingPersonal} style={{ flexShrink:0, padding:'6px 10px', borderRadius:'var(--ag-radius)', border:'1px solid #efcaca', background:'transparent', color:'#b23b3b', fontSize:12, fontWeight:600, cursor:'pointer' }}>Sacar</button>
+              </div>
+            ))}
+            <div style={{ fontSize:12, lineHeight:1.45, color:'#697970', marginTop:12 }}>Al sacar una persona no se borran sus registros anteriores.</div>
+            <button className="ag-small-action" onClick={() => setModalPersonal(false)} style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:'1px solid #d8e1dc', fontSize:13, color:'#697970', cursor:'pointer', marginTop:14 }}>Cerrar</button>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal historial adelantos */}
       {modalHistorial && (
