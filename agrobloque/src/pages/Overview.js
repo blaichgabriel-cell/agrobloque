@@ -31,9 +31,15 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
   const [filter, setFilter] = useState('todos')
   const [sort, setSort] = useState('codigo')
   const [work, setWork] = useState(false)
-  const today = dateKey(new Date())
+  const [now, setNow] = useState(() => new Date())
+  const today = dateKey(now)
   const month = `${today.slice(0, 7)}-01`
   const can = key => canAccessModule(role, key)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     let current = true
@@ -122,30 +128,34 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
   const pareceNombreTecnico = !nombreCuenta.includes(' ') && nombreCuenta.length > 16
   const nombre = nombreCuenta && !pareceNombreTecnico ? nombreCuenta.split(/\s+/)[0] : ''
   const mayWork = availableWork(role, isGuest).length > 0
+  const hour = now.getHours()
+  const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
+  const fullDate = now.toLocaleDateString('es-PY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   return <div className="ag-overview">
     <header className="ag-topbar">
       <span className="ag-mobile-brand"><b>AB</b> AgroBloque</span>
       {can('buscar') && <button className="ag-search-link" onClick={() => navigate('/buscar')}><i className="ti ti-search" /><span>Buscar bloques, cultivos, actividades…</span><kbd>Ctrl K</kbd></button>}
-      <label className="ag-field-select"><span className="ag-sr-only">Campo activo</span><i className="ti ti-map-pin" /><select value={campoActivo?.id || ''} onChange={e => { const campo = campos.find(c => c.id === e.target.value); if (campo) { setCampoActivo(campo); localStorage.setItem('agrobloque-campo-activo', campo.id) } }}>{!campos.length && <option value="">Sin campos</option>}{campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
       {can('alertas') && <button className="ag-icon-button" aria-label="Ver alertas" onClick={() => navigate('/alertas')}><i className="ti ti-bell" /></button>}
-      <span className="ag-top-date"><strong>{new Date(`${today}T12:00:00`).toLocaleDateString('es-PY', { day: 'numeric', month: 'long', year: 'numeric' })}</strong><small>{new Date(`${today}T12:00:00`).toLocaleDateString('es-PY', { weekday: 'long' })}</small></span>
+      <span className="ag-top-account" aria-label="Usuario actual">{(nombre || 'U').charAt(0).toUpperCase()}</span>
     </header>
     <section className="ag-hero">
-      <div className="ag-hero-copy"><span className="ag-eyebrow">RESUMEN DEL CAMPO</span><h1><small>Buenos días,</small>{nombre || 'bienvenido'}.</h1><p>“Un campo bien gestionado siempre da frutos.”</p></div>
-      <div className="ag-hero-actions"><div className="ag-hero-field"><i className="ti ti-leaf" aria-hidden="true" /><span><strong>{campoActivo?.nombre || 'AgroBloque'}</strong><small>Producción y trabajo diario</small></span></div>{mayWork && <button className="ag-primary" onClick={() => setWork(true)}><i className="ti ti-plus" aria-hidden="true" />Registrar trabajo</button>}</div>
+      <div className="ag-hero-head">
+        <div className="ag-hero-copy"><span className="ag-hero-date">{fullDate}</span><h1><small>{greeting},</small>{nombre || 'bienvenido'}.</h1></div>
+        <div className="ag-hero-actions"><label className="ag-field-select"><span className="ag-sr-only">Campo activo</span><i className="ti ti-map-pin" /><select value={campoActivo?.id || ''} onChange={e => { const campo = campos.find(c => c.id === e.target.value); if (campo) { setCampoActivo(campo); localStorage.setItem('agrobloque-campo-activo', campo.id) } }}>{!campos.length && <option value="">Sin campos</option>}{campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>{mayWork && <button className="ag-primary" onClick={() => setWork(true)}><i className="ti ti-plus" aria-hidden="true" />Registrar trabajo</button>}</div>
+      </div>
+      <div className="ag-metrics">
+        {can('cosecha') && <Metric loading={loading} icon="ti-leaf" label="Producción del mes" value={value('cosechas', monthlyKg > 0 ? `${number(monthlyKg)} kg` : 'Sin cosechas')} detail={new Date(`${today}T12:00:00`).toLocaleDateString('es-PY', { month: 'long', year: 'numeric' })} compact={monthlyKg <= 0} onClick={() => navigate('/cosecha')} />}
+        <Metric loading={loading} icon="ti-layout-grid" label="Bloques activos" value={value('bloques', active)} detail={`de ${value('bloques', data.bloques.length)} bloques`} onClick={() => navigate('/mapa')} />
+        {!isGuest && can('asistencia') ? <Metric loading={loading} icon="ti-users" label="Personal en campo" value={value('operarios', data.operarios.length)} detail="Operarios activos" onClick={() => navigate('/asistencia')} /> : <Metric loading={loading} icon="ti-seeding" label="Plantaciones activas" value={value('plantas', data.plantas.length)} detail="En el campo seleccionado" onClick={() => navigate('/mapa')} />}
+        {can('agenda') && <Metric loading={loading} icon="ti-clipboard-list" label="Tareas pendientes" value={value('tareas', data.tareas.length)} detail="Agenda del campo" warning={data.tareas.length > 0} onClick={() => navigate('/agenda')} />}
+      </div>
     </section>
     {(fieldsError || errors.length > 0) && <div className="ag-load-error" role="alert">No se pudo cargar parte del resumen. Los datos no disponibles se muestran con «—».<button onClick={() => setRetry(n => n + 1)}>Reintentar</button></div>}
     {!loading && !fieldsError && !campos.length && <div className="ag-empty">No hay campos disponibles para este usuario.</div>}
-    <div className="ag-metrics">
-      {can('cosecha') && <Metric loading={loading} icon="ti-leaf" label="Producción del mes" value={value('cosechas', monthlyKg > 0 ? `${number(monthlyKg)} kg` : 'Sin cosechas este mes')} detail={new Date(`${today}T12:00:00`).toLocaleDateString('es-PY', { month: 'long', year: 'numeric' })} compact={monthlyKg <= 0} onClick={() => navigate('/cosecha')} />}
-      <Metric loading={loading} icon="ti-layout-grid" label="Bloques activos" value={value('bloques', active)} detail={`de ${value('bloques', data.bloques.length)} bloques`} onClick={() => navigate('/mapa')} />
-      {!isGuest && can('asistencia') ? <Metric loading={loading} icon="ti-users" label="Personal registrado" value={value('operarios', data.operarios.length)} detail="Operarios del campo" onClick={() => navigate('/asistencia')} /> : <Metric loading={loading} icon="ti-seeding" label="Plantaciones activas" value={value('plantas', data.plantas.length)} detail="En el campo seleccionado" onClick={() => navigate('/mapa')} />}
-      {can('agenda') && <Metric loading={loading} icon="ti-clipboard-list" label="Tareas pendientes" value={value('tareas', data.tareas.length)} detail="Agenda del campo" warning={data.tareas.length > 0} onClick={() => navigate('/agenda')} />}
-    </div>
     {mayWork && <div className="ag-register"><button className="ag-primary" onClick={() => setWork(true)}><i className="ti ti-plus" />Registrar trabajo</button></div>}
     <div className="ag-dashboard-columns"><div className="ag-main-column">
-      {can('mapa') && <section className="ag-panel ag-blocks-panel"><div className="ag-section-heading"><div className="ag-title-with-icon"><span><i className="ti ti-layers-subtract" /></span><div><h2>Bloques</h2><small>Gestioná y revisá el estado de tus cultivos.</small></div></div><button className="ag-text-button ag-outline-button" onClick={() => navigate('/mapa')}><i className="ti ti-map" />Ver mapa</button></div>
+      {can('mapa') && <section className="ag-panel ag-blocks-panel"><div className="ag-section-heading"><div className="ag-title-with-icon"><div><h2>Bloques del campo</h2><small>Gestioná y revisá el estado de tus cultivos.</small></div></div><button className="ag-text-button ag-outline-button" onClick={() => navigate('/mapa')}><i className="ti ti-map" />Ver mapa</button></div>
         <div className="ag-block-tools"><label className="ag-block-search"><i className="ti ti-search" /><input aria-label="Buscar bloque o cultivo" placeholder="Buscar bloque o cultivo" value={query} onChange={e => setQuery(e.target.value)} /></label><select aria-label="Filtrar bloques" value={filter} onChange={e => setFilter(e.target.value)}><option value="todos">Todos los bloques</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option></select><select aria-label="Ordenar bloques" value={sort} onChange={e => setSort(e.target.value)}><option value="codigo">Orden: bloque</option><option value="cultivo">Orden: cultivo</option><option value="actividad">Actividad reciente</option></select></div>
         <div className="ag-block-table"><div className="ag-block-labels"><span>Bloque / Cultivo</span><span>Estado</span><span>Días de cultivo</span><span>Actividad / próxima tarea</span><span /></div>
           {loading ? <Skeleton label="Cargando bloques…" /> : errors.includes('bloques') ? <div className="ag-empty">No se pudieron cargar los bloques.</div> : !shownBlocks.length ? <div className="ag-empty">{query || filter !== 'todos' ? 'No hay bloques que coincidan con el filtro.' : 'Todavía no hay bloques en este campo.'}</div> : shownBlocks.slice(0, 8).map(block => {
