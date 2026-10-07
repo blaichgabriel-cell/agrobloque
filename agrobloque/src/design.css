@@ -460,6 +460,7 @@ button:active:not(:disabled) { transform:translateY(1px); }
   .ag-top-date { display:none; }
 }
 @media (max-width:1099px) {
+  .ag-app [data-app-scroll] { padding-top:env(safe-area-inset-top,0px); }
   .ag-app [data-app-scroll] { padding-bottom:calc(84px + env(safe-area-inset-bottom,0px)) !important; }
   .ag-bottom-nav { display:flex; position:fixed; bottom:0; left:0; transform:none; width:100%; max-width:none; padding:6px max(12px,calc((100vw - 680px)/2)) calc(6px + env(safe-area-inset-bottom,0px)); background:#fff; border-top:1px solid var(--ag-line); z-index:50; }
   .ag-bottom-nav button { flex:1; display:flex; flex-direction:column; gap:4px; align-items:center; justify-content:center; border:0; background:transparent; color:#687969; font-size:11px; min-height:54px; cursor:pointer; }
@@ -720,4 +721,273 @@ button:active:not(:disabled) { transform:translateY(1px); }
 @media (min-width:1100px) {
   .ag-sidebar-nav { scrollbar-width:none; }
   .ag-sidebar-nav::-webkit-scrollbar { display:none; }
+}
+
+/* Inicio 2026: encabezado operativo oscuro y distribución responsive */
+.ag-topbar {
+  grid-template-columns:minmax(280px,1fr) auto auto;
+  min-height:68px;
+}
+.ag-top-account {
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  flex:0 0 38px;
+  border-radius:50%;
+  background:#dcecdf;
+  color:#163b2c;
+  font-size:13px;
+  font-weight:750;
+}
+.ag-hero {
+  min-height:294px;
+  display:block;
+  padding:26px 30px 22px;
+  overflow:hidden;
+  border:0;
+  border-radius:14px 14px 0 0;
+  color:#fff;
+  background:
+    linear-gradient(90deg,#071815f5 0%,#0a201be8 46%,#0b241dbd 100%),
+    url('./assets/campo-banner.jpg') center 52%/cover;
+  box-shadow:none;
+}
+.ag-hero-head {
+  min-height:142px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:28px;
+}
+.ag-hero-date {
+  display:block;
+  margin-bottom:10px;
+  color:#c4d2cc;
+  font-size:11px;
+  line-height:1.4;
+  text-transform:capitalize;
+}
+.ag-hero-copy h1 {
+  margin:0;
+  color:#b8d6c8;
+  font-family:inherit;
+  font-size:40px;
+  font-weight:650;
+  line-height:1.02;
+  letter-spacing:-1.5px;
+}
+.ag-hero-copy h1 small {
+  margin-bottom:5px;
+  color:#fff;
+  font-size:30px;
+  font-weight:650;
+  letter-spacing:-1px;
+}
+.ag-hero-actions {
+  min-width:220px;
+  align-self:flex-start;
+  align-items:stretch;
+  gap:10px;
+}
+.ag-hero .ag-field-select {
+  width:100%;
+  min-height:46px;
+  margin:0;
+  padding:0 11px;
+  border:1px solid #ffffff38;
+  border-radius:10px;
+  background:#0c241ed9;
+  color:#fff;
+  box-shadow:none;
+}
+.ag-hero .ag-field-select i { color:#8ed0aa; }
+.ag-hero .ag-field-select select {
+  width:100%;
+  max-width:none;
+  color:#fff;
+  background:#0c241e;
+  font-size:13px;
+  font-weight:650;
+}
+.ag-hero-actions .ag-primary {
+  min-height:44px;
+  background:#fff;
+  border-color:#fff;
+  color:#0a3e2b;
+}
+.ag-hero .ag-metrics {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:0;
+  margin:0;
+  border-top:1px solid #ffffff1f;
+}
+.ag-hero .ag-metric {
+  min-height:94px;
+  padding:18px 22px 8px;
+  display:block;
+  border:0;
+  border-right:1px solid #ffffff24;
+  border-radius:0;
+  background:transparent;
+  color:#fff;
+  box-shadow:none;
+}
+.ag-hero .ag-metric:first-child { padding-left:0; }
+.ag-hero .ag-metric:last-child { border-right:0; }
+.ag-hero .ag-metric-icon { display:none; }
+.ag-hero .ag-metric-label { color:#d4ded9; font-size:11px; }
+.ag-hero .ag-metric strong {
+  margin:0 0 6px;
+  color:#fff;
+  font-size:25px;
+  line-height:1.15;
+  letter-spacing:-.6px;
+}
+.ag-hero .ag-metric.is-compact strong { font-size:18px; }
+.ag-hero .ag-metric small { color:#aebfb7; font-size:10px; }
+.ag-hero .ag-metric.is-clickable:hover {
+  background:#ffffff08;
+  border-color:#ffffff24;
+  transform:none;
+  box-shadow:none;
+}
+.ag-register { display:none !important; }
+.ag-dashboard-columns {
+  margin-top:0;
+  padding:16px;
+  border:1px solid #e0e6e0;
+  border-top:0;
+  border-radius:0 0 14px 14px;
+  background:#f8f9f7;
+}
+.ag-blocks-panel { padding:22px; }
+.ag-blocks-panel .ag-section-heading h2 { font-size:22px; }
+.ag-blocks-panel .ag-title-with-icon { gap:0; }
+.ag-block-identity strong {
+  min-width:46px;
+  min-height:34px;
+  display:inline-grid;
+  place-items:center;
+  flex:0 0 46px;
+  padding:4px 7px;
+  border:1px solid #d9e5dc;
+  border-radius:7px;
+  background:#eff5f0;
+  color:#0c5036;
+  font-size:11px;
+  font-weight:750;
+}
+
+@media (min-width:1100px) {
+  .ag-sidebar {
+    background:linear-gradient(180deg,#081c17 0%,#09271f 100%);
+    color:#f2f7f4;
+    border-right:0;
+  }
+  .ag-brand,.ag-brand strong { color:#fff; }
+  .ag-brand { border-bottom-color:#ffffff18; }
+  .ag-brand-mark { color:#fff; }
+  .ag-brand small,.ag-nav-group h2 { color:#8fa99f; }
+  .ag-nav-link { color:#c9d8d1; }
+  .ag-nav-link:hover,.ag-profile-link:hover { background:#ffffff0d; color:#fff; }
+  .ag-nav-link[aria-current='page'] { background:#ffffff18; color:#fff; box-shadow:inset 3px 0 #69bd8d; }
+  .ag-nav-link[aria-current='page'] i { color:#83d2a3; }
+  .ag-sidebar-footer { border-color:#ffffff1a; }
+  .ag-profile { color:#fff; border-color:#ffffff1b; background:#ffffff08; }
+  .ag-profile small,.ag-profile-link i { color:#94aca2; }
+  .ag-avatar { background:#b8dbc5; color:#123e2d; }
+  .ag-signout { color:#b7cbc2; }
+}
+
+@media (max-width:1099px) {
+  .ag-topbar { grid-template-columns:1fr auto auto; }
+  .ag-dashboard-columns { padding:14px; }
+}
+
+@media (max-width:767px) {
+  .ag-overview { padding:0 12px 22px; }
+  .ag-topbar {
+    min-height:62px;
+    padding:10px 2px;
+    flex-wrap:nowrap;
+  }
+  .ag-mobile-brand { font-size:15px; }
+  .ag-mobile-brand b { font-size:25px; }
+  .ag-topbar>.ag-icon-button { order:0; width:38px; height:38px; }
+  .ag-top-account { width:36px; height:36px; flex-basis:36px; }
+  .ag-hero {
+    min-height:0;
+    padding:19px 16px 15px;
+    border-radius:14px 14px 0 0;
+    background:
+      linear-gradient(180deg,#071915ed 0%,#0a221ce8 100%),
+      url('./assets/campo-banner.jpg') center/cover;
+  }
+  .ag-hero-head {
+    min-height:0;
+    display:block;
+  }
+  .ag-hero-date { margin-bottom:9px; font-size:10px; }
+  .ag-hero-copy h1 { font-size:31px; line-height:1; }
+  .ag-hero-copy h1 small { display:block; font-size:22px; }
+  .ag-hero-actions {
+    display:block;
+    width:100%;
+    min-width:0;
+    margin-top:18px;
+  }
+  .ag-hero .ag-field-select {
+    display:flex;
+    width:100%;
+    min-height:48px;
+    padding:0 12px;
+    border:1px solid #ffffff38;
+    background:#102a23;
+  }
+  .ag-hero-actions .ag-primary { display:none; }
+  .ag-hero .ag-metrics {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    margin-top:14px;
+  }
+  .ag-hero .ag-metric {
+    min-height:82px;
+    padding:14px 10px 10px;
+    border-right:1px solid #ffffff22;
+    border-bottom:1px solid #ffffff22;
+  }
+  .ag-hero .ag-metric:nth-child(2n) { border-right:0; padding-left:14px; }
+  .ag-hero .ag-metric:nth-last-child(-n+2) { border-bottom:0; }
+  .ag-hero .ag-metric:first-child { padding-left:0; }
+  .ag-hero .ag-metric strong { font-size:22px; }
+  .ag-hero .ag-metric.is-compact strong { font-size:14px; line-height:1.15; }
+  .ag-hero .ag-metric-label,.ag-hero .ag-metric small { font-size:9px; }
+  .ag-dashboard-columns {
+    margin:0;
+    padding:10px;
+    gap:12px;
+  }
+  .ag-blocks-panel { order:-2; padding:15px 12px; }
+  .ag-blocks-panel .ag-section-heading { align-items:flex-start; }
+  .ag-blocks-panel .ag-section-heading h2 { font-size:19px; }
+  .ag-blocks-panel .ag-title-with-icon small { font-size:10px; }
+  .ag-block-row {
+    min-height:78px;
+    grid-template-columns:minmax(0,1fr) auto 12px;
+  }
+  .ag-block-identity {
+    display:grid;
+    grid-template-columns:44px minmax(0,1fr);
+    align-items:center;
+    gap:9px;
+  }
+  .ag-block-identity strong {
+    min-width:42px;
+    min-height:36px;
+    flex:auto;
+  }
+  .ag-block-identity>span { font-size:12px; }
+  .ag-status { white-space:normal; justify-self:end; max-width:92px; }
+  .ag-side-column { order:0; }
 }
