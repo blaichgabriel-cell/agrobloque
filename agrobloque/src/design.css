@@ -722,6 +722,38 @@ button:active:not(:disabled) { transform:translateY(1px); }
   .ag-block-tools input,.ag-block-tools select { background:#fff; }
 }
 
+/* Cierre accesible de las ventanas de Configuracion */
+.ag-config-modal-toolbar {
+  position:sticky;
+  top:-24px;
+  z-index:12;
+  display:flex;
+  justify-content:flex-end;
+  margin:-8px -4px 6px;
+  padding:8px 4px 4px;
+  background:linear-gradient(180deg,#f6f8f7 78%,rgba(246,248,247,0));
+}
+.ag-config-modal-close {
+  width:44px;
+  height:44px;
+  flex:0 0 44px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid #ded8ce;
+  border-radius:50%;
+  background:#fff;
+  color:#182c25;
+  box-shadow:0 8px 22px rgba(31,25,17,.12);
+  cursor:pointer;
+  transition:background .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+.ag-config-modal-close i { font-size:22px; }
+.ag-config-modal-close:hover { background:#f5f2ec; box-shadow:0 10px 26px rgba(31,25,17,.16); }
+.ag-config-modal-close:active { transform:scale(.96); }
+.ag-config-modal-close:focus-visible { outline:3px solid rgba(23,106,37,.28); outline-offset:2px; }
+.ag-config-modal-close:disabled { opacity:.5; cursor:not-allowed; }
+
 /* Paleta aprobada: fondo beige, navegación y cabecera negras, contenido blanco */
 :root {
   --ag-canvas:#ede6da;

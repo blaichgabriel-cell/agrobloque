@@ -548,7 +548,7 @@ export default function Configuracion({ role }) {
       </div>
 
       {modal && (
-        <Modal onClose={() => setModal(null)} label="Configuracion" style={{
+        <Modal busy={loading} onClose={cerrar} label="Configuracion" style={{
           position:'fixed',
           top:0,
           left:0,
@@ -562,7 +562,7 @@ export default function Configuracion({ role }) {
           padding: esDesktop() ? 24 : 0,
           boxSizing:'border-box',
         }}>
-          <div style={{
+          <div className="ag-config-modal-card" style={{
             background:"#f6f8f7",
             borderRadius: esDesktop() ? 24 : '24px 24px 0 0',
             width:'100%',
@@ -572,6 +572,19 @@ export default function Configuracion({ role }) {
             overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
             boxShadow: esDesktop() ? '0 28px 70px rgba(0,0,0,0.28)' : 'none',
           }}>
+
+            <div className="ag-config-modal-toolbar">
+              <button
+                type="button"
+                className="ag-config-modal-close"
+                onClick={cerrar}
+                disabled={loading}
+                aria-label="Cerrar configuracion"
+                title="Cerrar"
+              >
+                <i className="ti ti-x" aria-hidden="true"></i>
+              </button>
+            </div>
 
             {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{error}</div>}
             {success && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{success}</div>}
