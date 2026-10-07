@@ -686,6 +686,151 @@ button:active:not(:disabled) { transform:translateY(1px); }
   .ag-side-column { order:0; }
 }
 
+/* Ajuste final de superficie: estas reglas deben cerrar la cascada */
+:root { --ag-canvas:#ede6da; --ag-line:#e2ded6; --ag-radius:12px; }
+.ag-app,.ag-app [data-app-scroll],.ag-overview { background:#ede6da !important; }
+.ag-topbar .ag-search-link,.ag-panel,.ag-block-row,.ag-activity,.ag-block-search,.ag-block-tools select,.ag-outline-button { background:#fff; }
+.ag-topbar .ag-search-link { border:1px solid #e2ded6; border-radius:13px; box-shadow:0 8px 24px rgba(53,45,33,.05); }
+.ag-hero { margin-bottom:16px; border-radius:22px; background:linear-gradient(90deg,rgba(5,7,6,.97) 0%,rgba(7,9,8,.94) 48%,rgba(8,10,9,.84) 100%),url('./assets/campo-banner.jpg') center 52%/cover; box-shadow:0 12px 34px rgba(31,25,17,.10); }
+.ag-hero .ag-field-select { border-radius:14px; background:rgba(5,8,7,.88); }
+.ag-hero .ag-field-select select { background:#080b0a; }
+.ag-hero-actions .ag-primary { border-radius:14px; }
+.ag-dashboard-columns { padding:0; border:0; border-radius:0; background:transparent; }
+.ag-panel { border:1px solid #e2ded6; border-radius:18px; box-shadow:0 10px 28px rgba(53,45,33,.055); }
+.ag-block-search,.ag-block-tools select,.ag-outline-button { border-color:#e2ded6; border-radius:12px; }
+.ag-block-labels { border-radius:11px; background:#f3f4f1; }
+.ag-block-identity strong { border-radius:11px; }
+.ag-all-clear,.ag-notice,.ag-activity-icon,.ag-title-with-icon>span { border-radius:12px; }
+.ag-profile { border-radius:14px; }
+@media (min-width:1100px) {
+  .ag-sidebar { background:#080b0a; }
+  .ag-nav-link { border-radius:12px; }
+  .ag-nav-link:hover,.ag-profile-link:hover { background:#ffffff0c; }
+  .ag-nav-link[aria-current='page'] { background:#ffffff14; box-shadow:inset 3px 0 #6bd394; }
+}
+@media (max-width:1099px) {
+  .ag-bottom-nav { left:12px; right:12px; bottom:calc(8px + env(safe-area-inset-bottom,0px)); width:auto; border:1px solid #e2ded6; border-radius:18px; box-shadow:0 12px 32px rgba(42,34,23,.14); }
+  .ag-bottom-nav button:first-child { border-radius:14px 0 0 14px; }
+  .ag-bottom-nav button:last-child { border-radius:0 14px 14px 0; }
+}
+@media (max-width:767px) {
+  .ag-overview { padding-left:12px; padding-right:12px; }
+  .ag-hero { margin-bottom:12px; border-radius:20px; background:linear-gradient(180deg,rgba(5,7,6,.96) 0%,rgba(8,10,9,.91) 100%),url('./assets/campo-banner.jpg') center/cover; }
+  .ag-dashboard-columns { padding:0; }
+  .ag-panel { border-radius:17px; }
+  .ag-blocks-panel { padding:16px 13px; }
+  .ag-block-tools input,.ag-block-tools select { background:#fff; }
+}
+
+/* Paleta aprobada: fondo beige, navegación y cabecera negras, contenido blanco */
+:root {
+  --ag-canvas:#ede6da;
+  --ag-line:#e2ded6;
+  --ag-radius:12px;
+}
+.ag-app,
+.ag-app [data-app-scroll],
+.ag-overview {
+  background:#ede6da !important;
+}
+.ag-topbar .ag-search-link,
+.ag-panel,
+.ag-block-row,
+.ag-activity,
+.ag-block-search,
+.ag-block-tools select,
+.ag-outline-button {
+  background:#fff;
+}
+.ag-topbar .ag-search-link {
+  border:1px solid #e2ded6;
+  border-radius:13px;
+  box-shadow:0 8px 24px rgba(53,45,33,.05);
+}
+.ag-hero {
+  margin-bottom:16px;
+  border-radius:22px;
+  background:
+    linear-gradient(90deg,rgba(5,7,6,.97) 0%,rgba(7,9,8,.94) 48%,rgba(8,10,9,.84) 100%),
+    url('./assets/campo-banner.jpg') center 52%/cover;
+  box-shadow:0 12px 34px rgba(31,25,17,.10);
+}
+.ag-hero .ag-field-select {
+  border-radius:14px;
+  background:rgba(5,8,7,.88);
+}
+.ag-hero .ag-field-select select { background:#080b0a; }
+.ag-hero-actions .ag-primary { border-radius:14px; }
+.ag-dashboard-columns {
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.ag-panel {
+  border:1px solid #e2ded6;
+  border-radius:18px;
+  box-shadow:0 10px 28px rgba(53,45,33,.055);
+}
+.ag-block-search,
+.ag-block-tools select,
+.ag-outline-button {
+  border-color:#e2ded6;
+  border-radius:12px;
+}
+.ag-block-labels {
+  border-radius:11px;
+  background:#f3f4f1;
+}
+.ag-block-identity strong { border-radius:11px; }
+.ag-all-clear,
+.ag-notice,
+.ag-activity-icon,
+.ag-title-with-icon>span { border-radius:12px; }
+.ag-profile { border-radius:14px; }
+
+@media (min-width:1100px) {
+  .ag-sidebar {
+    background:#080b0a;
+  }
+  .ag-nav-link { border-radius:12px; }
+  .ag-nav-link:hover,.ag-profile-link:hover { background:#ffffff0c; }
+  .ag-nav-link[aria-current='page'] {
+    background:#ffffff14;
+    box-shadow:inset 3px 0 #6bd394;
+  }
+}
+
+@media (max-width:1099px) {
+  .ag-bottom-nav {
+    left:12px;
+    right:12px;
+    bottom:calc(8px + env(safe-area-inset-bottom,0px));
+    width:auto;
+    border:1px solid #e2ded6;
+    border-radius:18px;
+    box-shadow:0 12px 32px rgba(42,34,23,.14);
+  }
+  .ag-bottom-nav button:first-child { border-radius:14px 0 0 14px; }
+  .ag-bottom-nav button:last-child { border-radius:0 14px 14px 0; }
+}
+
+@media (max-width:767px) {
+  .ag-overview { padding-left:12px; padding-right:12px; }
+  .ag-hero {
+    margin-bottom:12px;
+    border-radius:20px;
+    background:
+      linear-gradient(180deg,rgba(5,7,6,.96) 0%,rgba(8,10,9,.91) 100%),
+      url('./assets/campo-banner.jpg') center/cover;
+  }
+  .ag-dashboard-columns { padding:0; }
+  .ag-panel { border-radius:17px; }
+  .ag-blocks-panel { padding:16px 13px; }
+  .ag-block-tools input,
+  .ag-block-tools select { background:#fff; }
+}
+
 @media (max-width:767px) {
   .ag-overview { padding:0 14px 24px; }
   .ag-topbar { min-height:auto; display:flex; gap:7px; padding:14px 0; }
@@ -990,4 +1135,40 @@ button:active:not(:disabled) { transform:translateY(1px); }
   .ag-block-identity>span { font-size:12px; }
   .ag-status { white-space:normal; justify-self:end; max-width:92px; }
   .ag-side-column { order:0; }
+}
+
+/* Cierre visual aprobado: fondo beige, cabecera negra y superficies blancas */
+:root { --ag-canvas:#ede6da; --ag-line:#e2ded6; --ag-radius:12px; }
+.ag-app,.ag-app [data-app-scroll],.ag-overview { background:#ede6da !important; }
+.ag-topbar .ag-search-link,.ag-panel,.ag-block-row,.ag-activity,.ag-block-search,.ag-block-tools select,.ag-outline-button { background:#fff; }
+.ag-topbar .ag-search-link { border:1px solid #e2ded6; border-radius:13px; box-shadow:0 8px 24px rgba(53,45,33,.05); }
+.ag-hero { margin-bottom:16px; border-radius:22px; background:linear-gradient(90deg,rgba(5,7,6,.97) 0%,rgba(7,9,8,.94) 48%,rgba(8,10,9,.84) 100%),url('./assets/campo-banner.jpg') center 52%/cover; box-shadow:0 12px 34px rgba(31,25,17,.10); }
+.ag-hero .ag-field-select { border-radius:14px; background:rgba(5,8,7,.88); }
+.ag-hero .ag-field-select select { background:#080b0a; }
+.ag-hero-actions .ag-primary { border-radius:14px; }
+.ag-dashboard-columns { padding:0; border:0; border-radius:0; background:transparent; }
+.ag-panel { border:1px solid #e2ded6; border-radius:18px; box-shadow:0 10px 28px rgba(53,45,33,.055); }
+.ag-block-search,.ag-block-tools select,.ag-outline-button { border-color:#e2ded6; border-radius:12px; }
+.ag-block-labels { border-radius:11px; background:#f3f4f1; }
+.ag-block-identity strong { border-radius:11px; }
+.ag-all-clear,.ag-notice,.ag-activity-icon,.ag-title-with-icon>span { border-radius:12px; }
+.ag-profile { border-radius:14px; }
+@media (min-width:1100px) {
+  .ag-sidebar { background:#080b0a; }
+  .ag-nav-link { border-radius:12px; }
+  .ag-nav-link:hover,.ag-profile-link:hover { background:#ffffff0c; }
+  .ag-nav-link[aria-current='page'] { background:#ffffff14; box-shadow:inset 3px 0 #6bd394; }
+}
+@media (max-width:1099px) {
+  .ag-bottom-nav { left:12px; right:12px; bottom:calc(8px + env(safe-area-inset-bottom,0px)); width:auto; border:1px solid #e2ded6; border-radius:18px; box-shadow:0 12px 32px rgba(42,34,23,.14); }
+  .ag-bottom-nav button:first-child { border-radius:14px 0 0 14px; }
+  .ag-bottom-nav button:last-child { border-radius:0 14px 14px 0; }
+}
+@media (max-width:767px) {
+  .ag-overview { padding-left:12px; padding-right:12px; }
+  .ag-hero { margin-bottom:12px; border-radius:20px; background:linear-gradient(180deg,rgba(5,7,6,.96) 0%,rgba(8,10,9,.91) 100%),url('./assets/campo-banner.jpg') center/cover; }
+  .ag-dashboard-columns { padding:0; }
+  .ag-panel { border-radius:17px; }
+  .ag-blocks-panel { padding:16px 13px; }
+  .ag-block-tools input,.ag-block-tools select { background:#fff; }
 }
