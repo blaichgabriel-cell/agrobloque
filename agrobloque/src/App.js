@@ -97,7 +97,7 @@ const allTabs = [
 ]
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
-const SIDEBAR_WIDTH = 224
+const SIDEBAR_WIDTH = 260
 
 const getStoredCampoId = () => {
   if (typeof window === 'undefined') return null
