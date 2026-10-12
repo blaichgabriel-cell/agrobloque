@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { descargarCsv, imprimirHtml } from '../lib/exporters'
@@ -32,6 +33,7 @@ const formInicial = {
 }
 
 export default function Contabilidad() {
+  const navigate = useNavigate()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [movimientos, setMovimientos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -235,6 +237,9 @@ export default function Contabilidad() {
             {[anhoActual() - 1, anhoActual(), anhoActual() + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           <div style={{ display:'flex', gap:6 }}>
+            <button onClick={() => navigate('/contabilidad/facturas')} style={{ ...smallAction, display:'flex', alignItems:'center', gap:6 }}>
+              <i className="ti ti-file-invoice" aria-hidden="true" /> Facturas
+            </button>
             <button onClick={exportarCsv} style={smallAction}>CSV</button>
             <button onClick={imprimirBalance} style={smallAction}>PDF</button>
             <button onClick={() => abrirNuevo('compra')} style={smallAction}>Compra</button>

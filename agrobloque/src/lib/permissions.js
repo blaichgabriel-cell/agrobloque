@@ -27,7 +27,7 @@ export const ACTIONS = [
   { key: 'delete', label: 'Borrar' },
 ]
 
-export const DISABLED_MODULES = ['ventas', 'costos', 'contabilidad', 'cuentas_pagar', 'reportes', 'historial', 'auditoria']
+export const DISABLED_MODULES = ['ventas', 'costos', 'cuentas_pagar', 'reportes', 'historial', 'auditoria']
 const ALL_KEYS = MODULES.map(m => m.key).filter(key => !DISABLED_MODULES.includes(key))
 const OPERADOR_KEYS = ALL_KEYS.filter(key => !['configuracion', 'auditoria'].includes(key))
 const LECTURA_KEYS = ALL_KEYS.filter(key => !['asistencia', 'cuentas_pagar', 'configuracion', 'auditoria'].includes(key))
@@ -102,6 +102,9 @@ export const moduleForPath = (path = '/') => {
 export const canAccessModule = (role, moduleKey) => {
   if (DISABLED_MODULES.includes(moduleKey)) return false
   if (!role) return false
+  // Contabilidad contiene informacion sensible: durante la prueba solo se
+  // habilita para administradores y la cuenta propietaria.
+  if (moduleKey === 'contabilidad' && role.rol !== 'admin' && role.email !== 'agrobloquetoni@gmail.com') return false
   if (moduleKey === 'asistencia' && role.rol !== 'admin') return false
   if (moduleKey === 'configuracion' && role.rol !== 'admin' && role.email !== 'agrobloquetoni@gmail.com') return false
   if (!moduleKey || moduleKey === 'inicio') return true

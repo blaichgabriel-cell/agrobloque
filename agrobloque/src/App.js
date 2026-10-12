@@ -16,6 +16,7 @@ import Fumigaciones from './pages/Fumigaciones'
 import Fertilizaciones from './pages/Fertilizaciones'
 import Costos from './pages/Costos'
 import Contabilidad from './pages/Contabilidad'
+import FacturasRecibidas from './pages/FacturasRecibidas'
 import CuentasPagar from './pages/CuentasPagar'
 import Reportes from './pages/Reportes'
 import Compradores from './pages/Compradores'
@@ -266,6 +267,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
             <Route path="/plan-nutricional" element={<Navigate to="/fertilizaciones"/>}/>
             <Route path="/costos" element={<ProtectedRoute role={role} moduleKey="costos"><Costos campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/contabilidad" element={<ProtectedRoute role={role} moduleKey="contabilidad"><Contabilidad/></ProtectedRoute>}/>
+            <Route path="/contabilidad/facturas" element={<ProtectedRoute role={role} moduleKey="contabilidad"><FacturasRecibidas/></ProtectedRoute>}/>
             <Route path="/cuentas-pagar" element={<ProtectedRoute role={role} moduleKey="cuentas_pagar"><CuentasPagar/></ProtectedRoute>}/>
             <Route path="/reportes" element={<ProtectedRoute role={role} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
