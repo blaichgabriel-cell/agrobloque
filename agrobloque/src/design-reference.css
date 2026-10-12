@@ -13,7 +13,7 @@
   .ag-profile-link { padding:13px 16px; border:1px solid rgba(30,46,37,.08); border-radius:17px; color:#18201c; background:rgba(255,255,255,.35); }
   .ag-profile-copy small { color:#666b68; }
 
-  .ag-overview { min-height:100vh; padding:20px 20px 36px 265px; }
+  .ag-overview { width:100%; max-width:none; min-height:100vh; margin:0; padding:20px 20px 36px; }
   .ag-topbar { display:grid; grid-template-columns:minmax(340px,715px) 1fr auto auto auto; gap:12px; margin-bottom:26px; }
   .ag-search-link { height:50px; border:1px solid rgba(255,255,255,.9); border-radius:26px; background:rgba(255,255,255,.66); box-shadow:none; }
   .ag-search-link kbd { background:rgba(35,45,39,.05); border:0; }
