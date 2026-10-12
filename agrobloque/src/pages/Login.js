@@ -13,7 +13,7 @@ function AgroBloqueLogo({ compact = false, light = false }) {
         <path d="M21 51c8-5.1 17.3-6.6 27.8-4.2" stroke="#76b947" strokeWidth="2.4" strokeLinecap="round" opacity=".78" />
       </svg>
       <div>
-        <div className="login-brand-name" style={{ color }}>AgroBloque</div>
+        <div className="login-brand-name" style={{ color }}>El Sembrador</div>
         {!compact && <div className="login-brand-tag" style={{ color: light ? 'rgba(255,255,255,.72)' : '#69756d' }}>Gestión agrícola simple y completa</div>}
       </div>
     </div>
@@ -49,7 +49,7 @@ export default function Login() {
         .login-brand{display:flex;align-items:center;gap:16px}.login-brand-name{font-size:34px;font-weight:850;letter-spacing:-1.6px;line-height:1}.login-brand-tag{font-size:13px;margin-top:7px;letter-spacing:.45px}.login-copy{max-width:650px;margin:auto 0}.login-copy h1{font-size:clamp(44px,4.2vw,68px);line-height:1.02;letter-spacing:-3px;color:#fff;margin:0 0 18px}.login-copy p{max-width:540px;color:rgba(255,255,255,.76);font-size:17px;line-height:1.6;margin:0}.login-features{display:flex;gap:10px;flex-wrap:wrap;margin-top:32px}.login-feature{border:1px solid rgba(255,255,255,.17);background:rgba(6,31,20,.47);backdrop-filter:blur(9px);border-radius:14px;padding:12px 15px;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px}.login-feature i{font-size:18px;color:#91cf62}.login-hero-foot{color:rgba(255,255,255,.55);font-size:11px;letter-spacing:1.6px;text-transform:uppercase}.login-panel{padding:42px clamp(30px,4vw,68px);display:flex;flex-direction:column;justify-content:center;position:relative}.login-mobile-brand{display:none}.login-form{width:100%;max-width:440px;margin:auto}.login-form h2{font-size:34px;letter-spacing:-1.2px;margin:0 0 8px;color:#103d2b}.login-intro{font-size:14px;color:#69756d;margin:0 0 34px}.login-label{display:block;font-size:12px;font-weight:750;color:#29362f;margin-bottom:8px}.login-field{height:54px;border:1px solid #dce3dc;border-radius:13px;background:#fff;display:flex;align-items:center;padding:0 15px;gap:11px;margin-bottom:18px;transition:border .15s,box-shadow .15s}.login-field:focus-within{border-color:#4f9139;box-shadow:0 0 0 4px rgba(79,145,57,.11)}.login-field i{font-size:19px;color:#879188}.login-field input{border:0;outline:0;background:transparent;width:100%;font-size:14px;color:#17221b}.login-field button{border:0;background:transparent;padding:5px;color:#607066;cursor:pointer}.login-submit{width:100%;height:56px;border:0;border-radius:13px;background:linear-gradient(135deg,#123f2d,#0a5133);color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 14px 30px rgba(15,69,44,.2);display:flex;align-items:center;justify-content:center;gap:10px}.login-submit:disabled{opacity:.65;cursor:wait}.login-error{color:#a73333;background:#fff0f0;border:1px solid #f5d1d1;padding:10px 12px;border-radius:10px;font-size:12px;margin-bottom:16px}.login-help{margin-top:20px;text-align:center;color:#78847c;font-size:12px}.login-footer{text-align:center;color:#9aa39c;font-size:11px;padding-top:28px}.login-security{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;color:#8a958e;font-size:11px}
         @media(max-width:820px){.agrobloque-login{display:block;background:#f8f7f2}.login-hero{min-height:285px;padding:26px 22px 70px;background-image:linear-gradient(0deg,rgba(5,29,19,.88),rgba(5,27,18,.22)),url('/assets/agrobloque-login-hero.png');background-position:58% center}.login-hero>.login-brand,.login-hero-foot{display:none}.login-copy{margin:auto 0 0}.login-copy h1{font-size:34px;letter-spacing:-1.7px;margin-bottom:10px}.login-copy p{font-size:13px;line-height:1.45;max-width:330px}.login-features{display:none}.login-panel{min-height:calc(100vh - 250px);margin-top:-34px;border-radius:28px 28px 0 0;background:#f8f7f2;padding:27px 22px 30px}.login-mobile-brand{display:block;margin-bottom:25px}.login-brand-compact .login-brand-name{font-size:24px}.login-form{margin:0 auto}.login-form h2{font-size:27px}.login-intro{margin-bottom:25px}.login-footer{padding-top:24px}}
       `}</style>
-      <section className="login-hero" aria-label="AgroBloque">
+      <section className="login-hero" aria-label="El Sembrador">
         <AgroBloqueLogo light />
         <div className="login-copy">
           <h1>Tu campo, siempre bajo control.</h1>
@@ -77,7 +77,7 @@ export default function Login() {
           </form>
           <div className="login-help">Acceso exclusivo para usuarios autorizados.</div>
           <div className="login-security"><i className="ti ti-shield-lock" />Conexión segura y datos protegidos</div>
-          <div className="login-footer">AgroBloque · Gestión agrícola simple y completa</div>
+          <div className="login-footer">El Sembrador · Gestión agrícola simple y completa</div>
         </div>
       </section>
     </main>

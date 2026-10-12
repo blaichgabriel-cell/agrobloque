@@ -55,6 +55,18 @@ export function LogoHS({ size = 48 }) {
   )
 }
 
+function StartupScreen() {
+  return <div className="ag-startup" role="status" aria-live="polite" aria-label="Abriendo El Sembrador">
+    <div className="ag-startup-glow" aria-hidden="true" />
+    <div className="ag-startup-brand">
+      <span className="ag-startup-mark"><i className="ti ti-leaf" /></span>
+      <div><strong>El Sembrador</strong><small>Gestión del campo</small></div>
+    </div>
+    <div className="ag-startup-progress" aria-hidden="true"><span /></div>
+    <p>Preparando tu campo…</p>
+  </div>
+}
+
 function ViveroIcon({ size = 20, color = 'currentColor' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -206,7 +218,7 @@ function DesktopSidebar({ isGuest = false, role }) {
     { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
   ]
   return <aside className="ag-sidebar" aria-label="Navegación principal">
-    <div className="ag-brand"><span className="ag-brand-mark" aria-hidden="true">AB<i className="ti ti-leaf" /></span><div><strong>AgroBloque</strong><small>El campo en control</small></div></div>
+    <div className="ag-brand"><span className="ag-brand-mark" aria-hidden="true"><i className="ti ti-leaf" /></span><div><strong>El Sembrador</strong><small>Gestión del campo</small></div></div>
     <nav className="ag-sidebar-nav">{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><MenuIcon icon={tab.icon} size={20} color="currentColor" /><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
@@ -440,14 +452,7 @@ export default function App() {
     </BrowserRouter>
   )
 
-  if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#f0ede8' }}>
-      <div style={{ textAlign:'center' }}>
-        <LogoHS size={56} />
-        <Skeleton rows={2} label="Abriendo AgroBloque" />
-      </div>
-    </div>
-  )
+  if (loading) return <StartupScreen />
 
   if (!session) return (
     <>

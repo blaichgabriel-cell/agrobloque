@@ -134,7 +134,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
 
   return <div className="ag-overview">
     <header className="ag-topbar">
-      <span className="ag-mobile-brand"><b>AB</b> AgroBloque</span>
+      <span className="ag-mobile-brand"><b><i className="ti ti-leaf" /></b> El Sembrador</span>
       {can('buscar') && <button className="ag-search-link" onClick={() => navigate('/buscar')}><i className="ti ti-search" /><span>Buscar bloques, cultivos, actividades…</span><kbd>Ctrl K</kbd></button>}
       {can('alertas') && <button className="ag-icon-button" aria-label="Ver alertas" onClick={() => navigate('/alertas')}><i className="ti ti-bell" /></button>}
       <label className="ag-field-select ag-top-field"><span className="ag-sr-only">Campo activo</span><i className="ti ti-map-pin" /><select value={campoActivo?.id || ''} onChange={e => { const campo = campos.find(c => c.id === e.target.value); if (campo) { setCampoActivo(campo); localStorage.setItem('agrobloque-campo-activo', campo.id) } }}>{!campos.length && <option value="">Sin campos</option>}{campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
