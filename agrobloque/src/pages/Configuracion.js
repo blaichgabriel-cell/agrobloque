@@ -1,7 +1,7 @@
 import { Modal } from '../components/UI'
 ﻿import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { forceLocalSignOut, supabase } from '../lib/supabase'
+import { createProvisioningAuthClient, forceLocalSignOut, supabase } from '../lib/supabase'
 import { descargarJson } from '../lib/exporters'
 import { ACTIONS, DISABLED_MODULES } from '../lib/permissions'
 const PERMISOS_MODULOS = [
@@ -25,6 +25,12 @@ const PERMISOS_MODULOS = [
   { key: 'auditoria', label: 'Auditoria' },
   { key: 'configuracion', label: 'Configuracion' },
 ].filter(m => !DISABLED_MODULES.includes(m.key))
+
+const crearContrasenaTemporal = () => {
+  const bytes = new Uint8Array(24)
+  window.crypto.getRandomValues(bytes)
+  return `Agb!${Array.from(bytes, value => value.toString(36)).join('')}`
+}
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
@@ -437,21 +443,34 @@ export default function Configuracion({ role }) {
         notas: form.notas || null,
       }
       const debeInvitar = !form.id || form.invitar_real
+      const { error: roleError } = form.id
+        ? await supabase.from('app_user_roles').update(payload).eq('id', form.id)
+        : await supabase.from('app_user_roles').insert(payload)
+      if (roleError) throw roleError
+
       if (debeInvitar) {
-        const { data: { session } } = await supabase.auth.getSession()
-        const resp = await fetch('/api/invitar-usuario', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token || ''}`,
-          },
-          body: JSON.stringify(payload),
-        })
-        const result = await resp.json().catch(() => ({}))
-        if (!resp.ok) throw new Error(result.error || 'No se pudo enviar la invitacion real.')
-      } else {
-        const { error } = await supabase.from('app_user_roles').update(payload).eq('id', form.id)
-        if (error) throw error
+        const authClient = createProvisioningAuthClient()
+        const redirectTo = `${window.location.origin}/?auth_action=set-password`
+        let enviarRecuperacion = Boolean(form.id)
+
+        if (!form.id) {
+          const { data: signupData, error: signupError } = await authClient.auth.signUp({
+            email: payload.email,
+            password: crearContrasenaTemporal(),
+            options: {
+              emailRedirectTo: redirectTo,
+              data: { nombre: payload.nombre || '', rol: payload.rol },
+            },
+          })
+          const yaRegistrado = /already|registered|exists|existe|registrad/i.test(signupError?.message || '') || signupData?.user?.identities?.length === 0
+          if (signupError && !yaRegistrado) throw signupError
+          enviarRecuperacion = yaRegistrado
+        }
+
+        if (enviarRecuperacion) {
+          const { error: resetError } = await authClient.auth.resetPasswordForEmail(payload.email, { redirectTo })
+          if (resetError) throw resetError
+        }
       }
 
       await fetchAll()

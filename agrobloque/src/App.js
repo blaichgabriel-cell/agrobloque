@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { forceLocalSignOut, guestToken, supabase } from './lib/supabase'
+import { authAction, forceLocalSignOut, guestToken, supabase } from './lib/supabase'
 import { Skeleton } from './components/UI'
 import Login from './pages/Login'
 import Dashboard from './pages/Overview'
@@ -303,7 +303,7 @@ export default function App() {
   const [role, setRole] = useState(normalizeRole(null))
   const [roleUserId, setRoleUserId] = useState(null)
   const guestPath = Boolean(guestToken)
-  const passwordSetupPath = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('auth_action') === 'set-password'
+  const passwordSetupPath = authAction === 'set-password'
 
   useEffect(() => {
     if (typeof window === 'undefined') return
