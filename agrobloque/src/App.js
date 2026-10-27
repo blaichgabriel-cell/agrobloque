@@ -303,6 +303,7 @@ export default function App() {
   const [role, setRole] = useState(normalizeRole(null))
   const [roleUserId, setRoleUserId] = useState(null)
   const guestPath = Boolean(guestToken)
+  const passwordSetupPath = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('auth_action') === 'set-password'
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -453,6 +454,8 @@ export default function App() {
   )
 
   if (loading) return <StartupScreen />
+
+  if (passwordSetupPath) return <Login mode="set-password" session={session} />
 
   if (!session) return (
     <>

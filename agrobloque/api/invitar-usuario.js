@@ -35,7 +35,7 @@ module.exports = async function handler(req, res) {
       .eq('email', adminEmail)
       .maybeSingle()
 
-    if (adminRole && (adminRole.activo === false || adminRole.rol !== 'admin')) {
+    if (!adminRole || adminRole.activo === false || adminRole.rol !== 'admin') {
       throw new Error('Solo un administrador puede invitar usuarios reales.')
     }
 
@@ -65,15 +65,25 @@ module.exports = async function handler(req, res) {
       await serviceClient.from('app_user_roles').insert(rolePayload)
     }
 
-    const redirectTo = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}/`
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim()
+    const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim()
+    if (!forwardedHost) throw new Error('No se pudo determinar la URL de la aplicacion.')
+    const redirectTo = `${forwardedProto}://${forwardedHost}/?auth_action=set-password`
     const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
       redirectTo,
       data: { nombre: body.nombre || '', rol: body.rol || 'operador' },
     })
 
-    if (inviteError) throw inviteError
+    if (inviteError) {
+      const alreadyRegistered = /already|registered|exists|existe|registrad/i.test(inviteError.message || '')
+      if (!alreadyRegistered) throw inviteError
 
-    res.status(200).json({ ok: true })
+      const publicClient = createClient(supabaseUrl, anonKey)
+      const { error: resetError } = await publicClient.auth.resetPasswordForEmail(email, { redirectTo })
+      if (resetError) throw resetError
+    }
+
+    res.status(200).json({ ok: true, message: 'Email de acceso enviado. El usuario debe crear su contrasena desde el enlace.' })
   } catch (error) {
     res.status(400).json({ error: error.message || 'No se pudo invitar usuario.' })
   }

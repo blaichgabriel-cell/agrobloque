@@ -436,12 +436,8 @@ export default function Configuracion({ role }) {
         activo: form.activo !== false,
         notas: form.notas || null,
       }
-      const { error } = form.id
-        ? await supabase.from('app_user_roles').update(payload).eq('id', form.id)
-        : await supabase.from('app_user_roles').insert(payload)
-      if (error) throw error
-
-      if (form.invitar_real) {
+      const debeInvitar = !form.id || form.invitar_real
+      if (debeInvitar) {
         const { data: { session } } = await supabase.auth.getSession()
         const resp = await fetch('/api/invitar-usuario', {
           method: 'POST',
@@ -453,11 +449,14 @@ export default function Configuracion({ role }) {
         })
         const result = await resp.json().catch(() => ({}))
         if (!resp.ok) throw new Error(result.error || 'No se pudo enviar la invitacion real.')
+      } else {
+        const { error } = await supabase.from('app_user_roles').update(payload).eq('id', form.id)
+        if (error) throw error
       }
 
       await fetchAll()
-      abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false })
-      setSuccess(form.invitar_real ? 'Usuario guardado e invitacion enviada.' : 'Permiso guardado.')
+      abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:true })
+      setSuccess(debeInvitar ? 'Invitacion enviada. El usuario debe abrir el email y crear su contrasena.' : 'Permiso actualizado.')
     } catch (e) {
       setError('No se pudo guardar: ' + (e.message || 'Ejecuta primero el SQL profesional.'))
     }
@@ -485,7 +484,7 @@ export default function Configuracion({ role }) {
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
     { icon:'ti-receipt-2', title:'Cuentas a pagar', sub:'Creditos con proveedores', color:"#08603f", bg:'#edf6ec', action: () => navigate('/cuentas-pagar') },
     { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:"#08603f", bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30', permisos: [] }) },
-    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:"#08603f", bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:false }) },
+    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:"#08603f", bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:true }) },
     { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:"#124e38", bg:'#eeeeee', action: () => navigate('/auditoria') },
     { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Ultimo: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
   ].filter((_, index) => esAdmin || index === 0)
@@ -649,7 +648,7 @@ export default function Configuracion({ role }) {
             {/* -- CUENTA -- */}
             {modal === 'roles' && <>
               <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:8 }}>Usuarios y permisos</div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:16 }}>Registro interno de roles. Para dar acceso real, el usuario tambien debe existir en Supabase Authentication.</div>
+              <div style={{ fontSize:12, color:"#697970", marginBottom:16 }}>Cada usuario nuevo recibe un email seguro para crear su propia contrasena.</div>
 
               <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom:12 }}>
                 <label className="ag-field-label" style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>{form.id ? 'Editar usuario' : 'Agregar usuario'}
@@ -671,12 +670,19 @@ export default function Configuracion({ role }) {
                   rol={form.rol || 'operador'}
                   onChange={acciones => setForm(f => ({ ...f, acciones }))}
                 />
-                <label style={{ display:'flex', alignItems:'center', gap:8, background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:'var(--ag-radius)', padding:12, marginBottom:12, fontSize:12, color:'#1d241f' }}>
-                  <input type="checkbox" checked={Boolean(form.invitar_real)} onChange={e=>setForm(f=>({...f,invitar_real:e.target.checked}))}/>
-                  Enviar invitacion real por email
-                </label>
+                {form.id ? (
+                  <label style={{ display:'flex', alignItems:'center', gap:8, background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:'var(--ag-radius)', padding:12, marginBottom:12, fontSize:12, color:'#1d241f' }}>
+                    <input type="checkbox" checked={Boolean(form.invitar_real)} onChange={e=>setForm(f=>({...f,invitar_real:e.target.checked}))}/>
+                    Reenviar email para crear la contrasena
+                  </label>
+                ) : (
+                  <div role="note" style={{ display:'flex', alignItems:'flex-start', gap:9, background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:'var(--ag-radius)', padding:12, marginBottom:12, fontSize:12, lineHeight:1.45, color:'#1d241f' }}>
+                    <i className="ti ti-mail-check" style={{ fontSize:18, color:'#176a25', marginTop:1 }} aria-hidden="true" />
+                    <span>Al crear el usuario enviaremos un email para que defina su contrasena. El administrador no necesita conocerla.</span>
+                  </div>
+                )}
                 <textarea style={{ ...inp, minHeight:64, resize:'vertical' }} value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
-                <button style={saveBtn('#176a25')} onClick={guardarRol} disabled={loading}>{loading ? 'Guardando...' : 'Guardar permiso'}</button>
+                <button style={saveBtn('#176a25')} onClick={guardarRol} disabled={loading}>{loading ? 'Enviando...' : (form.id ? 'Guardar cambios' : 'Crear usuario y enviar invitacion')}</button>
               </div>
 
               <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px' }}>
