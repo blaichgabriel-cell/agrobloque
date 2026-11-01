@@ -347,8 +347,8 @@ export default function Cosecha() {
         {loading ? <Skeleton rows={4} label="Cargando cosechas" /> : cosechas.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin registros de cosecha</div>
         ) : isDesktop ? (
-          <div className="ag-table-scroll" style={{ background:'#fff', border:'1px solid #e4e8e4', borderRadius:'var(--ag-radius)', overflow:'hidden', boxShadow:'none' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'110px 1fr 120px 120px 120px 108px', gap:12, padding:'11px 16px', background:'#fafbf8', borderBottom:'1px solid #edf0ed', color:'#687068', fontSize:12, fontWeight:700, textTransform:'uppercase' }}>
+          <div className="ag-table-scroll harvest-table" style={{ background:'#fff', border:'1px solid #e4e8e4', borderRadius:'var(--ag-radius)', overflow:'hidden', boxShadow:'none' }}>
+            <div className="harvest-table__head" style={{ display:'grid', gridTemplateColumns:'110px 1fr 120px 120px 120px 108px', gap:12, padding:'11px 16px', background:'#fafbf8', borderBottom:'1px solid #edf0ed', color:'#687068', fontSize:12, fontWeight:700, textTransform:'uppercase' }}>
               <span>Bloque</span>
               <span>Cultivo / campo</span>
               <span>Fecha</span>
@@ -359,7 +359,7 @@ export default function Cosecha() {
             {cosechas.map(c => {
               const cultivo = getCultivoCosecha(c)
               return (
-                <div key={c.id} onClick={() => setDetalle(c)} style={{ display:'grid', gridTemplateColumns:'110px 1fr 120px 120px 120px 108px', gap:12, alignItems:'center', padding:'13px 16px', borderBottom:'1px solid #f0f2ef', cursor:'pointer' }}>
+                <div className="harvest-table__row" key={c.id} onClick={() => setDetalle(c)} style={{ display:'grid', gridTemplateColumns:'110px 1fr 120px 120px 120px 108px', gap:12, alignItems:'center', padding:'13px 16px', borderBottom:'1px solid #f0f2ef', cursor:'pointer' }}>
                   <div>
                     <div style={{ fontSize:15, fontWeight:700, color:"#182c25" }}>{c.bloques?.codigo || '-'}</div>
                     <div style={{ fontSize:12, color:"#697970", marginTop:3 }}>Bloque</div>
@@ -379,10 +379,10 @@ export default function Cosecha() {
                     <div style={{ fontSize:12, color:'#687068', marginTop:2 }}>Produccion</div>
                   </div>
                   <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
-                    <button aria-label="Editar" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #e1e5e1', background:'#fff', color:'#333', cursor:'pointer' }} title="Editar">
+                    <button className="table-action" aria-label="Editar" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} title="Editar">
                       <i className="ti ti-pencil" style={{ fontSize:16 }} aria-hidden="true"></i>
                     </button>
-                    <button aria-label="Eliminar" onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #ffcccc', background:'#fff', color:'#c84040', cursor:'pointer' }} title="Eliminar">
+                    <button className="table-action table-action--danger" aria-label="Eliminar" onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} title="Eliminar">
                       <i className="ti ti-trash" style={{ fontSize:16 }} aria-hidden="true"></i>
                     </button>
                   </div>

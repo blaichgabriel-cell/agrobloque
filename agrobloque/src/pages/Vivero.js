@@ -368,7 +368,7 @@ export default function Vivero() {
         {error && <div style={{ background:'#fff3e8', color:'#a35f00', fontSize:12, padding:'9px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{error}</div>}
 
         <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(4, minmax(0, 1fr))' : '1fr 1fr', gap: isDesktop ? 12 : 8 }}>
-          <Stat dark label="Lotes activos" value={resumen.activos} sub={`${lotes.length} totales`} />
+          <Stat label="Lotes activos" value={resumen.activos} sub={`${lotes.length} totales`} />
           <Stat label="Germinacion" value={`${resumen.germinacion}%`} sub={`${resumen.germinadas} de ${resumen.semillas}`} />
           <Stat label="Perdidas" value={resumen.perdidas} sub="plantines" />
           <Stat label="Semillas" value={resumen.semillas} sub="sembradas" />
@@ -381,7 +381,7 @@ export default function Vivero() {
         ) : (
           <div className="ag-record-grid" style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
             {lotes.map(lote => (
-          <div className="ag-surface" key={lote.id} onClick={() => setDetalle(lote)} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+          <div className="ag-surface nursery-lot-card" key={lote.id} onClick={() => setDetalle(lote)} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
             <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}>
               <div>
                 <div style={{ fontSize:16, fontWeight:700, color:"#182c25" }}>{lote.cultivo}</div>
@@ -392,11 +392,12 @@ export default function Vivero() {
                 {lote.estado}
               </span>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginTop:12 }}>
+            <div className="nursery-lot-data">
               <Mini label="Semillas" value={lote.cantidad_semillas || 0} />
-              <Mini label="Germinadas" value={`${pct(lote.germinadas, lote.cantidad_semillas)}%`} />
+              <Mini label="Germinadas" value={lote.germinadas || 0} />
               <Mini label="Perdidas" value={lote.perdidas || 0} />
             </div>
+            <div className="germination-progress"><span><b style={{ width:`${Math.min(100, pct(lote.germinadas, lote.cantidad_semillas))}%` }} /></span><small><span>Germinación</span><strong className="numeric-data">{pct(lote.germinadas, lote.cantidad_semillas)}%</strong></small></div>
           </div>
         ))}
           </div>
@@ -546,18 +547,18 @@ export default function Vivero() {
   )
 }
 
-function Stat({ label, value, sub, dark }) {
+function Stat({ label, value, sub }) {
   return (
-    <div style={{ background: dark ? '#212121' : '#fff', color: dark ? '#fff' : '#0a0a0a', borderRadius:'var(--ag-radius)', padding:'14px 16px' }}>
-      <div style={{ fontSize:12, color: dark ? 'rgba(255,255,255,0.55)' : '#9a9a9a', textTransform:'uppercase', marginBottom:4 }}>{label}</div>
-      <div className="ag-page-title" style={{ fontSize:24, fontWeight:700 }}>{value}</div>
-      <div style={{ fontSize:12, color: dark ? 'rgba(255,255,255,0.55)' : '#9a9a9a', marginTop:3 }}>{sub}</div>
+    <div className="kpi-card nursery-kpi">
+      <div className="kpi-card__label">{label}</div>
+      <div className="kpi-card__value numeric-data">{value}</div>
+      <div className="kpi-card__detail">{sub}</div>
     </div>
   )
 }
 
 function Mini({ label, value }) {
-  return <div style={{ background:'#f7f7f5', borderRadius:'var(--ag-radius)', padding:9 }}><div style={{ fontSize:12, color:"#697970" }}>{label}</div><div style={{ fontSize:14, fontWeight:700 }}>{value}</div></div>
+  return <div className="nursery-datum"><span>{label}</span><strong className="numeric-data">{value}</strong></div>
 }
 
 function Info({ label, value, last }) {

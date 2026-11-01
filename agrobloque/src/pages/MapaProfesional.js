@@ -103,7 +103,7 @@ export default function MapaProfesional({ campoActivo }) {
       <label className="ab-block-search"><i className="ti ti-search" /><input aria-label="Buscar bloque o cultivo" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar bloque o cultivo…" /></label>
       <div className="ab-status-filters">{[['todos','Todos'],['produccion','En producción'],['atencion','Requieren atención'],['vacio','Sin cultivo']].map(([k,v]) => <button key={k} aria-pressed={estado === k} className={estado === k ? 'active' : ''} onClick={() => setEstado(k)}>{v}</button>)}</div>
       <select aria-label="Filtrar por cultivo" value={cultivo} onChange={e => setCultivo(e.target.value)}><option value="todos">Todos los cultivos</option>{cultivos.map(c => <option key={c} value={c}>{c}</option>)}</select>
-      <div className="ab-view-toggle"><button aria-pressed={vista === 'tarjetas'} className={vista === 'tarjetas' ? 'active' : ''} onClick={() => setVista('tarjetas')}><i className="ti ti-layout-grid" />Tarjetas</button><button aria-pressed={vista === 'mapa'} className={vista === 'mapa' ? 'active' : ''} onClick={() => setVista('mapa')}><i className="ti ti-map" />Mapa</button></div>
+      <div className="segmented-control ab-view-toggle"><button aria-pressed={vista === 'tarjetas'} className={vista === 'tarjetas' ? 'active' : ''} onClick={() => setVista('tarjetas')}><i className="ti ti-layout-grid" />Tarjetas</button><button aria-pressed={vista === 'mapa'} className={vista === 'mapa' ? 'active' : ''} onClick={() => setVista('mapa')}><i className="ti ti-map" />Mapa</button></div>
     </section>
     {loading ? <div className="ab-block-skeletons" role="status" aria-label="Cargando bloques">{Array.from({length:8}).map((_,i) => <div key={i} />)}</div> : !filtrados.length ? <div className="ab-empty">No hay bloques que coincidan con los filtros.</div> : vista === 'tarjetas' ? <div className="ab-block-grid">{filtrados.map(r => <BlockCard key={r.id} item={r} campo={campoActivo.nombre} onOpen={() => navigate(`/bloque/${r.id}`)} />)}</div> : <div className="ab-field-map">{filtrados.map(r => <BlockCard key={r.id} item={r} campo={campoActivo.nombre} onOpen={() => navigate(`/bloque/${r.id}`)} compact />)}</div>}
     <NotasPanel modulo="mapa" titulo="Notas de bloques y mapa" />
@@ -111,7 +111,7 @@ export default function MapaProfesional({ campoActivo }) {
   </div>
 }
 
-function Kpi({ icon, value, label, alert }) { return <div className={`ab-kpi ${alert ? 'alert' : ''}`}><i className={`ti ${icon}`} /><div><strong>{value}</strong><span>{label}</span></div></div> }
+function Kpi({ icon, value, label, alert }) { return <div className={`kpi-card ab-kpi ${alert ? 'alert' : ''}`}><i className={`ti ${icon}`} /><div><strong className="numeric-data">{value}</strong><span>{label}</span></div></div> }
 
 function BlockCard({ item, campo, onOpen, compact }) {
   const color = item.atencion ? (item.vencida ? '#c7463b' : '#d08a24') : item.cultivo ? (COLOR_CULTIVO[item.cultivo] || '#25a866') : '#9aa49f'

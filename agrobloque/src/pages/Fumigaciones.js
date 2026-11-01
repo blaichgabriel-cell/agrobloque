@@ -460,14 +460,14 @@ export default function Fumigaciones() {
         {loading ? <Skeleton rows={4} label="Cargando aplicaciones" /> : fechasOrdenadas.length === 0 ? (
           <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin registros</div>
         ) : fechasOrdenadas.map(fecha => (
-          <div key={fecha}>
+          <div className="treatment-timeline" key={fecha}>
             {/* Separador de fecha */}
-            <div style={{ display:'flex', alignItems:'center', gap:10, margin:'16px 0 8px' }}>
-              <div style={{ height:1, flex:1, background:'#e0ddd8' }}></div>
-              <div style={{ fontSize:12, fontWeight:600, color:"#124e38", textTransform:'capitalize', whiteSpace:'nowrap' }}>
+            <div className="timeline-date">
+              <div className="timeline-date__line"></div>
+              <div className="timeline-date__label">
                 {formatFechaLabel(fecha)}
               </div>
-              <div style={{ height:1, flex:1, background:'#e0ddd8' }}></div>
+              <div className="timeline-date__line"></div>
             </div>
 
             {porFecha[fecha].map(f => {
@@ -478,7 +478,7 @@ export default function Fumigaciones() {
               const tanques = f.tanques_cantidad && f.tanque_litros ? `${fmtCantidad(f.tanques_cantidad)} tanque${Number(f.tanques_cantidad) === 1 ? '' : 's'} x ${fmtCantidad(f.tanque_litros)} L` : ''
 
               return (
-                <div className="ag-surface" key={f.id} onClick={() => setDetalle(f)} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding: isDesktop ? '16px 18px' : '14px 16px', marginBottom: isDesktop ? 10 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+                <div className="ag-surface timeline-entry" key={f.id} onClick={() => setDetalle(f)} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding: isDesktop ? '16px 18px' : '14px 16px', marginBottom: isDesktop ? 10 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                     <div style={{ width:38, height:38, borderRadius:'var(--ag-radius)', background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                       <i className={`ti ${tipo.icon}`} style={{ fontSize:18, color:tipo.color }} aria-hidden="true"></i>

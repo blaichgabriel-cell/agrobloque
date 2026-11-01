@@ -165,7 +165,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
             const days = plant?.fecha_siembra ? Math.max(0, Math.floor((new Date(`${today}T12:00:00`) - new Date(`${plant.fecha_siembra.slice(0, 10)}T12:00:00`)) / 86400000)) : null
             const status = !block.activo ? 'Inactivo' : plant ? 'En producción' : 'En preparación'
             const next = data.tareas.find(t => t.bloque_id === block.id)
-            return <button className="ag-block-row" key={block.id} onClick={() => navigate(`/bloque/${block.id}`)}><span className="ag-block-identity"><strong>{block.codigo}</strong><span>{errors.includes('plantas') ? '—' : plant?.cultivos?.nombre || 'Sin cultivo activo'}</span></span><span className={`ag-status ${!block.activo ? 'is-inactive' : !plant ? 'is-preparing' : ''}`}><span />{status}</span><span className="ag-block-days">{days ?? '—'}</span><span className="ag-block-activity">{next ? `Próxima: ${next.descripcion} · ${relativeDate(next.fecha_programada, today)}` : last ? `${last.label} · ${relativeDate(last.date, today)}` : 'Sin actividades registradas'}</span><i className="ti ti-chevron-right" /></button>
+            return <button className="ag-block-row" key={block.id} onClick={() => navigate(`/bloque/${block.id}`)}><span className="ag-block-identity"><strong>{block.codigo}</strong><span>{errors.includes('plantas') ? '—' : plant?.cultivos?.nombre || 'Sin cultivo activo'}</span></span><span className={`status-pill ag-status ${!block.activo ? 'is-inactive' : !plant ? 'is-preparing' : ''}`}><span />{status}</span><span className="ag-block-days numeric-data">{days ?? '—'}</span><span className="ag-block-activity">{next ? `Próxima: ${next.descripcion} · ${relativeDate(next.fecha_programada, today)}` : last ? `${last.label} · ${relativeDate(last.date, today)}` : 'Sin actividades registradas'}</span><i className="ti ti-chevron-right" /></button>
           })}</div>
         {!!shownBlocks.length && <div className="ag-blocks-footer"><span>Mostrando {Math.min(5, shownBlocks.length)} de {shownBlocks.length} bloques</span>{shownBlocks.length > 5 && <button className="ag-text-button ag-more-blocks" onClick={() => navigate('/mapa')}>Ver todos los bloques <i className="ti ti-arrow-right" /></button>}</div>}
       </section>}
@@ -180,10 +180,11 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
 
 function Metric({ loading, icon, label, value, detail, warning, compact, onClick }) {
   const Tag = onClick ? 'button' : 'div'
-  return <Tag onClick={onClick} className={`ag-metric ${onClick ? 'is-clickable' : ''} ${warning ? 'is-warning' : ''} ${compact ? 'is-compact' : ''}`}><span className="ag-metric-icon"><i className={`ti ${icon}`} /></span><div><span className="ag-metric-label">{label}</span><strong className={loading ? 'ag-skeleton-value' : undefined} aria-busy={loading || undefined}>{value}</strong><small>{detail}</small></div></Tag>
+  return <Tag onClick={onClick} className={`kpi-card ag-metric ${onClick ? 'is-clickable' : ''} ${warning ? 'is-warning' : ''} ${compact ? 'is-compact' : ''}`}><span className="ag-metric-icon"><i className={`ti ${icon}`} /></span><div><span className="ag-metric-label">{label}</span><strong className={`numeric-data ${loading ? 'ag-skeleton-value' : ''}`} aria-busy={loading || undefined}>{value}</strong><small>{detail}</small></div></Tag>
 }
 
 function ProductionChart({ days }) {
+  if (days.every(day => day.kg === 0)) return <div className="empty-state empty-state--compact"><span className="empty-state__icon"><i className="ti ti-chart-line" aria-hidden="true" /></span><div><strong>Todavía no hay producción esta semana</strong><p>Los kilos cosechados aparecerán acá cuando registres la primera cosecha.</p></div></div>
   const max = Math.max(...days.map(d => d.kg), 1)
   const points = days.map((d, i) => `${48 + i * 88},${150 - d.kg / max * 120}`)
   return <div className="ag-chart"><svg viewBox="0 0 620 198" role="img" aria-label={`Cosecha de los últimos siete días: ${days.map(d => `${d.label}, ${number(d.kg)} kg`).join('; ')}`}>

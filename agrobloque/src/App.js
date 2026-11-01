@@ -239,15 +239,15 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   }, [])
 
   return (
-    <div className="ag-app" style={{ display: 'flex', minHeight: '100vh', background: dashboardDesktop ? '#f6f8f5' : '#f2f1ef' }}>
+    <div className="ag-app" style={{ display: 'flex', minHeight: '100dvh', background: dashboardDesktop ? '#f6f8f5' : '#f2f1ef' }}>
       <ConnectionStatus />
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
       <div data-app-scroll style={{
         flex: 1,
         marginLeft: isDesktop ? SIDEBAR_WIDTH : 0,
-        height: '100vh',
-        minHeight: '100vh',
+        height: '100dvh',
+        minHeight: '100dvh',
         background: dashboardDesktop ? '#f6f8f5' : '#f2f1ef',
         paddingBottom: isDesktop ? 0 : 64,
         maxWidth: isDesktop ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100%',
@@ -259,7 +259,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
           maxWidth: dashboardDesktop ? 'none' : (isDesktop ? 1440 : 1080),
           width: '100%',
           margin: dashboardDesktop ? 0 : '0 auto',
-          minHeight: '100vh',
+          minHeight: '100dvh',
         }}>
           <Routes>
             <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role}/>}/>

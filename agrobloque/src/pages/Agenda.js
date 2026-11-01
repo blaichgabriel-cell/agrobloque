@@ -124,7 +124,7 @@ export default function Agenda() {
             <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Planificación</div>
             <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Agenda</div>
           </div>
-          <button aria-label="Agregar registro" onClick={() => { setForm(vacio); setModal(true) }} style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+          <button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}>
             <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
           </button>
         </div>
@@ -138,7 +138,7 @@ export default function Agenda() {
       <div className="ag-page-body" style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
         <Notice tone="error">{!modal && error}</Notice><Notice>{success}</Notice>
         {loading ? <Skeleton rows={3} label="Cargando agenda" /> : tareasFiltradas.length === 0 ? (
-          <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>No hay tareas {filtro === 'pendientes' ? 'pendientes' : ''}</div>
+          <div className="empty-state"><span className="empty-state__icon"><i className="ti ti-calendar-check" aria-hidden="true" /></span><div><strong>No hay tareas {filtro === 'pendientes' ? 'pendientes' : 'en esta vista'}</strong><p>Agregá una tarea para organizar el próximo trabajo del campo.</p><button className="app-button app-button--secondary" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus" aria-hidden="true" />Crear tarea</button></div></div>
         ) : (
           <div className="ag-record-grid" style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
             {tareasFiltradas.map(t => {
@@ -177,7 +177,7 @@ export default function Agenda() {
         })}
           </div>
         )}
-        <NotasPanel modulo="agenda" titulo="Blog de notas de agenda" />
+        <NotasPanel modulo="agenda" titulo="Bloc de notas de agenda" />
       </div>
 
       {modal && (

@@ -722,6 +722,43 @@ button:active:not(:disabled) { transform:translateY(1px); }
   .ag-block-tools input,.ag-block-tools select { background:#fff; }
 }
 
+/* AgroBloque Design System 2026 — fuente única de tokens */
+:root {
+  --color-canvas:#f3efe7;
+  --color-canvas-soft:#f8f6f1;
+  --color-surface:#ffffff;
+  --color-surface-muted:#f4f6f2;
+  --color-forest-950:#071b12;
+  --color-forest-900:#0c2d1e;
+  --color-forest-800:#124e38;
+  --color-forest-700:#176342;
+  --color-forest-600:#2f7b4e;
+  --color-forest-100:#e5f0e7;
+  --color-ink:#17241d;
+  --color-muted:#66736c;
+  --color-danger:#a63d3d;
+  --color-danger-soft:#fff3f2;
+  --color-warning:#9a6208;
+  --color-warning-soft:#fff6df;
+  --color-success:#17633e;
+  --radius-sm:10px;
+  --radius-md:14px;
+  --radius-lg:20px;
+  --border-subtle:1px solid rgba(0,0,0,.06);
+  --shadow-sm:0 1px 2px rgba(18,34,25,.04),0 6px 18px rgba(18,34,25,.045);
+  --shadow-md:0 2px 5px rgba(18,34,25,.04),0 14px 36px rgba(18,34,25,.07);
+  --shadow-floating:0 8px 20px rgba(16,35,24,.08),0 28px 60px rgba(16,35,24,.09);
+  --motion-ease:cubic-bezier(.25,.1,.25,1);
+  --ag-canvas:var(--color-canvas);
+  --ag-surface:var(--color-surface);
+  --ag-ink:var(--color-ink);
+  --ag-muted:var(--color-muted);
+  --ag-green:var(--color-forest-800);
+  --ag-radius:var(--radius-md);
+  --ag-line:rgba(0,0,0,.07);
+  --ag-shadow:var(--shadow-sm);
+}
+
 /* Cierre accesible de las ventanas de Configuracion */
 .ag-config-modal-toolbar {
   position:sticky;
