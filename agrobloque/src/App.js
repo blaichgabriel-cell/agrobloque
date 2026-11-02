@@ -229,6 +229,14 @@ function DesktopSidebar({ isGuest = false, role }) {
   </aside>
 }
 
+const MODULE_BY_PATH = {
+  '/': 'bloques', '/mapa': 'bloques', '/bloque': 'bloques', '/cosecha': 'bloques',
+  '/vivero': 'agua', '/fertilizaciones': 'agua', '/plan-nutricional': 'agua',
+  '/fumigaciones': 'alerta', '/alertas': 'alerta',
+  '/contabilidad': 'finanzas', '/cuentas-pagar': 'finanzas', '/costos': 'finanzas', '/ventas': 'finanzas', '/reportes': 'finanzas',
+}
+const moduleFromPath = pathname => MODULE_BY_PATH['/' + (pathname.split('/')[1] || '')] || 'bloques'
+
 function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1100)
   const location = useLocation()
@@ -241,7 +249,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   }, [])
 
   return (
-    <div className={`ag-app ${dashboardDesktop ? 'is-dashboard' : ''}`}>
+    <div className={`ag-app ${dashboardDesktop ? 'is-dashboard' : ''}`} data-module={moduleFromPath(location.pathname)}>
       <Toaster position="top-right" richColors closeButton theme="light" mobileOffset={12} toastOptions={{ className:'ag-toast' }} />
       <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
       <ConnectionStatus />

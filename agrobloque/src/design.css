@@ -326,3 +326,83 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search
   .ag-sidebar,.ag-topbar,.bento-card,.ag-panel,.ag-surface,.kpi-card { border-color:rgba(15,41,30,.3) !important; background:#fff !important; }
   .ag-hero .hero-kpi-card { border-color:rgba(255,255,255,.55) !important; background:rgba(0,0,0,.35) !important; }
 }
+
+/* ==========================================================================
+   Bio-Luminescent Spatial Glass
+   Capa 1: primitivos · Capa 2: semanticos · Capa 3: componentes
+   ========================================================================== */
+:root {
+  /* Capa 1 - primitivos */
+  --bl-canvas:#EEF2F6;
+  --bl-emerald:#10B981; --bl-cyan:#06B6D4; --bl-indigo:#6366F1; --bl-amber:#F59E0B;
+  --bl-ink:#0F172A; --bl-ink-2:#475569;
+  --bl-hero:linear-gradient(135deg,#061A14 0%,#0D2E22 50%,#0F172A 100%);
+  --bl-grad-bloques:linear-gradient(135deg,#059669,#34D399);
+  --bl-grad-agua:linear-gradient(135deg,#0284C7,#2DD4BF);
+  --bl-grad-alerta:linear-gradient(135deg,#D97706,#F43F5E);
+  --bl-grad-finanzas:linear-gradient(135deg,#4F46E5,#A855F7);
+  --bl-font-display:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --bl-font-ui:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --bl-font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  /* Capa 2 - semanticos (reasignan los tokens que ya usa el resto del CSS) */
+  --surface-canvas:var(--bl-canvas);
+  --surface-glass:rgba(255,255,255,.68);
+  --surface-forest:var(--bl-hero);
+  --surface-forest-glass:rgba(255,255,255,.08);
+  --border-specular:1px solid rgba(255,255,255,.95);
+  --slate-900:var(--bl-ink);
+  --slate-700:var(--bl-ink-2);
+  --text-primary:var(--bl-ink);
+  --text-secondary:var(--bl-ink-2);
+  --glass-blur:blur(28px) saturate(200%);
+  --glass-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 24px 48px -12px rgba(15,23,42,.14),0 8px 16px -8px rgba(15,23,42,.08);
+  --mod-gradient:var(--bl-grad-bloques); --mod-accent:#059669; --mod-tint:rgba(16,185,129,.12);
+}
+
+/* Capa 3 - color por modulo (App.js escribe data-module en .ag-app) */
+[data-module='bloques']  { --mod-gradient:var(--bl-grad-bloques);   --mod-accent:#059669; --mod-tint:rgba(16,185,129,.12); }
+[data-module='agua']     { --mod-gradient:var(--bl-grad-agua);      --mod-accent:#0284C7; --mod-tint:rgba(6,182,212,.12); }
+[data-module='alerta']   { --mod-gradient:var(--bl-grad-alerta);    --mod-accent:#D97706; --mod-tint:rgba(245,158,11,.14); }
+[data-module='finanzas'] { --mod-gradient:var(--bl-grad-finanzas);  --mod-accent:#4F46E5; --mod-tint:rgba(99,102,241,.12); }
+
+/* Lienzo con mesh gradients fijos */
+body {
+  background-color:var(--bl-canvas);
+  background-image:
+    radial-gradient(60% 50% at 8% 4%,rgba(16,185,129,.14),transparent 70%),
+    radial-gradient(50% 45% at 96% 10%,rgba(6,182,212,.12),transparent 70%),
+    radial-gradient(55% 50% at 90% 96%,rgba(99,102,241,.10),transparent 70%),
+    radial-gradient(45% 40% at 6% 92%,rgba(245,158,11,.08),transparent 70%);
+  background-attachment:fixed;
+  color:var(--text-primary);
+  font-family:var(--bl-font-ui);
+}
+html { background:var(--bl-canvas); }
+
+/* Tipografia */
+h1,h2,h3,.ag-page-title,.ag-brand strong { font-family:var(--bl-font-display); color:var(--text-primary); }
+.numeric-data,.ag-block-days,.ag-block-code,.kpi-card__value,.ag-metric strong,.ag-nav-badge,[class*='amount'],[class*='cantidad'],[class*='stock'] {
+  font-family:var(--bl-font-mono); font-variant-numeric:tabular-nums lining-nums; letter-spacing:-.02em;
+}
+
+/* Cristal: contorno externo + especular + sombra multicapa */
+.spatial-glass,.ag-sidebar,.bento-card,.ag-panel,.ag-surface,.kpi-card,.ab-kpi,.ab-block-card,.nursery-lot-card,.harvest-table,.inventory-group-card,.accounting-page section {
+  background:var(--surface-glass) !important;
+  -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+  border:1px solid rgba(255,255,255,.95) !important;
+  box-shadow:var(--glass-shadow),0 0 0 1px rgba(15,23,42,.06) !important;
+}
+.ag-sidebar { color:var(--text-secondary); }
+.ag-nav-link { color:var(--text-secondary); }
+
+/* Acento por modulo en navegacion y encabezados */
+.ag-nav-link[aria-current='page'] { background:var(--mod-gradient); color:#fff; box-shadow:0 6px 16px -4px var(--mod-accent); }
+.ag-title-with-icon>span { background:var(--mod-gradient); color:#fff; box-shadow:0 6px 14px -4px var(--mod-accent); }
+.SegmentedControl button.active,.module-switch button.active,.ag-segmented button.active,[role='tab'][aria-selected='true'] { color:var(--mod-accent); }
+*:focus-visible { outline-color:var(--mod-tint); }
+
+/* Hero oscuro: texto siempre blanco, sub-tarjetas de cristal ahumado */
+.ag-hero { background:var(--bl-hero); color:#FFFFFF; }
+.ag-hero h1,.ag-hero h2,.ag-hero h3,.ag-hero strong,.ag-hero .ag-metric strong { color:#FFFFFF; }
+.ag-hero .hero-kpi-card { background:rgba(255,255,255,.08) !important; border:1px solid rgba(255,255,255,.18) !important; }
