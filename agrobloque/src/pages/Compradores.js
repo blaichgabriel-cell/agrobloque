@@ -8,12 +8,12 @@ const TIPOS = ['Mayorista','Mercado','Particular','Exportador','Otro']
 function ModalConfirm({ nombre, onConfirm, onCancel }) {
   return (
     <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:"#182c25", marginBottom:8, textAlign:'center' }}>¿Eliminar comprador?</div>
-        <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>"{nombre}" y su historial serán eliminados.</div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="ag-small-action" onClick={onCancel} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
-          <button className="ag-small-action" onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
+      <div className="ag-surface ui-211525">
+        <div className="ui-3e43be">¿Eliminar comprador?</div>
+        <div className="ui-01159a">"{nombre}" y su historial serán eliminados.</div>
+        <div className="ui-9c6869">
+          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
+          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Eliminar</button>
         </div>
       </div>
     </Modal>
@@ -86,70 +86,70 @@ export default function Compradores() {
   const lblStyle = { fontSize:12, color:"#697970", marginBottom:6, display:'block' }
 
   return (
-    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+    <div className="ag-page ui-c1c124">
       {confirmar && <ModalConfirm nombre={confirmar.nombre} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
-      <div className="ag-page-header" style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:4 }}>
+      <div className="ag-page-header ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div className="ui-f46979">
           <div>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Ventas</div>
-            <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Compradores</div>
+            <div className="ui-476525">Ventas</div>
+            <div className="ag-page-title ui-136b85">Compradores</div>
           </div>
-          <button aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' }); setModal(true) }} style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+          <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' }); setModal(true) }}>
+            <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
           </button>
         </div>
       </div>
 
       <div className="ag-page-body" style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         {compradores.length === 0 ? (
-          <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>
+          <div className="ui-5baa7a">
             Sin compradores registrados.<br/>
-            <span style={{ fontSize:12 }}>Agrega compradores para conservar sus datos de contacto.</span>
+            <span className="ui-6b9c17">Agrega compradores para conservar sus datos de contacto.</span>
           </div>
         ) : (
-          <div className="ag-record-grid" style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+          <div className="ag-record-grid ui-998b74" style={{ gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
             {compradores.map(c => {
           const stats = getStats(c.id)
           const isOpen = expandido === c.id
           return (
-            <div className="ag-surface" key={c.id} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }} onClick={() => setExpandido(isOpen ? null : c.id)}>
-                <div style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:'#eeeeee', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <i className="ti ti-building-store" style={{ fontSize:18, color:"#124e38" }} aria-hidden="true"></i>
+            <div className="ag-surface ui-9a7f69" key={c.id} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+              <div className="ui-38997f" onClick={() => setExpandido(isOpen ? null : c.id)}>
+                <div className="ui-f9ef33">
+                  <i className="ti ti-building-store ui-b45e7d" aria-hidden="true"></i>
                 </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{c.nombre}</div>
-                  <div style={{ fontSize:12, color:"#697970", marginTop:1 }}>{c.tipo}{c.telefono ? ' · ' + c.telefono : ''}</div>
+                <div className="ui-da5cd6">
+                  <div className="ui-788a2f">{c.nombre}</div>
+                  <div className="ui-046ab9">{c.tipo}{c.telefono ? ' · ' + c.telefono : ''}</div>
                 </div>
-                <div style={{ textAlign:'right' }}>
+                <div className="ui-f6e3d7">
                   {stats.operaciones > 0 ? (
                     <>
-                      <div style={{ fontSize:13, fontWeight:700, color:"#124e38" }}>{stats.kg.toLocaleString()} kg</div>
-                      <div style={{ fontSize:12, color:"#697970" }}>{stats.operaciones} operaciones</div>
+                      <div className="ui-199f15">{stats.kg.toLocaleString()} kg</div>
+                      <div className="ui-93a7e1">{stats.operaciones} operaciones</div>
                     </>
                   ) : (
-                    <div style={{ fontSize:12, color:'#6b796d' }}>Contacto</div>
+                    <div className="ui-612696">Contacto</div>
                   )}
                 </div>
-                <i className={`ti ${isOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize:14, color:'#d0d0d0' }} aria-hidden="true"></i>
+                <i className={`${`ti ${isOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`} ui-2ed188`} aria-hidden="true"></i>
               </div>
 
               {isOpen && (
-                <div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid #f6f8f7" }}>
+                <div className="ui-cdbc20">
                   {stats.operaciones > 0 && (
-                    <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-                      <div style={{ flex:1, background:"#f6f8f7", borderRadius:'var(--ag-radius)', padding:'10px 12px', textAlign:'center' }}>
-                        <div style={{ fontSize:12, color:"#697970", marginBottom:3 }}>Total kg</div>
-                        <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{stats.kg.toLocaleString()}</div>
+                    <div className="ui-60e304">
+                      <div className="ui-362c49">
+                        <div className="ui-2ed576">Total kg</div>
+                        <div className="ui-788a2f">{stats.kg.toLocaleString()}</div>
                       </div>
-                      <div style={{ flex:1, background:'#eeeeee', borderRadius:'var(--ag-radius)', padding:'10px 12px', textAlign:'center' }}>
-                        <div style={{ fontSize:12, color:"#697970", marginBottom:3 }}>Precio prom</div>
-                        <div style={{ fontSize:14, fontWeight:700, color:"#124e38" }}>Gs. {stats.precioProm.toLocaleString()}</div>
+                      <div className="ui-e31e6d">
+                        <div className="ui-2ed576">Precio prom</div>
+                        <div className="ui-398ec2">Gs. {stats.precioProm.toLocaleString()}</div>
                       </div>
-                      <div style={{ flex:1, background:"#f6f8f7", borderRadius:'var(--ag-radius)', padding:'10px 12px', textAlign:'center' }}>
-                        <div style={{ fontSize:12, color:"#697970", marginBottom:3 }}>Ingresos</div>
-                        <div style={{ fontSize:12, fontWeight:700, color:"#182c25" }}>Gs. {Math.round(stats.ingresos/1000)}k</div>
+                      <div className="ui-362c49">
+                        <div className="ui-2ed576">Ingresos</div>
+                        <div className="ui-3d66b7">Gs. {Math.round(stats.ingresos/1000)}k</div>
                       </div>
                     </div>
                   )}
@@ -157,19 +157,19 @@ export default function Compradores() {
                   {/* Últimas operaciones */}
                   {(historial[c.id] || []).slice(0, 4).map((h, i) => {
                     return (
-                      <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:"1px solid #f6f8f7" }}>
+                      <div className="ui-34edf3" key={i}>
                         <div>
-                          <div style={{ fontSize:12, color:"#182c25" }}>{h.producto || 'Venta'}{h.bloques?.codigo ? ' - Bloque ' + h.bloques.codigo : ''} · {h.kg_total} kg</div>
-                          <div style={{ fontSize:12, color:"#697970" }}>{h.fecha}</div>
+                          <div className="ui-8dc166">{h.producto || 'Venta'}{h.bloques?.codigo ? ' - Bloque ' + h.bloques.codigo : ''} · {h.kg_total} kg</div>
+                          <div className="ui-93a7e1">{h.fecha}</div>
                         </div>
-                        {h.precio_kg > 0 && <div style={{ fontSize:12, fontWeight:600, color:"#124e38" }}>Gs. {Number(h.precio_kg).toLocaleString()}/kg</div>}
+                        {h.precio_kg > 0 && <div className="ui-bbdbab">Gs. {Number(h.precio_kg).toLocaleString()}/kg</div>}
                       </div>
                     )
                   })}
 
-                  <div style={{ display:'flex', gap:6, marginTop:12 }}>
-                    <button className="ag-small-action" onClick={() => { setForm({...c}); setModal(true) }} style={{ flex:1, padding:'8px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, color:'#555', cursor:'pointer' }}>Editar</button>
-                    <button className="ag-small-action" onClick={() => eliminar(c)} style={{ flex:1, padding:'8px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                  <div className="ui-c49781">
+                    <button className="ag-small-action ui-80b205" onClick={() => { setForm({...c}); setModal(true) }}>Editar</button>
+                    <button className="ag-small-action ui-ea5cb1" onClick={() => eliminar(c)}>Eliminar</button>
                   </div>
                 </div>
               )}
@@ -183,22 +183,22 @@ export default function Compradores() {
 
       {modal && (
         <Modal onClose={() => setModal(false)} label="Compradores" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'80vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id ? 'Editar comprador' : 'Nuevo comprador'}</div>
+          <div className="ui-ab5655" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div className="ui-c7b1b6">{form.id ? 'Editar comprador' : 'Nuevo comprador'}</div>
             <label style={lblStyle}>Nombre *</label>
             <input style={inpStyle} value={form.nombre} onChange={e => setForm(f => ({...f, nombre:e.target.value}))} placeholder="Ej: Mercado Central"/>
             <label style={lblStyle}>Tipo</label>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
+            <div className="ui-1e850e">
               {TIPOS.map(t => (
-                <button className="ag-small-action" key={t} onClick={() => setForm(f => ({...f, tipo:t}))} style={{ padding:'8px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:12, fontWeight:500, cursor:'pointer', background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>{t}</button>
+                <button className="ag-small-action ui-0b12f2" key={t} onClick={() => setForm(f => ({...f, tipo:t}))} style={{ background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>{t}</button>
               ))}
             </div>
             <label style={lblStyle}>Teléfono (opcional)</label>
             <input style={inpStyle} value={form.telefono} onChange={e => setForm(f => ({...f, telefono:e.target.value}))} placeholder="Ej: 0981 000 000"/>
             <label style={lblStyle}>Notas (opcional)</label>
-            <textarea style={{ ...inpStyle, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
-            <button className="ag-small-action" style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
-            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
+            <textarea className="ui-dc8f36" style={{ ...inpStyle }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
+            <button className="ag-small-action ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
+            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </Modal>
       )}

@@ -34,24 +34,7 @@ import TaskNotifications from './components/TaskNotifications'
 
 export function LogoHS({ size = 48 }) {
   return (
-    <div style={{
-      width: size,
-      height: size,
-      borderRadius: Math.round(size * 0.28),
-      background: 'linear-gradient(145deg, #111 0%, #252525 100%)',
-      color: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      overflow: 'hidden',
-      boxSizing: 'border-box',
-      fontFamily: "'Arial Black', 'Arial Bold', Arial, sans-serif",
-      fontWeight: 900,
-      fontSize: Math.round(size * 0.46),
-      lineHeight: 1,
-      letterSpacing: -1,
-    }}>
+    <div className="ui-a1c952" style={{ width: size, height: size, borderRadius: Math.round(size * 0.28), fontSize: Math.round(size * 0.46) }}>
       AB
     </div>
   )
@@ -148,12 +131,12 @@ const esErrorSesion = (error) => {
 function SinPermiso() {
   const navigate = useNavigate()
   return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f2f1ef', padding:24 }}>
-      <div style={{ background:'#fff', border:'1px solid #e8ece8', borderRadius:22, padding:24, maxWidth:360, textAlign:'center', boxShadow:'0 18px 40px rgba(0,0,0,0.08)' }}>
-        <i className="ti ti-lock" style={{ fontSize:34, color:'#176a25' }} aria-hidden="true"></i>
-        <h2 style={{ margin:'12px 0 8px', fontSize:20 }}>Sin permiso</h2>
-        <p style={{ margin:'0 0 18px', fontSize:13, color:'#687068', lineHeight:1.45 }}>Tu usuario no tiene acceso a este modulo.</p>
-        <button onClick={() => navigate('/')} style={{ border:'none', background:'#212121', color:'#fff', borderRadius:12, padding:'11px 16px', fontWeight:700, cursor:'pointer' }}>Volver al inicio</button>
+    <div className="ui-bebe1c">
+      <div className="ui-47fa46">
+        <i className="ti ti-lock ui-58cce7" aria-hidden="true"></i>
+        <h2 className="ui-174519">Sin permiso</h2>
+        <p className="ui-3c8988">Tu usuario no tiene acceso a este modulo.</p>
+        <button className="ui-8931ad" onClick={() => navigate('/')}>Volver al inicio</button>
       </div>
     </div>
   )
@@ -458,9 +441,9 @@ export default function App() {
   if (!session) return (
     <>
       {dataError && (
-        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 560, width: 'calc(100% - 28px)', textAlign: 'center' }}>
+        <div className="ui-6454c8">
           <span>{dataError}</span>
-          <button onClick={() => forceLocalSignOut()} style={{ marginLeft: 10, border: 'none', borderRadius: 8, background: '#7a4a00', color: '#fff', padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Limpiar sesion</button>
+          <button className="ui-2052fc" onClick={() => forceLocalSignOut()}>Limpiar sesion</button>
         </div>
       )}
       <Login />
@@ -471,15 +454,15 @@ export default function App() {
     <BrowserRouter>
       <ScrollToTop />
       {dataError && (
-        <div style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#fff4e5', color: '#7a4a00', border: '1px solid #ffd89a', borderRadius: 12, padding: '10px 14px', fontSize: 13, boxShadow: '0 10px 24px rgba(0,0,0,0.12)', maxWidth: 560, width: 'calc(100% - 28px)', textAlign: 'center' }}>
+        <div className="ui-6454c8">
           <span>{dataError}</span>
-          <button onClick={() => forceLocalSignOut()} style={{ marginLeft: 10, border: 'none', borderRadius: 8, background: '#7a4a00', color: '#fff', padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Limpiar sesion</button>
+          <button className="ui-2052fc" onClick={() => forceLocalSignOut()}>Limpiar sesion</button>
         </div>
       )}
       {roleUserId !== session.user.id ? (
         <Skeleton rows={3} label="Cargando tu espacio de trabajo" />
       ) : !role.permisos.length ? (
-        <div style={{ padding:40, textAlign:'center' }}>
+        <div className="ui-6aff1e">
           <p>Tu cuenta todavía no tiene acceso habilitado. Pedí al administrador que configure tus permisos.</p>
           <button onClick={() => forceLocalSignOut()}>Cerrar sesión</button>
         </div>

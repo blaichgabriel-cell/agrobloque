@@ -41,14 +41,14 @@ const esDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 11
 
 function PermisosSelector({ permisos, onChange, ayuda }) {
   return (
-    <div style={{ background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:'var(--ag-radius)', padding:12, marginBottom:12 }}>
-      <div style={{ fontSize:12, fontWeight:700, color:"#08603f", marginBottom:4, textTransform:'uppercase' }}>Modulos permitidos</div>
-      {ayuda && <div style={{ fontSize:12, color:'#687068', marginBottom:9, lineHeight:1.35 }}>{ayuda}</div>}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+    <div className="ui-2bd9c0">
+      <div className="ui-704136">Modulos permitidos</div>
+      {ayuda && <div className="ui-a3bdd9">{ayuda}</div>}
+      <div className="ui-ffec37">
         {PERMISOS_MODULOS.map(m => {
           const checked = !Array.isArray(permisos) || permisos.length === 0 || permisos.includes(m.key)
           return (
-            <label key={m.key} style={{ display:'flex', alignItems:'center', gap:7, fontSize:12, color:'#1d241f', padding:'6px 4px' }}>
+            <label className="ui-9d30ce" key={m.key}>
               <input
                 type="checkbox"
                 checked={checked}
@@ -67,7 +67,7 @@ function PermisosSelector({ permisos, onChange, ayuda }) {
           )
         })}
       </div>
-      <div style={{ fontSize:12, color:"#697970", marginTop:6 }}>Si desmarcas un modulo, no aparece en el menu ni en accesos.</div>
+      <div className="ui-3421f7">Si desmarcas un modulo, no aparece en el menu ni en accesos.</div>
     </div>
   )
 }
@@ -83,17 +83,17 @@ function AccionesSelector({ permisos, acciones, rol, onChange }) {
       : ['view']
 
   return (
-    <div className="ag-surface" style={{ background:'#fff', border:'1px solid #e8ece8', borderRadius:'var(--ag-radius)', padding:12, marginBottom:12 }}>
-      <div style={{ fontSize:12, fontWeight:700, color:"#08603f", marginBottom:4, textTransform:'uppercase' }}>Acciones permitidas</div>
-      <div style={{ fontSize:12, color:'#687068', marginBottom:9, lineHeight:1.35 }}>Define si este usuario puede ver, crear, editar o borrar en cada modulo permitido.</div>
-      <div style={{ display:'grid', gap:7, maxHeight:240, overflowY:'auto', paddingRight:4 }}>
+    <div className="ag-surface ui-91fc48">
+      <div className="ui-704136">Acciones permitidas</div>
+      <div className="ui-a3bdd9">Define si este usuario puede ver, crear, editar o borrar en cada modulo permitido.</div>
+      <div className="ui-36396b">
         {modulosActivos.map(m => {
           const actuales = Array.isArray(acciones?.[m.key]) ? acciones[m.key] : defaults
           return (
-            <div key={m.key} style={{ display:'grid', gridTemplateColumns:'115px repeat(4, 1fr)', gap:6, alignItems:'center', fontSize:12, borderBottom:"1px solid #f6f8f7", paddingBottom:6 }}>
-              <strong style={{ color:'#1d241f' }}>{m.label}</strong>
+            <div className="ui-006580" key={m.key}>
+              <strong className="ui-cfbe51">{m.label}</strong>
               {ACTIONS.map(a => (
-                <label key={a.key} style={{ display:'flex', alignItems:'center', gap:4, color:'#4d544e' }}>
+                <label className="ui-d74de0" key={a.key}>
                   <input
                     type="checkbox"
                     checked={actuales.includes(a.key)}
@@ -509,59 +509,59 @@ export default function Configuracion({ role }) {
   ].filter((_, index) => esAdmin || index === 0)
 
   return (
-    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
-      <input type="file" accept="image/*" ref={fotoRef} style={{ display:'none' }} onChange={subirFotoPerfil} />
+    <div className="ag-page ui-c1c124">
+      <input className="ui-cb4589" type="file" accept="image/*" ref={fotoRef} onChange={subirFotoPerfil} />
 
-      <div style={{ padding:'24px 20px 16px' }}>
-        <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Sistema</div>
-        <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5, marginBottom:20 }}>Configuracion</div>
-        {error && !modal && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{error}</div>}
-        {success && !modal && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{success}</div>}
+      <div className="ui-327143">
+        <div className="ui-476525">Sistema</div>
+        <div className="ag-page-title ui-83e514">Configuracion</div>
+        {error && !modal && <div className="ui-e136cb">{error}</div>}
+        {success && !modal && <div className="ui-c90154">{success}</div>}
 
         {/* Tarjeta de perfil rapida */}
-        <div style={{ background:"#124e38", borderRadius:'var(--ag-radius)', padding:'16px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:14 }}>
-          <div style={{ position:'relative', flexShrink:0 }}>
+        <div className="ui-528a72">
+          <div className="ui-e020d3">
             {perfil.foto ? (
-              <img src={perfil.foto} alt="perfil"
-                style={{ width:52, height:52, borderRadius:'50%', objectFit:'cover', border:'2px solid rgba(255,255,255,0.2)' }}/>
+              <img className="ui-ba97c6" src={perfil.foto} alt="perfil"
+               />
             ) : (
-              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(255,255,255,0.12)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <i className="ti ti-user" style={{ fontSize:24, color:'rgba(255,255,255,0.6)' }} aria-hidden="true"></i>
+              <div className="ui-cb1feb">
+                <i className="ti ti-user ui-a1fcc8" aria-hidden="true"></i>
               </div>
             )}
-            <button aria-label="Cambiar foto" className="ag-small-action" onClick={() => fotoRef.current?.click()}
-              style={{ position:'absolute', bottom:-2, right:-2, width:20, height:20, borderRadius:'50%', background:'#fff', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>
-              <i className="ti ti-camera" style={{ fontSize:12, color:"#124e38" }} aria-hidden="true"></i>
+            <button aria-label="Cambiar foto" className="ag-small-action ui-3b8eb9" onClick={() => fotoRef.current?.click()}
+             >
+              <i className="ti ti-camera ui-aa481a" aria-hidden="true"></i>
             </button>
           </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          <div className="ui-89bd09">
+            <div className="ui-3eb7c1">
               {perfil.nombre || 'Sin nombre'}
             </div>
-            <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{perfil.email}</div>
+            <div className="ui-e571fd">{perfil.email}</div>
           </div>
-          <button className="ag-small-action" onClick={() => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email })}
-            style={{ padding:'6px 12px', borderRadius:'var(--ag-radius)', background:'rgba(255,255,255,0.12)', border:'none', fontSize:12, color:'rgba(255,255,255,0.8)', cursor:'pointer', flexShrink:0 }}>
+          <button className="ag-small-action ui-6d9a58" onClick={() => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email })}
+           >
             Editar
           </button>
         </div>
       </div>
 
-      <div style={{ padding:'0 14px 100px' }}>
+      <div className="ui-1a3247">
         {menuItems.map((it, i) => (
-          <div className="ag-surface" key={i} onClick={it.action} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
-            <div style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background: it.bg || '#f2f1ef', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <i className={`ti ${it.icon}`} style={{ fontSize:18, color: it.color || '#0a0a0a' }} aria-hidden="true"></i>
+          <div className="ag-surface ui-f40337" key={i} onClick={it.action}>
+            <div className="ui-3044e7" style={{ background: it.bg || '#f2f1ef' }}>
+              <i className={`${`ti ${it.icon}`} ui-bf83cf`} style={{ color: it.color || '#0a0a0a' }} aria-hidden="true"></i>
             </div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:"#182c25" }}>{it.title}</div>
-              <div style={{ fontSize:12, color:'#6b796d', marginTop:2 }}>{it.sub}</div>
+            <div className="ui-da5cd6">
+              <div className="ui-451b76">{it.title}</div>
+              <div className="ui-2cf511">{it.sub}</div>
             </div>
-            <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
+            <i className="ti ti-chevron-right ui-d63ae8" aria-hidden="true"></i>
           </div>
         ))}
-        <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginTop:8, cursor:'pointer' }} onClick={() => forceLocalSignOut()}>
-          <div style={{ fontSize:14, fontWeight:600, color:'#c84040', textAlign:'center' }}>Cerrar sesion</div>
+        <div className="ag-surface ui-4000ee" onClick={() => forceLocalSignOut()}>
+          <div className="ui-fce2c6">Cerrar sesion</div>
         </div>
       </div>
 
@@ -580,16 +580,7 @@ export default function Configuracion({ role }) {
           padding: esDesktop() ? 24 : 0,
           boxSizing:'border-box',
         }}>
-          <div className="ag-config-modal-card" style={{
-            background:"#f6f8f7",
-            borderRadius: esDesktop() ? 24 : '24px 24px 0 0',
-            width:'100%',
-            maxWidth: esDesktop() ? 620 : 480,
-            padding:'24px 20px 40px',
-            maxHeight: esDesktop() ? '82vh' : '88vh',
-            overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
-            boxShadow: esDesktop() ? '0 28px 70px rgba(0,0,0,0.28)' : 'none',
-          }}>
+          <div className="ag-config-modal-card ui-70723f" style={{ borderRadius: esDesktop() ? 24 : '24px 24px 0 0', maxWidth: esDesktop() ? 620 : 480, maxHeight: esDesktop() ? '82vh' : '88vh', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none', boxShadow: esDesktop() ? '0 28px 70px rgba(0,0,0,0.28)' : 'none' }}>
 
             <div className="ag-config-modal-toolbar">
               <button
@@ -604,17 +595,17 @@ export default function Configuracion({ role }) {
               </button>
             </div>
 
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{error}</div>}
-            {success && <div style={{ background:'#edfaf3', color:'#1a5c2e', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{success}</div>}
+            {error && <div className="ui-e136cb">{error}</div>}
+            {success && <div className="ui-c90154">{success}</div>}
 
             {modal === 'invitados' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:8 }}>Invitados de solo lectura</div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:16 }}>El invitado entra con un link y no puede editar ni borrar datos.</div>
+              <div className="ui-8decf3">Invitados de solo lectura</div>
+              <div className="ui-7d5827">El invitado entra con un link y no puede editar ni borrar datos.</div>
 
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom:12 }}>
-                <label className="ag-field-label" style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Crear link
+              <div className="ag-surface ui-e446b2">
+                <label className="ag-field-label ui-486335">Crear link
                 <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del invitado"/></label>
-                <label className="ag-field-label" style={{ fontSize:12, fontWeight:700, color:'#687068', margin:'2px 0 7px', textTransform:'uppercase' }}>Campo permitido
+                <label className="ag-field-label ui-13e1ed">Campo permitido
                 <select style={inp} value={form.campo_id||''} onChange={e=>setForm(f=>({...f,campo_id:e.target.value}))}>
                   <option value="">Todos los campos</option>
                   {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -634,28 +625,28 @@ export default function Configuracion({ role }) {
               </div>
 
               {linkInvitado && (
-                <div style={{ background:"#edf7f1", border:'1px solid #cde6c8', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:12 }}>
-                  <div style={{ fontSize:12, color:"#08603f", fontWeight:700, marginBottom:6 }}>Link creado</div>
-                  <div style={{ fontSize:12, color:'#1d261d', wordBreak:'break-all', lineHeight:1.4, marginBottom:10 }}>{linkInvitado}</div>
+                <div className="ui-b7f0a4">
+                  <div className="ui-db4b65">Link creado</div>
+                  <div className="ui-3164c8">{linkInvitado}</div>
                   <button style={saveBtn('#212121')} onClick={copiarLinkInvitado}>Copiar link</button>
                 </div>
               )}
 
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px' }}>
-                <div style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Links creados</div>
+              <div className="ag-surface ui-9a7f69">
+                <div className="ui-486335">Links creados</div>
                 {invitados.length === 0 ? (
-                  <div style={{ fontSize:12, color:"#697970", padding:'8px 0' }}>Sin invitados creados.</div>
+                  <div className="ui-9a291f">Sin invitados creados.</div>
                 ) : invitados.map(inv => (
                   <div key={inv.id} style={listItem}>
                     <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:"#182c25" }}>{inv.nombre}</div>
-                      <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>
+                      <div className="ui-1d6b4b">{inv.nombre}</div>
+                      <div className="ui-a8f171">
                         {inv.campos?.nombre || 'Todos los campos'}  -  {inv.activo ? 'Activo' : 'Desactivado'}{inv.expires_at ? `  -  vence ${String(inv.expires_at).slice(0,10)}` : ''}
                       </div>
                     </div>
                     {inv.activo && (
-                      <button className="ag-small-action" onClick={() => desactivarInvitado(inv.id)}
-                        style={{ border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', borderRadius:'var(--ag-radius)', padding:'7px 10px', fontSize:12, cursor:'pointer' }}>
+                      <button className="ag-small-action ui-77d570" onClick={() => desactivarInvitado(inv.id)}
+                       >
                         Desactivar
                       </button>
                     )}
@@ -666,11 +657,11 @@ export default function Configuracion({ role }) {
 
             {/* -- CUENTA -- */}
             {modal === 'roles' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:8 }}>Usuarios y permisos</div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:16 }}>Cada usuario nuevo recibe un email seguro para crear su propia contrasena.</div>
+              <div className="ui-8decf3">Usuarios y permisos</div>
+              <div className="ui-7d5827">Cada usuario nuevo recibe un email seguro para crear su propia contrasena.</div>
 
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom:12 }}>
-                <label className="ag-field-label" style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>{form.id ? 'Editar usuario' : 'Agregar usuario'}
+              <div className="ag-surface ui-e446b2">
+                <label className="ag-field-label ui-486335">{form.id ? 'Editar usuario' : 'Agregar usuario'}
                 <input style={inp} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="correo@empresa.com"/></label>
                 <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre"/>
                 <select style={inp} value={form.rol||'operador'} onChange={e=>setForm(f=>({...f,rol:e.target.value}))}>
@@ -690,33 +681,33 @@ export default function Configuracion({ role }) {
                   onChange={acciones => setForm(f => ({ ...f, acciones }))}
                 />
                 {form.id ? (
-                  <label style={{ display:'flex', alignItems:'center', gap:8, background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:'var(--ag-radius)', padding:12, marginBottom:12, fontSize:12, color:'#1d241f' }}>
+                  <label className="ui-fc5f0c">
                     <input type="checkbox" checked={Boolean(form.invitar_real)} onChange={e=>setForm(f=>({...f,invitar_real:e.target.checked}))}/>
                     Reenviar email para crear la contrasena
                   </label>
                 ) : (
-                  <div role="note" style={{ display:'flex', alignItems:'flex-start', gap:9, background:'#f7fbf5', border:'1px solid #cfe5c8', borderRadius:'var(--ag-radius)', padding:12, marginBottom:12, fontSize:12, lineHeight:1.45, color:'#1d241f' }}>
-                    <i className="ti ti-mail-check" style={{ fontSize:18, color:'#176a25', marginTop:1 }} aria-hidden="true" />
+                  <div className="ui-ca26cd" role="note">
+                    <i className="ti ti-mail-check ui-6f7515" aria-hidden="true" />
                     <span>Al crear el usuario enviaremos un email para que defina su contrasena. El administrador no necesita conocerla.</span>
                   </div>
                 )}
-                <textarea style={{ ...inp, minHeight:64, resize:'vertical' }} value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
+                <textarea className="ui-d303ae" style={{ ...inp }} value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
                 <button style={saveBtn('#176a25')} onClick={guardarRol} disabled={loading}>{loading ? 'Enviando...' : (form.id ? 'Guardar cambios' : 'Crear usuario y enviar invitacion')}</button>
               </div>
 
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px' }}>
-                <div style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Registrados</div>
+              <div className="ag-surface ui-9a7f69">
+                <div className="ui-486335">Registrados</div>
                 {roles.length === 0 ? (
-                  <div style={{ fontSize:12, color:"#697970", padding:'8px 0' }}>Sin usuarios registrados.</div>
+                  <div className="ui-9a291f">Sin usuarios registrados.</div>
                 ) : roles.map(r => (
                   <div key={r.id} style={listItem}>
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:"#182c25" }}>{r.nombre || r.email}</div>
-                      <div style={{ fontSize:12, color:"#697970", marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.email} - {r.rol}</div>
+                    <div className="ui-3f9f96">
+                      <div className="ui-1d6b4b">{r.nombre || r.email}</div>
+                      <div className="ui-2f9f8e">{r.email} - {r.rol}</div>
                     </div>
-                    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-                      <button className="ag-small-action" style={{ padding:'5px 10px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, color:'#555', cursor:'pointer' }} onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, invitar_real:false })}>Editar</button>
-                      <button className="ag-small-action" style={{ padding:'5px 10px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, color:'#c84040', cursor:'pointer' }} onClick={() => eliminarRol(r.id)}>Borrar</button>
+                    <div className="ui-52e666">
+                      <button className="ag-small-action ui-1283df" onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, invitar_real:false })}>Editar</button>
+                      <button className="ag-small-action ui-0a7db6" onClick={() => eliminarRol(r.id)}>Borrar</button>
                     </div>
                   </div>
                 ))}
@@ -725,47 +716,47 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'cuenta' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Mi cuenta</div>
+              <div className="ui-c7b1b6">Mi cuenta</div>
 
               {/* Foto */}
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:24 }}>
-                <div style={{ position:'relative', marginBottom:10 }}>
+              <div className="ui-080f90">
+                <div className="ui-ecfc6a">
                   {perfil.foto ? (
-                    <img src={perfil.foto} alt="perfil"
-                      style={{ width:80, height:80, borderRadius:'50%', objectFit:'cover', border:"3px solid #e2e9e5" }}/>
+                    <img className="ui-e97dd4" src={perfil.foto} alt="perfil"
+                     />
                   ) : (
-                    <div style={{ width:80, height:80, borderRadius:'50%', background:"#e2e9e5", display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <i className="ti ti-user" style={{ fontSize:36, color:"#697970" }} aria-hidden="true"></i>
+                    <div className="ui-f2a366">
+                      <i className="ti ti-user ui-64b5eb" aria-hidden="true"></i>
                     </div>
                   )}
-                  <button aria-label="Cambiar foto" onClick={() => fotoRef.current?.click()}
-                    style={{ position:'absolute', bottom:0, right:0, width:26, height:26, borderRadius:'50%', background:"#124e38", border:"2px solid #f6f8f7", cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <i className="ti ti-camera" style={{ fontSize:13, color:'#fff' }} aria-hidden="true"></i>
+                  <button className="ui-46e341" aria-label="Cambiar foto" onClick={() => fotoRef.current?.click()}
+                   >
+                    <i className="ti ti-camera ui-6a3571" aria-hidden="true"></i>
                   </button>
                 </div>
-                <span style={{ fontSize:12, color:"#697970" }}>Toca la camara para cambiar la foto</span>
+                <span className="ui-93a7e1">Toca la camara para cambiar la foto</span>
               </div>
 
               {/* Nombre */}
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom:12 }}>
-                <label className="ag-field-label" style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Nombre
-                <input style={{ ...inp, marginBottom:8 }} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/></label>
+              <div className="ag-surface ui-e446b2">
+                <label className="ag-field-label ui-486335">Nombre
+                <input className="ui-d51702" style={{ ...inp }} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/></label>
                 <button style={saveBtn()} onClick={guardarNombre} disabled={loading}>{loading?'Guardando...':'Guardar nombre'}</button>
               </div>
 
               {/* Email */}
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom:12 }}>
-                <label className="ag-field-label" style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Email
-                <input style={{ ...inp, marginBottom:8 }} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/></label>
-                <div style={{ fontSize:12, color:"#697970", marginBottom:10 }}>Si cambias el email, recibiras un link de confirmacion</div>
+              <div className="ag-surface ui-e446b2">
+                <label className="ag-field-label ui-486335">Email
+                <input className="ui-d51702" style={{ ...inp }} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/></label>
+                <div className="ui-51eea9">Si cambias el email, recibiras un link de confirmacion</div>
                 <button style={saveBtn('#1a5c2e')} onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
               </div>
 
               {/* Contrasena */}
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom:12 }}>
-                <label className="ag-field-label" style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Contrasena
-                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contrasena"/></label>
-                <input style={{ ...inp, marginBottom:8 }} type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contrasena"/>
+              <div className="ag-surface ui-e446b2">
+                <label className="ag-field-label ui-486335">Contrasena
+                <input className="ui-d51702" style={{ ...inp }} type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contrasena"/></label>
+                <input className="ui-d51702" style={{ ...inp }} type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contrasena"/>
                 <button style={saveBtn('#c84040')} onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contrasena'}</button>
               </div>
 
@@ -774,20 +765,20 @@ export default function Configuracion({ role }) {
 
             {/* -- CAMPOS -- */}
             {modal === 'campos' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Campos</div>
-              {campos.map(c => (<div key={c.id} style={listItem}><div style={{ fontSize:13, fontWeight:500 }}>{c.nombre}</div></div>))}
+              <div className="ui-c7b1b6">Campos</div>
+              {campos.map(c => (<div key={c.id} style={listItem}><div className="ui-0aae41">{c.nombre}</div></div>))}
               <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
             </>}
 
             {/* -- CULTIVOS -- */}
             {modal === 'cultivos' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Cultivos</div>
+              <div className="ui-c7b1b6">Cultivos</div>
               {cultivos.map(c => (
                 <div key={c.id} style={listItem}>
-                  <div style={{ fontSize:13, fontWeight:500 }}>{c.nombre}</div>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <button className="ag-small-action" style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
-                    <button className="ag-small-action" style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('cultivos',c.id,'cultivos')}>Eliminar</button>
+                  <div className="ui-0aae41">{c.nombre}</div>
+                  <div className="ui-91294d">
+                    <button className="ag-small-action ui-387856" onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
+                    <button className="ag-small-action ui-14c146" onClick={() => eliminar('cultivos',c.id,'cultivos')}>Eliminar</button>
                   </div>
                 </div>
               ))}
@@ -796,8 +787,8 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'editarCultivo' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Nombre</div>
+              <div className="ui-c7b1b6">{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
+              <div className="ui-74cc19">Nombre</div>
               <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morron"/>
               <button style={saveBtn()} onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
               <button style={cancelBtn} onClick={() => abrir('cultivos')}>Volver</button>
@@ -805,16 +796,16 @@ export default function Configuracion({ role }) {
 
             {/* -- OPERARIOS -- */}
             {modal === 'operarios' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Operarios</div>
+              <div className="ui-c7b1b6">Operarios</div>
               {campos.map(campo => (
                 <div key={campo.id}>
-                  <div style={{ fontSize:12, fontWeight:600, color:"#697970", padding:'10px 0 6px' }}>{campo.nombre}</div>
+                  <div className="ui-269365">{campo.nombre}</div>
                   {operarios.filter(o => o.campo_id === campo.id).map(o => (
                     <div key={o.id} style={listItem}>
-                      <div style={{ fontSize:13, fontWeight:500 }}>{o.nombre}</div>
-                      <div style={{ display:'flex', gap:6 }}>
-                        <button className="ag-small-action" style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
-                        <button className="ag-small-action" style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('operarios',o.id,'operarios')}>Eliminar</button>
+                      <div className="ui-0aae41">{o.nombre}</div>
+                      <div className="ui-91294d">
+                        <button className="ag-small-action ui-387856" onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
+                        <button className="ag-small-action ui-14c146" onClick={() => eliminar('operarios',o.id,'operarios')}>Eliminar</button>
                       </div>
                     </div>
                   ))}
@@ -825,8 +816,8 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'editarOperario' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id?'Editar operario':'Nuevo operario'}</div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Nombre</div>
+              <div className="ui-c7b1b6">{form.id?'Editar operario':'Nuevo operario'}</div>
+              <div className="ui-74cc19">Nombre</div>
               <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
               <button style={saveBtn()} onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
               <button style={cancelBtn} onClick={() => abrir('operarios')}>Volver</button>
@@ -834,13 +825,13 @@ export default function Configuracion({ role }) {
 
             {/* -- ABONOS -- */}
             {modal === 'abonos' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Abonos de base</div>
+              <div className="ui-c7b1b6">Abonos de base</div>
               {abonos.map(a => (
                 <div key={a.id} style={listItem}>
-                  <div style={{ fontSize:13, fontWeight:500 }}>{a.nombre}</div>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <button className="ag-small-action" style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, color:'#555', cursor:'pointer' }} onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
-                    <button className="ag-small-action" style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, color:'#c84040', cursor:'pointer' }} onClick={() => eliminar('abonos',a.id,'abonos')}>Eliminar</button>
+                  <div className="ui-0aae41">{a.nombre}</div>
+                  <div className="ui-91294d">
+                    <button className="ag-small-action ui-387856" onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
+                    <button className="ag-small-action ui-14c146" onClick={() => eliminar('abonos',a.id,'abonos')}>Eliminar</button>
                   </div>
                 </div>
               ))}
@@ -849,8 +840,8 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'editarAbono' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id?'Editar abono':'Nuevo abono'}</div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Nombre</div>
+              <div className="ui-c7b1b6">{form.id?'Editar abono':'Nuevo abono'}</div>
+              <div className="ui-74cc19">Nombre</div>
               <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
               <button style={saveBtn()} onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
               <button style={cancelBtn} onClick={() => abrir('abonos')}>Volver</button>
@@ -858,15 +849,15 @@ export default function Configuracion({ role }) {
 
             {/* -- BLOQUES -- */}
             {modal === 'bloques' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:6 }}>Tipo de bloques</div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:20 }}>Toca un bloque para cambiar si es invernadero o campo abierto</div>
+              <div className="ui-0c9a57">Tipo de bloques</div>
+              <div className="ui-fe1408">Toca un bloque para cambiar si es invernadero o campo abierto</div>
               {campos.map(campo => (
                 <div key={campo.id}>
-                  <div style={{ fontSize:12, fontWeight:600, color:"#697970", padding:'10px 0 6px' }}>{campo.nombre}</div>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
+                  <div className="ui-269365">{campo.nombre}</div>
+                  <div className="ui-c4905b">
                     {bloques.filter(b => b.campo_id === campo.id).map(b => (
-                      <div key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })}
-                        style={{ padding:'6px 12px', borderRadius:'var(--ag-radius)', fontSize:12, fontWeight:500, cursor:'pointer', border:"1px solid #e2e9e5", background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
+                      <div className="ui-6a9e69" key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })}
+                        style={{ background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
                         {b.codigo}  -  {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
                       </div>
                     ))}
@@ -877,11 +868,11 @@ export default function Configuracion({ role }) {
             </>}
 
             {modal === 'editarBloque' && <>
-              <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:6 }}>Bloque {form.codigo}</div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:20 }}>Selecciona el tipo de este bloque</div>
-              <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+              <div className="ui-0c9a57">Bloque {form.codigo}</div>
+              <div className="ui-fe1408">Selecciona el tipo de este bloque</div>
+              <div className="ui-248550">
                 {['invernadero','campo_abierto'].map(t => (
-                  <button className="ag-small-action" key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ flex:1, padding:14, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:13, fontWeight:600, cursor:'pointer', background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
+                  <button className="ag-small-action ui-86faf0" key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
                     {t === 'invernadero' ? 'Invernadero' : 'Campo abierto'}
                   </button>
                 ))}

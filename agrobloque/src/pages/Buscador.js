@@ -125,42 +125,42 @@ export default function Buscador() {
   }, [items, q])
 
   return (
-    <div className="ag-page ag-page-body" style={{ minHeight:'100vh', background:"#f6f8f7", padding: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '34px 36px 100px' : '24px 14px 100px' }}>
-      <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 1180 : 900, margin:'0 auto' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-          <button aria-label="Volver" onClick={() => navigate(-1)} style={{ width:40, height:40, borderRadius:'var(--ag-radius)', border:'none', background:'#fff', cursor:'pointer' }}>
-            <i className="ti ti-arrow-left" style={{ fontSize:20 }} aria-hidden="true"></i>
+    <div className="ag-page ag-page-body ui-71cde8" style={{ padding: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '34px 36px 100px' : '24px 14px 100px' }}>
+      <div className="ui-f47a4b" style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 1180 : 900 }}>
+        <div className="ui-31b0cd">
+          <button className="ui-78cb77" aria-label="Volver" onClick={() => navigate(-1)}>
+            <i className="ti ti-arrow-left ui-e5e6f8" aria-hidden="true"></i>
           </button>
           <div>
-            <div style={{ fontSize:12, color:"#697970" }}>Busqueda global</div>
-            <h1 style={{ margin:0, fontSize:24, letterSpacing:-0.6 }}>Buscar en AgroBloque</h1>
+            <div className="ui-93a7e1">Busqueda global</div>
+            <h1 className="ui-ee8706">Buscar en AgroBloque</h1>
           </div>
         </div>
 
-        <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:12, marginBottom:14, border:'1px solid #e8ece8' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'26px 1fr', alignItems:'center', gap:8 }}>
-            <i className="ti ti-search" style={{ fontSize:22, color:"#08603f" }} aria-hidden="true"></i>
-            <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar A-1, tomate, comprador, abono, cosecha..."
-              style={{ border:'none', outline:'none', fontSize:15, padding:'10px 4px', background:'transparent' }} />
+        <div className="ag-surface ui-3c3495">
+          <div className="ui-affe91">
+            <i className="ti ti-search ui-1cfb3f" aria-hidden="true"></i>
+            <input className="ui-ead7f5" autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar A-1, tomate, comprador, abono, cosecha..."
+              />
           </div>
         </div>
 
         {loading ? (
-          <div style={{ textAlign:'center', padding:38, color:"#697970" }}>Cargando buscador...</div>
+          <div className="ui-4e47d3">Cargando buscador...</div>
         ) : resultados.length === 0 ? (
-          <div className="ag-surface" style={{ textAlign:'center', padding:38, color:"#697970", background:'#fff', borderRadius:'var(--ag-radius)' }}>Sin resultados.</div>
+          <div className="ag-surface ui-8a232f">Sin resultados.</div>
         ) : resultados.map((r, i) => (
           <div key={`${r.tipo}-${r.titulo}-${i}`} style={card} onClick={() => navigate(r.path)}>
-            <div style={{ display:'grid', gridTemplateColumns:'42px 1fr 18px', gap:12, alignItems:'center' }}>
-              <span style={{ width:42, height:42, borderRadius:'var(--ag-radius)', background:"#edf7f1", display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <i className={`ti ${r.icon}`} style={{ fontSize:21, color:"#08603f" }} aria-hidden="true"></i>
+            <div className="ui-caa1ed">
+              <span className="ui-dd385b">
+                <i className={`${`ti ${r.icon}`} ui-d932c2`} aria-hidden="true"></i>
               </span>
-              <span style={{ minWidth:0 }}>
-                <span style={{ display:'block', fontSize:12, color:"#697970", textTransform:'uppercase', fontWeight:700 }}>{r.tipo}</span>
-                <strong style={{ display:'block', fontSize:15, color:'#111', marginTop:2 }}>{r.titulo}</strong>
-                <span style={{ display:'block', fontSize:12, color:'#687068', marginTop:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.sub}</span>
+              <span className="ui-3f9f96">
+                <span className="ui-9e8e47">{r.tipo}</span>
+                <strong className="ui-57bdb3">{r.titulo}</strong>
+                <span className="ui-7dd5eb">{r.sub}</span>
               </span>
-              <i className="ti ti-chevron-right" style={{ fontSize:18, color:'#1c211d' }} aria-hidden="true"></i>
+              <i className="ti ti-chevron-right ui-4416e1" aria-hidden="true"></i>
             </div>
           </div>
         ))}

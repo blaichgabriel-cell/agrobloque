@@ -39,12 +39,12 @@ const UNIDADES = ['kg','g','cc','ml','L','unidad']
 function ModalConfirm({ titulo, mensaje, onConfirm, onCancel }) {
   return (
     <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:"#182c25", marginBottom:8, textAlign:'center' }}>{titulo}</div>
-        {mensaje && <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>{mensaje}</div>}
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="ag-small-action" onClick={onCancel} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
-          <button className="ag-small-action" onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Confirmar</button>
+      <div className="ag-surface ui-211525">
+        <div className="ui-3e43be">{titulo}</div>
+        {mensaje && <div className="ui-01159a">{mensaje}</div>}
+        <div className="ui-9c6869">
+          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
+          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Confirmar</button>
         </div>
       </div>
     </Modal>
@@ -781,7 +781,7 @@ export default function FichaBloque() {
   const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:10, boxSizing:'border-box' }
 
   if (!bloque) return (
-    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+    <div className="ag-page ui-44f558">
       <Skeleton rows={5} label="Cargando ficha del bloque" />
     </div>
   )
@@ -791,7 +791,7 @@ export default function FichaBloque() {
     const esMasReciente = fertilizaciones.length > 0 && fertilizaciones[0].id === fertDetalle.id
     const esAnterior = fertilizaciones.length > 1 && fertilizaciones[1].id === fertDetalle.id
     return (
-      <div className="ag-block-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+      <div className="ag-block-page ui-c1c124">
         {confirmarElimFert && (
           <ModalConfirm
             titulo="Eliminar fertilizacion?"
@@ -800,45 +800,45 @@ export default function FichaBloque() {
             onCancel={() => setConfirmarElimFert(null)}
           />
         )}
-        <div style={{ padding:'24px 20px 16px' }}>
-          <button className="ag-small-action" onClick={() => setFertDetalle(null)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
-            <i className="ti ti-arrow-left" style={{ fontSize:18, color:"#124e38" }} aria-hidden="true"></i>
-            <span style={{ fontSize:13, color:"#124e38", fontWeight:500 }}>Fertilizacion</span>
+        <div className="ui-327143">
+          <button className="ag-small-action ui-7347f9" onClick={() => setFertDetalle(null)}>
+            <i className="ti ti-arrow-left ui-b45e7d" aria-hidden="true"></i>
+            <span className="ui-fe5017">Fertilizacion</span>
           </button>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
-            <div style={{ fontSize:22, fontWeight:700, color:"#182c25" }}>{rangoFertilizacion(fertDetalle)}</div>
-            {esMasReciente && <span style={{ fontSize:12, fontWeight:700, padding:'3px 10px', borderRadius:'var(--ag-radius)', background:'#1a5c2e', color:'#fff' }}>ACTUAL</span>}
-            {esAnterior && <span style={{ fontSize:12, fontWeight:700, padding:'3px 10px', borderRadius:'var(--ag-radius)', background:"#e2e9e5", color:'#555' }}>ANTERIOR</span>}
+          <div className="ui-82e63f">
+            <div className="ui-882dd8">{rangoFertilizacion(fertDetalle)}</div>
+            {esMasReciente && <span className="ui-c28681">ACTUAL</span>}
+            {esAnterior && <span className="ui-e7ea3c">ANTERIOR</span>}
           </div>
-          <div style={{ fontSize:12, color:"#697970" }}>Bloque {bloque.codigo}</div>
+          <div className="ui-93a7e1">Bloque {bloque.codigo}</div>
         </div>
-        <div style={{ padding:'0 14px 100px' }}>
+        <div className="ui-1a3247">
           {(fertDetalle.soluciones || []).map((sol, si) => (
-            <div className="ag-surface" key={si} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:10 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:'#1a5c2e', marginBottom:10, textTransform:'uppercase', letterSpacing:1 }}>
+            <div className="ag-surface ui-49272e" key={si}>
+              <div className="ui-1f5c91">
                 Solucion {sol.nombre}
               </div>
               {(sol.productos || []).map((prod, pi) => (
-                <div key={pi} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:"1px solid #f6f8f7" }}>
-                  <div style={{ fontSize:13, color:"#182c25" }}>{prod.nombre || '-'}</div>
-                  <div style={{ fontSize:13, fontWeight:600, color:"#182c25" }}>{prod.cantidad} {prod.unidad}</div>
+                <div className="ui-efee8d" key={pi}>
+                  <div className="ui-7b80c9">{prod.nombre || '-'}</div>
+                  <div className="ui-076bb2">{prod.cantidad} {prod.unidad}</div>
                 </div>
               ))}
             </div>
           ))}
           {notasFertilizacionVisibles(fertDetalle.notas) && (
-            <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px', marginBottom:10 }}>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>NOTAS</div>
-              <div style={{ fontSize:13, color:"#182c25" }}>{notasFertilizacionVisibles(fertDetalle.notas)}</div>
+            <div className="ag-surface ui-f3f33f">
+              <div className="ui-476525">NOTAS</div>
+              <div className="ui-7b80c9">{notasFertilizacionVisibles(fertDetalle.notas)}</div>
             </div>
           )}
-          <button className="ag-small-action" onClick={() => navigate(`/fertilizaciones?editar=${encodeURIComponent(fertDetalle.grupo_id || fertDetalle.id)}`)}
-            style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'none', background:'#1a5c2e', fontSize:13, fontWeight:700, color:'#fff', cursor:'pointer', marginTop:8 }}>
-            <i className="ti ti-pencil" style={{ marginRight:7 }} aria-hidden="true"></i>
+          <button className="ag-small-action ui-a20b62" onClick={() => navigate(`/fertilizaciones?editar=${encodeURIComponent(fertDetalle.grupo_id || fertDetalle.id)}`)}
+           >
+            <i className="ti ti-pencil ui-52eaee" aria-hidden="true"></i>
             {fertDetalle.plan_id ? 'Editar semana completa' : 'Editar fertilización'}
           </button>
-          <button className="ag-small-action" onClick={() => setConfirmarElimFert(fertDetalle.id)}
-            style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer', marginTop:8 }}>
+          <button className="ag-small-action ui-ee3408" onClick={() => setConfirmarElimFert(fertDetalle.id)}
+           >
             Eliminar este registro
           </button>
         </div>
@@ -849,44 +849,44 @@ export default function FichaBloque() {
   // Vista detalle de ciclo historico
   if (historialDetalle) {
     return (
-      <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+      <div className="ag-page ui-c1c124">
         {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-        <div style={{ padding:'24px 20px 16px' }}>
-          <button className="ag-small-action" onClick={() => setHistorialDetalle(null)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
-            <i className="ti ti-arrow-left" style={{ fontSize:18, color:"#124e38" }} aria-hidden="true"></i>
-            <span style={{ fontSize:13, color:"#124e38", fontWeight:500 }}>Historial</span>
+        <div className="ui-327143">
+          <button className="ag-small-action ui-7347f9" onClick={() => setHistorialDetalle(null)}>
+            <i className="ti ti-arrow-left ui-b45e7d" aria-hidden="true"></i>
+            <span className="ui-fe5017">Historial</span>
           </button>
-          <div style={{ fontSize:22, fontWeight:700, color:"#182c25", marginBottom:4 }}>
+          <div className="ui-72161c">
             {historialDetalle.cultivos?.nombre}{getVariedad(historialDetalle) ? `  -  ${getVariedad(historialDetalle)}` : ''}
           </div>
-          <div style={{ fontSize:12, color:"#697970" }}>Bloque {bloque.codigo}  -  {historialDetalle.fecha_siembra || 'Sin fecha'}</div>
+          <div className="ui-93a7e1">Bloque {bloque.codigo}  -  {historialDetalle.fecha_siembra || 'Sin fecha'}</div>
         </div>
-        <div style={{ padding:'0 14px 100px' }}>
-          <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:10 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Datos del ciclo</div>
+        <div className="ui-1a3247">
+          <div className="ag-surface ui-49272e">
+            <div className="ui-486335">Datos del ciclo</div>
             {[
               ['Cultivo', historialDetalle.cultivos?.nombre || '-'],
               ['Variedad', getVariedad(historialDetalle) || '-'],
               ['Fecha siembra', historialDetalle.fecha_siembra || '-'],
               ['Plantas', (historialDetalle.cantidad_plantas ?? historialDetalle.densidad_plantas_m2) ? `${Number(historialDetalle.cantidad_plantas ?? historialDetalle.densidad_plantas_m2).toLocaleString('es-PY')}` : '-'],
             ].map(([k,v]) => (
-              <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:"1px solid #f6f8f7" }}>
-                <div style={{ fontSize:12, color:"#697970" }}>{k}</div>
-                <div style={{ fontSize:12, fontWeight:500, color:"#182c25" }}>{v}</div>
+              <div className="ui-a7a997" key={k}>
+                <div className="ui-93a7e1">{k}</div>
+                <div className="ui-0993fa">{v}</div>
               </div>
             ))}
           </div>
-          <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:10 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#697970", marginBottom:10, textTransform:'uppercase' }}>Abonos de base utilizados</div>
+          <div className="ag-surface ui-49272e">
+            <div className="ui-486335">Abonos de base utilizados</div>
             {(historialDetalle.plantacion_abonos || []).length > 0 ? historialDetalle.plantacion_abonos.map(abono => (
-              <div key={abono.id || abono.abono_id} style={{ display:'flex', justifyContent:'space-between', gap:16, padding:'9px 0', borderBottom:"1px solid #f6f8f7" }}>
-                <div style={{ fontSize:13, fontWeight:600, color:"#182c25" }}>{abono.abonos?.nombre || 'Abono'}</div>
-                <div style={{ fontSize:12, color:"#697970", textAlign:'right' }}>{fmtAbonoPlantacion(abono)}</div>
+              <div className="ui-1eefd4" key={abono.id || abono.abono_id}>
+                <div className="ui-076bb2">{abono.abonos?.nombre || 'Abono'}</div>
+                <div className="ui-62cb6b">{fmtAbonoPlantacion(abono)}</div>
               </div>
-            )) : <div style={{ fontSize:13, color:"#697970" }}>No se registraron abonos de base en este ciclo.</div>}
+            )) : <div className="ui-1685e1">No se registraron abonos de base en este ciclo.</div>}
           </div>
-          <button className="ag-small-action" onClick={() => eliminarHistorial(historialDetalle.id)}
-            style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:13, color:'#c84040', cursor:'pointer' }}>
+          <button className="ag-small-action ui-a3fc3f" onClick={() => eliminarHistorial(historialDetalle.id)}
+           >
             Eliminar este ciclo del historial
           </button>
         </div>
@@ -895,15 +895,15 @@ export default function FichaBloque() {
   }
 
   return (
-    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+    <div className="ag-page ui-c1c124">
       {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-      <input type="file" accept="image/*" ref={fileRef} style={{ display:'none' }} onChange={subirFoto} />
+      <input className="ui-cb4589" type="file" accept="image/*" ref={fileRef} onChange={subirFoto} />
 
       {/* Header */}
-      <div className="ag-block-header" style={{ padding:'24px 20px 0' }}>
-        <button className="ag-small-action" onClick={() => navigate(-1)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
-          <i className="ti ti-arrow-left" style={{ fontSize:18, color:"#124e38" }} aria-hidden="true"></i>
-          <span style={{ fontSize:13, color:"#124e38", fontWeight:500 }}>Volver</span>
+      <div className="ag-block-header ui-606ba4">
+        <button className="ag-small-action ui-7347f9" onClick={() => navigate(-1)}>
+          <i className="ti ti-arrow-left ui-b45e7d" aria-hidden="true"></i>
+          <span className="ui-fe5017">Volver</span>
         </button>
         <div className="ag-block-hero">
           <div>
@@ -917,38 +917,38 @@ export default function FichaBloque() {
           </div>
           {plantacionActiva && <div className="ag-block-summary"><span><small>Edad del cultivo</small><strong>{diasDesde(plantacionActiva.fecha_siembra) ?? '—'} <em>días</em></strong></span><span><small>Plantas del ciclo</small><strong>{cantidadPlantasActiva ? Number(cantidadPlantasActiva).toLocaleString('es-PY') : '—'}</strong></span><span><small>Cosecha del ciclo</small><strong>{fmtKg(totalKgCiclo)} <em>kg</em></strong></span></div>}
           {!plantacionActiva && (
-            <button className="ag-small-action" onClick={abrirNuevaPlantacion} style={{ padding:'8px 14px', borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', fontSize:12, fontWeight:600, color:'#fff', cursor:'pointer' }}>
+            <button className="ag-small-action ui-2c5a32" onClick={abrirNuevaPlantacion}>
               + Nueva plantacion
             </button>
           )}
         </div>
 
         {mensajeExito && (
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, background:'#eaf6ec', color:"#08603f", border:'1px solid #c9e4ce', borderRadius:'var(--ag-radius)', padding:'11px 13px', marginBottom:12, fontSize:12, fontWeight:600 }}>
+          <div className="ui-05bacd">
             <span>{mensajeExito}</span>
-            <button type="button" onClick={() => setMensajeExito('')} aria-label="Cerrar mensaje" style={{ border:'none', background:'transparent', color:"#08603f", cursor:'pointer', fontSize:16, lineHeight:1 }}>×</button>
+            <button className="ui-ecf4ec" type="button" onClick={() => setMensajeExito('')} aria-label="Cerrar mensaje">×</button>
           </div>
         )}
 
-        <div className="ag-block-quick" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:12, marginBottom:12, border:"1px solid #e2e9e5" }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:10 }}>
+        <div className="ag-block-quick ui-46ae6b">
+          <div className="ui-d4e113">
             <div>
-              <div style={{ fontSize:13, fontWeight:700, color:"#182c25" }}>Registrar en este bloque</div>
-              <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>El bloque queda seleccionado automáticamente</div>
+              <div className="ui-1d6b4b">Registrar en este bloque</div>
+              <div className="ui-a8f171">El bloque queda seleccionado automáticamente</div>
             </div>
-            <button className="ag-small-action" type="button" onClick={() => setShowQr(true)} style={{ padding:'8px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #d9ddd8', background:'#fff', color:"#124e38", fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
-              <i className="ti ti-qrcode" style={{ marginRight:5 }} aria-hidden="true"></i> Ver QR
+            <button className="ag-small-action ui-cd464c" type="button" onClick={() => setShowQr(true)}>
+              <i className="ti ti-qrcode ui-e5876b" aria-hidden="true"></i> Ver QR
             </button>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:7 }}>
-            <button className="ag-small-action" type="button" onClick={() => abrirCargaRapida('fumigaciones')} style={{ padding:'10px 5px', borderRadius:'var(--ag-radius)', border:'none', background:'#fff3e8', color:'#a85b00', fontSize:12, fontWeight:700, cursor:'pointer' }}><i className="ti ti-spray" aria-hidden="true" /> Fumigación <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
-            <button className="ag-small-action" type="button" onClick={() => abrirCargaRapida('fertilizacion')} style={{ padding:'10px 5px', borderRadius:'var(--ag-radius)', border:'none', background:"#edf7f1", color:"#08603f", fontSize:12, fontWeight:700, cursor:'pointer' }}><i className="ti ti-leaf" aria-hidden="true" /> Fertilización <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
-            <button className="ag-small-action" type="button" onClick={() => abrirCargaRapida('cosecha')} style={{ padding:'10px 5px', borderRadius:'var(--ag-radius)', border:'none', background:'#eeeeee', color:"#124e38", fontSize:12, fontWeight:700, cursor:'pointer' }}><i className="ti ti-cut" aria-hidden="true" /> Cosecha <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
+          <div className="ui-1a4890">
+            <button className="ag-small-action ui-0ea43e" type="button" onClick={() => abrirCargaRapida('fumigaciones')}><i className="ti ti-spray" aria-hidden="true" /> Fumigación <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
+            <button className="ag-small-action ui-228318" type="button" onClick={() => abrirCargaRapida('fertilizacion')}><i className="ti ti-leaf" aria-hidden="true" /> Fertilización <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
+            <button className="ag-small-action ui-f0ca92" type="button" onClick={() => abrirCargaRapida('cosecha')}><i className="ti ti-cut" aria-hidden="true" /> Cosecha <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="ag-block-tabs" aria-label="Secciones del bloque" style={{ display:'flex', gap:5, overflowX:'auto', paddingBottom:4 }}>
+        <div className="ag-block-tabs ui-c1894b" aria-label="Secciones del bloque">
           {[
             ['plantacion','Plantación'],
             ['fertilizacion',`Fertilización (${fertilizaciones.length})`],
@@ -957,27 +957,25 @@ export default function FichaBloque() {
             ['fotos',`Fotos (${fotos.length})`],
             ['historial',`Historial (${historial.length})`],
           ].map(([k,v]) => (
-            <button className="ag-small-action" key={k} aria-pressed={seccion === k} onClick={() => setSeccion(k)}
-              style={{ padding:'7px 14px', borderRadius:'var(--ag-radius)', border:'none', fontSize:12, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap',
-                background: seccion===k ? (k==='fertilizacion' ? '#1a5c2e' : '#212121') : '#e8e6e2',
-                color: seccion===k ? '#fff' : '#9a9a9a' }}>
+            <button className="ag-small-action ui-f9a370" key={k} aria-pressed={seccion === k} onClick={() => setSeccion(k)}
+              style={{ background: seccion===k ? (k==='fertilizacion' ? '#1a5c2e' : '#212121') : '#e8e6e2', color: seccion===k ? '#fff' : '#9a9a9a' }}>
               {v}
             </button>
           ))}
         </div>
       </div>
 
-      <div className={`ag-block-content ag-block-section-${seccion}`} key={seccion} style={{ padding:'12px 14px 100px' }}>
+      <div className={`${`ag-block-content ag-block-section-${seccion}`} ui-538f66`} key={seccion}>
 
         {/* PLANTACION ACTUAL */}
         {seccion === 'plantacion' && (
           <>
             {plantacionActiva ? (
               <>
-                <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:10 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#182c25" }}>Datos de la plantacion</div>
-                    <button className="ag-small-action" onClick={abrirEditarPlantacion} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, color:'#555', cursor:'pointer' }}>Editar</button>
+                <div className="ag-surface ui-49272e">
+                  <div className="ui-546e10">
+                    <div className="ui-1d6b4b">Datos de la plantacion</div>
+                    <button className="ag-small-action ui-387856" onClick={abrirEditarPlantacion}>Editar</button>
                   </div>
                   {[
                     ['Cultivo', plantacionActiva.cultivos?.nombre || '-'],
@@ -986,68 +984,68 @@ export default function FichaBloque() {
                     ['Dias en campo', diasDesde(plantacionActiva.fecha_siembra) !== null ? `${diasDesde(plantacionActiva.fecha_siembra)} dias` : '-'],
                     ['Cantidad de plantas', cantidadPlantasActiva ? `${cantidadPlantasActiva.toLocaleString('es-PY')} plantas` : '-'],
                   ].map(([k,v]) => (
-                    <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:"1px solid #f6f8f7" }}>
-                      <div style={{ fontSize:12, color:"#697970" }}>{k}</div>
-                      <div style={{ fontSize:12, fontWeight:500, color:"#182c25" }}>{v}</div>
+                    <div className="ui-a7a997" key={k}>
+                      <div className="ui-93a7e1">{k}</div>
+                      <div className="ui-0993fa">{v}</div>
                     </div>
                   ))}
                   {abonosPlantacion.length > 0 && (
-                    <div style={{ padding:'8px 0' }}>
-                      <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Abonos de base</div>
+                    <div className="ui-e1deb8">
+                      <div className="ui-74cc19">Abonos de base</div>
                       {abonosPlantacion.map(a => (
-                        <div key={a.id} style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
-                          <span style={{ fontSize:12, color:"#182c25" }}>{a.abonos?.nombre}</span>
-                          <span style={{ fontSize:12, color:"#697970" }}>{fmtAbonoPlantacion(a)}</span>
+                        <div className="ui-821f5f" key={a.id}>
+                          <span className="ui-8dc166">{a.abonos?.nombre}</span>
+                          <span className="ui-93a7e1">{fmtAbonoPlantacion(a)}</span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
-                  <div style={{ background:"#124e38", borderRadius:'var(--ag-radius)', padding:'14px' }}>
-                    <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', marginBottom:4 }}>KG COSECHADOS</div>
-                    <div style={{ fontSize:22, fontWeight:700, color:'#fff' }}>{fmtKg(totalKgCiclo)}</div>
-                    <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:2 }}>este ciclo</div>
+                <div className="ui-e4712c">
+                  <div className="ui-253181">
+                    <div className="ui-19caa9">KG COSECHADOS</div>
+                    <div className="ui-b428dd">{fmtKg(totalKgCiclo)}</div>
+                    <div className="ui-626bf4">este ciclo</div>
                   </div>
-                  <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px' }}>
-                    <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>KG POR PLANTA</div>
-                    <div style={{ fontSize:22, fontWeight:700, color:"#124e38" }}>{kgPorPlanta || '-'}</div>
-                    <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>kg/planta</div>
+                  <div className="ag-surface ui-c2bf5d">
+                    <div className="ui-476525">KG POR PLANTA</div>
+                    <div className="ui-7ad61e">{kgPorPlanta || '-'}</div>
+                    <div className="ui-a8f171">kg/planta</div>
                   </div>
                   {totalMuertes > 0 && (
-                    <div style={{ background:'#fff0f0', borderRadius:'var(--ag-radius)', padding:'14px', gridColumn:'1 / -1' }}>
-                      <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>PLANTAS MUERTAS</div>
-                      <div style={{ fontSize:22, fontWeight:700, color:'#c84040' }}>{totalMuertes.toLocaleString('es-PY')}</div>
+                    <div className="ui-5aaa70">
+                      <div className="ui-476525">PLANTAS MUERTAS</div>
+                      <div className="ui-4a5507">{totalMuertes.toLocaleString('es-PY')}</div>
                     </div>
                   )}
                 </div>
 
-                <div style={{ display:'flex', gap:8 }}>
-                  <button className="ag-small-action" onClick={abrirNuevaPlantacion}
-                    style={{ flex:1, padding:'12px', borderRadius:'var(--ag-radius)', border:'1px dashed #888', background:'transparent', fontSize:12, fontWeight:600, color:'#555', cursor:'pointer' }}>
+                <div className="ui-9c6869">
+                  <button className="ag-small-action ui-004512" onClick={abrirNuevaPlantacion}
+                   >
                     Nueva plantacion
                   </button>
-                  <button className="ag-small-action" onClick={() => setShowMuerte(true)}
-                    style={{ flex:1, padding:'12px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, fontWeight:600, color:'#c84040', cursor:'pointer' }}>
+                  <button className="ag-small-action ui-d4abad" onClick={() => setShowMuerte(true)}
+                   >
                     + Muerte de plantas
                   </button>
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:8 }}>
-                  <button className="ag-small-action" onClick={finalizarPlantacionActiva}
-                    style={{ padding:'11px', borderRadius:'var(--ag-radius)', border:'1px solid #d8c18a', background:'#fff8e8', fontSize:12, fontWeight:700, color:'#7a5a13', cursor:'pointer' }}>
+                <div className="ui-caac2c">
+                  <button className="ag-small-action ui-5b0f32" onClick={finalizarPlantacionActiva}
+                   >
                     Finalizar plantacion
                   </button>
-                  <button className="ag-small-action" onClick={eliminarPlantacionActiva}
-                    style={{ padding:'11px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'#fff0f0', fontSize:12, fontWeight:700, color:'#c84040', cursor:'pointer' }}>
+                  <button className="ag-small-action ui-05757f" onClick={eliminarPlantacionActiva}
+                   >
                     Eliminar plantacion
                   </button>
                 </div>
               </>
             ) : (
-              <div className="ag-surface" style={{ textAlign:'center', padding:'40px 20px', color:"#697970", fontSize:13, background:'#fff', borderRadius:'var(--ag-radius)' }}>
+              <div className="ag-surface ui-13bbf9">
                 Sin plantacion activa.<br/>
-                <button className="ag-small-action" onClick={abrirNuevaPlantacion} style={{ marginTop:12, padding:'10px 20px', borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>
+                <button className="ag-small-action ui-a4d716" onClick={abrirNuevaPlantacion}>
                   + Nueva plantacion
                 </button>
               </div>
@@ -1058,46 +1056,46 @@ export default function FichaBloque() {
         {/* FERTILIZACION */}
         {seccion === 'fertilizacion' && (
           <>
-            <div style={{ background: planSemanal ? '#eef6ea' : '#fff', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:10, border: planSemanal ? '1px solid #cde6c8' : '1px dashed #d6d6d6' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start', marginBottom:10 }}>
+            <div className="ui-d686c5" style={{ background: planSemanal ? '#eef6ea' : '#fff', border: planSemanal ? '1px solid #cde6c8' : '1px dashed #d6d6d6' }}>
+              <div className="ui-1d6f95">
                 <div>
-                  <div style={{ fontSize:12, fontWeight:700, color: planSemanal ? '#1a5c2e' : '#8b928b', textTransform:'uppercase', marginBottom:4 }}>Plan semanal</div>
-                  <div style={{ fontSize:15, fontWeight:700, color:"#182c25" }}>{planSemanal ? planSemanal.nombre : 'Sin plan activo'}</div>
-                  <div style={{ fontSize:12, color:'#687068', marginTop:3 }}>
+                  <div className="ui-338218" style={{ color: planSemanal ? '#1a5c2e' : '#8b928b' }}>Plan semanal</div>
+                  <div className="ui-62e15c">{planSemanal ? planSemanal.nombre : 'Sin plan activo'}</div>
+                  <div className="ui-13b58a">
                     {planSemanal ? `${planSemanal.litros_preparados || '-'} L preparados  -  ${aplicacionesPlan.length} aplicaciones` : 'Solo para los bloques que usan receta semanal.'}
                   </div>
                 </div>
-                <button className="ag-small-action" onClick={abrirPlanSemanal}
-                  style={{ padding:'8px 12px', borderRadius:'var(--ag-radius)', border:'none', background:"#124e38", color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                <button className="ag-small-action ui-0a1c50" onClick={abrirPlanSemanal}
+                 >
                   {planSemanal ? 'Editar' : 'Crear'}
                 </button>
               </div>
               {planSemanal && (
                 <>
-                  <div style={{ display:'grid', gap:6, marginBottom:10 }}>
+                  <div className="ui-c44e95">
                     {(planSemanal.soluciones || []).slice(0, 3).map((sol, si) => (
-                      <div key={si} style={{ fontSize:12, color:'#263026' }}>
+                      <div className="ui-405ecf" key={si}>
                         <strong>Sol. {sol.nombre}:</strong> {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x => x.trim()).join('  -  ') || 'Sin productos'}
                       </div>
                     ))}
                   </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                    <button className="ag-small-action" onClick={abrirAplicarPlan}
-                      style={{ padding:'11px', borderRadius:'var(--ag-radius)', border:'none', background:'#1a5c2e', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                  <div className="ui-f56ef1">
+                    <button className="ag-small-action ui-3f7a77" onClick={abrirAplicarPlan}
+                     >
                       Aplicar hoy
                     </button>
-                    <button className="ag-small-action" onClick={desactivarPlanSemanal}
-                      style={{ padding:'11px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                    <button className="ag-small-action ui-98ffc9" onClick={desactivarPlanSemanal}
+                     >
                       Desactivar
                     </button>
                   </div>
                   {aplicacionesPlan.length > 0 && (
-                    <div style={{ marginTop:12 }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:"#697970", textTransform:'uppercase', marginBottom:6 }}>Ultimas aplicaciones</div>
+                    <div className="ui-002535">
+                      <div className="ui-2fff95">Ultimas aplicaciones</div>
                       {aplicacionesPlan.slice(0, 5).map(app => (
-                        <div key={app.id} style={{ display:'flex', justifyContent:'space-between', gap:10, padding:'7px 0', borderTop:'1px solid rgba(0,0,0,0.06)' }}>
-                          <span style={{ fontSize:12, color:'#202820' }}>{app.fecha}{app.responsable ? `  -  ${app.responsable}` : ''}</span>
-                          <strong style={{ fontSize:12 }}>{app.litros_aplicados || '-'} L</strong>
+                        <div className="ui-d1d4a9" key={app.id}>
+                          <span className="ui-93e9c9">{app.fecha}{app.responsable ? `  -  ${app.responsable}` : ''}</span>
+                          <strong className="ui-6b9c17">{app.litros_aplicados || '-'} L</strong>
                         </div>
                       ))}
                     </div>
@@ -1106,13 +1104,13 @@ export default function FichaBloque() {
               )}
             </div>
 
-            <button className="ag-small-action" onClick={abrirNuevaFertilizacion}
-              style={{ width:'100%', padding:13, borderRadius:'var(--ag-radius)', border:'none', background:'#1a5c2e', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', marginBottom:16 }}>
+            <button className="ag-small-action ui-bcc504" onClick={abrirNuevaFertilizacion}
+             >
               + Nueva fertilizacion
             </button>
 
             {fertilizaciones.length === 0 ? (
-              <div className="ag-surface" style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13, background:'#fff', borderRadius:'var(--ag-radius)' }}>
+              <div className="ag-surface ui-eeb39f">
                 Sin fertilizaciones registradas en este bloque
               </div>
             ) : (
@@ -1120,23 +1118,23 @@ export default function FichaBloque() {
                 {/* Fertilizacion actual */}
                 {fertilizaciones[0] && (
                   <>
-                    <div style={{ fontSize:12, fontWeight:700, color:'#1a5c2e', marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>Fertilizacion actual</div>
-                    <div onClick={() => setFertDetalle(fertilizaciones[0])}
-                      style={{ background:'#1a5c2e', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:16, cursor:'pointer' }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
-                        <div style={{ fontSize:16, fontWeight:700, color:'#fff' }}>{rangoFertilizacion(fertilizaciones[0])}</div>
-                        <i className="ti ti-chevron-right" style={{ fontSize:16, color:'rgba(255,255,255,0.4)' }} aria-hidden="true"></i>
+                    <div className="ui-4192ca">Fertilizacion actual</div>
+                    <div className="ui-2e75cf" onClick={() => setFertDetalle(fertilizaciones[0])}
+                     >
+                      <div className="ui-5ad71a">
+                        <div className="ui-659921">{rangoFertilizacion(fertilizaciones[0])}</div>
+                        <i className="ti ti-chevron-right ui-77746e" aria-hidden="true"></i>
                       </div>
                       {(fertilizaciones[0].soluciones || []).map((sol, si) => (
-                        <div key={si} style={{ marginBottom:6 }}>
-                          <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)', fontWeight:700, marginBottom:3 }}>SOL. {sol.nombre}</div>
-                          <div style={{ fontSize:12, color:'rgba(255,255,255,0.85)' }}>
+                        <div className="ui-2937bf" key={si}>
+                          <div className="ui-627852">SOL. {sol.nombre}</div>
+                          <div className="ui-d76068">
                             {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join('  -  ')}
                           </div>
                         </div>
                       ))}
                       {notasFertilizacionVisibles(fertilizaciones[0].notas) && (
-                        <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', marginTop:8, fontStyle:'italic' }}>{notasFertilizacionVisibles(fertilizaciones[0].notas)}</div>
+                        <div className="ui-80cec8">{notasFertilizacionVisibles(fertilizaciones[0].notas)}</div>
                       )}
                     </div>
                   </>
@@ -1145,17 +1143,17 @@ export default function FichaBloque() {
                 {/* Fertilizacion anterior */}
                 {fertilizaciones[1] && (
                   <>
-                    <div style={{ fontSize:12, fontWeight:700, color:"#697970", marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>Fertilizacion anterior</div>
-                    <div className="ag-surface" onClick={() => setFertDetalle(fertilizaciones[1])}
-                      style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:16, cursor:'pointer' }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
-                        <div style={{ fontSize:15, fontWeight:700, color:"#182c25" }}>{rangoFertilizacion(fertilizaciones[1])}</div>
-                        <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
+                    <div className="ui-4899be">Fertilizacion anterior</div>
+                    <div className="ag-surface ui-fe238f" onClick={() => setFertDetalle(fertilizaciones[1])}
+                     >
+                      <div className="ui-5ad71a">
+                        <div className="ui-62e15c">{rangoFertilizacion(fertilizaciones[1])}</div>
+                        <i className="ti ti-chevron-right ui-d63ae8" aria-hidden="true"></i>
                       </div>
                       {(fertilizaciones[1].soluciones || []).map((sol, si) => (
-                        <div key={si} style={{ marginBottom:6 }}>
-                          <div style={{ fontSize:12, color:'#1a5c2e', fontWeight:700, marginBottom:3 }}>SOL. {sol.nombre}</div>
-                          <div style={{ fontSize:12, color:'#555' }}>
+                        <div className="ui-2937bf" key={si}>
+                          <div className="ui-63459e">SOL. {sol.nombre}</div>
+                          <div className="ui-93a7e1">
                             {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join('  -  ')}
                           </div>
                         </div>
@@ -1167,17 +1165,17 @@ export default function FichaBloque() {
                 {/* Historial de fertilizaciones */}
                 {fertilizaciones.length > 2 && (
                   <>
-                    <div style={{ fontSize:12, fontWeight:700, color:"#697970", marginBottom:8, textTransform:'uppercase', letterSpacing:.5 }}>Historial</div>
+                    <div className="ui-4899be">Historial</div>
                     {fertilizaciones.slice(2).map(fert => (
-                      <div className="ag-surface" key={fert.id} onClick={() => setFertDetalle(fert)}
-                        style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:8, display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
-                        <div style={{ flex:1 }}>
-                          <div style={{ fontSize:13, fontWeight:600, color:"#182c25" }}>{rangoFertilizacion(fert)}</div>
-                          <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>
+                      <div className="ag-surface ui-652941" key={fert.id} onClick={() => setFertDetalle(fert)}
+                       >
+                        <div className="ui-da5cd6">
+                          <div className="ui-076bb2">{rangoFertilizacion(fert)}</div>
+                          <div className="ui-a8f171">
                             {(fert.soluciones || []).length} solucion{(fert.soluciones || []).length !== 1 ? 'es' : ''}  -  {(fert.soluciones || []).reduce((s,sol) => s + (sol.productos||[]).length, 0)} productos
                           </div>
                         </div>
-                        <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
+                        <i className="ti ti-chevron-right ui-d63ae8" aria-hidden="true"></i>
                       </div>
                     ))}
                   </>
@@ -1191,22 +1189,22 @@ export default function FichaBloque() {
         {seccion === 'cosechas' && (
           <>
             {cosechasCiclo.length === 0 ? (
-              <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin cosechas registradas en este ciclo</div>
+              <div className="ui-5baa7a">Sin cosechas registradas en este ciclo</div>
             ) : (
               <>
-                <div style={{ background:"#124e38", borderRadius:'var(--ag-radius)', padding:'16px', marginBottom:10 }}>
-                  <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', marginBottom:4 }}>TOTAL DEL CICLO</div>
-                  <div style={{ fontSize:32, fontWeight:700, color:'#fff' }}>{fmtKg(totalKgCiclo)} kg</div>
-                  {kgPorPlanta && <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:2 }}>{kgPorPlanta} kg por planta</div>}
+                <div className="ui-369c7d">
+                  <div className="ui-19caa9">TOTAL DEL CICLO</div>
+                  <div className="ui-f89942">{fmtKg(totalKgCiclo)} kg</div>
+                  {kgPorPlanta && <div className="ui-626bf4">{kgPorPlanta} kg por planta</div>}
                 </div>
                 {cosechasCiclo.map(c => (
-                  <div className="ag-surface" key={c.id} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:8 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:"#182c25" }}>{c.fecha}</div>
-                      <div style={{ fontSize:16, fontWeight:700, color:"#182c25" }}>{fmtKg(c.kg_total)} kg</div>
+                  <div className="ag-surface ui-0beb00" key={c.id}>
+                    <div className="ui-9b26fa">
+                      <div className="ui-076bb2">{c.fecha}</div>
+                      <div className="ui-6dc1df">{fmtKg(c.kg_total)} kg</div>
                     </div>
-                    <div style={{ display:'flex', gap:6 }}>
-                      <div style={{ fontSize:12, padding:'2px 8px', borderRadius:6, background:'#eeeeee', color:'#555' }}>
+                    <div className="ui-91294d">
+                      <div className="ui-fcf19b">
                         {c.calidad === 'primera' ? '1ra' : c.calidad === 'segunda' ? '2da' : 'Mixta'}
                       </div>
                     </div>
@@ -1220,36 +1218,36 @@ export default function FichaBloque() {
         {/* INCIDENCIAS */}
         {seccion === 'incidencias' && (
           <>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:12 }}>Fumigaciones registradas y vinculadas a este bloque</div>
+            <div className="ui-315e0e">Fumigaciones registradas y vinculadas a este bloque</div>
             {incidencias.length === 0 ? (
-              <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin fumigaciones registradas</div>
+              <div className="ui-5baa7a">Sin fumigaciones registradas</div>
             ) : incidencias.map((inc, i) => (
-              <div className="ag-surface" key={i} onClick={() => setIncidenciaDetalle(inc)} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:8, cursor:'pointer' }}>
-                <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
-                  <div style={{ fontSize:12, fontWeight:600, padding:'2px 8px', borderRadius:6, background: inc.tipo==='fumigacion' ? '#fff3e8' : '#eaf4fb', color: inc.tipo==='fumigacion' ? '#e07b00' : '#2980b9' }}>
+              <div className="ag-surface ui-3451cf" key={i} onClick={() => setIncidenciaDetalle(inc)}>
+                <div className="ui-31d953">
+                  <div className="ui-878e4e" style={{ background: inc.tipo==='fumigacion' ? '#fff3e8' : '#eaf4fb', color: inc.tipo==='fumigacion' ? '#e07b00' : '#2980b9' }}>
                     {inc.tipo === 'fumigacion' ? 'Fumigacion' : inc.tipo === 'fertiriego' ? 'Fertiriego' : 'Foliar'}
                   </div>
-                  <div style={{ fontSize:12, color:"#697970" }}>{inc.fecha}</div>
+                  <div className="ui-93a7e1">{inc.fecha}</div>
                 </div>
-                <div style={{ fontSize:13, color:"#182c25", marginBottom:4 }}>{inc.notas}</div>
+                <div className="ui-3178c3">{inc.notas}</div>
                 {inc.fumigacion_productos?.length > 0 && (
-                  <div style={{ fontSize:12, color:"#697970" }}>
+                  <div className="ui-93a7e1">
                     {inc.fumigacion_productos.map(fp => fp.productos?.nombre || fp.producto_nombre).filter(Boolean).join(', ')}
                   </div>
                 )}
-                <div style={{ fontSize:12, color:"#08603f", marginTop:8, fontWeight:700 }}>Tocar para ver detalle</div>
+                <div className="ui-88371b">Tocar para ver detalle</div>
               </div>
             ))}
             {muertes.length > 0 && (
               <>
-                <div style={{ fontSize:12, fontWeight:600, color:"#697970", margin:'16px 0 8px', textTransform:'uppercase' }}>Muerte de plantas</div>
+                <div className="ui-2c2d2a">Muerte de plantas</div>
                 {muertes.map(m => (
-                  <div key={m.id} style={{ background:'#fff0f0', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:8 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:'#c84040' }}>{m.cantidad} plantas  -  {m.causa}</div>
-                      <div style={{ fontSize:12, color:"#697970" }}>{m.fecha}</div>
+                  <div className="ui-74aa9e" key={m.id}>
+                    <div className="ui-9b26fa">
+                      <div className="ui-66a70e">{m.cantidad} plantas  -  {m.causa}</div>
+                      <div className="ui-93a7e1">{m.fecha}</div>
                     </div>
-                    {m.descripcion && <div style={{ fontSize:12, color:"#697970" }}>{m.descripcion}</div>}
+                    {m.descripcion && <div className="ui-93a7e1">{m.descripcion}</div>}
                   </div>
                 ))}
               </>
@@ -1260,22 +1258,22 @@ export default function FichaBloque() {
         {/* FOTOS */}
         {seccion === 'fotos' && (
           <>
-            <button className="ag-small-action" onClick={() => fileRef.current?.click()}
-              style={{ width:'100%', padding:13, borderRadius:'var(--ag-radius)', border:'1px dashed #888', background:'transparent', fontSize:13, fontWeight:600, color:'#555', cursor:'pointer', marginBottom:12 }}>
-              <i className="ti ti-camera" style={{ fontSize:16, marginRight:6 }} aria-hidden="true"></i>
+            <button className="ag-small-action ui-62f30d" onClick={() => fileRef.current?.click()}
+             >
+              <i className="ti ti-camera ui-e705f9" aria-hidden="true"></i>
               Agregar foto
             </button>
             {fotos.length === 0 ? (
-              <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin fotos en este ciclo</div>
+              <div className="ui-5baa7a">Sin fotos en este ciclo</div>
             ) : (
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              <div className="ui-f56ef1">
                 {fotos.map(f => (
-                  <div key={f.id} style={{ borderRadius:'var(--ag-radius)', overflow:'hidden', position:'relative', background:"#e2e9e5" }}>
-                    <img src={f.url} alt="foto bloque" style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }}/>
-                    <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'rgba(0,0,0,0.5)', padding:'6px 8px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                      <span style={{ fontSize:12, color:'#fff' }}>{f.fecha}</span>
-                      <button aria-label="Eliminar" className="ag-small-action" onClick={() => eliminarFoto(f.id)} style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}>
-                        <i className="ti ti-trash" style={{ fontSize:14, color:'#fff' }} aria-hidden="true"></i>
+                  <div className="ui-8e4804" key={f.id}>
+                    <img className="ui-caf585" src={f.url} alt="foto bloque"/>
+                    <div className="ui-aa460d">
+                      <span className="ui-e3758e">{f.fecha}</span>
+                      <button aria-label="Eliminar" className="ag-small-action ui-d088ca" onClick={() => eliminarFoto(f.id)}>
+                        <i className="ti ti-trash ui-9fe38b" aria-hidden="true"></i>
                       </button>
                     </div>
                   </div>
@@ -1289,19 +1287,19 @@ export default function FichaBloque() {
         {seccion === 'historial' && (
           <>
             {historial.length === 0 ? (
-              <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin ciclos anteriores</div>
+              <div className="ui-5baa7a">Sin ciclos anteriores</div>
             ) : historial.map(p => (
-              <div className="ag-surface" key={p.id} onClick={() => setHistorialDetalle(p)}
-                style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom:8, display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:600, color:"#182c25" }}>
+              <div className="ag-surface ui-4aac8a" key={p.id} onClick={() => setHistorialDetalle(p)}
+               >
+                <div className="ui-da5cd6">
+                  <div className="ui-451b76">
                     {p.cultivos?.nombre}{getVariedad(p) ? `  -  ${getVariedad(p)}` : ''}
                   </div>
-                  <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>
+                  <div className="ui-a8f171">
                     Siembra: {p.fecha_siembra || '-'}
                   </div>
                 </div>
-                <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
+                <i className="ti ti-chevron-right ui-d63ae8" aria-hidden="true"></i>
               </div>
             ))}
           </>
@@ -1310,76 +1308,76 @@ export default function FichaBloque() {
 
       {/* Modal nueva/editar plantacion */}
       {(showNuevaPlantacion || showEditarPlantacion) && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{showEditarPlantacion ? 'Editar plantacion' : 'Nueva plantacion'}</div>
+        <div className="ui-66d878" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end' }}>
+          <div className="ui-7dd37e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div className="ui-c7b1b6">{showEditarPlantacion ? 'Editar plantacion' : 'Nueva plantacion'}</div>
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Cultivo *
+            <label className="ag-field-label ui-74cc19">Cultivo *
             <select style={inpStyle} value={form.cultivo_id} onChange={e => setForm(f => ({...f, cultivo_id:e.target.value}))}>
               <option value="">Selecciona cultivo...</option>
               {cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select></label>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:8, marginTop:-2, marginBottom:10 }}>
-              <input
-                style={{ ...inpStyle, marginBottom:0 }}
+            <div className="ui-16e267">
+              <input className="ui-e7ec54"
+                style={{ ...inpStyle }}
                 type="text"
                 value={nuevoCultivoNombre}
                 onChange={e => setNuevoCultivoNombre(e.target.value)}
                 placeholder="Si no aparece, escribilo aca..."
               />
-              <button className="ag-small-action"
+              <button className="ag-small-action ui-c1563e"
                 type="button"
                 onClick={agregarCultivoRapido}
-                style={{ padding:'0 14px', borderRadius:'var(--ag-radius)', border:'none', background:"#08603f", color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}
+               
               >
                 Agregar
               </button>
             </div>
             {cultivoRapidoError && (
-              <div style={{ background:'#fff0f0', color:'#a52525', borderRadius:'var(--ag-radius)', padding:'9px 11px', fontSize:12, marginBottom:10 }}>
+              <div className="ui-9614e6">
                 {cultivoRapidoError}
               </div>
             )}
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Variedad
+            <label className="ag-field-label ui-74cc19">Variedad
             <input style={inpStyle} type="text" value={form.variedad_texto} onChange={e => setForm(f => ({...f, variedad_texto:e.target.value}))} placeholder="Ej: Rojo, Lamuyo..."/></label>
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Fecha de siembra *
+            <label className="ag-field-label ui-74cc19">Fecha de siembra *
             <input style={inpStyle} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({...f, fecha_siembra:e.target.value}))}/></label>
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Cantidad de plantas
+            <label className="ag-field-label ui-74cc19">Cantidad de plantas
             <input style={inpStyle} type="text" inputMode="numeric" value={form.cantidad_plantas} onChange={e => setForm(f => ({...f, cantidad_plantas:e.target.value.replace(/[^0-9.,\s]/g, '')}))} onBlur={() => setForm(f => ({...f, cantidad_plantas:formatLocaleInteger(f.cantidad_plantas)}))} placeholder="Ej: 41.497" autoComplete="off"/></label>
 
-            <div style={{ fontSize:12, color:"#697970", marginBottom:8 }}>Abonos de base</div>
-            <div style={{ display:'flex', gap:7, marginBottom:10 }}>
-              <input style={{ ...inpStyle, marginBottom:0, flex:1 }} type="text" value={nuevoAbonoNombre} onChange={e => setNuevoAbonoNombre(e.target.value)} placeholder="Escribir abono directamente" />
-              <button className="ag-small-action" type="button" onClick={agregarAbonoRapido} disabled={!nuevoAbonoNombre.trim()} style={{ padding:'9px 13px', borderRadius:'var(--ag-radius)', border:'none', background:'#1a5c2e', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>Agregar</button>
+            <div className="ui-9546b4">Abonos de base</div>
+            <div className="ui-711010">
+              <input className="ui-d8b4c5" style={{ ...inpStyle }} type="text" value={nuevoAbonoNombre} onChange={e => setNuevoAbonoNombre(e.target.value)} placeholder="Escribir abono directamente" />
+              <button className="ag-small-action ui-2082ce" type="button" onClick={agregarAbonoRapido} disabled={!nuevoAbonoNombre.trim()}>Agregar</button>
             </div>
-            <div style={{ fontSize:12, color:"#697970", margin:'-4px 0 9px' }}>No hace falta cargarlo previamente en inventario.</div>
-            {abonoRapidoError && <div style={{ background:'#fff0f0', color:'#a52525', borderRadius:'var(--ag-radius)', padding:'9px 11px', fontSize:12, marginBottom:10 }}>{abonoRapidoError}</div>}
+            <div className="ui-59f8a7">No hace falta cargarlo previamente en inventario.</div>
+            {abonoRapidoError && <div className="ui-9614e6">{abonoRapidoError}</div>}
             {abonos.map(a => (
-              <div key={a.id} style={{ marginBottom:8 }}>
-                <div onClick={() => toggleAbono(a.id)}
-                  style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:'var(--ag-radius)', background: form.abonos_ids.includes(a.id) ? '#212121' : '#fff', cursor:'pointer', marginBottom: form.abonos_ids.includes(a.id) ? 6 : 0 }}>
-                  <div style={{ width:18, height:18, borderRadius:5, border: form.abonos_ids.includes(a.id) ? 'none' : '1.5px solid #d0d0d0', background: form.abonos_ids.includes(a.id) ? '#fff' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    {form.abonos_ids.includes(a.id) && <i className="ti ti-check" style={{ fontSize:12, color:"#124e38" }} aria-hidden="true"></i>}
+              <div className="ui-d51702" key={a.id}>
+                <div className="ui-bfa195" onClick={() => toggleAbono(a.id)}
+                  style={{ background: form.abonos_ids.includes(a.id) ? '#212121' : '#fff', marginBottom: form.abonos_ids.includes(a.id) ? 6 : 0 }}>
+                  <div className="ui-7b138e" style={{ border: form.abonos_ids.includes(a.id) ? 'none' : '1.5px solid #d0d0d0', background: form.abonos_ids.includes(a.id) ? '#fff' : 'transparent' }}>
+                    {form.abonos_ids.includes(a.id) && <i className="ti ti-check ui-aa481a" aria-hidden="true"></i>}
                   </div>
-                  <span style={{ fontSize:13, color: form.abonos_ids.includes(a.id) ? '#fff' : '#0a0a0a' }}>{a.nombre}</span>
+                  <span className="ui-3044b6" style={{ color: form.abonos_ids.includes(a.id) ? '#fff' : '#0a0a0a' }}>{a.nombre}</span>
                 </div>
                 {form.abonos_ids.includes(a.id) && (
-                  <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr 1fr', gap:6, paddingLeft:4 }}>
-                    <input style={{ flex:2, padding:'8px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }}
+                  <div className="ui-da683d">
+                    <input className="ui-0b58f7"
                       type="text" placeholder="Cantidad (ej: 50)"
                       value={form.abonos_cantidades[a.id] || ''}
                       onChange={e => setForm(f => ({...f, abonos_cantidades:{...f.abonos_cantidades, [a.id]:e.target.value}}))}/>
-                    <select style={{ flex:1, padding:'8px 6px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }}
+                    <select className="ui-59c31d"
                       value={(form.abonos_cantidades[a.id+'_unidad']) || 'kg'}
                       onChange={e => setForm(f => ({...f, abonos_cantidades:{...f.abonos_cantidades, [a.id+'_unidad']:e.target.value}}))}>
                       <option value="kg">kg</option>
                       <option value="g">g</option>
                       <option value="ton">ton</option>
                     </select>
-                    <select style={{ padding:'8px 6px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:12, color:"#182c25" }}
+                    <select className="ui-170849"
                       value={(form.abonos_cantidades[a.id+'_alcance']) || 'total'}
                       onChange={e => setForm(f => ({...f, abonos_cantidades:{...f.abonos_cantidades, [a.id+'_alcance']:e.target.value}}))}>
                       <option value="total">Total</option>
@@ -1390,11 +1388,11 @@ export default function FichaBloque() {
               </div>
             ))}
 
-            <button className="ag-small-action" style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background: saving ? '#888' : '#212121', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer', marginTop:12 }}
+            <button className="ag-small-action ui-ae1eb0" style={{ background: saving ? '#888' : '#212121' }}
               onClick={showEditarPlantacion ? guardarEditarPlantacion : guardarNuevaPlantacion} disabled={saving}>
               {saving ? 'Guardando...' : showEditarPlantacion ? 'Guardar cambios' : 'Guardar plantacion'}
             </button>
-            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }}
+            <button className="ag-small-action ui-9d2a4a"
               onClick={() => { setShowNuevaPlantacion(false); setShowEditarPlantacion(false) }}>
               Cancelar
             </button>
@@ -1405,27 +1403,27 @@ export default function FichaBloque() {
       {/* Modal muerte de plantas */}
       {showMuerte && (
         <Modal onClose={() => setShowMuerte(false)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>Registrar muerte de plantas</div>
+          <div className="ui-72e3b5" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0' }}>
+            <div className="ui-c7b1b6">Registrar muerte de plantas</div>
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Cantidad de plantas *
+            <label className="ag-field-label ui-74cc19">Cantidad de plantas *
             <input style={inpStyle} type="number" value={formMuerte.cantidad} onChange={e => setFormMuerte(f => ({...f, cantidad:e.target.value}))} placeholder="Ej: 5"/></label>
 
-            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Causa</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:12 }}>
+            <div className="ui-74cc19">Causa</div>
+            <div className="ui-1e850e">
               {CAUSAS_MUERTE.map(c => (
-                <button className="ag-small-action" key={c} onClick={() => setFormMuerte(f => ({...f, causa:c}))}
-                  style={{ padding:'7px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:12, fontWeight:500, cursor:'pointer', background: formMuerte.causa===c ? '#c84040' : '#fff', color: formMuerte.causa===c ? '#fff' : '#555' }}>
+                <button className="ag-small-action ui-e36b2f" key={c} onClick={() => setFormMuerte(f => ({...f, causa:c}))}
+                  style={{ background: formMuerte.causa===c ? '#c84040' : '#fff', color: formMuerte.causa===c ? '#fff' : '#555' }}>
                   {c}
                 </button>
               ))}
             </div>
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Descripcion (opcional)
-            <textarea style={{ ...inpStyle, minHeight:60, resize:'vertical' }} value={formMuerte.descripcion} onChange={e => setFormMuerte(f => ({...f, descripcion:e.target.value}))} placeholder="Detalles adicionales..."/></label>
+            <label className="ag-field-label ui-74cc19">Descripcion (opcional)
+            <textarea className="ui-dc8f36" style={{ ...inpStyle }} value={formMuerte.descripcion} onChange={e => setFormMuerte(f => ({...f, descripcion:e.target.value}))} placeholder="Detalles adicionales..."/></label>
 
-            <button className="ag-small-action" style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:'#c84040', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarMuerte} disabled={saving}>{saving ? 'Guardando...' : 'Registrar'}</button>
-            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setShowMuerte(false)}>Cancelar</button>
+            <button className="ag-small-action ui-9002be" onClick={guardarMuerte} disabled={saving}>{saving ? 'Guardando...' : 'Registrar'}</button>
+            <button className="ag-small-action ui-9d2a4a" onClick={() => setShowMuerte(false)}>Cancelar</button>
           </div>
         </Modal>
       )}
@@ -1434,48 +1432,48 @@ export default function FichaBloque() {
       {showPlanSemanal && (
         <Modal onClose={() => setShowPlanSemanal(false)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}
           onClick={e => e.target===e.currentTarget && setShowPlanSemanal(false)}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'88vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:4 }}>{formPlan.id ? 'Editar plan semanal' : 'Nuevo plan semanal'}</div>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:16 }}>Usalo solo en los bloques donde preparas fertilizacion para varios dias.</div>
+          <div className="ui-fda65b" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div className="ui-99efa8">{formPlan.id ? 'Editar plan semanal' : 'Nuevo plan semanal'}</div>
+            <div className="ui-7d5827">Usalo solo en los bloques donde preparas fertilizacion para varios dias.</div>
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Nombre
+            <label className="ag-field-label ui-74cc19">Nombre
             <input style={inpStyle} value={formPlan.nombre} onChange={e => setFormPlan(f => ({ ...f, nombre:e.target.value }))} /></label>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div className="ui-f56ef1">
               <div>
-                <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Fecha inicio
+                <label className="ag-field-label ui-74cc19">Fecha inicio
                 <input type="date" style={inpStyle} value={formPlan.fecha_inicio} onChange={e => setFormPlan(f => ({ ...f, fecha_inicio:e.target.value }))} /></label>
               </div>
               <div>
-                <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Litros preparados
+                <label className="ag-field-label ui-74cc19">Litros preparados
                 <input style={inpStyle} value={formPlan.litros_preparados} onChange={e => setFormPlan(f => ({ ...f, litros_preparados:e.target.value }))} placeholder="Ej: 200" /></label>
               </div>
             </div>
 
             {formPlan.soluciones.map((sol, si) => (
-              <div className="ag-surface" key={si} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:14, marginBottom:12 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:'#1a5c2e' }}>Solucion {sol.nombre}</div>
-                  {formPlan.soluciones.length > 1 && <button onClick={() => eliminarSolucionPlan(si)} style={{ border:'none', background:'none', color:'#c84040', cursor:'pointer' }}>Eliminar</button>}
+              <div className="ag-surface ui-7fff2b" key={si}>
+                <div className="ui-b3c308">
+                  <div className="ui-515b34">Solucion {sol.nombre}</div>
+                  {formPlan.soluciones.length > 1 && <button className="ui-6ae6fb" onClick={() => eliminarSolucionPlan(si)}>Eliminar</button>}
                 </div>
                 {(sol.productos || []).map((prod, pi) => (
-                  <div className="ag-product-row" key={pi} style={{ display:'grid', gridTemplateColumns:'1fr 74px 72px 28px', gap:6, marginBottom:8 }}>
-                    <input style={{ ...inpStyle, marginBottom:0 }} value={prod.nombre} onChange={e => actualizarProductoPlan(si, pi, 'nombre', e.target.value)} placeholder="Producto"/>
-                    <input style={{ ...inpStyle, marginBottom:0 }} value={prod.cantidad} onChange={e => actualizarProductoPlan(si, pi, 'cantidad', e.target.value)} placeholder="Cant."/>
-                    <select style={{ ...inpStyle, marginBottom:0 }} value={prod.unidad} onChange={e => actualizarProductoPlan(si, pi, 'unidad', e.target.value)}>
+                  <div className="ag-product-row ui-964def" key={pi}>
+                    <input className="ui-e7ec54" style={{ ...inpStyle }} value={prod.nombre} onChange={e => actualizarProductoPlan(si, pi, 'nombre', e.target.value)} placeholder="Producto"/>
+                    <input className="ui-e7ec54" style={{ ...inpStyle }} value={prod.cantidad} onChange={e => actualizarProductoPlan(si, pi, 'cantidad', e.target.value)} placeholder="Cant."/>
+                    <select className="ui-e7ec54" style={{ ...inpStyle }} value={prod.unidad} onChange={e => actualizarProductoPlan(si, pi, 'unidad', e.target.value)}>
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
-                    <button onClick={() => eliminarProductoPlan(si, pi)} style={{ border:'none', background:'transparent', color:'#c84040', cursor:'pointer' }}>x</button>
+                    <button className="ui-b58c47" onClick={() => eliminarProductoPlan(si, pi)}>x</button>
                   </div>
                 ))}
-                <button className="ag-small-action" onClick={() => agregarProductoPlan(si)} style={{ width:'100%', padding:9, borderRadius:'var(--ag-radius)', border:'1px dashed #b8c9b5', background:'transparent', fontSize:12, color:'#1a5c2e', cursor:'pointer' }}>+ Producto</button>
+                <button className="ag-small-action ui-0a1d4e" onClick={() => agregarProductoPlan(si)}>+ Producto</button>
               </div>
             ))}
-            <button className="ag-small-action" onClick={agregarSolucionPlan} style={{ width:'100%', padding:11, borderRadius:'var(--ag-radius)', border:'1px dashed #1a5c2e', background:'#fff', fontSize:12, color:'#1a5c2e', cursor:'pointer', marginBottom:12 }}>+ Agregar solucion</button>
-            <textarea style={{ ...inpStyle, minHeight:70, resize:'vertical' }} value={formPlan.notas} onChange={e => setFormPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas del plan"/>
-            <button className="ag-small-action" onClick={guardarPlanSemanal} disabled={savingFert} style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', border:'none', background:'#1a5c2e', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+            <button className="ag-small-action ui-b987ad" onClick={agregarSolucionPlan}>+ Agregar solucion</button>
+            <textarea className="ui-3d581a" style={{ ...inpStyle }} value={formPlan.notas} onChange={e => setFormPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas del plan"/>
+            <button className="ag-small-action ui-08c1f7" onClick={guardarPlanSemanal} disabled={savingFert}>
               {savingFert ? 'Guardando...' : 'Guardar plan semanal'}
             </button>
-            <button className="ag-small-action" onClick={() => setShowPlanSemanal(false)} style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', marginTop:8, fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
+            <button className="ag-small-action ui-51b9ff" onClick={() => setShowPlanSemanal(false)}>Cancelar</button>
           </div>
         </Modal>
       )}
@@ -1483,19 +1481,19 @@ export default function FichaBloque() {
       {showAplicarPlan && (
         <Modal onClose={() => setShowAplicarPlan(false)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}
           onClick={e => e.target===e.currentTarget && setShowAplicarPlan(false)}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:16 }}>Aplicar plan semanal</div>
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Fecha
+          <div className="ui-72e3b5" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0' }}>
+            <div className="ui-606db8">Aplicar plan semanal</div>
+            <label className="ag-field-label ui-74cc19">Fecha
             <input type="date" style={inpStyle} value={formAplicacionPlan.fecha} onChange={e => setFormAplicacionPlan(f => ({ ...f, fecha:e.target.value }))} /></label>
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Litros aplicados
+            <label className="ag-field-label ui-74cc19">Litros aplicados
             <input style={inpStyle} value={formAplicacionPlan.litros_aplicados} onChange={e => setFormAplicacionPlan(f => ({ ...f, litros_aplicados:e.target.value }))} placeholder="Ej: 40" /></label>
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Responsable
+            <label className="ag-field-label ui-74cc19">Responsable
             <input style={inpStyle} value={formAplicacionPlan.responsable} onChange={e => setFormAplicacionPlan(f => ({ ...f, responsable:e.target.value }))} placeholder="Opcional" /></label>
-            <textarea style={{ ...inpStyle, minHeight:70, resize:'vertical' }} value={formAplicacionPlan.notas} onChange={e => setFormAplicacionPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas"/>
-            <button className="ag-small-action" onClick={guardarAplicacionPlan} disabled={savingFert} style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', border:'none', background:'#1a5c2e', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+            <textarea className="ui-3d581a" style={{ ...inpStyle }} value={formAplicacionPlan.notas} onChange={e => setFormAplicacionPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas"/>
+            <button className="ag-small-action ui-08c1f7" onClick={guardarAplicacionPlan} disabled={savingFert}>
               {savingFert ? 'Guardando...' : 'Guardar aplicacion'}
             </button>
-            <button className="ag-small-action" onClick={() => setShowAplicarPlan(false)} style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', marginTop:8, fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
+            <button className="ag-small-action ui-51b9ff" onClick={() => setShowAplicarPlan(false)}>Cancelar</button>
           </div>
         </Modal>
       )}
@@ -1503,51 +1501,51 @@ export default function FichaBloque() {
       {incidenciaDetalle && (
         <Modal onClose={() => setIncidenciaDetalle(null)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:130, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center', padding: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : 0 }}
           onClick={e => e.target===e.currentTarget && setIncidenciaDetalle(null)}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:520, padding:'22px 20px 28px', maxHeight:'88vh', overflowY:'auto' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start', marginBottom:14 }}>
+          <div className="ui-ae773e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0' }}>
+            <div className="ui-6c2eec">
               <div>
-                <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Detalle de fumigacion</div>
-                <div style={{ fontSize:22, fontWeight:700, color:"#182c25" }}>{incidenciaDetalle.tipo === 'fertiriego' ? 'Fertiriego' : incidenciaDetalle.tipo === 'foliar' ? 'Foliar' : 'Fumigacion'}</div>
-                <div style={{ fontSize:12, color:"#697970", marginTop:3 }}>{incidenciaDetalle.fecha}</div>
+                <div className="ui-476525">Detalle de fumigacion</div>
+                <div className="ui-882dd8">{incidenciaDetalle.tipo === 'fertiriego' ? 'Fertiriego' : incidenciaDetalle.tipo === 'foliar' ? 'Foliar' : 'Fumigacion'}</div>
+                <div className="ui-13b58a">{incidenciaDetalle.fecha}</div>
               </div>
-              <button aria-label="Cerrar" onClick={() => setIncidenciaDetalle(null)} style={{ border:'none', background:'#fff', borderRadius:'var(--ag-radius)', width:38, height:38, cursor:'pointer' }}>
-                <i className="ti ti-x" style={{ fontSize:19 }} aria-hidden="true"></i>
+              <button className="ui-6de38e" aria-label="Cerrar" onClick={() => setIncidenciaDetalle(null)}>
+                <i className="ti ti-x ui-b7c8fe" aria-hidden="true"></i>
               </button>
             </div>
 
-            <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:14, marginBottom:10 }}>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Bloques</div>
-              <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>
+            <div className="ag-surface ui-f3f33f">
+              <div className="ui-74cc19">Bloques</div>
+              <div className="ui-788a2f">
                 {(incidenciaDetalle.fumigacion_bloques || []).map(fb => fb.bloques?.codigo).filter(Boolean).join(', ') || bloque?.codigo || '-'}
               </div>
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:14 }}>
-                <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Operario</div>
-                <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{incidenciaDetalle.operario || '-'}</div>
+            <div className="ui-f6fa01">
+              <div className="ag-surface ui-c2bf5d">
+                <div className="ui-74cc19">Operario</div>
+                <div className="ui-788a2f">{incidenciaDetalle.operario || '-'}</div>
               </div>
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:14 }}>
-                <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Tanques</div>
-                <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>
+              <div className="ag-surface ui-c2bf5d">
+                <div className="ui-74cc19">Tanques</div>
+                <div className="ui-788a2f">
                   {incidenciaDetalle.tanques_cantidad || '-'}{incidenciaDetalle.tanque_litros ? ` x ${incidenciaDetalle.tanque_litros} L` : ''}
                 </div>
               </div>
             </div>
 
-            <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:14, marginBottom:10 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#182c25", marginBottom:10 }}>Productos aplicados</div>
+            <div className="ag-surface ui-f3f33f">
+              <div className="ui-3771db">Productos aplicados</div>
               {(incidenciaDetalle.fumigacion_productos || []).length === 0 ? (
-                <div style={{ fontSize:12, color:"#697970" }}>Sin productos cargados.</div>
+                <div className="ui-93a7e1">Sin productos cargados.</div>
               ) : incidenciaDetalle.fumigacion_productos.map((fp, idx) => (
-                <div key={idx} style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:10, padding:'10px 0', borderTop: idx === 0 ? 'none' : '1px solid #f0ede8' }}>
+                <div className="ui-d01382" key={idx} style={{ borderTop: idx === 0 ? 'none' : '1px solid #f0ede8' }}>
                   <div>
-                    <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</div>
-                    <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>
+                    <div className="ui-788a2f">{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</div>
+                    <div className="ui-a8f171">
                       Dosis: {fp.dosis || `${fp.cantidad || '-'} ${fp.unidad_uso || ''}`}
                     </div>
                   </div>
-                  <div style={{ textAlign:'right', fontSize:12, color:"#697970" }}>
+                  <div className="ui-eb34de">
                     {fp.descuento_stock ? `Stock: ${fmtKg(fp.descuento_stock)} ${fp.productos?.unidad || ''}` : ''}
                     {fp.productos?.carencia_dias ? <div>Carencia: {fp.productos.carencia_dias} dias</div> : null}
                   </div>
@@ -1556,9 +1554,9 @@ export default function FichaBloque() {
             </div>
 
             {incidenciaDetalle.notas && (
-              <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:14 }}>
-                <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Notas</div>
-                <div style={{ fontSize:13, color:"#182c25", lineHeight:1.45 }}>{incidenciaDetalle.notas}</div>
+              <div className="ag-surface ui-c2bf5d">
+                <div className="ui-74cc19">Notas</div>
+                <div className="ui-3e9bfb">{incidenciaDetalle.notas}</div>
               </div>
             )}
           </div>
@@ -1568,50 +1566,41 @@ export default function FichaBloque() {
       {showNuevaFertilizacion && (
         <Modal onClose={() => setShowNuevaFertilizacion(false)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}
           onClick={e => e.target===e.currentTarget && setShowNuevaFertilizacion(false)}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'92vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:4 }}>Nueva fertilizacion</div>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:20 }}>Elegi uno o varios bloques. Se guarda un registro separado por cada bloque.</div>
+          <div className="ui-6c907f" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div className="ui-99efa8">Nueva fertilizacion</div>
+            <div className="ui-fe1408">Elegi uno o varios bloques. Se guarda un registro separado por cada bloque.</div>
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Fecha *
+            <label className="ag-field-label ui-74cc19">Fecha *
             <input style={inpStyle} type="date" value={formFert.fecha} onChange={e => setFormFert(f => ({...f, fecha:e.target.value}))}/></label>
 
-            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Bloques *</div>
-            <div className="ag-surface" style={{ background:'#fff', border:"1px solid #e2e9e5", borderRadius:'var(--ag-radius)', padding:12, marginBottom:12 }}>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+            <div className="ui-74cc19">Bloques *</div>
+            <div className="ag-surface ui-91fc48">
+              <div className="ui-096aaf">
                 {(bloquesCampo.length ? bloquesCampo : [{ id, codigo: bloque.codigo }]).map(b => {
                   const seleccionado = (formFert.bloques_ids || []).includes(b.id)
                   const cultivo = b.plantaciones?.find(p => p.activa)?.cultivos?.nombre
                   return (
-                    <button className="ag-small-action" key={b.id} type="button" onClick={() => alternarBloqueFertilizacion(b.id)} style={{
-                      border:'1px solid #dfe6df',
-                      background: seleccionado ? '#1a5c2e' : '#f8f8f8',
-                      color: seleccionado ? '#fff' : '#263026',
-                      borderRadius:999,
-                      padding:'7px 10px',
-                      fontSize:12,
-                      fontWeight:700,
-                      cursor:'pointer',
-                    }}>
+                    <button className="ag-small-action ui-59cb66" key={b.id} type="button" onClick={() => alternarBloqueFertilizacion(b.id)} style={{ background: seleccionado ? '#1a5c2e' : '#f8f8f8', color: seleccionado ? '#fff' : '#263026' }}>
                       {b.codigo}{cultivo ? ` - ${cultivo}` : ''}
                     </button>
                   )
                 })}
               </div>
-              <div style={{ fontSize:12, color:"#697970", marginTop:10 }}>
+              <div className="ui-80c1d8">
                 {(formFert.bloques_ids || []).length || 0} bloque{(formFert.bloques_ids || []).length === 1 ? '' : 's'} seleccionado{(formFert.bloques_ids || []).length === 1 ? '' : 's'}
               </div>
             </div>
 
             {/* Soluciones */}
             {formFert.soluciones.map((sol, si) => (
-              <div className="ag-surface" key={si} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px', marginBottom:10 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <div style={{ width:28, height:28, borderRadius:'var(--ag-radius)', background:'#1a5c2e', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{sol.nombre}</span>
+              <div className="ag-surface ui-f3f33f" key={si}>
+                <div className="ui-b3c308">
+                  <div className="ui-2a9780">
+                    <div className="ui-73f54d">
+                      <span className="ui-5f32fb">{sol.nombre}</span>
                     </div>
-                    <input
-                      style={{ fontSize:13, fontWeight:600, color:"#182c25", border:'none', background:'transparent', padding:0, width:80 }}
+                    <input className="ui-a25fd0"
+                     
                       value={sol.nombre}
                       onChange={e => {
                         const sols = [...formFert.soluciones]
@@ -1622,68 +1611,68 @@ export default function FichaBloque() {
                     />
                   </div>
                   {formFert.soluciones.length > 1 && (
-                    <button aria-label="Eliminar" className="ag-small-action" onClick={() => eliminarSolucion(si)}
-                      style={{ background:'none', border:'none', cursor:'pointer', padding:4, color:'#c84040', fontSize:12 }}>
-                      <i className="ti ti-trash" style={{ fontSize:14 }} aria-hidden="true"></i>
+                    <button aria-label="Eliminar" className="ag-small-action ui-fa2a44" onClick={() => eliminarSolucion(si)}
+                     >
+                      <i className="ti ti-trash ui-0cf08e" aria-hidden="true"></i>
                     </button>
                   )}
                 </div>
 
                 {sol.productos.map((prod, pi) => (
-                  <div key={pi} style={{ display:'flex', gap:6, marginBottom:8, alignItems:'center' }}>
-                    <input
-                      style={{ flex:3, padding:'9px 10px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#f8f8f8', fontSize:12, color:"#182c25" }}
+                  <div className="ui-01389d" key={pi}>
+                    <input className="ui-f3cd63"
+                     
                       type="text" placeholder="Producto (ej: KCL)"
                       value={prod.nombre}
                       onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)}
                     />
-                    <input
-                      style={{ flex:1.5, padding:'9px 8px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#f8f8f8', fontSize:12, color:"#182c25" }}
+                    <input className="ui-3e1ed4"
+                     
                       type="text" placeholder="Cant."
                       value={prod.cantidad}
                       onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)}
                     />
-                    <select
-                      style={{ flex:1.2, padding:'9px 4px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#f8f8f8', fontSize:12, color:"#182c25" }}
+                    <select className="ui-30e3bd"
+                     
                       value={prod.unidad}
                       onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)}>
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
                     {sol.productos.length > 1 && (
-                      <button aria-label="Cerrar" className="ag-small-action" onClick={() => eliminarProducto(si, pi)}
-                        style={{ background:'none', border:'none', cursor:'pointer', padding:4, color:'#c84040' }}>
-                        <i className="ti ti-x" style={{ fontSize:13 }} aria-hidden="true"></i>
+                      <button aria-label="Cerrar" className="ag-small-action ui-79fbe7" onClick={() => eliminarProducto(si, pi)}
+                       >
+                        <i className="ti ti-x ui-3044b6" aria-hidden="true"></i>
                       </button>
                     )}
                   </div>
                 ))}
 
-                <button className="ag-small-action" onClick={() => agregarProducto(si)}
-                  style={{ padding:'6px 12px', borderRadius:'var(--ag-radius)', border:'1px dashed #ccc', background:'transparent', fontSize:12, color:'#888', cursor:'pointer' }}>
+                <button className="ag-small-action ui-a0678b" onClick={() => agregarProducto(si)}
+                 >
                   + Agregar producto
                 </button>
               </div>
             ))}
 
-            <button className="ag-small-action" onClick={agregarSolucion}
-              style={{ width:'100%', padding:11, borderRadius:'var(--ag-radius)', border:'1px dashed #1a5c2e', background:'transparent', fontSize:12, fontWeight:600, color:'#1a5c2e', cursor:'pointer', marginBottom:12 }}>
+            <button className="ag-small-action ui-5fcb3d" onClick={agregarSolucion}
+             >
               + Agregar solucion
             </button>
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Notas (opcional)
-            <textarea
-              style={{ ...inpStyle, minHeight:60, resize:'vertical' }}
+            <label className="ag-field-label ui-74cc19">Notas (opcional)
+            <textarea className="ui-dc8f36"
+              style={{ ...inpStyle }}
               value={formFert.notas}
               onChange={e => setFormFert(f => ({...f, notas:e.target.value}))}
               placeholder="Observaciones, ajustes del ingeniero..."/></label>
 
-            <button className="ag-small-action"
-              style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background: savingFert ? '#888' : '#1a5c2e', border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer', marginTop:4 }}
+            <button className="ag-small-action ui-978577"
+              style={{ background: savingFert ? '#888' : '#1a5c2e' }}
               onClick={guardarFertilizacion} disabled={savingFert}>
               {savingFert ? 'Guardando...' : 'Guardar fertilizacion'}
             </button>
-            <button className="ag-small-action"
-              style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }}
+            <button className="ag-small-action ui-9d2a4a"
+             
               onClick={() => setShowNuevaFertilizacion(false)}>
               Cancelar
             </button>
@@ -1693,21 +1682,21 @@ export default function FichaBloque() {
 
       {showQr && (
         <Modal onClose={() => setShowQr(false)} label="Registro del bloque" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:220, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-          <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', width:'100%', maxWidth:420, padding:'22px 20px 26px', textAlign:'center', maxHeight:'90vh', overflowY:'auto' }}>
-            <div style={{ fontSize:12, color:"#697970" }}>{bloque.campos?.nombre}</div>
-            <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", margin:'3px 0 14px' }}>QR Bloque {bloque.codigo}</div>
-            {qrError && <div style={{ background:'#fff0f0', color:'#b02a2a', borderRadius:'var(--ag-radius)', padding:10, fontSize:12, marginBottom:12 }}>{qrError}</div>}
+          <div className="ag-surface ui-701d98">
+            <div className="ui-93a7e1">{bloque.campos?.nombre}</div>
+            <div className="ag-page-title ui-92e9fa">QR Bloque {bloque.codigo}</div>
+            {qrError && <div className="ui-99ac05">{qrError}</div>}
             {qrDataUrl
-              ? <img src={qrDataUrl} alt={`QR del bloque ${bloque.codigo}`} style={{ width:'100%', maxWidth:300, height:'auto', display:'block', margin:'0 auto 14px' }}/>
-              : <div style={{ padding:50, color:"#697970", fontSize:13 }}>Generando QR...</div>}
-            <div style={{ fontSize:12, color:'#687068', lineHeight:1.45, marginBottom:16 }}>Al escanear, abre directamente este bloque. Para cargar información se requiere iniciar sesión.</div>
-            {typeof navigator.share === 'function' && <button className="ag-small-action" type="button" onClick={compartirQr} disabled={!qrDataUrl} style={{ width:'100%', padding:12, marginBottom:8, borderRadius:'var(--ag-radius)', border:'none', background:"#08603f", color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Compartir / Guardar QR</button>}
-            <div style={{ fontSize:12, color:'#687068', lineHeight:1.45, marginBottom:12 }}>En iPhone, usá Compartir / Guardar QR y elegí Guardar imagen o Guardar en Archivos. También podés mantener presionado el QR para ver las opciones disponibles.</div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-              <button className="ag-small-action" type="button" onClick={descargarQr} disabled={!qrDataUrl} style={{ padding:12, borderRadius:'var(--ag-radius)', border:'1px solid #d9ddd8', background:'#fff', color:"#124e38", fontSize:13, fontWeight:700, cursor:'pointer' }}>Descargar</button>
-              <button className="ag-small-action" type="button" onClick={imprimirQr} disabled={!qrDataUrl} style={{ padding:12, borderRadius:'var(--ag-radius)', border:'none', background:"#124e38", color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Imprimir etiqueta</button>
+              ? <img className="ui-980293" src={qrDataUrl} alt={`QR del bloque ${bloque.codigo}`}/>
+              : <div className="ui-266415">Generando QR...</div>}
+            <div className="ui-906e8e">Al escanear, abre directamente este bloque. Para cargar información se requiere iniciar sesión.</div>
+            {typeof navigator.share === 'function' && <button className="ag-small-action ui-f40c68" type="button" onClick={compartirQr} disabled={!qrDataUrl}>Compartir / Guardar QR</button>}
+            <div className="ui-50089c">En iPhone, usá Compartir / Guardar QR y elegí Guardar imagen o Guardar en Archivos. También podés mantener presionado el QR para ver las opciones disponibles.</div>
+            <div className="ui-f56ef1">
+              <button className="ag-small-action ui-1cc6c1" type="button" onClick={descargarQr} disabled={!qrDataUrl}>Descargar</button>
+              <button className="ag-small-action ui-bb7661" type="button" onClick={imprimirQr} disabled={!qrDataUrl}>Imprimir etiqueta</button>
             </div>
-            <button className="ag-small-action" type="button" onClick={() => { setShowQr(false); setQrError('') }} style={{ width:'100%', padding:11, borderRadius:'var(--ag-radius)', border:'none', background:'transparent', color:"#697970", fontSize:13, cursor:'pointer', marginTop:8 }}>Cerrar</button>
+            <button className="ag-small-action ui-5979cd" type="button" onClick={() => { setShowQr(false); setQrError('') }}>Cerrar</button>
           </div>
         </Modal>
       )}

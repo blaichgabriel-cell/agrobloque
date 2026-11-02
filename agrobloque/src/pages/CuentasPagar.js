@@ -232,14 +232,14 @@ export default function CuentasPagar() {
   }
 
   return (
-    <div style={{ background:"#f6f8f7", minHeight:'100vh', padding:'32px 18px 90px' }}>
-      <div style={{ maxWidth:1100, margin:'0 auto' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:14, marginBottom:18 }}>
+    <div className="ui-42cbcb">
+      <div className="ui-89a869">
+        <div className="ui-a9915a">
           <div>
-            <div style={{ color:"#697970", fontSize:12 }}>Credito con proveedores</div>
-            <h1 style={{ margin:'4px 0 0', fontSize:28, letterSpacing:-0.8 }}>Cuentas a pagar</h1>
+            <div className="ui-567f4b">Credito con proveedores</div>
+            <h1 className="ui-5f0bf1">Cuentas a pagar</h1>
           </div>
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
+          <div className="ui-9a2d51">
             <button onClick={exportarCsv} style={smallBtn}>CSV</button>
             <button onClick={imprimir} style={smallBtn}>PDF</button>
             <button onClick={() => abrirProveedor()} style={darkBtn}>+ Proveedor</button>
@@ -249,15 +249,15 @@ export default function CuentasPagar() {
 
         {error && <div style={errorBox}>{error}</div>}
 
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, minmax(140px, 1fr))', gap:12, marginBottom:16 }}>
+        <div className="ui-e9ea38">
           <Stat dark title="Deuda total" value={fmtGs(resumen.deudaTotal)} sub={`${resumen.conDeuda} proveedores con deuda`} />
           <Stat title="Compras a credito" value={fmtGs(resumen.comprasTotal)} sub="total registrado" />
           <Stat title="Pagos realizados" value={fmtGs(resumen.pagosTotal)} sub="total abonado" />
           <Stat title="Proveedores" value={proveedores.length} sub="registrados" />
         </div>
 
-        <div style={{ ...card, padding:12, marginBottom:16 }}>
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+        <div className="ui-d5d952" style={{ ...card }}>
+          <div className="ui-e0e9ec">
             {[
               ['todos', 'Activos'],
               ['deuda', 'Con deuda'],
@@ -269,28 +269,28 @@ export default function CuentasPagar() {
           </div>
         </div>
 
-        <div style={{ display:'grid', gap:12 }}>
+        <div className="ui-3dee6e">
           {loading ? (
             <div style={empty}>Cargando...</div>
           ) : proveedoresFiltrados.length === 0 ? (
             <div style={empty}>Sin proveedores para mostrar.</div>
           ) : proveedoresFiltrados.map(p => (
             <div key={p.id} style={card}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:14, alignItems:'center' }}>
-                <button onClick={() => setProveedorAbierto(proveedorAbierto === p.id ? null : p.id)} style={{ border:'none', background:'transparent', textAlign:'left', cursor:'pointer', padding:0 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <span style={iconPill}><i className="ti ti-building-store" style={{ fontSize:23, color:"#08603f" }} /></span>
+              <div className="ui-0e57ac">
+                <button className="ui-d7681e" onClick={() => setProveedorAbierto(proveedorAbierto === p.id ? null : p.id)}>
+                  <div className="ui-9f0e4d">
+                    <span style={iconPill}><i className="ti ti-building-store ui-157cb3" /></span>
                     <span>
-                      <strong style={{ fontSize:17 }}>{p.nombre}</strong>
-                      <span style={{ display:'block', fontSize:12, color:'#7a817a', marginTop:3 }}>
+                      <strong className="ui-74d4b0">{p.nombre}</strong>
+                      <span className="ui-61d9d1">
                         {p.tipo || 'Proveedor'}{p.telefono ? ` - ${p.telefono}` : ''}
                       </span>
                     </span>
                   </div>
                 </button>
-                <div style={{ textAlign:'right' }}>
-                  <strong style={{ fontSize:22, color:p.saldo > 0 ? '#c84040' : '#176a25' }}>{fmtGs(p.saldo)}</strong>
-                  <div style={{ display:'flex', gap:7, justifyContent:'flex-end', marginTop:8, flexWrap:'wrap' }}>
+                <div className="ui-f6e3d7">
+                  <strong className="ui-b5ef88" style={{ color:p.saldo > 0 ? '#c84040' : '#176a25' }}>{fmtGs(p.saldo)}</strong>
+                  <div className="ui-329ffb">
                     <button onClick={() => abrirMovimiento(null, p.id)} style={miniBtn}>Movimiento</button>
                     <button onClick={() => abrirProveedor(p)} style={miniBtn}>Editar</button>
                     <button onClick={() => eliminarProveedor(p)} style={dangerMiniBtn}>Eliminar</button>
@@ -299,29 +299,29 @@ export default function CuentasPagar() {
               </div>
 
               {proveedorAbierto === p.id && (
-                <div style={{ marginTop:14, borderTop:'1px solid #edf0ed', paddingTop:12 }}>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:10, marginBottom:12 }}>
+                <div className="ui-868ac0">
+                  <div className="ui-84875d">
                     <MiniTotal label="Compras/deuda" value={fmtGs(p.compras)} />
                     <MiniTotal label="Pagos/ajustes" value={fmtGs(p.pagos)} />
                     <MiniTotal label="Movimientos" value={p.movimientos.length} />
                   </div>
-                  {p.notas && <div style={{ fontSize:13, color:'#4d544e', marginBottom:10, whiteSpace:'pre-wrap' }}>{p.notas}</div>}
-                  <div style={{ display:'grid', gap:8 }}>
+                  {p.notas && <div className="ui-7aca70">{p.notas}</div>}
+                  <div className="ui-b1b744">
                     {p.movimientos.length === 0 ? (
-                      <div style={{ color:"#697970", fontSize:13 }}>Sin movimientos.</div>
+                      <div className="ui-a35c15">Sin movimientos.</div>
                     ) : p.movimientos.map(m => (
-                      <div key={m.id} style={{ background:'#f7f8f6', borderRadius:8, padding:'10px 12px', display:'grid', gridTemplateColumns:'1fr auto', gap:10, alignItems:'center' }}>
+                      <div className="ui-294e9c" key={m.id}>
                         <div>
-                          <strong style={{ fontSize:14 }}>{m.concepto}</strong>
-                          <div style={{ fontSize:12, color:'#788078', marginTop:3 }}>
+                          <strong className="ui-0cf08e">{m.concepto}</strong>
+                          <div className="ui-9c8a95">
                             {m.fecha} - {tiposMovimiento.find(t => t.value === m.tipo)?.label || m.tipo}{m.comprobante ? ` - ${m.comprobante}` : ''}
                           </div>
                         </div>
-                        <div style={{ textAlign:'right' }}>
+                        <div className="ui-f6e3d7">
                           <strong style={{ color:signoMovimiento(m.tipo) > 0 ? '#c84040' : '#176a25' }}>
                             {signoMovimiento(m.tipo) > 0 ? '+' : '-'} {fmtGs(m.monto)}
                           </strong>
-                          <div style={{ display:'flex', gap:6, marginTop:7 }}>
+                          <div className="ui-c5f310">
                             <button onClick={() => abrirMovimiento(m)} style={miniBtn}>Editar</button>
                             <button onClick={() => eliminarMovimiento(m)} style={dangerMiniBtn}>Borrar</button>
                           </div>
@@ -347,12 +347,12 @@ export default function CuentasPagar() {
           <input style={input} placeholder="Contacto" value={proveedorForm.contacto || ''} onChange={e => setProveedorForm(f => ({ ...f, contacto:e.target.value }))} />
           <input style={input} placeholder="Telefono" value={proveedorForm.telefono || ''} onChange={e => setProveedorForm(f => ({ ...f, telefono:e.target.value }))} />
           <input style={input} placeholder="Direccion" value={proveedorForm.direccion || ''} onChange={e => setProveedorForm(f => ({ ...f, direccion:e.target.value }))} />
-          <textarea style={{ ...input, minHeight:80 }} placeholder="Notas internas" value={proveedorForm.notas || ''} onChange={e => setProveedorForm(f => ({ ...f, notas:e.target.value }))} />
-          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, marginBottom:12 }}>
+          <textarea className="ui-278063" style={{ ...input }} placeholder="Notas internas" value={proveedorForm.notas || ''} onChange={e => setProveedorForm(f => ({ ...f, notas:e.target.value }))} />
+          <label className="ui-0f0b58">
             <input type="checkbox" checked={proveedorForm.activo !== false} onChange={e => setProveedorForm(f => ({ ...f, activo:e.target.checked }))} />
             Proveedor activo
           </label>
-          <button onClick={guardarProveedor} style={{ ...greenBtn, width:'100%' }}>Guardar proveedor</button>
+          <button className="ui-6d5673" onClick={guardarProveedor} style={{ ...greenBtn }}>Guardar proveedor</button>
         </Modal>
       )}
 
@@ -362,27 +362,27 @@ export default function CuentasPagar() {
             <option value="">Elegir proveedor</option>
             {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <div className="ui-eba032">
             <input type="date" style={input} value={movimientoForm.fecha || hoy()} onChange={e => setMovimientoForm(f => ({ ...f, fecha:e.target.value }))} />
             <select style={input} value={movimientoForm.tipo || 'compra_credito'} onChange={e => setMovimientoForm(f => ({ ...f, tipo:e.target.value }))}>
               {tiposMovimiento.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           <input style={input} placeholder="Concepto: fertilizante, semillas, pago parcial..." value={movimientoForm.concepto || ''} onChange={e => setMovimientoForm(f => ({ ...f, concepto:e.target.value }))} />
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <div className="ui-eba032">
             <select style={input} value={movimientoForm.categoria || 'Insumos'} onChange={e => setMovimientoForm(f => ({ ...f, categoria:e.target.value }))}>
               {categorias.map(c => <option key={c}>{c}</option>)}
             </select>
             <input style={input} placeholder="Monto" value={movimientoForm.monto || ''} onChange={e => setMovimientoForm(f => ({ ...f, monto:e.target.value }))} />
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <div className="ui-eba032">
             <select style={input} value={movimientoForm.medio_pago || 'Transferencia'} onChange={e => setMovimientoForm(f => ({ ...f, medio_pago:e.target.value }))}>
               {mediosPago.map(m => <option key={m}>{m}</option>)}
             </select>
             <input style={input} placeholder="Factura/comprobante" value={movimientoForm.comprobante || ''} onChange={e => setMovimientoForm(f => ({ ...f, comprobante:e.target.value }))} />
           </div>
-          <textarea style={{ ...input, minHeight:80 }} placeholder="Notas" value={movimientoForm.notas || ''} onChange={e => setMovimientoForm(f => ({ ...f, notas:e.target.value }))} />
-          <button onClick={guardarMovimiento} style={{ ...greenBtn, width:'100%' }}>Guardar movimiento</button>
+          <textarea className="ui-278063" style={{ ...input }} placeholder="Notas" value={movimientoForm.notas || ''} onChange={e => setMovimientoForm(f => ({ ...f, notas:e.target.value }))} />
+          <button className="ui-6d5673" onClick={guardarMovimiento} style={{ ...greenBtn }}>Guardar movimiento</button>
         </Modal>
       )}
     </div>
@@ -392,29 +392,29 @@ export default function CuentasPagar() {
 function Stat({ title, value, sub, dark }) {
   return (
     <div style={{ ...card, background:dark ? '#212121' : '#fff', color:dark ? '#fff' : '#101511' }}>
-      <div style={{ color:dark ? 'rgba(255,255,255,0.62)' : '#7b837b', fontSize:11, textTransform:'uppercase' }}>{title}</div>
-      <strong style={{ display:'block', fontSize:24, marginTop:7 }}>{value}</strong>
-      <div style={{ color:dark ? 'rgba(255,255,255,0.58)' : '#6c746d', fontSize:12, marginTop:5 }}>{sub}</div>
+      <div className="ui-8640d8" style={{ color:dark ? 'rgba(255,255,255,0.62)' : '#7b837b' }}>{title}</div>
+      <strong className="ui-333c70">{value}</strong>
+      <div className="ui-b7951f" style={{ color:dark ? 'rgba(255,255,255,0.58)' : '#6c746d' }}>{sub}</div>
     </div>
   )
 }
 
 function MiniTotal({ label, value }) {
   return (
-    <div style={{ background:'#f7f8f6', borderRadius:8, padding:12 }}>
-      <div style={{ color:'#7a817a', fontSize:11, textTransform:'uppercase' }}>{label}</div>
-      <strong style={{ fontSize:16, display:'block', marginTop:4 }}>{value}</strong>
+    <div className="ui-3017aa">
+      <div className="ui-f352e6">{label}</div>
+      <strong className="ui-70c605">{value}</strong>
     </div>
   )
 }
 
 function Modal({ title, children, onClose }) {
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:18 }}>
-      <div style={{ width:'100%', maxWidth:520, maxHeight:'90vh', overflowY:'auto', background:"#f6f8f7", borderRadius:8, padding:20, boxShadow:'none' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-          <h2 style={{ margin:0, fontSize:22 }}>{title}</h2>
-          <button onClick={onClose} style={{ border:'1px solid #e3e3de', background:'#fff', borderRadius:8, width:36, height:36, cursor:'pointer' }}>x</button>
+    <div className="ui-9d3361">
+      <div className="ui-b344e7">
+        <div className="ui-57d669">
+          <h2 className="ui-8f657d">{title}</h2>
+          <button className="ui-685979" onClick={onClose}>x</button>
         </div>
         {children}
       </div>

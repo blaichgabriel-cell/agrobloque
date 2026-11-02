@@ -64,12 +64,12 @@ const INVENTORY_TONES = { semillas:'bloques', nutricion:'agua', fitosanitarios:'
 function ModalConfirm({ mensaje, onConfirm, onCancel }) {
   return (
     <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:"#182c25", marginBottom:8, textAlign:'center' }}>¿Eliminar producto?</div>
-        <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>{mensaje}</div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="ag-small-action" onClick={onCancel} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
-          <button className="ag-small-action" onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
+      <div className="ag-surface ui-211525">
+        <div className="ui-3e43be">¿Eliminar producto?</div>
+        <div className="ui-01159a">{mensaje}</div>
+        <div className="ui-9c6869">
+          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
+          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Eliminar</button>
         </div>
       </div>
     </Modal>
@@ -322,21 +322,21 @@ export default function Inventario() {
       {/* Vista productos de categoría */}
       {categoriaActiva && catActInfo && (
         <>
-          <div className="ag-page-header" style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-            <button className="ag-small-action" onClick={() => setCategoriaActiva(null)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:12 }}>
-              <i className="ti ti-arrow-left" style={{ fontSize:18, color:"#124e38" }} aria-hidden="true"></i>
-              <span style={{ fontSize:13, color:"#124e38", fontWeight:500 }}>Inventario</span>
+          <div className="ag-page-header ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+            <button className="ag-small-action ui-7347f9" onClick={() => setCategoriaActiva(null)}>
+              <i className="ti ti-arrow-left ui-b45e7d" aria-hidden="true"></i>
+              <span className="ui-fe5017">Inventario</span>
             </button>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <div style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:catActInfo.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <i className={`ti ${catActInfo.icon}`} style={{ fontSize:20, color:catActInfo.color }} aria-hidden="true"></i>
+            <div className="ui-fb4d82">
+              <div className="ui-c36754">
+                <div className="ui-e46614" style={{ background:catActInfo.bg }}>
+                  <i className={`${`ti ${catActInfo.icon}`} ui-e5e6f8`} style={{ color:catActInfo.color }} aria-hidden="true"></i>
                 </div>
-                <div style={{ fontSize:22, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>{catActInfo.label}</div>
+                <div className="ui-edab21">{catActInfo.label}</div>
               </div>
-              <button aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.defaultCategory, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
-                style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+              <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.defaultCategory, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
+               >
+                <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
               </button>
             </div>
             <label className="inventory-search"><i className="ti ti-search" aria-hidden="true" /><input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder={`Buscar en ${catActInfo.label.toLowerCase()}…`} /></label>
@@ -344,44 +344,44 @@ export default function Inventario() {
 
           <div className="ag-page-body" style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
             {productosCat.length === 0 ? (
-              <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin productos en esta categoría</div>
+              <div className="ui-5baa7a">Sin productos en esta categoría</div>
             ) : (
-              <div className="ag-record-grid" style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(320px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+              <div className="ag-record-grid ui-998b74" style={{ gridTemplateColumns: isDesktop ? 'repeat(2, minmax(320px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
               {productosCat.map(p => {
               const stockVisible = formatearStock(p.stock_actual, p.unidad)
               return (
-              <div className="ag-surface" key={p.id} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
-                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{p.nombre}</div>
-                    <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>{p.principio_activo || '—'}</div>
+              <div className="ag-surface ui-9a7f69" key={p.id} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+                <div className="ui-f81471">
+                  <div className="ui-da5cd6">
+                    <div className="ui-788a2f">{p.nombre}</div>
+                    <div className="ui-a8f171">{p.principio_activo || '—'}</div>
                   </div>
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:22, fontWeight:700, color: getStockColor(p) }}>{stockVisible.cantidad}</div>
-                    <div style={{ fontSize:12, color:"#697970" }}>{stockVisible.unidad}</div>
+                  <div className="ui-f6e3d7">
+                    <div className="ui-02cbdf" style={{ color: getStockColor(p) }}>{stockVisible.cantidad}</div>
+                    <div className="ui-93a7e1">{stockVisible.unidad}</div>
                   </div>
                 </div>
 
-                <div style={{ background:"#f6f8f7", borderRadius:'var(--ag-radius)', height:6, overflow:'hidden', marginBottom:6 }}>
-                  <div style={{ height:'100%', background: getStockColor(p), borderRadius:'var(--ag-radius)', width:`${getStockPct(p)}%`, transition:'width .3s' }}></div>
+                <div className="ui-94804d">
+                  <div className="ui-b874b9" style={{ background: getStockColor(p), width:`${getStockPct(p)}%` }}></div>
                 </div>
 
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
-                  <div style={{ background: getStockBg(p), borderRadius:'var(--ag-radius)', padding:'3px 10px', fontSize:12, fontWeight:600, color: getStockColor(p) }}>
+                <div className="ui-7c2fd3">
+                  <div className="ui-64e4ed" style={{ background: getStockBg(p), color: getStockColor(p) }}>
                     {p.stock_actual <= 0 ? 'Sin stock' : p.stock_actual <= p.stock_minimo ? `Bajo - min ${formatearCantidadConUnidad(p.stock_minimo, p.unidad)}` : `OK - min ${formatearCantidadConUnidad(p.stock_minimo, p.unidad)}`}
                   </div>
                   {p.carencia_dias > 0 && (
-                    <div style={{ background:'#fff3e8', borderRadius:'var(--ag-radius)', padding:'3px 10px', fontSize:12, fontWeight:600, color:'#c8700a' }}>
+                    <div className="ui-e010db">
                       {p.carencia_dias}d carencia
                     </div>
                   )}
                 </div>
 
-                <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <button onClick={() => ajustarStock(p.id, -1)} style={{ width:32, height:32, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:"#f6f8f7", fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>−</button>
-                  <button onClick={() => ajustarStock(p.id, 1)} style={{ width:32, height:32, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:"#f6f8f7", fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>+</button>
-                  <button className="ag-small-action" onClick={() => { setForm({...p, categoria_nombre: getCatNombre(p)}); setModal('form') }} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, color:'#555', cursor:'pointer', marginLeft:4 }}>Editar</button>
-                  <button className="ag-small-action" onClick={() => eliminar(p.id, p.nombre)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                <div className="ui-f60339">
+                  <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, -1)}>−</button>
+                  <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, 1)}>+</button>
+                  <button className="ag-small-action ui-922ea3" onClick={() => { setForm({...p, categoria_nombre: getCatNombre(p)}); setModal('form') }}>Editar</button>
+                  <button className="ag-small-action ui-14c146" onClick={() => eliminar(p.id, p.nombre)}>Eliminar</button>
                 </div>
               </div>
               )
@@ -393,12 +393,12 @@ export default function Inventario() {
       )}
 
       <div className="ag-page-body" style={{ padding: isDesktop ? '0 36px 100px' : '0 14px 100px' }}>
-        {movimientos.length > 0 && <section style={{ background:'#fff', border:'1px solid #e2e9e5', borderRadius:'var(--ag-radius)', padding:18, marginBottom:16 }}>
-          <div style={{ fontSize:18, fontWeight:700, color:'#182c25', marginBottom:12 }}>Movimientos recientes</div>
-          {movimientos.map(m => <div key={m.id} style={{ display:'grid', gridTemplateColumns:isDesktop ? '1fr auto auto' : '1fr auto', gap:10, padding:'10px 0', borderTop:'1px solid #eef1ee', alignItems:'center' }}>
-            <div><strong style={{ fontSize:13 }}>{m.productos?.nombre || 'Producto'}</strong><div style={{ fontSize:12, color:'#697970', marginTop:3 }}>{m.detalle || m.modulo || m.tipo}</div></div>
-            <strong style={{ color:Number(m.cantidad) >= 0 ? '#08603f' : '#c84040', fontSize:13 }}>{Number(m.cantidad) >= 0 ? '+' : ''}{fmtNumero(m.cantidad)} {m.productos?.unidad || ''}</strong>
-            {isDesktop && <time style={{ fontSize:12, color:'#8a948b' }}>{new Date(m.created_at).toLocaleString('es-PY')}</time>}
+        {movimientos.length > 0 && <section className="ui-123417">
+          <div className="ui-f951e6">Movimientos recientes</div>
+          {movimientos.map(m => <div className="ui-c6e460" key={m.id} style={{ gridTemplateColumns:isDesktop ? '1fr auto auto' : '1fr auto' }}>
+            <div><strong className="ui-3044b6">{m.productos?.nombre || 'Producto'}</strong><div className="ui-13b58a">{m.detalle || m.modulo || m.tipo}</div></div>
+            <strong className="ui-3044b6" style={{ color:Number(m.cantidad) >= 0 ? '#08603f' : '#c84040' }}>{Number(m.cantidad) >= 0 ? '+' : ''}{fmtNumero(m.cantidad)} {m.productos?.unidad || ''}</strong>
+            {isDesktop && <time className="ui-5e0192">{new Date(m.created_at).toLocaleString('es-PY')}</time>}
           </div>)}
         </section>}
         <NotasPanel modulo="inventario" titulo="Notas del inventario" />
@@ -406,16 +406,16 @@ export default function Inventario() {
 
       {/* Modal producto */}
       {modal === 'form' && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id ? 'Editar producto' : 'Nuevo producto'}</div>
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{error}</div>}
+        <div className="ui-66d878" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end' }}>
+          <div className="ui-7dd37e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div className="ui-c7b1b6">{form.id ? 'Editar producto' : 'Nuevo producto'}</div>
+            {error && <div className="ui-e136cb">{error}</div>}
 
-            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Categoría</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
+            <div className="ui-74cc19">Categoría</div>
+            <div className="ui-395b5b">
               {PRODUCT_CATEGORIES.map(cat => (
-                <button className="ag-small-action" key={cat.key} onClick={() => setForm(f => ({...f, categoria_nombre:cat.key}))}
-                  style={{ padding:'7px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:12, fontWeight:500, cursor:'pointer', background: form.categoria_nombre===cat.key ? '#212121' : '#fff', color: form.categoria_nombre===cat.key ? '#fff' : '#555' }}>
+                <button className="ag-small-action ui-e36b2f" key={cat.key} onClick={() => setForm(f => ({...f, categoria_nombre:cat.key}))}
+                  style={{ background: form.categoria_nombre===cat.key ? '#212121' : '#fff', color: form.categoria_nombre===cat.key ? '#fff' : '#555' }}>
                   {cat.label}
                 </button>
               ))}
@@ -430,23 +430,23 @@ export default function Inventario() {
               ['Notas', 'notas', 'text', 'Opcional'],
             ].map(([lbl, key, type, ph]) => (
               <div key={key}>
-                <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>{lbl}
+                <label className="ag-field-label ui-74cc19">{lbl}
                 <input style={inpStyle} type={type} value={form[key]||''} onChange={e => setForm(f => ({...f, [key]:e.target.value}))} placeholder={ph}/></label>
               </div>
             ))}
 
-            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Unidad</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:16 }}>
+            <div className="ui-74cc19">Unidad</div>
+            <div className="ui-1e69e2">
               {['kg','gramos','litros','cc','unidades'].map(u => (
-                <button className="ag-small-action" key={u} onClick={() => setForm(f => ({...f, unidad:u}))}
-                  style={{ padding:'9px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:12, fontWeight:500, cursor:'pointer', background: form.unidad===u ? '#212121' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>
+                <button className="ag-small-action ui-45ba57" key={u} onClick={() => setForm(f => ({...f, unidad:u}))}
+                  style={{ background: form.unidad===u ? '#212121' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>
                   {u}
                 </button>
               ))}
             </div>
 
-            <button className="ag-small-action" style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
-            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModal(null)}>Cancelar</button>
+            <button className="ag-small-action ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
+            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(null)}>Cancelar</button>
           </div>
         </div>
       )}

@@ -56,50 +56,50 @@ export default function Auditoria() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:"#f6f8f7", padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
-      <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 900, margin:'0 auto' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:16 }}>
+    <div className="ui-71cde8" style={{ padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
+      <div className="ui-f47a4b" style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 900 }}>
+        <div className="ui-ec8096">
           <div>
-            <div style={{ fontSize:12, color:"#697970" }}>Registro interno</div>
-            <h1 style={{ margin:0, fontSize:24, letterSpacing:-0.6 }}>Auditoria</h1>
+            <div className="ui-93a7e1">Registro interno</div>
+            <h1 className="ui-ee8706">Auditoria</h1>
           </div>
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={exportarCsv} style={{ height:42, borderRadius:8, border:'1px solid #e8ece8', background:'#fff', padding:'0 12px', fontWeight:700, cursor:'pointer' }}>CSV</button>
-            <button onClick={exportarPdf} style={{ height:42, borderRadius:8, border:'none', background:"#08603f", color:'#fff', padding:'0 12px', fontWeight:700, cursor:'pointer' }}>PDF</button>
-            <button onClick={cargar} style={{ width:42, height:42, borderRadius:8, border:'none', background:"#124e38", color:'#fff', cursor:'pointer' }}>
-              <i className="ti ti-refresh" style={{ fontSize:20 }} aria-hidden="true"></i>
+          <div className="ui-9c6869">
+            <button className="ui-2d8a82" onClick={exportarCsv}>CSV</button>
+            <button className="ui-b6b93a" onClick={exportarPdf}>PDF</button>
+            <button className="ui-eb7bbd" onClick={cargar}>
+              <i className="ti ti-refresh ui-e5e6f8" aria-hidden="true"></i>
             </button>
           </div>
         </div>
 
-        <div style={{ background:'#fff', border:'1px solid #e8ece8', borderRadius:8, padding:12, marginBottom:12, display:'grid', gridTemplateColumns:'1fr 1fr 1.3fr', gap:8 }}>
-          <select value={filtro.modulo} onChange={e => setFiltro(f => ({ ...f, modulo:e.target.value }))}
-            style={{ border:'1px solid #e8ece8', borderRadius:8, padding:'10px 12px', fontSize:13, background:'#fff' }}>
+        <div className="ui-8e13c4">
+          <select className="ui-13d88e" value={filtro.modulo} onChange={e => setFiltro(f => ({ ...f, modulo:e.target.value }))}
+           >
             <option value="">Todos los modulos</option>
             {modulos.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
-          <input value={filtro.accion} onChange={e => setFiltro(f => ({ ...f, accion:e.target.value }))} placeholder="Accion"
-            style={{ border:'1px solid #e8ece8', borderRadius:8, padding:'10px 12px', fontSize:13 }} />
-          <input value={filtro.texto} onChange={e => setFiltro(f => ({ ...f, texto:e.target.value }))} placeholder="Buscar usuario, detalle o tabla"
-            style={{ border:'1px solid #e8ece8', borderRadius:8, padding:'10px 12px', fontSize:13 }} />
+          <input className="ui-ea25ac" value={filtro.accion} onChange={e => setFiltro(f => ({ ...f, accion:e.target.value }))} placeholder="Accion"
+            />
+          <input className="ui-ea25ac" value={filtro.texto} onChange={e => setFiltro(f => ({ ...f, texto:e.target.value }))} placeholder="Buscar usuario, detalle o tabla"
+            />
         </div>
 
-        {error && <div style={{ background:'#fff0f0', color:'#c84040', padding:'10px 12px', borderRadius:8, fontSize:13, marginBottom:12 }}>{error}</div>}
+        {error && <div className="ui-9392ce">{error}</div>}
         {loading ? (
-          <div style={{ textAlign:'center', padding:38, color:"#697970" }}>Cargando auditoria...</div>
+          <div className="ui-4e47d3">Cargando auditoria...</div>
         ) : visibles.length === 0 ? (
-          <div style={{ textAlign:'center', padding:38, color:"#697970", background:'#fff', borderRadius:8 }}>Todavia no hay movimientos registrados.</div>
+          <div className="ui-c59321">Todavia no hay movimientos registrados.</div>
         ) : visibles.map(log => (
-          <div key={log.id} style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom:8, border:'1px solid #e8ece8', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:6 }}>
-              <strong style={{ fontSize:15 }}>{log.accion}</strong>
-              <span style={{ fontSize:11, color:"#697970" }}>{String(log.created_at || '').slice(0, 16).replace('T', ' ')}</span>
+          <div className="ui-b0ecff" key={log.id} style={{ boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+            <div className="ui-8ac9c1">
+              <strong className="ui-3dd9b4">{log.accion}</strong>
+              <span className="ui-51b095">{String(log.created_at || '').slice(0, 16).replace('T', ' ')}</span>
             </div>
-            <div style={{ fontSize:12, color:'#687068' }}>
+            <div className="ui-93a7e1">
               {log.modulo}{log.tabla ? ` - ${log.tabla}` : ''}{log.registro_id ? ` - ${log.registro_id}` : ''}
             </div>
-            {log.detalle && <div style={{ fontSize:13, marginTop:8, color:'#202820' }}>{log.detalle}</div>}
-            {log.usuario_email && <div style={{ fontSize:11, marginTop:8, color:"#697970" }}>{log.usuario_email}</div>}
+            {log.detalle && <div className="ui-bbba42">{log.detalle}</div>}
+            {log.usuario_email && <div className="ui-5f3fea">{log.usuario_email}</div>}
           </div>
         ))}
       </div>

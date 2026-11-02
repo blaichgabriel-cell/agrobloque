@@ -198,59 +198,59 @@ export default function Historial({ campoActivo }) {
   const resumen = tiposLista().map(t => ({ ...t, total:eventos.filter(e => e.tipo === t.key).length }))
 
   return (
-    <div style={{ minHeight:'100vh', background:"#f6f8f7", padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
-      <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 980, margin:'0 auto' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:16 }}>
+    <div className="ui-71cde8" style={{ padding: typeof window !== 'undefined' && window.innerWidth >= 768 ? '34px 36px 100px' : '24px 14px 100px' }}>
+      <div className="ui-f47a4b" style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 768 ? 1180 : 980 }}>
+        <div className="ui-3259aa">
           <div>
-            <div style={{ fontSize:12, color:"#697970" }}>Trazabilidad</div>
-            <h1 style={{ margin:0, fontSize:24, letterSpacing:-0.6 }}>Historial completo</h1>
+            <div className="ui-93a7e1">Trazabilidad</div>
+            <h1 className="ui-ee8706">Historial completo</h1>
           </div>
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={exportar} style={iconBtn}><i className="ti ti-download" style={{ fontSize:19 }} /></button>
-            <button onClick={imprimir} style={{ ...iconBtn, background:"#124e38", color:'#fff' }}><i className="ti ti-printer" style={{ fontSize:19 }} /></button>
+          <div className="ui-9c6869">
+            <button onClick={exportar} style={iconBtn}><i className="ti ti-download ui-b7c8fe" /></button>
+            <button className="ui-c84552" onClick={imprimir} style={{ ...iconBtn }}><i className="ti ti-printer ui-b7c8fe" /></button>
           </div>
         </div>
 
-        <div style={{ background:'#fff', borderRadius:8, padding:14, marginBottom:10, border:'1px solid #e8ece8' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+        <div className="ui-0874a1">
+          <div className="ui-d3055b">
             <select value={campoSel?.id || ''} onChange={e => setCampoSel(campos.find(c => c.id === e.target.value))} style={inputStyle}>
               {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
             <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar en historial..." style={inputStyle} />
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          <div className="ui-f56ef1">
             <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={inputStyle} />
             <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={inputStyle} />
           </div>
         </div>
 
-        <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:8 }}>
+        <div className="ui-9c59d2">
           <Chip active={filtro === 'todos'} onClick={() => setFiltro('todos')} label={`Todo ${eventos.length}`} />
           {resumen.map(t => <Chip key={t.key} active={filtro === t.key} onClick={() => setFiltro(t.key)} label={`${t.label} ${t.total}`} />)}
         </div>
 
         {loading ? (
-          <div style={{ textAlign:'center', padding:38, color:"#697970" }}>Armando historial...</div>
+          <div className="ui-4e47d3">Armando historial...</div>
         ) : visibles.length === 0 ? (
-          <div style={{ textAlign:'center', padding:38, color:"#697970", background:'#fff', borderRadius:8 }}>Sin movimientos para mostrar.</div>
+          <div className="ui-c59321">Sin movimientos para mostrar.</div>
         ) : (
-          <div style={{ display:'grid', gap:8 }}>
+          <div className="ui-b1b744">
             {visibles.map((e, i) => {
               const t = tipos[e.tipo] || tipos.tarea
               return (
-                <div key={`${e.tipo}-${e.fecha}-${i}`} onClick={() => navigate(e.path)} style={{ background:'#fff', borderRadius:8, padding:'13px 14px', border:'1px solid #e8ece8', cursor:'pointer' }}>
-                  <div style={{ display:'grid', gridTemplateColumns:'42px 1fr auto', gap:12, alignItems:'center' }}>
-                    <span style={{ width:42, height:42, borderRadius:8, background:t.bg, color:t.color, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <i className={`ti ${t.icon}`} style={{ fontSize:21 }} />
+                <div className="ui-e331bd" key={`${e.tipo}-${e.fecha}-${i}`} onClick={() => navigate(e.path)}>
+                  <div className="ui-a1cc9d">
+                    <span className="ui-13ebd9" style={{ background:t.bg, color:t.color }}>
+                      <i className={`${`ti ${t.icon}`} ui-27a8ac`} />
                     </span>
-                    <span style={{ minWidth:0 }}>
-                      <span style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                        <strong style={{ fontSize:14 }}>{e.titulo}</strong>
-                        <span style={{ fontSize:10, color:t.color, background:t.bg, borderRadius:8, padding:'3px 7px', fontWeight:700 }}>{t.label}</span>
+                    <span className="ui-3f9f96">
+                      <span className="ui-747a39">
+                        <strong className="ui-0cf08e">{e.titulo}</strong>
+                        <span className="ui-e3d4a2" style={{ color:t.color, background:t.bg }}>{t.label}</span>
                       </span>
-                      <span style={{ display:'block', fontSize:12, color:'#687068', marginTop:4, lineHeight:1.35 }}>{e.fecha} - {e.detalle}</span>
+                      <span className="ui-8839ed">{e.fecha} - {e.detalle}</span>
                     </span>
-                    <i className="ti ti-chevron-right" style={{ fontSize:18, color:'#1f241f' }} />
+                    <i className="ti ti-chevron-right ui-efe630" />
                   </div>
                 </div>
               )
@@ -268,7 +268,7 @@ function tiposLista() {
 
 function Chip({ active, label, onClick }) {
   return (
-    <button onClick={onClick} style={{ border:'none', borderRadius:999, background:active ? '#212121' : '#fff', color:active ? '#fff' : '#4f574f', padding:'8px 12px', fontSize:12, fontWeight:700, whiteSpace:'nowrap', cursor:'pointer' }}>
+    <button className="ui-b8190d" onClick={onClick} style={{ background:active ? '#212121' : '#fff', color:active ? '#fff' : '#4f574f' }}>
       {label}
     </button>
   )

@@ -27,54 +27,36 @@ export default function NavBar() {
   return (
     <>
       {showMore && (
-        <div style={{
-          position:'fixed', bottom:64, left:0, right:0,
-          background:'#fff', borderTop:'0.5px solid #e8e6e2',
-          padding:'12px 14px',
-          display:'grid', gridTemplateColumns:'1fr 1fr 1fr',
-          gap:8, zIndex:40,
-        }}>
+        <div className="ui-a2ee4d">
           {moreTabs.map(t => (
-            <button key={t.path} onClick={() => { navigate(t.path); setShowMore(false) }}
-              style={{
-                padding:'10px 6px', borderRadius:14,
-                border:'1px solid #e8e6e2',
-                background: location.pathname===t.path ? '#212121' : '#f2f1ef',
-                cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4,
-              }}>
-              <i className={`ti ${t.icon}`} style={{ fontSize:20, color: location.pathname===t.path ? '#fff' : '#555' }} aria-hidden="true"></i>
-              <span style={{ fontSize:9, fontWeight:600, color: location.pathname===t.path ? '#fff' : '#555' }}>{t.label}</span>
+            <button className="ui-268af1" key={t.path} onClick={() => { navigate(t.path); setShowMore(false) }}
+              style={{ background: location.pathname===t.path ? '#212121' : '#f2f1ef' }}>
+              <i className={`${`ti ${t.icon}`} ui-e5e6f8`} style={{ color: location.pathname===t.path ? '#fff' : '#555' }} aria-hidden="true"></i>
+              <span className="ui-e6f375" style={{ color: location.pathname===t.path ? '#fff' : '#555' }}>{t.label}</span>
             </button>
           ))}
         </div>
       )}
 
-      <div style={{
-        position:'fixed', bottom:0, left:0, right:0,
-        display:'flex',
-        borderTop:'0.5px solid #e8e6e2',
-        background:'#f9f8f6',
-        paddingBottom:'env(safe-area-inset-bottom,0px)',
-        zIndex:50,
-      }}>
+      <div className="ui-7bf93e">
         {mainTabs.map(t => {
           const active = location.pathname === t.path
           return (
-            <div key={t.path}
-              style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'8px 0', cursor:'pointer' }}
+            <div className="ui-310d3e" key={t.path}
+             
               onClick={() => { navigate(t.path); setShowMore(false) }}>
-              <i className={`ti ${t.icon}`} style={{ fontSize:21, color: active ? '#212121' : '#ccc' }} aria-hidden="true"></i>
-              {active && <div style={{ width:4, height:4, borderRadius:'50%', background:'#212121' }}></div>}
-              <span style={{ fontSize:8, color: active ? '#212121' : '#ccc', fontWeight: active ? 600 : 400 }}>{t.label}</span>
+              <i className={`${`ti ${t.icon}`} ui-27a8ac`} style={{ color: active ? '#212121' : '#ccc' }} aria-hidden="true"></i>
+              {active && <div className="ui-6bceb6"></div>}
+              <span className="ui-908ae8" style={{ color: active ? '#212121' : '#ccc', fontWeight: active ? 600 : 400 }}>{t.label}</span>
             </div>
           )
         })}
-        <div
-          style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'8px 0', cursor:'pointer' }}
+        <div className="ui-310d3e"
+         
           onClick={() => setShowMore(!showMore)}>
-          <i className={`ti ${showMore ? 'ti-x' : 'ti-dots'}`} style={{ fontSize:21, color: isMoreActive || showMore ? '#212121' : '#ccc' }} aria-hidden="true"></i>
-          {isMoreActive && !showMore && <div style={{ width:4, height:4, borderRadius:'50%', background:'#212121' }}></div>}
-          <span style={{ fontSize:8, color: isMoreActive || showMore ? '#212121' : '#ccc', fontWeight: isMoreActive || showMore ? 600 : 400 }}>Más</span>
+          <i className={`${`ti ${showMore ? 'ti-x' : 'ti-dots'}`} ui-27a8ac`} style={{ color: isMoreActive || showMore ? '#212121' : '#ccc' }} aria-hidden="true"></i>
+          {isMoreActive && !showMore && <div className="ui-6bceb6"></div>}
+          <span className="ui-908ae8" style={{ color: isMoreActive || showMore ? '#212121' : '#ccc', fontWeight: isMoreActive || showMore ? 600 : 400 }}>Más</span>
         </div>
       </div>
     </>

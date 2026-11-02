@@ -15,12 +15,12 @@ const TIPOS = {
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
     <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:"#182c25", marginBottom:8, textAlign:'center' }}>¿Cancelar tarea?</div>
-        <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>La tarea se conservará en el historial.</div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="ag-small-action" onClick={onCancel} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
-          <button className="ag-small-action" onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Cancelar tarea</button>
+      <div className="ag-surface ui-211525">
+        <div className="ui-3e43be">¿Cancelar tarea?</div>
+        <div className="ui-01159a">La tarea se conservará en el historial.</div>
+        <div className="ui-9c6869">
+          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
+          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Cancelar tarea</button>
         </div>
       </div>
     </Modal>
@@ -130,16 +130,16 @@ export default function Agenda() {
   }
 
   return (
-    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+    <div className="ag-page ui-c1c124">
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
-      <div className="ag-page-header" style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:20 }}>
+      <div className="ag-page-header ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div className="ui-869419">
           <div>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Planificación</div>
-            <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Agenda</div>
+            <div className="ui-476525">Planificación</div>
+            <div className="ag-page-title ui-136b85">Agenda</div>
           </div>
-          <div className="agenda-header-actions"><button className="app-button app-button--secondary app-button--icon" aria-label="Activar notificaciones" onClick={activarNotificaciones}><i className="ti ti-bell" aria-hidden="true" /></button><button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i></button></div>
+          <div className="agenda-header-actions"><button className="app-button app-button--secondary app-button--icon" aria-label="Activar notificaciones" onClick={activarNotificaciones}><i className="ti ti-bell" aria-hidden="true" /></button><button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus ui-d0538c" aria-hidden="true"></i></button></div>
         </div>
         <div className="SegmentedControl agenda-segments" role="tablist" aria-label="Filtrar tareas">
           {[['pendientes','Pendientes'],['hoy','Hoy'],['completadas','Completadas'],['todas','Todas']].map(([k,v]) => (
@@ -153,36 +153,36 @@ export default function Agenda() {
         {loading ? <Skeleton rows={3} label="Cargando agenda" /> : tareasFiltradas.length === 0 ? (
           <div className="empty-state"><span className="empty-state__icon"><i className="ti ti-calendar-check" aria-hidden="true" /></span><div><strong>No hay tareas {filtro === 'pendientes' ? 'pendientes' : 'en esta vista'}</strong><p>Agregá una tarea para organizar el próximo trabajo del campo.</p><button className="app-button app-button--secondary" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus" aria-hidden="true" />Crear tarea</button></div></div>
         ) : (
-          <div className="ag-record-grid" style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+          <div className="ag-record-grid ui-998b74" style={{ gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
             {tareasFiltradas.map(t => {
           const tipo = TIPOS[t.tipo] || TIPOS.otro
           const badge = getBadge(t)
           return (
-            <div className="ag-surface" key={t.id} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, opacity: t.completada ? 0.6 : 1, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-                <div style={{ width:34, height:34, borderRadius:'var(--ag-radius)', background:tipo.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <i className={`ti ${tipo.icon}`} style={{ fontSize:16, color:tipo.color }} aria-hidden="true"></i>
+            <div className="ag-surface ui-9a7f69" key={t.id} style={{ marginBottom: isDesktop ? 0 : 8, opacity: t.completada ? 0.6 : 1, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+              <div className="ui-3efc24">
+                <div className="ui-4c27b0" style={{ background:tipo.bg }}>
+                  <i className={`${`ti ${tipo.icon}`} ui-2592cc`} style={{ color:tipo.color }} aria-hidden="true"></i>
                 </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:12, color:"#697970", marginBottom:1 }}>{tipo.label}{t.campos?.nombre ? ' · ' + t.campos.nombre : ''}{t.bloques?.codigo ? ' · ' + t.bloques.codigo : ''}</div>
-                  <div style={{ fontSize:13, fontWeight:600, color:"#182c25" }}>{t.descripcion}</div>
+                <div className="ui-da5cd6">
+                  <div className="ui-8c86bf">{tipo.label}{t.campos?.nombre ? ' · ' + t.campos.nombre : ''}{t.bloques?.codigo ? ' · ' + t.bloques.codigo : ''}</div>
+                  <div className="ui-076bb2">{t.descripcion}</div>
                 </div>
-                {badge && <div style={{ fontSize:12, fontWeight:700, padding:'3px 8px', borderRadius:'var(--ag-radius)', background:badge.bg, color:badge.color, flexShrink:0 }}>{badge.label}</div>}
+                {badge && <div className="ui-fb8dcd" style={{ background:badge.bg, color:badge.color }}>{badge.label}</div>}
               </div>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:10, borderTop:"1px solid #f6f8f7" }}>
+              <div className="ui-8a97f7">
                 <div className="agenda-task-time"><i className="ti ti-calendar-event" aria-hidden="true" />{t.fecha_programada}{t.hora_programada ? ` · ${String(t.hora_programada).slice(0, 5)}` : ''}</div>
-                <div style={{ display:'flex', gap:6 }}>
-                  <button className="ag-small-action" onClick={() => editarTarea(t)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #d9ded9', background:'transparent', fontSize:12, color:'#343a36', cursor:'pointer' }}>Editar</button>
+                <div className="ui-91294d">
+                  <button className="ag-small-action ui-2bc228" onClick={() => editarTarea(t)}>Editar</button>
                   {!t.completada && !t.anulada && (
-                    <button className="ag-small-action" onClick={() => completarTarea(t.id)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #d4b89a', background:'transparent', fontSize:12, fontWeight:500, color:"#124e38", cursor:'pointer' }}>
+                    <button className="ag-small-action ui-9f0a77" onClick={() => completarTarea(t.id)}>
                       ✓ Completar
                     </button>
                   )}
-                  {!t.anulada && <button className="ag-small-action" onClick={() => eliminarTarea(t.id)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, fontWeight:500, color:'#c84040', cursor:'pointer' }}>
+                  {!t.anulada && <button className="ag-small-action ui-0a41d9" onClick={() => eliminarTarea(t.id)}>
                     Cancelar
                   </button>
                   }
-                  {(t.completada || t.anulada) && <button className="ag-small-action" onClick={() => reabrirTarea(t.id)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #d4b89a', background:'transparent', fontSize:12, color:'#124e38', cursor:'pointer' }}>Reabrir</button>}
+                  {(t.completada || t.anulada) && <button className="ag-small-action ui-aa2db8" onClick={() => reabrirTarea(t.id)}>Reabrir</button>}
                 </div>
               </div>
             </div>
@@ -195,32 +195,32 @@ export default function Agenda() {
 
       {modal && (
         <Modal busy={saving} onClose={() => setModal(false)} label="Registro de tarea" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'85vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id ? 'Editar tarea' : 'Nueva tarea'}</div>
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Tipo
-            <select style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} value={form.tipo} onChange={e => setForm(f => ({...f, tipo:e.target.value}))}>
+          <div className="ui-526967" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div className="ui-c7b1b6">{form.id ? 'Editar tarea' : 'Nueva tarea'}</div>
+            <label className="ag-field-label ui-74cc19">Tipo
+            <select className="ui-2c08cb" value={form.tipo} onChange={e => setForm(f => ({...f, tipo:e.target.value}))}>
               {Object.entries(TIPOS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
             </select></label>
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Descripción *
-            <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, minHeight:80, resize:'vertical' }} value={form.descripcion} onChange={e => setForm(f => ({...f, descripcion:e.target.value}))} placeholder="Ej: Fumigar bloques A-2 y A-3"/></label>
+            <label className="ag-field-label ui-74cc19">Descripción *
+            <textarea className="ui-260cff" value={form.descripcion} onChange={e => setForm(f => ({...f, descripcion:e.target.value}))} placeholder="Ej: Fumigar bloques A-2 y A-3"/></label>
             <div className="agenda-date-grid"><label className="ag-field-label">Fecha objetivo *<input type="date" value={form.fecha_programada} onChange={e => setForm(f => ({...f, fecha_programada:e.target.value}))}/></label><label className="ag-field-label">Hora objetivo<input type="time" value={form.hora_programada || ''} onChange={e => setForm(f => ({...f, hora_programada:e.target.value}))}/></label></div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}><div><label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Prioridad<select style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, marginBottom:12 }} value={form.prioridad || 'normal'} onChange={e => setForm(f => ({...f, prioridad:e.target.value}))}><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option></select></label></div><div><label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Responsable<input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, marginBottom:12, boxSizing:'border-box' }} value={form.responsable || ''} onChange={e => setForm(f => ({...f, responsable:e.target.value}))} placeholder="Opcional" /></label></div></div>
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Campo (opcional)
-            <select style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} value={form.campo_id} onChange={e => { setForm(f => ({...f, campo_id:e.target.value, bloque_id:''})); if(e.target.value) fetchBloques(e.target.value) }}>
+            <div className="ui-eba032"><div><label className="ag-field-label ui-74cc19">Prioridad<select className="ui-f9a767" value={form.prioridad || 'normal'} onChange={e => setForm(f => ({...f, prioridad:e.target.value}))}><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option></select></label></div><div><label className="ag-field-label ui-74cc19">Responsable<input className="ui-90f37f" value={form.responsable || ''} onChange={e => setForm(f => ({...f, responsable:e.target.value}))} placeholder="Opcional" /></label></div></div>
+            <label className="ag-field-label ui-74cc19">Campo (opcional)
+            <select className="ui-2c08cb" value={form.campo_id} onChange={e => { setForm(f => ({...f, campo_id:e.target.value, bloque_id:''})); if(e.target.value) fetchBloques(e.target.value) }}>
               <option value="">Todos los campos</option>
               {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select></label>
             {form.campo_id && bloques.length > 0 && <>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Bloque (opcional)</div>
-              <select style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
+              <div className="ui-74cc19">Bloque (opcional)</div>
+              <select className="ui-2c08cb" value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
                 <option value="">Todos los bloques</option>
                 {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
               </select>
             </>}
-            <button className="ag-small-action" style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardarTarea} disabled={saving}>
+            <button className="ag-small-action ui-17d991" onClick={guardarTarea} disabled={saving}>
               {saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar tarea'}
             </button>
-            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
+            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </Modal>
       )}

@@ -25,13 +25,13 @@ const estadoLabel = {
 
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:'#fff', borderRadius:8, padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:700, color:"#182c25", marginBottom:8, textAlign:'center' }}>Eliminar venta</div>
-        <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>Esta accion no se puede deshacer.</div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={onCancel} style={{ flex:1, padding:12, borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:'#777', cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:8, border:'none', background:'#c84040', fontSize:13, fontWeight:700, color:'#fff', cursor:'pointer' }}>Eliminar</button>
+    <div className="ui-8bd58b">
+      <div className="ui-585654">
+        <div className="ui-cb8bcf">Eliminar venta</div>
+        <div className="ui-01159a">Esta accion no se puede deshacer.</div>
+        <div className="ui-9c6869">
+          <button className="ui-077b36" onClick={onCancel}>Cancelar</button>
+          <button className="ui-fbf0a5" onClick={onConfirm}>Eliminar</button>
         </div>
       </div>
     </div>
@@ -46,44 +46,44 @@ function ModalDetalle({ venta, onClose, onEdit, onDelete }) {
   const value = { fontSize:13, fontWeight:700, color:'#111', textAlign:'right' }
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:150, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'#fff', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:500, padding:'22px 20px 34px', maxHeight:'88vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
+    <div className="ui-74ea9b" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end' }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ui-759bab" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+        <div className="ui-65048f">
           <div>
-            <div style={{ fontSize:12, color:'#8d938d', marginBottom:4 }}>Detalle de venta</div>
-            <div style={{ fontSize:22, fontWeight:700, color:"#182c25" }}>{venta.producto || 'Producto'}</div>
-            <div style={{ fontSize:12, color:'#8d938d', marginTop:4 }}>{venta.compradores?.nombre || 'Sin comprador'} - {venta.fecha}</div>
+            <div className="ui-de5560">Detalle de venta</div>
+            <div className="ui-882dd8">{venta.producto || 'Producto'}</div>
+            <div className="ui-1301e2">{venta.compradores?.nombre || 'Sin comprador'} - {venta.fecha}</div>
           </div>
-          <button onClick={onClose} style={{ width:36, height:36, borderRadius:8, border:'1px solid #ececec', background:'#fff', cursor:'pointer' }}>
-            <i className="ti ti-x" style={{ fontSize:18 }} aria-hidden="true"></i>
+          <button className="ui-f730c6" onClick={onClose}>
+            <i className="ti ti-x ui-bf83cf" aria-hidden="true"></i>
           </button>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
-          <div style={{ background:"#124e38", borderRadius:8, padding:'14px 15px' }}>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:4 }}>Total venta</div>
-            <div style={{ fontSize:21, color:'#fff', fontWeight:700 }}>Gs. {fmtGs(total)}</div>
+        <div className="ui-1a76a0">
+          <div className="ui-76327e">
+            <div className="ui-a3c58b">Total venta</div>
+            <div className="ui-a32197">Gs. {fmtGs(total)}</div>
           </div>
-          <div style={{ background: saldo > 0 ? '#fff3e3' : '#e8f5e5', borderRadius:8, padding:'14px 15px' }}>
-            <div style={{ fontSize:10, color:'#6d746e', marginBottom:4 }}>Estado</div>
-            <div style={{ fontSize:18, color: saldo > 0 ? '#bd640b' : '#176a25', fontWeight:700 }}>{estadoLabel[venta.estado_cobro] || 'Pagado'}</div>
+          <div className="ui-bc331e" style={{ background: saldo > 0 ? '#fff3e3' : '#e8f5e5' }}>
+            <div className="ui-f31d5c">Estado</div>
+            <div className="ui-90ec18" style={{ color: saldo > 0 ? '#bd640b' : '#176a25' }}>{estadoLabel[venta.estado_cobro] || 'Pagado'}</div>
           </div>
         </div>
 
-        <div style={{ background:'#fafafa', borderRadius:8, padding:'4px 14px', marginBottom:14 }}>
+        <div className="ui-be8685">
           <div style={item}><span style={label}>Kilos vendidos</span><span style={value}>{fmtKg(venta.kg_total)} kg</span></div>
           <div style={item}><span style={label}>Precio por kg</span><span style={value}>Gs. {fmtGs(venta.precio_kg)}</span></div>
           <div style={item}><span style={label}>Cobrado</span><span style={value}>Gs. {fmtGs(venta.monto_cobrado)}</span></div>
           <div style={item}><span style={label}>Saldo</span><span style={value}>{saldo > 0 ? `Gs. ${fmtGs(saldo)}` : '-'}</span></div>
           <div style={item}><span style={label}>Forma de pago</span><span style={value}>{venta.forma_pago || '-'}</span></div>
-          <div style={{ ...item, borderBottom:'none' }}><span style={label}>Origen</span><span style={value}>{venta.bloques?.codigo ? `Bloque ${venta.bloques.codigo}` : 'Sin bloque asignado'}</span></div>
+          <div className="ui-310b5d" style={{ ...item }}><span style={label}>Origen</span><span style={value}>{venta.bloques?.codigo ? `Bloque ${venta.bloques.codigo}` : 'Sin bloque asignado'}</span></div>
         </div>
 
-        {venta.notas && <div style={{ background:"#f6f8f7", borderRadius:8, padding:'12px 14px', fontSize:13, color:'#4d544e', marginBottom:14 }}>{venta.notas}</div>}
+        {venta.notas && <div className="ui-a5941a">{venta.notas}</div>}
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-          <button onClick={onEdit} style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #d9ddd8', background:'#fff', color:"#124e38", fontSize:13, fontWeight:700, cursor:'pointer' }}>Editar venta</button>
-          <button onClick={onDelete} style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', fontSize:13, fontWeight:700, cursor:'pointer' }}>Eliminar</button>
+        <div className="ui-f56ef1">
+          <button className="ui-356937" onClick={onEdit}>Editar venta</button>
+          <button className="ui-690a60" onClick={onDelete}>Eliminar</button>
         </div>
       </div>
     </div>
@@ -94,55 +94,55 @@ function ModalDetalleGrupo({ grupo, onClose, onEdit, onDelete }) {
   const saldo = Math.max(0, grupo.total - grupo.cobrado)
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:150, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'#fff', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:560, padding:'22px 20px 34px', maxHeight:'88vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
+    <div className="ui-74ea9b" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end' }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ui-f81175" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+        <div className="ui-65048f">
           <div>
-            <div style={{ fontSize:12, color:'#8d938d', marginBottom:4 }}>Detalle de venta agrupada</div>
-            <div style={{ fontSize:22, fontWeight:700, color:"#182c25" }}>{grupo.comprador}</div>
-            <div style={{ fontSize:12, color:'#8d938d', marginTop:4 }}>{grupo.fecha} - {grupo.items.length} productos</div>
+            <div className="ui-de5560">Detalle de venta agrupada</div>
+            <div className="ui-882dd8">{grupo.comprador}</div>
+            <div className="ui-1301e2">{grupo.fecha} - {grupo.items.length} productos</div>
           </div>
-          <button onClick={onClose} style={{ width:36, height:36, borderRadius:8, border:'1px solid #ececec', background:'#fff', cursor:'pointer' }}>
-            <i className="ti ti-x" style={{ fontSize:18 }} aria-hidden="true"></i>
+          <button className="ui-f730c6" onClick={onClose}>
+            <i className="ti ti-x ui-bf83cf" aria-hidden="true"></i>
           </button>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
-          <div style={{ background:"#124e38", borderRadius:8, padding:'14px 15px' }}>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:4 }}>Total venta</div>
-            <div style={{ fontSize:21, color:'#fff', fontWeight:700 }}>Gs. {fmtGs(grupo.total)}</div>
+        <div className="ui-1a76a0">
+          <div className="ui-76327e">
+            <div className="ui-a3c58b">Total venta</div>
+            <div className="ui-a32197">Gs. {fmtGs(grupo.total)}</div>
           </div>
-          <div style={{ background: saldo > 0 ? '#fff3e3' : '#e8f5e5', borderRadius:8, padding:'14px 15px' }}>
-            <div style={{ fontSize:10, color:'#6d746e', marginBottom:4 }}>Cobro</div>
-            <div style={{ fontSize:18, color: saldo > 0 ? '#bd640b' : '#176a25', fontWeight:700 }}>{saldo > 0 ? `Debe Gs. ${fmtGs(saldo)}` : 'Pagado'}</div>
+          <div className="ui-bc331e" style={{ background: saldo > 0 ? '#fff3e3' : '#e8f5e5' }}>
+            <div className="ui-f31d5c">Cobro</div>
+            <div className="ui-90ec18" style={{ color: saldo > 0 ? '#bd640b' : '#176a25' }}>{saldo > 0 ? `Debe Gs. ${fmtGs(saldo)}` : 'Pagado'}</div>
           </div>
         </div>
 
-        <div style={{ background:'#fafafa', borderRadius:8, overflow:'hidden', marginBottom:14 }}>
+        <div className="ui-dff26e">
           {grupo.items.map((venta, idx) => {
             const total = Number(venta.total) || (Number(venta.kg_total) || 0) * (Number(venta.precio_kg) || 0)
             return (
-              <div key={venta.id} style={{ padding:'12px 14px', borderBottom: idx === grupo.items.length - 1 ? 'none' : '1px solid #eeeeee' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:4 }}>
-                  <div style={{ minWidth:0 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{venta.producto}</div>
-                    <div style={{ fontSize:11, color:"#697970", marginTop:2 }}>{venta.bloques?.codigo ? `Bloque ${venta.bloques.codigo}` : 'Sin bloque asignado'}</div>
+              <div className="ui-b2b190" key={venta.id} style={{ borderBottom: idx === grupo.items.length - 1 ? 'none' : '1px solid #eeeeee' }}>
+                <div className="ui-87fd17">
+                  <div className="ui-3f9f96">
+                    <div className="ui-788a2f">{venta.producto}</div>
+                    <div className="ui-66d4fa">{venta.bloques?.codigo ? `Bloque ${venta.bloques.codigo}` : 'Sin bloque asignado'}</div>
                   </div>
-                  <div style={{ textAlign:'right', flexShrink:0 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>Gs. {fmtGs(total)}</div>
-                    <div style={{ fontSize:11, color:'#687068' }}>{fmtKg(venta.kg_total)} kg - Gs. {fmtGs(venta.precio_kg)}/kg</div>
+                  <div className="ui-1d3685">
+                    <div className="ui-788a2f">Gs. {fmtGs(total)}</div>
+                    <div className="ui-51b095">{fmtKg(venta.kg_total)} kg - Gs. {fmtGs(venta.precio_kg)}/kg</div>
                   </div>
                 </div>
-                <div style={{ display:'flex', justifyContent:'flex-end', gap:6, marginTop:8 }}>
-                  <button onClick={() => onEdit(venta)} style={{ padding:'5px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:11, color:'#555', cursor:'pointer' }}>Editar</button>
-                  <button onClick={() => onDelete(venta.id)} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #ffcccc', background:'#fff0f0', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+                <div className="ui-24f5cd">
+                  <button className="ui-389f8b" onClick={() => onEdit(venta)}>Editar</button>
+                  <button className="ui-132fe6" onClick={() => onDelete(venta.id)}>Eliminar</button>
                 </div>
               </div>
             )
           })}
         </div>
 
-        <button style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer' }} onClick={onClose}>Cerrar</button>
+        <button className="ui-132c44" onClick={onClose}>Cerrar</button>
       </div>
     </div>
   )
@@ -466,23 +466,23 @@ export default function Ventas() {
   const label = { fontSize:10, color:"#697970", marginBottom:6, display:'block', fontWeight:700 }
 
   return (
-    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+    <div className="ui-c1c124">
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
       {detalle && <ModalDetalle venta={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditar(detalle)} onDelete={() => eliminar(detalle.id)} />}
       {detalleGrupo && <ModalDetalleGrupo grupo={detalleGrupo} onClose={() => setDetalleGrupo(null)} onEdit={(venta) => abrirEditar(venta)} onDelete={(id) => eliminar(id)} />}
 
-      <div style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+      <div className="ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div className="ui-796b93">
           <div>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Comercial</div>
-            <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Ventas</div>
+            <div className="ui-476525">Comercial</div>
+            <div className="ui-136b85">Ventas</div>
           </div>
-          <button onClick={abrirNueva} style={{ width:40, height:40, borderRadius:8, background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+          <button className="ui-11115c" onClick={abrirNueva}>
+            <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
           </button>
         </div>
-        {error && <div style={{ background:'#fff3e3', color:'#8a4d00', fontSize:12, padding:'9px 12px', borderRadius:8, marginBottom:10 }}>{error}</div>}
-        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr 1fr', gap: isDesktop ? 14 : 8 }}>
+        {error && <div className="ui-7d680a">{error}</div>}
+        <div className="ui-998b74" style={{ gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr 1fr', gap: isDesktop ? 14 : 8 }}>
           <Stat dark title="Vendido" value={`Gs. ${fmtGs(totalVendido)}`} sub={`${fmtKg(kgVendidos)} kg`} />
           <Stat title="Cobrado" value={`Gs. ${fmtGs(totalCobrado)}`} sub="dinero recibido" />
           <Stat title="Pendiente" value={totalPendiente > 0 ? `Gs. ${fmtGs(totalPendiente)}` : '-'} sub="cuentas por cobrar" warn={totalPendiente > 0} />
@@ -492,46 +492,46 @@ export default function Ventas() {
 
       <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         {ventas.length === 0 ? (
-          <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13, background:'#fff', borderRadius:8 }}>
+          <div className="ui-e1ea88">
             Sin ventas registradas.
           </div>
         ) : isDesktop ? (
-          <div style={{ background:'#fff', border:'1px solid #e4e8e4', borderRadius:8, overflow:'hidden', boxShadow:'none' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 110px 120px 130px 108px', gap:12, padding:'11px 16px', background:'#fafbf8', borderBottom:'1px solid #edf0ed', color:'#687068', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>
+          <div className="ui-32ad28">
+            <div className="ui-da9b72">
               <span>Venta</span>
               <span>Comprador / origen</span>
-              <span style={{ textAlign:'right' }}>Kg</span>
-              <span style={{ textAlign:'right' }}>Productos</span>
-              <span style={{ textAlign:'right' }}>Total</span>
-              <span style={{ textAlign:'right' }}>Acciones</span>
+              <span className="ui-f6e3d7">Kg</span>
+              <span className="ui-f6e3d7">Productos</span>
+              <span className="ui-f6e3d7">Total</span>
+              <span className="ui-f6e3d7">Acciones</span>
             </div>
             {gruposVentas.map(g => {
               const saldo = Math.max(0, g.total - g.cobrado)
               const esGrupo = g.items.length > 1
               const v = g.items[0]
               return (
-                <div key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)} style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 110px 120px 130px 108px', gap:12, alignItems:'center', padding:'13px 16px', borderBottom:'1px solid #f0f2ef', cursor:'pointer' }}>
-                  <div style={{ minWidth:0 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:"#182c25", whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{esGrupo ? `${g.items.length} productos vendidos` : v.producto}</div>
-                    {esGrupo && <div style={{ fontSize:11, color:'#687068', marginTop:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.items.map(item => item.producto).join(', ')}</div>}
-                    <div style={{ display:'flex', gap:6, marginTop:5, flexWrap:'wrap' }}>
-                      <span style={{ padding:'2px 8px', borderRadius:8, fontSize:10, fontWeight:700, background: saldo > 0 ? '#fff3e3' : '#e8f5e5', color: saldo > 0 ? '#bd640b' : '#176a25' }}>{saldo > 0 ? 'Pendiente' : 'Pagado'}</span>
-                      {saldo > 0 && <span style={{ padding:'2px 8px', borderRadius:8, fontSize:10, background:'#fff0f0', color:'#c84040' }}>Debe Gs. {fmtGs(saldo)}</span>}
+                <div className="ui-a2222c" key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)}>
+                  <div className="ui-3f9f96">
+                    <div className="ui-0debaf">{esGrupo ? `${g.items.length} productos vendidos` : v.producto}</div>
+                    {esGrupo && <div className="ui-a4ec02">{g.items.map(item => item.producto).join(', ')}</div>}
+                    <div className="ui-c3af51">
+                      <span className="ui-e278ed" style={{ background: saldo > 0 ? '#fff3e3' : '#e8f5e5', color: saldo > 0 ? '#bd640b' : '#176a25' }}>{saldo > 0 ? 'Pendiente' : 'Pagado'}</span>
+                      {saldo > 0 && <span className="ui-242114">Debe Gs. {fmtGs(saldo)}</span>}
                     </div>
                   </div>
-                  <div style={{ minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#08603f", whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.comprador}</div>
-                    <div style={{ fontSize:11, color:"#697970", marginTop:3 }}>{g.fecha}</div>
+                  <div className="ui-3f9f96">
+                    <div className="ui-3004e8">{g.comprador}</div>
+                    <div className="ui-3315a4">{g.fecha}</div>
                   </div>
-                  <div style={{ textAlign:'right', fontSize:13, fontWeight:700 }}>{fmtKg(g.kg)}</div>
-                  <div style={{ textAlign:'right', fontSize:13, color:'#4d544e' }}>{g.items.length}</div>
-                  <div style={{ textAlign:'right', fontSize:15, fontWeight:700 }}>Gs. {fmtGs(g.total)}</div>
-                  <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
-                    <button onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #e1e5e1', background:'#fff', color:'#333', cursor:'pointer' }} title={esGrupo ? 'Ver detalle' : 'Editar'}>
-                      <i className={`ti ${esGrupo ? 'ti-eye' : 'ti-pencil'}`} style={{ fontSize:16 }} aria-hidden="true"></i>
+                  <div className="ui-358cfe">{fmtKg(g.kg)}</div>
+                  <div className="ui-18be75">{g.items.length}</div>
+                  <div className="ui-c9e5e3">Gs. {fmtGs(g.total)}</div>
+                  <div className="ui-12274e">
+                    <button className="ui-dbdafa" onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }} title={esGrupo ? 'Ver detalle' : 'Editar'}>
+                      <i className={`${`ti ${esGrupo ? 'ti-eye' : 'ti-pencil'}`} ui-2592cc`} aria-hidden="true"></i>
                     </button>
-                    {!esGrupo && <button onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} style={{ width:34, height:30, borderRadius:9, border:'1px solid #ffcccc', background:'#fff', color:'#c84040', cursor:'pointer' }} title="Eliminar">
-                      <i className="ti ti-trash" style={{ fontSize:16 }} aria-hidden="true"></i>
+                    {!esGrupo && <button className="ui-5cff60" onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} title="Eliminar">
+                      <i className="ti ti-trash ui-2592cc" aria-hidden="true"></i>
                     </button>}
                   </div>
                 </div>
@@ -539,36 +539,36 @@ export default function Ventas() {
             })}
           </div>
         ) : (
-          <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+          <div className="ui-998b74" style={{ gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
             {gruposVentas.map(g => {
               const saldo = Math.max(0, g.total - g.cobrado)
               const esGrupo = g.items.length > 1
               const v = g.items[0]
               return (
-                <div key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)} style={{ background:'#fff', borderRadius:8, padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:8 }}>
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ fontSize:15, fontWeight:700, color:"#182c25" }}>{esGrupo ? `${g.items.length} productos vendidos` : v.producto}</div>
-                      <div style={{ fontSize:12, color:"#08603f", fontWeight:700, marginTop:2 }}>{g.comprador}</div>
-                      <div style={{ fontSize:11, color:"#697970", marginTop:2 }}>{g.fecha}</div>
-                      {esGrupo && <div style={{ fontSize:11, color:'#687068', marginTop:5 }}>{g.items.map(item => item.producto).join(', ')}</div>}
+                <div className="ui-ccaf82" key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+                  <div className="ui-2b96ff">
+                    <div className="ui-3f9f96">
+                      <div className="ui-62e15c">{esGrupo ? `${g.items.length} productos vendidos` : v.producto}</div>
+                      <div className="ui-efaf11">{g.comprador}</div>
+                      <div className="ui-66d4fa">{g.fecha}</div>
+                      {esGrupo && <div className="ui-6ad5d0">{g.items.map(item => item.producto).join(', ')}</div>}
                     </div>
-                    <div style={{ textAlign:'right', flexShrink:0 }}>
-                      <div style={{ fontSize:19, fontWeight:700, color:"#182c25" }}>Gs. {fmtGs(g.total)}</div>
-                      <div style={{ fontSize:11, color:'#555', fontWeight:700 }}>{fmtKg(g.kg)} kg</div>
+                    <div className="ui-1d3685">
+                      <div className="ui-000002">Gs. {fmtGs(g.total)}</div>
+                      <div className="ui-fbe473">{fmtKg(g.kg)} kg</div>
                     </div>
                   </div>
-                  <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-                    <span style={{ padding:'3px 10px', borderRadius:8, fontSize:10, fontWeight:700, background: saldo > 0 ? '#fff3e3' : '#e8f5e5', color: saldo > 0 ? '#bd640b' : '#176a25' }}>{saldo > 0 ? 'Pendiente' : 'Pagado'}</span>
-                    <span style={{ padding:'3px 10px', borderRadius:8, fontSize:10, background:"#f6f8f7", color:'#555' }}>{g.items.length} producto{g.items.length === 1 ? '' : 's'}</span>
-                    {saldo > 0 && <span style={{ padding:'3px 10px', borderRadius:8, fontSize:10, background:'#fff0f0', color:'#c84040' }}>Debe Gs. {fmtGs(saldo)}</span>}
+                  <div className="ui-0726a3">
+                    <span className="ui-9e3e7e" style={{ background: saldo > 0 ? '#fff3e3' : '#e8f5e5', color: saldo > 0 ? '#bd640b' : '#176a25' }}>{saldo > 0 ? 'Pendiente' : 'Pagado'}</span>
+                    <span className="ui-93221c">{g.items.length} producto{g.items.length === 1 ? '' : 's'}</span>
+                    {saldo > 0 && <span className="ui-bd1935">Debe Gs. {fmtGs(saldo)}</span>}
                   </div>
-                  {v.notas && !esGrupo && <div style={{ fontSize:11, color:"#697970", padding:'7px 10px', background:"#f6f8f7", borderRadius:8, marginBottom:8 }}>{v.notas}</div>}
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ fontSize:11, color:'#777' }}>Tocar para ver detalle</span>
-                    <div style={{ display:'flex', gap:6 }}>
-                      <button onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }} style={{ padding:'5px 12px', borderRadius:8, border:"1px solid #e2e9e5", background:'transparent', fontSize:11, color:'#555', cursor:'pointer' }}>{esGrupo ? 'Ver' : 'Editar'}</button>
-                      {!esGrupo && <button onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #ffcccc', background:'transparent', fontSize:11, color:'#c84040', cursor:'pointer' }}>Eliminar</button>}
+                  {v.notas && !esGrupo && <div className="ui-6ecc79">{v.notas}</div>}
+                  <div className="ui-510ea6">
+                    <span className="ui-dc716d">Tocar para ver detalle</span>
+                    <div className="ui-91294d">
+                      <button className="ui-3624ce" onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }}>{esGrupo ? 'Ver' : 'Editar'}</button>
+                      {!esGrupo && <button className="ui-ee01f4" onClick={(e) => { e.stopPropagation(); eliminar(v.id) }}>Eliminar</button>}
                     </div>
                   </div>
                 </div>
@@ -580,17 +580,17 @@ export default function Ventas() {
       </div>
 
       {modal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:500, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id ? 'Editar venta' : 'Registrar venta'}</div>
-            {error && <div style={{ background:'#fff3e3', color:'#8a4d00', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:12 }}>{error}</div>}
+        <div className="ui-8b7442" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end' }}>
+          <div className="ui-44a917" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div className="ui-c7b1b6">{form.id ? 'Editar venta' : 'Registrar venta'}</div>
+            {error && <div className="ui-fb48d7">{error}</div>}
 
             {!form.id && (
-              <div style={{ display:'flex', gap:5, background:"#e2e9e5", borderRadius:8, padding:4, marginBottom:14 }}>
-                <button type="button" onClick={() => setModoMultiple(false)} style={{ flex:1, padding:9, borderRadius:8, border:'none', cursor:'pointer', background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:700 }}>
+              <div className="ui-796353">
+                <button className="ui-cada8c" type="button" onClick={() => setModoMultiple(false)} style={{ background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777' }}>
                   Un producto
                 </button>
-                <button type="button" onClick={() => setModoMultiple(true)} style={{ flex:1, padding:9, borderRadius:8, border:'none', cursor:'pointer', background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:700 }}>
+                <button className="ui-cada8c" type="button" onClick={() => setModoMultiple(true)} style={{ background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777' }}>
                   Varios productos
                 </button>
               </div>
@@ -610,7 +610,7 @@ export default function Ventas() {
                 <label style={label}>Producto *</label>
                 <input style={inp} value={form.producto} onChange={e => setForm(f => ({ ...f, producto:e.target.value }))} placeholder="Ej: Tomate, pepino, morron" />
 
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                <div className="ui-f56ef1">
                   <div>
                     <label style={label}>Kilos *</label>
                     <input style={inp} type="text" inputMode="decimal" value={form.kg_total} onChange={e => setForm(f => ({ ...f, kg_total:e.target.value }))} placeholder="Ej: 150" />
@@ -634,7 +634,7 @@ export default function Ventas() {
                   <option value="">Venta sin bloque especifico</option>
                   {bloquesVisibles.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
                 </select>
-                {cultivoSugerido && <div style={{ background:'#e8f5e5', color:"#08603f", borderRadius:8, padding:'9px 12px', fontSize:12, fontWeight:700, marginBottom:12 }}>Cultivo sugerido: {cultivoSugerido}</div>}
+                {cultivoSugerido && <div className="ui-99850b">Cultivo sugerido: {cultivoSugerido}</div>}
               </>
             ) : (
               <>
@@ -643,21 +643,21 @@ export default function Ventas() {
                   <option value="">Todos los campos</option>
                   {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
-                <div style={{ display:'grid', gap:10, marginBottom:12 }}>
+                <div className="ui-c0b83a">
                   {lineasVenta.map((linea, idx) => {
                     const bloqueLinea = bloques.find(b => b.id === linea.bloque_id)
                     const cultivoLinea = getCultivoBloque(bloqueLinea)
                     const totalLinea = parsearKg(linea.kg_total) * parsearGs(linea.precio_kg)
                     return (
-                      <div key={idx} style={{ background:'#fff', border:'1px solid #e4e6e2', borderRadius:8, padding:12 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                          <strong style={{ fontSize:13 }}>Producto {idx + 1}</strong>
+                      <div className="ui-ac8a4c" key={idx}>
+                        <div className="ui-b3c308">
+                          <strong className="ui-3044b6">Producto {idx + 1}</strong>
                           {lineasVenta.length > 1 && (
-                            <button type="button" onClick={() => quitarLineaVenta(idx)} style={{ border:'1px solid #ffcccc', background:'#fff', color:'#c84040', borderRadius:8, padding:'5px 9px', fontSize:11, cursor:'pointer' }}>Quitar</button>
+                            <button className="ui-375820" type="button" onClick={() => quitarLineaVenta(idx)}>Quitar</button>
                           )}
                         </div>
                         <input style={inp} value={linea.producto} onChange={e => actualizarLineaVenta(idx, 'producto', e.target.value)} placeholder="Producto"/>
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                        <div className="ui-f56ef1">
                           <input style={inp} type="text" inputMode="decimal" value={linea.kg_total} onChange={e => actualizarLineaVenta(idx, 'kg_total', e.target.value)} placeholder="Kg"/>
                           <input style={inp} type="text" inputMode="numeric" value={linea.precio_kg} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); actualizarLineaVenta(idx, 'precio_kg', r ? parseInt(r, 10).toLocaleString('es-PY') : '') }} placeholder="Gs/kg"/>
                         </div>
@@ -670,23 +670,23 @@ export default function Ventas() {
                           <option value="">Sin bloque especifico</option>
                           {bloquesVisibles.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
                         </select>
-                        {cultivoLinea && <div style={{ background:'#e8f5e5', color:"#08603f", borderRadius:8, padding:'7px 10px', fontSize:11, fontWeight:700, margin:'-4px 0 10px' }}>{cultivoLinea}</div>}
-                        <input style={{ ...inp, marginBottom:0 }} value={linea.notas} onChange={e => actualizarLineaVenta(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
-                        {totalLinea > 0 && <div style={{ fontSize:11, color:'#687068', fontWeight:700, marginTop:8 }}>Subtotal: Gs. {fmtGs(totalLinea)}</div>}
+                        {cultivoLinea && <div className="ui-9af458">{cultivoLinea}</div>}
+                        <input className="ui-e7ec54" style={{ ...inp }} value={linea.notas} onChange={e => actualizarLineaVenta(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
+                        {totalLinea > 0 && <div className="ui-be0b54">Subtotal: Gs. {fmtGs(totalLinea)}</div>}
                       </div>
                     )
                   })}
                 </div>
-                <button type="button" onClick={agregarLineaVenta} style={{ width:'100%', padding:12, borderRadius:8, border:'1px dashed #bfc6bf', background:'#fff', fontSize:13, fontWeight:700, color:"#08603f", cursor:'pointer', marginBottom:12 }}>
+                <button className="ui-f8cb2b" type="button" onClick={agregarLineaVenta}>
                   + Agregar otro producto
                 </button>
               </>
             )}
 
             <label style={label}>Estado de cobro</label>
-            <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+            <div className="ui-60e304">
               {['pagado', 'pendiente', 'parcial'].map(e => (
-                <button key={e} onClick={() => setForm(f => ({ ...f, estado_cobro:e, monto_cobrado: e === 'parcial' ? f.monto_cobrado : '' }))} style={{ flex:1, padding:'9px', borderRadius:8, border:"1px solid #e2e9e5", fontSize:12, fontWeight:700, cursor:'pointer', background: form.estado_cobro === e ? '#212121' : '#fff', color: form.estado_cobro === e ? '#fff' : '#555' }}>{estadoLabel[e]}</button>
+                <button className="ui-eb3cc9" key={e} onClick={() => setForm(f => ({ ...f, estado_cobro:e, monto_cobrado: e === 'parcial' ? f.monto_cobrado : '' }))} style={{ background: form.estado_cobro === e ? '#212121' : '#fff', color: form.estado_cobro === e ? '#fff' : '#555' }}>{estadoLabel[e]}</button>
               ))}
             </div>
 
@@ -701,17 +701,17 @@ export default function Ventas() {
             <input style={inp} value={form.forma_pago} onChange={e => setForm(f => ({ ...f, forma_pago:e.target.value }))} placeholder="Efectivo, transferencia, cheque..." />
 
             <label style={label}>Notas</label>
-            <textarea style={{ ...inp, minHeight:64, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones..." />
+            <textarea className="ui-d303ae" style={{ ...inp }} value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones..." />
 
             {((!modoMultiple || form.id) ? ventaTotalForm : ventaTotalMultiple) > 0 && (
-              <div style={{ background:'#eeeeee', borderRadius:8, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:12, color:"#124e38" }}>Total venta</span>
-                <span style={{ fontSize:14, fontWeight:700, color:"#124e38" }}>Gs. {fmtGs((!modoMultiple || form.id) ? ventaTotalForm : ventaTotalMultiple)}</span>
+              <div className="ui-a11ccd">
+                <span className="ui-aa481a">Total venta</span>
+                <span className="ui-398ec2">Gs. {fmtGs((!modoMultiple || form.id) ? ventaTotalForm : ventaTotalMultiple)}</span>
               </div>
             )}
 
-            <button style={{ width:'100%', padding:14, borderRadius:8, background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : modoMultiple && !form.id ? 'Guardar venta con productos' : 'Guardar venta'}</button>
-            <button style={{ width:'100%', padding:12, borderRadius:8, background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
+            <button className="ui-ae772b" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : modoMultiple && !form.id ? 'Guardar venta con productos' : 'Guardar venta'}</button>
+            <button className="ui-3f3807" onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </div>
       )}
@@ -721,10 +721,10 @@ export default function Ventas() {
 
 function Stat({ title, value, sub, dark, warn }) {
   return (
-    <div style={{ background: dark ? '#212121' : '#fff', borderRadius:8, padding:'14px 16px', border: dark ? 'none' : '1px solid #e8ece8' }}>
-      <div style={{ fontSize:9, color: dark ? 'rgba(255,255,255,0.5)' : '#8b928b', textTransform:'uppercase', marginBottom:4 }}>{title}</div>
-      <div style={{ fontSize: dark ? 22 : 18, fontWeight:700, color: dark ? '#fff' : warn ? '#bd640b' : '#212121', letterSpacing:-.5, lineHeight:1.1 }}>{value}</div>
-      <div style={{ fontSize:10, color: dark ? 'rgba(255,255,255,0.5)' : '#8b928b', marginTop:3 }}>{sub}</div>
+    <div className="ui-d7e44b" style={{ background: dark ? '#212121' : '#fff', border: dark ? 'none' : '1px solid #e8ece8' }}>
+      <div className="ui-dedf0f" style={{ color: dark ? 'rgba(255,255,255,0.5)' : '#8b928b' }}>{title}</div>
+      <div className="ui-b9c079" style={{ fontSize: dark ? 22 : 18, color: dark ? '#fff' : warn ? '#bd640b' : '#212121' }}>{value}</div>
+      <div className="ui-89a879" style={{ color: dark ? 'rgba(255,255,255,0.5)' : '#8b928b' }}>{sub}</div>
     </div>
   )
 }

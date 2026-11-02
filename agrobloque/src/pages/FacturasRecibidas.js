@@ -166,15 +166,15 @@ export default function FacturasRecibidas() {
   }
 
   return (
-    <main style={{ minHeight:'100vh', background:'#f6f8f7', padding:isDesktop ? '32px 36px 100px' : '22px 14px 100px' }}>
-      <header style={{ maxWidth:1080, margin:'0 auto 18px', display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start' }}>
-        <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+    <main className="ui-71cde8" style={{ padding:isDesktop ? '32px 36px 100px' : '22px 14px 100px' }}>
+      <header className="ui-6dc486">
+        <div className="ui-118850">
           <button onClick={() => navigate('/contabilidad')} aria-label="Volver a Contabilidad" style={iconButton}>
             <i className="ti ti-arrow-left" aria-hidden="true" />
           </button>
           <div>
-            <div style={{ fontSize:11, color:'#697970', marginBottom:4 }}>Contabilidad · documentos privados</div>
-            <h1 style={{ margin:0, fontSize:isDesktop ? 25 : 21, color:'#182c25' }}>Facturas recibidas</h1>
+            <div className="ui-18854e">Contabilidad · documentos privados</div>
+            <h1 className="ui-fc3fb4" style={{ fontSize:isDesktop ? 25 : 21 }}>Facturas recibidas</h1>
           </div>
         </div>
         <button onClick={() => inputRef.current?.click()} style={primaryButton}>
@@ -183,15 +183,15 @@ export default function FacturasRecibidas() {
         <input ref={inputRef} type="file" accept="application/pdf,.pdf" onChange={elegirArchivo} hidden />
       </header>
 
-      <div style={{ maxWidth:1080, margin:'0 auto' }}>
+      <div className="ui-696e8a">
         <section style={notice}>
-          <i className="ti ti-shield-check" style={{ fontSize:22, color:'#08603f' }} aria-hidden="true" />
-          <div><strong>Prueba controlada</strong><div style={{ marginTop:3, color:'#667069' }}>El sistema intenta leer el PDF, pero nada entra al balance hasta que vos lo apruebes.</div></div>
+          <i className="ti ti-shield-check ui-1cfb3f" aria-hidden="true" />
+          <div><strong>Prueba controlada</strong><div className="ui-e8c73b">El sistema intenta leer el PDF, pero nada entra al balance hasta que vos lo apruebes.</div></div>
         </section>
 
         {error && <div role="alert" style={errorBox}>{error}</div>}
 
-        <div style={{ display:'flex', gap:6, margin:'14px 0', overflowX:'auto' }}>
+        <div className="ui-d5c4f2">
           {[
             ['pendiente', `Pendientes (${pendientes})`],
             ['aprobada', 'Aprobadas'],
@@ -210,23 +210,23 @@ export default function FacturasRecibidas() {
               <div style={{ ...documentIcon, background:factura.estado === 'aprobada' ? '#edf7f1' : factura.estado === 'rechazada' ? '#f4f4f4' : '#fff6e7' }}>
                 <i className="ti ti-file-type-pdf" aria-hidden="true" />
               </div>
-              <div style={{ minWidth:0 }}>
-                <div style={{ display:'flex', gap:7, alignItems:'center', flexWrap:'wrap' }}>
-                  <strong style={{ color:'#17231e', fontSize:14 }}>{factura.proveedor}</strong>
+              <div className="ui-3f9f96">
+                <div className="ui-f2535c">
+                  <strong className="ui-3e2dd6">{factura.proveedor}</strong>
                   <Estado estado={factura.estado} />
                 </div>
-                <div style={{ color:'#707a73', fontSize:12, marginTop:4 }}>
+                <div className="ui-ec4b50">
                   {factura.fecha_factura} · {factura.comprobante || 'Sin numero'}{factura.ruc ? ` · RUC ${factura.ruc}` : ''}
                 </div>
-                <div style={{ color:'#929993', fontSize:11, marginTop:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{factura.archivo_nombre}</div>
+                <div className="ui-f99029">{factura.archivo_nombre}</div>
               </div>
-              <div style={{ display:'grid', justifyItems:'end', gap:7 }}>
-                <strong style={{ color:'#182c25', whiteSpace:'nowrap' }}>{factura.moneda === 'USD' ? 'USD' : 'Gs.'} {fmtGs(factura.total)}</strong>
-                <div style={{ display:'flex', gap:6 }}>
+              <div className="ui-bf011c">
+                <strong className="ui-c1859e">{factura.moneda === 'USD' ? 'USD' : 'Gs.'} {fmtGs(factura.total)}</strong>
+                <div className="ui-91294d">
                   <button onClick={() => abrirPdf(factura)} style={miniButton} title="Ver PDF"><i className="ti ti-eye" /></button>
                   {factura.estado === 'pendiente' && <>
-                    <button onClick={() => rechazar(factura)} style={{ ...miniButton, color:'#9b3c3c' }} title="Rechazar"><i className="ti ti-x" /></button>
-                    <button onClick={() => aprobar(factura)} style={{ ...miniButton, background:'#08603f', color:'#fff', borderColor:'#08603f' }} title="Aprobar"><i className="ti ti-check" /></button>
+                    <button className="ui-d1059a" onClick={() => rechazar(factura)} style={{ ...miniButton }} title="Rechazar"><i className="ti ti-x" /></button>
+                    <button className="ui-52184b" onClick={() => aprobar(factura)} style={{ ...miniButton }} title="Aprobar"><i className="ti ti-check" /></button>
                   </>}
                 </div>
               </div>
@@ -238,13 +238,13 @@ export default function FacturasRecibidas() {
       {modal && (
         <div style={overlay} role="presentation" onMouseDown={event => event.target === event.currentTarget && cerrar()}>
           <section role="dialog" aria-modal="true" aria-labelledby="factura-title" style={sheet}>
-            <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'flex-start', marginBottom:16 }}>
-              <div><div style={{ fontSize:11, color:'#697970' }}>Revisar lectura</div><h2 id="factura-title" style={{ margin:'4px 0 0', fontSize:20 }}>Nueva factura</h2></div>
+            <div className="ui-9bae07">
+              <div><div className="ui-51b095">Revisar lectura</div><h2 className="ui-aad0a1" id="factura-title">Nueva factura</h2></div>
               <button onClick={cerrar} style={iconButton} aria-label="Cerrar"><i className="ti ti-x" /></button>
             </div>
-            <div style={fileSummary}><i className="ti ti-file-type-pdf" /><div style={{ minWidth:0 }}><strong style={{ display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{archivo?.name}</strong><small>{estado}</small></div></div>
-            {error && <div role="alert" style={{ ...errorBox, marginTop:0, marginBottom:12 }}>{error}</div>}
-            <div style={{ display:'grid', gridTemplateColumns:isDesktop ? '1fr 1fr' : '1fr', gap:isDesktop ? 10 : 0 }}>
+            <div style={fileSummary}><i className="ti ti-file-type-pdf" /><div className="ui-3f9f96"><strong className="ui-2fd49b">{archivo?.name}</strong><small>{estado}</small></div></div>
+            {error && <div className="ui-d8f2f7" role="alert" style={{ ...errorBox }}>{error}</div>}
+            <div className="ui-998b74" style={{ gridTemplateColumns:isDesktop ? '1fr 1fr' : '1fr', gap:isDesktop ? 10 : 0 }}>
               <Field label="Fecha de factura" type="date" value={form.fecha} onChange={value => setForm(f => ({ ...f, fecha:value }))} />
               <Field label="Proveedor" required value={form.proveedor} onChange={value => setForm(f => ({ ...f, proveedor:value }))} />
               <Field label="RUC" value={form.ruc} onChange={value => setForm(f => ({ ...f, ruc:value }))} />
@@ -254,7 +254,7 @@ export default function FacturasRecibidas() {
             </div>
             <Field label="Descripcion" value={form.descripcion} onChange={value => setForm(f => ({ ...f, descripcion:value }))} />
             <Field label="Notas (opcional)" value={form.notas} onChange={value => setForm(f => ({ ...f, notas:value }))} />
-            <button onClick={guardarPendiente} disabled={saving} style={{ ...primaryButton, width:'100%', justifyContent:'center', opacity:saving ? .65 : 1 }}>{saving ? 'Guardando…' : 'Guardar para revisar'}</button>
+            <button className="ui-d6167d" onClick={guardarPendiente} disabled={saving} style={{ ...primaryButton, opacity:saving ? .65 : 1 }}>{saving ? 'Guardando…' : 'Guardar para revisar'}</button>
             <button onClick={cerrar} disabled={saving} style={secondaryButton}>Cancelar</button>
           </section>
         </div>
@@ -268,12 +268,12 @@ function Field({ label: text, value, onChange, type = 'text', inputMode, require
 }
 
 function Empty({ icon, text }) {
-  return <div style={{ padding:'42px 20px', textAlign:'center', color:'#778079' }}><i className={`ti ${icon}`} style={{ display:'block', fontSize:30, marginBottom:10 }} /><span style={{ fontSize:13 }}>{text}</span></div>
+  return <div className="ui-33b68b"><i className={`${`ti ${icon}`} ui-7068c5`} /><span className="ui-3044b6">{text}</span></div>
 }
 
 function Estado({ estado }) {
   const cfg = estado === 'aprobada' ? ['Aprobada', '#e7f5eb', '#176a35'] : estado === 'rechazada' ? ['Rechazada', '#f0f1f0', '#656b67'] : ['Pendiente', '#fff2d8', '#8c5b00']
-  return <span style={{ padding:'3px 7px', borderRadius:7, background:cfg[1], color:cfg[2], fontSize:10, fontWeight:700 }}>{cfg[0]}</span>
+  return <span className="ui-61bc14" style={{ background:cfg[1], color:cfg[2] }}>{cfg[0]}</span>
 }
 
 const panel = { background:'#fff', border:'1px solid #e5eae6', borderRadius:10, padding:'4px 16px' }

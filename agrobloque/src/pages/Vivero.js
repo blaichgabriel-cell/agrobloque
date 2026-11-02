@@ -398,16 +398,16 @@ export default function Vivero() {
       {detalle && (
         <div className="bl-overlay" onClick={e => e.target === e.currentTarget && setDetalle(null)}>
           <div className="bl-sheet">
-            <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:14 }}>
+            <div className="ui-60c2bd">
               <div>
-                <div style={{ fontSize:12, color:"#697970" }}>Detalle de lote</div>
-                <div style={{ fontSize:22, fontWeight:700 }}>{detalle.cultivo}</div>
-                <div style={{ fontSize:12, color:"#08603f", fontWeight:700 }}>{detalle.variedad || 'Sin variedad'}</div>
+                <div className="ui-93a7e1">Detalle de lote</div>
+                <div className="ui-02cbdf">{detalle.cultivo}</div>
+                <div className="ui-d239cf">{detalle.variedad || 'Sin variedad'}</div>
               </div>
               <button aria-label="Cerrar" onClick={() => setDetalle(null)} className="bl-icon-btn"><i className="ti ti-x" /></button>
             </div>
 
-            <div style={{ background:'#f7f7f5', borderRadius:'var(--ag-radius)', padding:'4px 14px', marginBottom:14 }}>
+            <div className="ui-d87c39">
               <Info label="Fecha siembra" value={detalle.fecha_siembra} />
               <Info label="Fecha estimada trasplante" value={detalle.fecha_estimada_trasplante || '-'} />
               <Info label="Fecha real trasplante" value={detalle.fecha_real_trasplante || '-'} />
@@ -419,34 +419,34 @@ export default function Vivero() {
               <Info label="Perdidas" value={detalle.perdidas || 0} last />
             </div>
 
-            {detalle.notas && <div style={{ background:"#f6f8f7", borderRadius:'var(--ag-radius)', padding:12, fontSize:13, marginBottom:14 }}>{detalle.notas}</div>}
+            {detalle.notas && <div className="ui-9c4127">{detalle.notas}</div>}
 
             {detalle.bloque_id ? (
-              <button onClick={() => navigate(`/bloque/${detalle.bloque_id}`)} style={{ ...primaryBtn, marginBottom:12 }}>
+              <button className="ui-fa3e1c" onClick={() => navigate(`/bloque/${detalle.bloque_id}`)} style={{ ...primaryBtn }}>
                 Ver bloque trasplantado
               </button>
             ) : detalle.estado !== 'trasplantado' && (
-              <button onClick={() => abrirTrasplante(detalle)} style={{ ...primaryBtn, marginBottom:12, background:"#08603f" }}>
+              <button className="ui-606a6c" onClick={() => abrirTrasplante(detalle)} style={{ ...primaryBtn }}>
                 Trasplantar a bloque
               </button>
             )}
 
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-              <div style={{ fontSize:15, fontWeight:700 }}>Tratamientos</div>
-              <button className="ag-small-action" onClick={() => { setTratForm(tratamientoInicial); setModalTratamiento(true) }} style={{ border:'none', borderRadius:'var(--ag-radius)', background:'#1a5c2e', color:'#fff', padding:'8px 10px', fontSize:12, fontWeight:700 }}>+ Tratamiento</button>
+            <div className="ui-b3c308">
+              <div className="ui-9535b3">Tratamientos</div>
+              <button className="ag-small-action ui-8ab10c" onClick={() => { setTratForm(tratamientoInicial); setModalTratamiento(true) }}>+ Tratamiento</button>
             </div>
             {tratamientos.length === 0 ? (
-              <div style={{ color:"#697970", fontSize:13, marginBottom:14 }}>Sin tratamientos registrados.</div>
+              <div className="ui-c0d22a">Sin tratamientos registrados.</div>
             ) : tratamientos.map(t => (
-              <div key={t.id} style={{ background:'#f7f7f5', borderRadius:'var(--ag-radius)', padding:11, marginBottom:8 }}>
-                <div style={{ fontSize:13, fontWeight:700 }}>{t.tipo}</div>
-                <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>{t.fecha}{t.producto ? ` · ${t.producto}` : ''}{t.dosis ? ` · ${t.dosis}` : ''}</div>
-                {t.notas && <div style={{ fontSize:12, marginTop:6 }}>{t.notas}</div>}
-                <div style={{ display:'flex', gap:6, marginTop:8 }}><button className="ag-small-action" onClick={() => editarTratamiento(t)} style={{ ...secondaryBtn, width:'auto', padding:'6px 10px', margin:0 }}>Editar</button><button className="ag-small-action" onClick={() => anularTratamiento(t)} style={{ ...dangerBtn, width:'auto', padding:'6px 10px', margin:0 }}>Anular</button></div>
+              <div className="ui-190117" key={t.id}>
+                <div className="ui-843e0a">{t.tipo}</div>
+                <div className="ui-a8f171">{t.fecha}{t.producto ? ` · ${t.producto}` : ''}{t.dosis ? ` · ${t.dosis}` : ''}</div>
+                {t.notas && <div className="ui-e396da">{t.notas}</div>}
+                <div className="ui-e396ba"><button className="ag-small-action ui-794ba0" onClick={() => editarTratamiento(t)} style={{ ...secondaryBtn }}>Editar</button><button className="ag-small-action ui-794ba0" onClick={() => anularTratamiento(t)} style={{ ...dangerBtn }}>Anular</button></div>
               </div>
             ))}
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:14 }}>
+            <div className="ui-0a45a3">
               <button onClick={() => abrirEditar(detalle)} className="bl-btn bl-btn--ghost">Editar lote</button>
               <button onClick={() => eliminarLote(detalle.id)} className="bl-btn bl-btn--danger">Eliminar</button>
             </div>
@@ -457,23 +457,23 @@ export default function Vivero() {
       {modal && (
         <div className="bl-overlay">
           <div className="bl-sheet">
-            <div style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>{form.id ? 'Editar lote' : 'Nuevo lote de vivero'}</div>
+            <div className="ui-9c155f">{form.id ? 'Editar lote' : 'Nuevo lote de vivero'}</div>
             <Select label="Campo" value={form.campo_id} onChange={v => setForm(f => ({ ...f, campo_id:v }))} options={campos.map(c => [c.id, c.nombre])} />
             <Field label="Fecha de siembra *" type="date" value={form.fecha_siembra} onChange={v => setForm(f => ({ ...f, fecha_siembra:v }))} />
             <Field label="Cultivo/semilla *" value={form.cultivo} onChange={v => setForm(f => ({ ...f, cultivo:v }))} placeholder="Ej: Tomate" />
             <Field label="Variedad" value={form.variedad} onChange={v => setForm(f => ({ ...f, variedad:v }))} placeholder="Ej: Sheila, Nathalie" />
             <Field label="Detalle de semilla" value={form.semilla} onChange={v => setForm(f => ({ ...f, semilla:v }))} placeholder="Marca, lote o procedencia" />
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div className="ui-f56ef1">
               <Field label="Cantidad semillas" type="number" value={form.cantidad_semillas} onChange={v => setForm(f => ({ ...f, cantidad_semillas:v }))} />
               <Field label="Bandejas" type="number" value={form.bandejas} onChange={v => setForm(f => ({ ...f, bandejas:v }))} />
             </div>
             <Field label="Sustrato" value={form.sustrato} onChange={v => setForm(f => ({ ...f, sustrato:v }))} placeholder="Ej: turba + perlita" />
             <Field label="Abono incorporado al sustrato" value={form.abono_sustrato} onChange={v => setForm(f => ({ ...f, abono_sustrato:v }))} placeholder="Ej: 15-15-15, humus, compost" />
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div className="ui-f56ef1">
               <Field label="Trasplante estimado" type="date" value={form.fecha_estimada_trasplante} onChange={v => setForm(f => ({ ...f, fecha_estimada_trasplante:v }))} />
               <Field label="Trasplante real" type="date" value={form.fecha_real_trasplante} onChange={v => setForm(f => ({ ...f, fecha_real_trasplante:v }))} />
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div className="ui-f56ef1">
               <Field label="Germinadas" type="number" value={form.germinadas} onChange={v => setForm(f => ({ ...f, germinadas:v }))} />
               <Field label="Perdidas" type="number" value={form.perdidas} onChange={v => setForm(f => ({ ...f, perdidas:v }))} />
             </div>
@@ -488,7 +488,7 @@ export default function Vivero() {
       {modalTratamiento && (
         <div className="bl-overlay">
           <div className="bl-sheet">
-            <div style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>{tratForm.id ? 'Editar tratamiento' : 'Nuevo tratamiento'}</div>
+            <div className="ui-9c155f">{tratForm.id ? 'Editar tratamiento' : 'Nuevo tratamiento'}</div>
             <Field label="Fecha *" type="date" value={tratForm.fecha} onChange={v => setTratForm(f => ({ ...f, fecha:v }))} />
             <Field label="Tipo *" value={tratForm.tipo} onChange={v => setTratForm(f => ({ ...f, tipo:v }))} placeholder="Ej: fungicida, fertilizante, enraizante" />
             <Field label="Producto" value={tratForm.producto} onChange={v => setTratForm(f => ({ ...f, producto:v }))} />
@@ -504,11 +504,11 @@ export default function Vivero() {
       {modalTrasplante && detalle && (
         <div className="bl-overlay">
           <div className="bl-sheet">
-            <div style={{ fontSize:18, fontWeight:700, marginBottom:4 }}>Trasplantar a bloque</div>
-            <div style={{ fontSize:12, color:'#7d837d', marginBottom:16 }}>
+            <div className="ui-d26ea9">Trasplantar a bloque</div>
+            <div className="ui-67972d">
               {detalle.cultivo}{detalle.variedad ? ` - ${detalle.variedad}` : ''} · {detalle.campos?.nombre || 'Sin campo'}
             </div>
-            {error && <div style={{ background:'#fff0f0', color:'#b02a2a', borderRadius:'var(--ag-radius)', padding:10, fontSize:12, marginBottom:12 }}>{error}</div>}
+            {error && <div className="ui-99ac05">{error}</div>}
             <Select
               label="Bloque destino *"
               value={trasForm.bloque_id}
@@ -519,7 +519,7 @@ export default function Vivero() {
             />
             <Field label="Fecha real de trasplante *" type="date" value={trasForm.fecha_real_trasplante} onChange={v => setTrasForm(f => ({ ...f, fecha_real_trasplante:v }))} />
             <Field label="Cantidad de plantas" type="number" value={trasForm.cantidad_plantas} onChange={v => setTrasForm(f => ({ ...f, cantidad_plantas:v }))} />
-            <label style={{ display:'flex', alignItems:'center', gap:10, background:'#fff', border:'1px solid #e3e5e1', borderRadius:'var(--ag-radius)', padding:'11px 14px', marginBottom:12, fontSize:13, cursor:'pointer' }}>
+            <label className="ui-e68140">
               <input
                 type="checkbox"
                 checked={!!trasForm.finalizar_lote}
@@ -551,7 +551,7 @@ function Mini({ label, value }) {
 }
 
 function Info({ label, value, last }) {
-  return <div style={{ display:'flex', justifyContent:'space-between', gap:12, padding:'10px 0', borderBottom:last ? 'none' : '1px solid #e8e8e8' }}><span style={{ fontSize:12, color:'#8d938d' }}>{label}</span><strong style={{ fontSize:13, textAlign:'right' }}>{value}</strong></div>
+  return <div className="ui-4a6b0f" style={{ borderBottom:last ? 'none' : '1px solid #e8e8e8' }}><span className="ui-5e0192">{label}</span><strong className="ui-d4a5ed">{value}</strong></div>
 }
 
 // Los enteros se escriben como texto: un <input type="number"> descarta "41.497" o "1.000.000".
@@ -573,7 +573,7 @@ function Field({ label, value, onChange, type = 'text', placeholder = '', textar
 
 function Select({ label, value, onChange, options }) {
   return (
-    <label style={{ display:'block' }}>
+    <label className="ui-fa9aec">
       <div className="bl-label">{label}</div>
       <select value={value || ''} onChange={e => onChange(e.target.value)} className="bl-input">
         <option value="">Sin asignar</option>

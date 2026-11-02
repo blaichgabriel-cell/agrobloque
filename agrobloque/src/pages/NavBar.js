@@ -27,35 +27,35 @@ export default function NavBar() {
   return (
     <>
       {showMore && (
-        <div style={{ position:'fixed', bottom:64, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'#fff', borderTop:"0.5px solid #e2e9e5", padding:'12px 14px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, zIndex:40 }}>
+        <div className="ui-ca8c85">
           {moreTabs.map(t => (
-            <button key={t.path} onClick={() => { navigate(t.path); setShowMore(false) }}
-              style={{ padding:'10px 6px', borderRadius:8, border:"1px solid #e2e9e5", background: location.pathname===t.path ? '#A0785A' : '#f2f1ef', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-              <i className={`ti ${t.icon}`} style={{ fontSize:20, color: location.pathname===t.path ? '#fff' : '#555' }} aria-hidden="true"></i>
-              <span style={{ fontSize:9, fontWeight:600, color: location.pathname===t.path ? '#fff' : '#555' }}>{t.label}</span>
+            <button className="ui-6ec60a" key={t.path} onClick={() => { navigate(t.path); setShowMore(false) }}
+              style={{ background: location.pathname===t.path ? '#A0785A' : '#f2f1ef' }}>
+              <i className={`${`ti ${t.icon}`} ui-e5e6f8`} style={{ color: location.pathname===t.path ? '#fff' : '#555' }} aria-hidden="true"></i>
+              <span className="ui-e6f375" style={{ color: location.pathname===t.path ? '#fff' : '#555' }}>{t.label}</span>
             </button>
           ))}
         </div>
       )}
 
-      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, display:'flex', borderTop:"0.5px solid #e2e9e5", background:'#f9f8f6', paddingBottom:'env(safe-area-inset-bottom,0px)', zIndex:50 }}>
+      <div className="ui-652476">
         {mainTabs.map(t => {
           const active = location.pathname === t.path
           return (
-            <div key={t.path} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'8px 0', cursor:'pointer' }}
+            <div className="ui-310d3e" key={t.path}
               onClick={() => { navigate(t.path); setShowMore(false) }}>
-              <i className={`ti ${t.icon}`} style={{ fontSize:21, color: active ? '#A0785A' : '#ccc' }} aria-hidden="true"></i>
-              {active && <div style={{ width:4, height:4, borderRadius:'50%', background:'#A0785A' }}></div>}
-              <span style={{ fontSize:8, color: active ? '#A0785A' : '#ccc', fontWeight: active ? 600 : 400 }}>{t.label}</span>
+              <i className={`${`ti ${t.icon}`} ui-27a8ac`} style={{ color: active ? '#A0785A' : '#ccc' }} aria-hidden="true"></i>
+              {active && <div className="ui-4fae2a"></div>}
+              <span className="ui-908ae8" style={{ color: active ? '#A0785A' : '#ccc', fontWeight: active ? 600 : 400 }}>{t.label}</span>
             </div>
           )
         })}
 
-        <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'8px 0', cursor:'pointer' }}
+        <div className="ui-310d3e"
           onClick={() => setShowMore(!showMore)}>
-          <i className={`ti ${showMore ? 'ti-x' : 'ti-dots'}`} style={{ fontSize:21, color: isMoreActive || showMore ? '#A0785A' : '#ccc' }} aria-hidden="true"></i>
-          {isMoreActive && !showMore && <div style={{ width:4, height:4, borderRadius:'50%', background:'#A0785A' }}></div>}
-          <span style={{ fontSize:8, color: isMoreActive || showMore ? '#A0785A' : '#ccc', fontWeight: isMoreActive || showMore ? 600 : 400 }}>Más</span>
+          <i className={`${`ti ${showMore ? 'ti-x' : 'ti-dots'}`} ui-27a8ac`} style={{ color: isMoreActive || showMore ? '#A0785A' : '#ccc' }} aria-hidden="true"></i>
+          {isMoreActive && !showMore && <div className="ui-4fae2a"></div>}
+          <span className="ui-908ae8" style={{ color: isMoreActive || showMore ? '#A0785A' : '#ccc', fontWeight: isMoreActive || showMore ? 600 : 400 }}>Más</span>
         </div>
       </div>
     </>

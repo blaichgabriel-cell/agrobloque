@@ -19,12 +19,12 @@ const fechaLocal = () => {
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
     <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'24px 20px', width:'100%', maxWidth:340 }}>
-        <div style={{ fontSize:15, fontWeight:600, color:"#182c25", marginBottom:8, textAlign:'center' }}>¿Eliminar registro?</div>
-        <div style={{ fontSize:13, color:"#697970", textAlign:'center', marginBottom:20 }}>Esta acción no se puede deshacer.</div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="ag-small-action" onClick={onCancel} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:13, color:"#697970", cursor:'pointer' }}>Cancelar</button>
-          <button className="ag-small-action" onClick={onConfirm} style={{ flex:1, padding:12, borderRadius:'var(--ag-radius)', border:'none', background:'#c84040', fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer' }}>Eliminar</button>
+      <div className="ag-surface ui-211525">
+        <div className="ui-3e43be">¿Eliminar registro?</div>
+        <div className="ui-01159a">Esta acción no se puede deshacer.</div>
+        <div className="ui-9c6869">
+          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
+          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Eliminar</button>
         </div>
       </div>
     </Modal>
@@ -76,48 +76,48 @@ function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
 
   return (
     <Modal onClose={onClose} label="Cosecha" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:150, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && onClose()}>
-      <div className="ag-surface" style={{ background:'#fff', borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'22px 20px 34px', maxHeight:'88vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
+      <div className="ag-surface ui-74f274" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+        <div className="ui-65048f">
           <div>
-            <div style={{ fontSize:12, color:'#8d938d', marginBottom:4 }}>Detalle de cosecha</div>
-            <div style={{ fontSize:22, fontWeight:700, color:"#182c25" }}>{cultivo}</div>
-            <div style={{ fontSize:12, color:'#8d938d', marginTop:4 }}>Bloque {cosecha.bloques?.codigo} · {cosecha.fecha}</div>
+            <div className="ui-de5560">Detalle de cosecha</div>
+            <div className="ui-882dd8">{cultivo}</div>
+            <div className="ui-1301e2">Bloque {cosecha.bloques?.codigo} · {cosecha.fecha}</div>
           </div>
-          <button aria-label="Cerrar" onClick={onClose} style={{ width:36, height:36, borderRadius:'var(--ag-radius)', border:'1px solid #ececec', background:'#fff', cursor:'pointer' }}>
-            <i className="ti ti-x" style={{ fontSize:18 }} aria-hidden="true"></i>
+          <button className="ui-4f781a" aria-label="Cerrar" onClick={onClose}>
+            <i className="ti ti-x ui-bf83cf" aria-hidden="true"></i>
           </button>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
-          <div style={{ background:"#124e38", borderRadius:'var(--ag-radius)', padding:'14px 15px' }}>
-            <div style={{ fontSize:12, color:'rgba(255,255,255,0.55)', marginBottom:4 }}>Kilos</div>
-            <div className="ag-page-title" style={{ fontSize:24, color:'#fff', fontWeight:700 }}>{fmtKg(cosecha.kg_total)} kg</div>
+        <div className="ui-1a76a0">
+          <div className="ui-946af5">
+            <div className="ui-57250f">Kilos</div>
+            <div className="ag-page-title ui-0bef41">{fmtKg(cosecha.kg_total)} kg</div>
           </div>
-          <div style={{ background:"#f6f8f7", borderRadius:'var(--ag-radius)', padding:'14px 15px' }}>
-            <div style={{ fontSize:12, color:'#8d938d', marginBottom:4 }}>Calidad</div>
-            <div style={{ fontSize:18, color:"#124e38", fontWeight:700 }}>{calidadLabel(cosecha.calidad)}</div>
+          <div className="ui-b9340b">
+            <div className="ui-de5560">Calidad</div>
+            <div className="ui-94f9c9">{calidadLabel(cosecha.calidad)}</div>
           </div>
         </div>
 
-        <div style={{ background:'#fafafa', borderRadius:'var(--ag-radius)', padding:'4px 14px', marginBottom:14 }}>
+        <div className="ui-7d9b35">
           <div style={item}><span style={label}>Producto/cultivo</span><span style={value}>{cultivo}</span></div>
           <div style={item}><span style={label}>Campo</span><span style={value}>{cosecha.bloques?.campos?.nombre || '-'}</span></div>
           <div style={item}><span style={label}>Bloque</span><span style={value}>{cosecha.bloques?.codigo || '-'}</span></div>
           <div style={item}><span style={label}>Calidad</span><span style={value}>{calidadLabel(cosecha.calidad)}</span></div>
-          <div style={{ ...item, borderBottom:'none' }}><span style={label}>Uso</span><span style={value}>Produccion del bloque</span></div>
+          <div className="ui-310b5d" style={{ ...item }}><span style={label}>Uso</span><span style={value}>Produccion del bloque</span></div>
         </div>
 
         {cosecha.notas && (
-          <div style={{ background:"#f6f8f7", borderRadius:'var(--ag-radius)', padding:'12px 14px', fontSize:13, color:'#4d544e', marginBottom:14 }}>
+          <div className="ui-1fe1de">
             {cosecha.notas}
           </div>
         )}
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-          <button className="ag-small-action" onClick={onEdit} style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px solid #d9ddd8', background:'#fff', color:"#124e38", fontSize:13, fontWeight:700, cursor:'pointer' }}>
+        <div className="ui-f56ef1">
+          <button className="ag-small-action ui-8c497d" onClick={onEdit}>
             Editar cosecha
           </button>
-          <button className="ag-small-action" onClick={onDelete} style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'#fff0f0', color:'#c84040', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          <button className="ag-small-action ui-432170" onClick={onDelete}>
             Eliminar
           </button>
         </div>
@@ -311,33 +311,33 @@ export default function Cosecha() {
   const inp = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
 
   return (
-    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+    <div className="ag-page ui-c1c124">
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
       {detalle && <ModalDetalle cosecha={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditarCosecha(detalle)} onDelete={() => eliminar(detalle.id)} />}
 
-      <div className="ag-page-header" style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+      <div className="ag-page-header ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div className="ui-796b93">
           <div>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Producción</div>
-            <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Cosecha</div>
+            <div className="ui-476525">Producción</div>
+            <div className="ag-page-title ui-136b85">Cosecha</div>
           </div>
-          <button aria-label="Agregar registro" onClick={abrirNuevaCosecha} style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
+          <button className="ui-56054f" aria-label="Agregar registro" onClick={abrirNuevaCosecha}>
+            <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
           </button>
         </div>
-        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:10 }}>{error}</div>}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: isDesktop ? 14 : 8 }}>
-          <div style={{ background:"#124e38", borderRadius:'var(--ag-radius)', padding:'14px 16px' }}>
-            <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:4 }}>Total cosechado</div>
-            <div style={{ fontSize:28, fontWeight:700, color:'#fff', letterSpacing:-1, lineHeight:1 }}>{fmtKg(totalKg)}</div>
-            <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', marginTop:3 }}>kg · {cosechas.length} registros</div>
+        {error && <div className="ui-d6d959">{error}</div>}
+        <div className="ui-f66100" style={{ gap: isDesktop ? 14 : 8 }}>
+          <div className="ui-07e05f">
+            <div className="ui-8a137e">Total cosechado</div>
+            <div className="ui-60c14a">{fmtKg(totalKg)}</div>
+            <div className="ui-5ff7eb">kg · {cosechas.length} registros</div>
           </div>
-          <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px' }}>
-            <div style={{ fontSize:12, color:"#697970", textTransform:'uppercase', marginBottom:4 }}>Promedio por registro</div>
-            <div style={{ fontSize:18, fontWeight:700, color:"#124e38", letterSpacing:-.5, lineHeight:1 }}>
+          <div className="ag-surface ui-9a7f69">
+            <div className="ui-081285">Promedio por registro</div>
+            <div className="ui-59e9d0">
               {promedioKg > 0 ? `${fmtKg(promedioKg)} kg` : '—'}
             </div>
-            <div style={{ fontSize:12, color:"#697970", marginTop:3 }}>solo produccion cosechada</div>
+            <div className="ui-13b58a">solo produccion cosechada</div>
           </div>
         </div>
       </div>
@@ -345,45 +345,45 @@ export default function Cosecha() {
       <Notice>{success}</Notice>
       <div className="ag-page-body" style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         {loading ? <Skeleton rows={4} label="Cargando cosechas" /> : cosechas.length === 0 ? (
-          <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin registros de cosecha</div>
+          <div className="ui-5baa7a">Sin registros de cosecha</div>
         ) : isDesktop ? (
-          <div className="ag-table-scroll harvest-table" style={{ background:'#fff', border:'1px solid #e4e8e4', borderRadius:'var(--ag-radius)', overflow:'hidden', boxShadow:'none' }}>
-            <div className="harvest-table__head" style={{ display:'grid', gridTemplateColumns:'110px 1fr 120px 120px 120px 108px', gap:12, padding:'11px 16px', background:'#fafbf8', borderBottom:'1px solid #edf0ed', color:'#687068', fontSize:12, fontWeight:700, textTransform:'uppercase' }}>
+          <div className="ag-table-scroll harvest-table ui-a0c0d7">
+            <div className="harvest-table__head ui-5d3c26">
               <span>Bloque</span>
               <span>Cultivo / campo</span>
               <span>Fecha</span>
               <span>Calidad</span>
-              <span style={{ textAlign:'right' }}>Kilos</span>
-              <span style={{ textAlign:'right' }}>Acciones</span>
+              <span className="ui-f6e3d7">Kilos</span>
+              <span className="ui-f6e3d7">Acciones</span>
             </div>
             {cosechas.map(c => {
               const cultivo = getCultivoCosecha(c)
               return (
-                <div className="harvest-table__row" key={c.id} onClick={() => setDetalle(c)} style={{ display:'grid', gridTemplateColumns:'110px 1fr 120px 120px 120px 108px', gap:12, alignItems:'center', padding:'13px 16px', borderBottom:'1px solid #f0f2ef', cursor:'pointer' }}>
+                <div className="harvest-table__row ui-8d792c" key={c.id} onClick={() => setDetalle(c)}>
                   <div>
-                    <div style={{ fontSize:15, fontWeight:700, color:"#182c25" }}>{c.bloques?.codigo || '-'}</div>
-                    <div style={{ fontSize:12, color:"#697970", marginTop:3 }}>Bloque</div>
+                    <div className="ui-62e15c">{c.bloques?.codigo || '-'}</div>
+                    <div className="ui-13b58a">Bloque</div>
                   </div>
-                  <div style={{ minWidth:0 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:"#08603f", whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{cultivo}</div>
-                    <div style={{ fontSize:12, color:"#697970", marginTop:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{c.bloques?.campos?.nombre || '-'}</div>
+                  <div className="ui-3f9f96">
+                    <div className="ui-d139ef">{cultivo}</div>
+                    <div className="ui-a8396a">{c.bloques?.campos?.nombre || '-'}</div>
                   </div>
-                  <div style={{ fontSize:13, color:'#4d544e' }}>{c.fecha}</div>
+                  <div className="ui-1685e1">{c.fecha}</div>
                   <div>
-                    <span style={{ padding:'3px 10px', borderRadius:'var(--ag-radius)', fontSize:12, fontWeight:700, background: c.calidad==='primera' ? '#eeeeee' : '#fff3e8', color: c.calidad==='primera' ? '#212121' : '#c8700a' }}>
+                    <span className="ui-62c4cc" style={{ background: c.calidad==='primera' ? '#eeeeee' : '#fff3e8', color: c.calidad==='primera' ? '#212121' : '#c8700a' }}>
                       {calidadLabel(c.calidad)}
                     </span>
                   </div>
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:17, fontWeight:700, color:"#182c25" }}>{fmtKg(c.kg_total)} kg</div>
-                    <div style={{ fontSize:12, color:'#687068', marginTop:2 }}>Produccion</div>
+                  <div className="ui-f6e3d7">
+                    <div className="ui-6a7a21">{fmtKg(c.kg_total)} kg</div>
+                    <div className="ui-a8f171">Produccion</div>
                   </div>
-                  <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
+                  <div className="ui-12274e">
                     <button className="table-action" aria-label="Editar" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} title="Editar">
-                      <i className="ti ti-pencil" style={{ fontSize:16 }} aria-hidden="true"></i>
+                      <i className="ti ti-pencil ui-2592cc" aria-hidden="true"></i>
                     </button>
                     <button className="table-action table-action--danger" aria-label="Eliminar" onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} title="Eliminar">
-                      <i className="ti ti-trash" style={{ fontSize:16 }} aria-hidden="true"></i>
+                      <i className="ti ti-trash ui-2592cc" aria-hidden="true"></i>
                     </button>
                   </div>
                 </div>
@@ -391,36 +391,36 @@ export default function Cosecha() {
             })}
           </div>
         ) : (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:0 }}>
+          <div className="ui-d054c6">
           {cosechas.map(c => {
           const cultivo = getCultivoCosecha(c)
           return (
-            <div className="ag-surface" key={c.id} onClick={() => setDetalle(c)} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
-              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
+            <div className="ag-surface ui-78436a" key={c.id} onClick={() => setDetalle(c)} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+              <div className="ui-f81471">
                 <div>
-                  <div style={{ fontSize:15, fontWeight:700, color:"#182c25" }}>Bloque {c.bloques?.codigo}</div>
-                  <div style={{ fontSize:12, fontWeight:700, color:"#08603f", marginTop:2 }}>{cultivo}</div>
-                  <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>{c.bloques?.campos?.nombre} · {c.fecha}</div>
+                  <div className="ui-62e15c">Bloque {c.bloques?.codigo}</div>
+                  <div className="ui-6b0aa7">{cultivo}</div>
+                  <div className="ui-a8f171">{c.bloques?.campos?.nombre} · {c.fecha}</div>
                 </div>
-                <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:20, fontWeight:700, color:"#182c25" }}>{fmtKg(c.kg_total)} kg</div>
-                  <div style={{ fontSize:12, color:'#687068', fontWeight:600 }}>Produccion</div>
+                <div className="ui-f6e3d7">
+                  <div className="ui-32fa66">{fmtKg(c.kg_total)} kg</div>
+                  <div className="ui-cd76a0">Produccion</div>
                 </div>
               </div>
-              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-                <div style={{ padding:'3px 10px', borderRadius:'var(--ag-radius)', fontSize:12, fontWeight:700, background:'#e8f5e5', color:"#08603f" }}>
+              <div className="ui-0726a3">
+                <div className="ui-a2fc39">
                   {cultivo}
                 </div>
-                <div style={{ padding:'3px 10px', borderRadius:'var(--ag-radius)', fontSize:12, fontWeight:600, background: c.calidad==='primera' ? '#eeeeee' : '#fff3e8', color: c.calidad==='primera' ? '#212121' : '#c8700a' }}>
+                <div className="ui-f972f1" style={{ background: c.calidad==='primera' ? '#eeeeee' : '#fff3e8', color: c.calidad==='primera' ? '#212121' : '#c8700a' }}>
                   {calidadLabel(c.calidad)}
                 </div>
               </div>
-              {c.notas && <div style={{ fontSize:12, color:"#697970", padding:'7px 10px', background:"#f6f8f7", borderRadius:'var(--ag-radius)', marginBottom:8 }}>{c.notas}</div>}
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:12, color:'#777' }}>Tocar para ver detalle</span>
-                <div style={{ display:'flex', gap:6 }}>
-                  <button className="ag-small-action" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'transparent', fontSize:12, color:'#555', cursor:'pointer' }}>Editar</button>
-                  <button className="ag-small-action" onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #ffcccc', background:'transparent', fontSize:12, color:'#c84040', cursor:'pointer' }}>Eliminar</button>
+              {c.notas && <div className="ui-9b1d73">{c.notas}</div>}
+              <div className="ui-510ea6">
+                <span className="ui-5e0192">Tocar para ver detalle</span>
+                <div className="ui-91294d">
+                  <button className="ag-small-action ui-387856" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }}>Editar</button>
+                  <button className="ag-small-action ui-14c146" onClick={(e) => { e.stopPropagation(); eliminar(c.id) }}>Eliminar</button>
                 </div>
               </div>
             </div>
@@ -433,78 +433,78 @@ export default function Cosecha() {
 
       {modal && (
         <Modal busy={saving} onClose={() => setModal(false)} label="Registrar cosecha" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div style={{ background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:480, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div style={{ fontSize:18, fontWeight:700, color:"#182c25", marginBottom:20 }}>{form.id ? 'Editar cosecha' : 'Registrar cosecha'}</div>
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{error}</div>}
+          <div className="ui-7dd37e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <div className="ui-c7b1b6">{form.id ? 'Editar cosecha' : 'Registrar cosecha'}</div>
+            {error && <div className="ui-e136cb">{error}</div>}
 
             {!form.id && (
-              <div style={{ display:'flex', gap:5, background:"#e2e9e5", borderRadius:'var(--ag-radius)', padding:4, marginBottom:14 }}>
-                <button className="ag-small-action" type="button" onClick={() => setModoMultiple(false)} style={{ flex:1, padding:9, borderRadius:'var(--ag-radius)', border:'none', cursor:'pointer', background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:700 }}>
+              <div className="ui-e960d5">
+                <button className="ag-small-action ui-3a5af5" type="button" onClick={() => setModoMultiple(false)} style={{ background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777' }}>
                   Una cosecha
                 </button>
-                <button className="ag-small-action" type="button" onClick={() => setModoMultiple(true)} style={{ flex:1, padding:9, borderRadius:'var(--ag-radius)', border:'none', cursor:'pointer', background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777', fontSize:12, fontWeight:700 }}>
+                <button className="ag-small-action ui-3a5af5" type="button" onClick={() => setModoMultiple(true)} style={{ background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777' }}>
                   Varias juntas
                 </button>
               </div>
             )}
 
             <FormHeading number="01" detail="Ubicación y fecha del registro">Origen de la cosecha</FormHeading>
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Campo
+            <label className="ag-field-label ui-74cc19">Campo
             <select style={inp} value={campoFiltro||''} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({...f, bloque_id:''})) }}>
               {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select></label>
 
             {(!modoMultiple || form.id) && (
               <>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Bloque *</div>
+            <div className="ui-74cc19">Bloque *</div>
             <select style={inp} value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
               <option value="">Seleccioná bloque...</option>
               {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
             </select>
 
             {form.bloque_id && (
-              <div style={{ background:'#e8f5e5', color:"#08603f", borderRadius:'var(--ag-radius)', padding:'9px 12px', fontSize:12, fontWeight:700, marginBottom:12 }}>
+              <div className="ui-154470">
                 Producto/cultivo: {cultivoSeleccionado || 'Sin plantacion activa registrada'}
               </div>
             )}
               </>
             )}
 
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Fecha *
+            <label className="ag-field-label ui-74cc19">Fecha *
             <input style={inp} type="date" value={form.fecha} onChange={e => setForm(f => ({...f, fecha:e.target.value}))}/></label>
 
             {(!modoMultiple || form.id) ? (
               <>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Kg cosechados * (admite decimales, ej: 1.5)</div>
+            <div className="ui-74cc19">Kg cosechados * (admite decimales, ej: 1.5)</div>
             <input style={inp} type="text" inputMode="decimal" value={form.kg_total}
               onChange={e => setForm(f => ({...f, kg_total: e.target.value}))}
               placeholder="Ej: 150 o 1.5"/>
 
-            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Calidad</div>
-            <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+            <div className="ui-74cc19">Calidad</div>
+            <div className="ui-60e304">
               {['primera','segunda','mixta'].map(q => (
-                <button className="ag-small-action" key={q} onClick={() => setForm(f => ({...f, calidad:q}))} style={{ flex:1, padding:'9px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:12, fontWeight:500, cursor:'pointer', background: form.calidad===q ? '#212121' : '#fff', color: form.calidad===q ? '#fff' : '#555' }}>
+                <button className="ag-small-action ui-949013" key={q} onClick={() => setForm(f => ({...f, calidad:q}))} style={{ background: form.calidad===q ? '#212121' : '#fff', color: form.calidad===q ? '#fff' : '#555' }}>
                   {q === 'primera' ? '1ra' : q === 'segunda' ? '2da' : 'Mixta'}
                 </button>
               ))}
             </div>
 
-            <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Notas (opcional)</div>
-            <textarea style={{ ...inp, minHeight:60, resize:'vertical' }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
+            <div className="ui-74cc19">Notas (opcional)</div>
+            <textarea className="ui-dc8f36" style={{ ...inp }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
               </>
             ) : (
               <>
-                <div style={{ fontSize:12, color:"#697970", marginBottom:8 }}>Cosechas del lote</div>
-                <div style={{ display:'grid', gap:10, marginBottom:12 }}>
+                <div className="ui-9546b4">Cosechas del lote</div>
+                <div className="ui-c0b83a">
                   {filasCosecha.map((fila, idx) => {
                     const bloqueFila = bloques.find(b => b.id === fila.bloque_id)
                     const cultivoFila = getCultivoBloque(bloqueFila, form.fecha)
                     return (
-                      <div className="ag-surface" key={idx} style={{ background:'#fff', border:'1px solid #e4e6e2', borderRadius:'var(--ag-radius)', padding:12 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                          <strong style={{ fontSize:13 }}>Cosecha {idx + 1}</strong>
+                      <div className="ag-surface ui-a1c79b" key={idx}>
+                        <div className="ui-b3c308">
+                          <strong className="ui-3044b6">Cosecha {idx + 1}</strong>
                           {filasCosecha.length > 1 && (
-                            <button className="ag-small-action" type="button" onClick={() => quitarFilaCosecha(idx)} style={{ border:'1px solid #ffcccc', background:'#fff', color:'#c84040', borderRadius:'var(--ag-radius)', padding:'5px 9px', fontSize:12, cursor:'pointer' }}>Quitar</button>
+                            <button className="ag-small-action ui-bf3abc" type="button" onClick={() => quitarFilaCosecha(idx)}>Quitar</button>
                           )}
                         </div>
                         <select style={inp} value={fila.bloque_id} onChange={e => actualizarFilaCosecha(idx, 'bloque_id', e.target.value)}>
@@ -512,7 +512,7 @@ export default function Cosecha() {
                           {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
                         </select>
                         {fila.bloque_id && (
-                          <div style={{ background:'#e8f5e5', color:"#08603f", borderRadius:'var(--ag-radius)', padding:'7px 10px', fontSize:12, fontWeight:700, margin:'-4px 0 10px' }}>
+                          <div className="ui-96f18a">
                             {cultivoFila || 'Sin plantacion activa registrada'}
                           </div>
                         )}
@@ -522,25 +522,25 @@ export default function Cosecha() {
                           <option value="segunda">2da calidad</option>
                           <option value="mixta">Mixta</option>
                         </select>
-                        <input style={{ ...inp, marginBottom:0 }} value={fila.notas} onChange={e => actualizarFilaCosecha(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
+                        <input className="ui-e7ec54" style={{ ...inp }} value={fila.notas} onChange={e => actualizarFilaCosecha(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
                       </div>
                     )
                   })}
                 </div>
-                <button className="ag-small-action" type="button" onClick={agregarFilaCosecha} style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px dashed #bfc6bf', background:'#fff', fontSize:13, fontWeight:700, color:"#08603f", cursor:'pointer', marginBottom:12 }}>
+                <button className="ag-small-action ui-f58cc5" type="button" onClick={agregarFilaCosecha}>
                   + Agregar otra cosecha
                 </button>
                 {totalKgMultiple > 0 && (
-                  <div style={{ background:'#eeeeee', borderRadius:'var(--ag-radius)', padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between', gap:12 }}>
-                    <span style={{ fontSize:12, color:"#124e38" }}>{fmtKg(totalKgMultiple)} kg en total</span>
-                    <span style={{ fontSize:14, fontWeight:700, color:"#124e38" }}>Produccion</span>
+                  <div className="ui-dbf2aa">
+                    <span className="ui-aa481a">{fmtKg(totalKgMultiple)} kg en total</span>
+                    <span className="ui-398ec2">Produccion</span>
                   </div>
                 )}
               </>
             )}
 
-            <button className="ag-form-submit" style={{ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' }} onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : modoMultiple ? 'Guardar lote de cosechas' : 'Guardar cosecha'}</button>
-            <button className="ag-small-action" style={{ width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }} onClick={() => setModal(false)}>Cancelar</button>
+            <button className="ag-form-submit ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : modoMultiple ? 'Guardar lote de cosechas' : 'Guardar cosecha'}</button>
+            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(false)}>Cancelar</button>
           </div>
         </Modal>
       )}

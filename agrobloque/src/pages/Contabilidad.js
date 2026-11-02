@@ -245,18 +245,18 @@ export default function Contabilidad() {
 
         {error && <div style={errorBox}>{error}</div>}
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:8, marginBottom:12 }}>
+        <div className="ui-860439">
           <select value={anho} onChange={e => setAnho(Number(e.target.value))} style={selectYear}>
             {[anhoActual() - 1, anhoActual(), anhoActual() + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          <div style={{ display:'flex', gap:6 }}>
-            <button onClick={() => navigate('/contabilidad/facturas')} style={{ ...smallAction, display:'flex', alignItems:'center', gap:6 }}>
+          <div className="ui-91294d">
+            <button className="ui-c59ad0" onClick={() => navigate('/contabilidad/facturas')} style={{ ...smallAction }}>
               <i className="ti ti-file-invoice" aria-hidden="true" /> Facturas
             </button>
             <button onClick={exportarCsv} style={smallAction}>CSV</button>
             <button onClick={imprimirBalance} style={smallAction}>PDF</button>
             <button onClick={() => abrirNuevo('compra')} style={smallAction}>Compra</button>
-            <button onClick={() => abrirNuevo('venta')} style={{ ...smallAction, background:"#08603f", color:'#fff' }}>Venta</button>
+            <button className="ui-c84552" onClick={() => abrirNuevo('venta')} style={{ ...smallAction }}>Venta</button>
           </div>
         </div>
 
@@ -275,7 +275,7 @@ export default function Contabilidad() {
               <div style={eyebrow}>Historial contable {anho}</div>
               <h2 style={sectionTitle}>Elegir mes</h2>
             </div>
-            <div style={{ fontSize:12, color:'#69706a', fontWeight:700 }}>{resumenMes.total} movimientos</div>
+            <div className="ui-19585d">{resumenMes.total} movimientos</div>
           </div>
           <div className="fin-month-grid">
             {resumen.porMes.map(m => {
@@ -298,10 +298,10 @@ export default function Contabilidad() {
               <div style={eyebrow}>Control de balance {anho}</div>
               <h2 style={sectionTitle}>Resumen mensual</h2>
             </div>
-            <i className="ti ti-table" style={{ fontSize:22, color:"#08603f" }} aria-hidden="true"></i>
+            <i className="ti ti-table ui-1cfb3f" aria-hidden="true"></i>
           </div>
 
-          <div style={{ overflowX:'auto' }}>
+          <div className="ui-df74e8">
             <table style={tabla}>
               <thead>
                 <tr>
@@ -313,11 +313,11 @@ export default function Contabilidad() {
               </thead>
               <tbody>
                 {resumen.porMes.map(m => (
-                  <tr key={m.nombre} onClick={() => setMesSeleccionado(m.idx)} style={{ cursor:'pointer', background: mesSeleccionado === m.idx ? '#f0f7ef' : 'transparent' }}>
+                  <tr className="ui-b202c6" key={m.nombre} onClick={() => setMesSeleccionado(m.idx)} style={{ background: mesSeleccionado === m.idx ? '#f0f7ef' : 'transparent' }}>
                     <td style={td}>{m.nombre}</td>
                     <td style={tdRight}>Gs. {fmtGs(m.compras)}</td>
                     <td style={tdRight}>Gs. {fmtGs(m.ventas)}</td>
-                    <td style={{ ...tdRight, color: m.balance >= 0 ? '#176a25' : '#c84040', fontWeight:700 }}>Gs. {fmtGs(m.balance)}</td>
+                    <td className="ui-83e448" style={{ ...tdRight, color: m.balance >= 0 ? '#176a25' : '#c84040' }}>Gs. {fmtGs(m.balance)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -363,11 +363,11 @@ export default function Contabilidad() {
       {modal && (
         <div style={overlay}>
           <div style={sheet}>
-            <div style={{ fontSize:19, fontWeight:700, marginBottom:16 }}>
+            <div className="ui-d5c0da">
               {form.id ? 'Editar movimiento' : 'Nuevo movimiento'}
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
+            <div className="ui-1a76a0">
               <button onClick={() => setTipo('compra')} style={form.tipo === 'compra' ? tipoActiveRed : tipoBtn}>Compra</button>
               <button onClick={() => setTipo('venta')} style={form.tipo === 'venta' ? tipoActiveGreen : tipoBtn}>Venta</button>
             </div>
@@ -407,26 +407,26 @@ function TotalCard({ icon, label, value, tone, detail = '' }) {
 function Movimiento({ mov, onEdit, onDelete }) {
   const venta = mov.tipo === 'venta'
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'42px 1fr auto', gap:11, alignItems:'center', padding:'11px 0', borderBottom:'1px solid #eef0ee' }}>
+    <div className="ui-bd5fd3">
       <div style={{ ...iconPill, background: venta ? '#edf6ec' : '#fff0f0' }}>
-        <i className={`ti ${venta ? 'ti-arrow-up-right' : 'ti-arrow-down-left'}`} style={{ fontSize:20, color: venta ? '#176a25' : '#c84040' }} aria-hidden="true"></i>
+        <i className={`${`ti ${venta ? 'ti-arrow-up-right' : 'ti-arrow-down-left'}`} ui-e5e6f8`} style={{ color: venta ? '#176a25' : '#c84040' }} aria-hidden="true"></i>
       </div>
-      <div style={{ minWidth:0 }}>
-        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-          <strong style={{ fontSize:13, color:'#111611' }}>{mov.descripcion}</strong>
-          <span style={{ borderRadius:8, background: venta ? '#edf6ec' : '#fff0f0', color: venta ? '#176a25' : '#c84040', padding:'3px 7px', fontSize:10, fontWeight:700 }}>
+      <div className="ui-3f9f96">
+        <div className="ui-36eedc">
+          <strong className="ui-aebc78">{mov.descripcion}</strong>
+          <span className="ui-3c74d4" style={{ background: venta ? '#edf6ec' : '#fff0f0', color: venta ? '#176a25' : '#c84040' }}>
             {venta ? 'Venta' : 'Compra'}
           </span>
         </div>
-        <div style={{ fontSize:11, color:'#7a817b', marginTop:3 }}>
+        <div className="ui-7aa842">
           {mov.fecha} · {mov.categoria || 'Sin categoria'}{mov.contraparte ? ` · ${mov.contraparte}` : ''}
         </div>
       </div>
-      <div style={{ display:'grid', justifyItems:'end', gap:5 }}>
-        <strong style={{ fontSize:13, color: venta ? '#176a25' : '#c84040' }}>Gs. {fmtGs(mov.monto)}</strong>
-        <div style={{ display:'flex', gap:5 }}>
+      <div className="ui-11f4c8">
+        <strong className="ui-3044b6" style={{ color: venta ? '#176a25' : '#c84040' }}>Gs. {fmtGs(mov.monto)}</strong>
+        <div className="ui-cfb7cc">
           <button onClick={onEdit} style={miniBtn}><i className="ti ti-pencil" /></button>
-          <button onClick={onDelete} style={{ ...miniBtn, color:'#c84040', borderColor:'#ffd1d1' }}><i className="ti ti-trash" /></button>
+          <button className="ui-00b236" onClick={onDelete} style={{ ...miniBtn }}><i className="ti ti-trash" /></button>
         </div>
       </div>
     </div>
@@ -435,10 +435,10 @@ function Movimiento({ mov, onEdit, onDelete }) {
 
 function Field({ label, value, onChange, type = 'text', placeholder = '', textarea, inputMode }) {
   return (
-    <label style={{ display:'block' }}>
+    <label className="ui-fa9aec">
       <div style={labelStyle}>{label}</div>
       {textarea ? (
-        <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...inputStyle, minHeight:72, resize:'vertical' }} />
+        <textarea className="ui-135d49" value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...inputStyle }} />
       ) : (
         <input type={type} inputMode={inputMode} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
       )}
@@ -448,7 +448,7 @@ function Field({ label, value, onChange, type = 'text', placeholder = '', textar
 
 function Select({ label, value, onChange, options }) {
   return (
-    <label style={{ display:'block' }}>
+    <label className="ui-fa9aec">
       <div style={labelStyle}>{label}</div>
       <select value={value || ''} onChange={e => onChange(e.target.value)} style={inputStyle}>
         {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -458,7 +458,7 @@ function Select({ label, value, onChange, options }) {
 }
 
 function Empty({ text }) {
-  return <div style={{ color:'#8c938d', textAlign:'center', padding:'26px 0', fontSize:13 }}>{text}</div>
+  return <div className="ui-fdcaa7">{text}</div>
 }
 
 const smallAction = {

@@ -183,42 +183,42 @@ export default function Alertas() {
   }), [alertas])
 
   return (
-    <div className="ag-page ag-page-body" style={{ minHeight:'100vh', background:"#f6f8f7", padding: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '34px 36px 100px' : '24px 14px 100px' }}>
-      <div style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 1180 : 900, margin:'0 auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:16 }}>
+    <div className="ag-page ag-page-body ui-71cde8" style={{ padding: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '34px 36px 100px' : '24px 14px 100px' }}>
+      <div className="ui-f47a4b" style={{ maxWidth: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 1180 : 900 }}>
+        <div className="ui-d73a43">
           <div>
-            <div style={{ fontSize:12, color:"#697970" }}>Control operativo</div>
-            <h1 style={{ margin:0, fontSize:24, letterSpacing:-0.6 }}>Alertas inteligentes</h1>
+            <div className="ui-93a7e1">Control operativo</div>
+            <h1 className="ui-ee8706">Alertas inteligentes</h1>
           </div>
-          <button aria-label="Actualizar" onClick={cargar} style={{ width:42, height:42, borderRadius:'var(--ag-radius)', border:'none', background:"#124e38", color:'#fff', cursor:'pointer' }}>
-            <i className="ti ti-refresh" style={{ fontSize:20 }} aria-hidden="true"></i>
+          <button className="ui-27d7de" aria-label="Actualizar" onClick={cargar}>
+            <i className="ti ti-refresh ui-e5e6f8" aria-hidden="true"></i>
           </button>
         </div>
-        {mensaje && <div style={{ background:'#edf6ec', color:'#08603f', border:'1px solid #d4e7d8', padding:'10px 12px', borderRadius:'var(--ag-radius)', marginBottom:12, fontSize:12 }}>{mensaje}</div>}
+        {mensaje && <div className="ui-ab0dc2">{mensaje}</div>}
 
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8, marginBottom:12 }}>
+        <div className="ui-9420ec">
           <Stat label="Altas" value={resumen.alta} color="#c84040" />
           <Stat label="Medias" value={resumen.media} color="#e07b00" />
           <Stat label="Avisos" value={resumen.baja} color="#176a25" />
         </div>
 
         {loading ? (
-          <div style={{ textAlign:'center', padding:38, color:"#697970" }}>Calculando alertas...</div>
+          <div className="ui-4e47d3">Calculando alertas...</div>
         ) : alertas.length === 0 ? (
-          <div className="ag-surface" style={{ textAlign:'center', padding:38, color:"#08603f", background:'#fff', borderRadius:'var(--ag-radius)' }}>Todo tranquilo por ahora.</div>
+          <div className="ag-surface ui-422178">Todo tranquilo por ahora.</div>
         ) : alertas.map((a, i) => {
           const s = severidad[a.tipo] || severidad.baja
           return (
-            <div className="ag-surface" key={`${a.titulo}-${i}`} onClick={() => navigate(a.path)} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom:8, border:'1px solid #e8ece8', cursor:'pointer', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'44px 1fr auto', gap:12, alignItems:'center' }}>
-                <span style={{ width:44, height:44, borderRadius:'var(--ag-radius)', background:s.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <i className={`ti ${s.icon}`} style={{ fontSize:22, color:s.color }} aria-hidden="true"></i>
+            <div className="ag-surface ui-ff9ccf" key={`${a.titulo}-${i}`} onClick={() => navigate(a.path)} style={{ boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+              <div className="ui-f4d829">
+                <span className="ui-51b32e" style={{ background:s.bg }}>
+                  <i className={`${`ti ${s.icon}`} ui-b5ef88`} style={{ color:s.color }} aria-hidden="true"></i>
                 </span>
                 <span>
-                  <strong style={{ display:'block', fontSize:15 }}>{a.titulo}</strong>
-                  <span style={{ display:'block', fontSize:12, color:'#687068', marginTop:3 }}>{a.detalle}</span>
+                  <strong className="ui-8ccc2b">{a.titulo}</strong>
+                  <span className="ui-962f1b">{a.detalle}</span>
                 </span>
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}><button className="ag-small-action" onClick={e => { e.stopPropagation(); gestionar(a, 'pospuesta') }} style={{ border:'1px solid #e2e9e5', background:'#fff', borderRadius:7, padding:'7px 9px', fontSize:12, cursor:'pointer' }}>Posponer 3 días</button><button className="ag-small-action" onClick={e => { e.stopPropagation(); gestionar(a, 'resuelta') }} style={{ border:'none', background:'#08603f', color:'#fff', borderRadius:7, padding:'7px 9px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Resolver</button></div>
+                <div className="ui-5a9605"><button className="ag-small-action ui-2e1c5c" onClick={e => { e.stopPropagation(); gestionar(a, 'pospuesta') }}>Posponer 3 días</button><button className="ag-small-action ui-707b17" onClick={e => { e.stopPropagation(); gestionar(a, 'resuelta') }}>Resolver</button></div>
               </div>
             </div>
           )
@@ -230,9 +230,9 @@ export default function Alertas() {
 
 function Stat({ label, value, color }) {
   return (
-    <div className="ag-surface" style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px', border:'1px solid #e8ece8' }}>
-      <div style={{ fontSize:12, color:"#697970", textTransform:'uppercase', fontWeight:700 }}>{label}</div>
-      <div style={{ fontSize:28, fontWeight:700, color, lineHeight:1.1, marginTop:4 }}>{value}</div>
+    <div className="ag-surface ui-72e6b5">
+      <div className="ui-7e686d">{label}</div>
+      <div className="ui-121d5b" style={{ color }}>{value}</div>
     </div>
   )
 }

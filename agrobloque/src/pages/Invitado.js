@@ -47,7 +47,7 @@ export default function Invitado() {
 
   return (
     <Shell campo={data?.campo?.nombre} onRefresh={cargar} compact={compact}>
-      <div style={{ display:'grid', gridTemplateColumns:statsColumns, gap:compact ? 10 : 12, marginBottom:16 }}>
+      <div className="ui-fa705b" style={{ gridTemplateColumns:statsColumns, gap:compact ? 10 : 12 }}>
         <Card title="Bloques activos" value={stats.bloques_activos} sub={`de ${stats.bloques_total || 0} totales`} />
         <Card title="Plantaciones" value={stats.plantaciones_activas} sub="activas" />
         <Card title="Operarios" value={stats.operarios} sub="registrados" />
@@ -59,14 +59,14 @@ export default function Invitado() {
           <h2 style={title}>Resumen financiero del mes</h2>
           <span style={badge}>Solo lectura</span>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:compact ? '1fr' : 'repeat(3, 1fr)', gap:10 }}>
+        <div className="ui-ea54d1" style={{ gridTemplateColumns:compact ? '1fr' : 'repeat(3, 1fr)' }}>
           <Money label="Ingresos" value={finanzas.ingresos} />
           <Money label="Costos" value={finanzas.costos} />
           <Money label="Balance" value={(finanzas.ingresos || 0) - (finanzas.costos || 0)} />
         </div>
       </section>
 
-      <div style={{ display:'grid', gridTemplateColumns:sectionColumns, gap:16, marginTop:16 }}>
+      <div className="ui-967a75" style={{ gridTemplateColumns:sectionColumns }}>
         <section style={panel}>
           <div style={head}><h2 style={title}>Plantaciones activas</h2></div>
           {(data?.plantaciones || []).length === 0 ? <SmallEmpty /> : data.plantaciones.map(p => (
@@ -82,7 +82,7 @@ export default function Invitado() {
         </section>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:sectionColumns, gap:16, marginTop:16 }}>
+      <div className="ui-967a75" style={{ gridTemplateColumns:sectionColumns }}>
         <section style={panel}>
           <div style={head}><h2 style={title}>Cosechas recientes</h2></div>
           {(data?.cosechas || []).length === 0 ? <SmallEmpty /> : data.cosechas.map(c => (
@@ -115,17 +115,17 @@ function useWindowWidth() {
 
 function Shell({ children, campo, onRefresh, compact = false }) {
   return (
-    <div style={{ minHeight:'100vh', background:'#f4f5f2', color:'#101511', padding:compact ? '14px 12px 28px' : 20 }}>
-      <div style={{ maxWidth:1180, margin:'0 auto' }}>
-        <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:14, marginBottom:18 }}>
-          <div style={{ minWidth:0 }}>
-            <div style={{ fontSize:12, textTransform:'uppercase', color:'#69706a', letterSpacing:1 }}>AgroBloque - Invitado</div>
-            <h1 style={{ margin:'4px 0 0', fontSize:compact ? 25 : 30, letterSpacing:-1 }}>El Sembrador</h1>
-            <div style={{ color:'#69706a', fontSize:14, marginTop:4, overflowWrap:'anywhere' }}>{campo || 'Vista de solo lectura'}</div>
+    <div className="ui-bc1e10" style={{ padding:compact ? '14px 12px 28px' : 20 }}>
+      <div className="ui-6d87e9">
+        <header className="ui-477274">
+          <div className="ui-3f9f96">
+            <div className="ui-d1cf09">AgroBloque - Invitado</div>
+            <h1 className="ui-227a72" style={{ fontSize:compact ? 25 : 30 }}>El Sembrador</h1>
+            <div className="ui-374162">{campo || 'Vista de solo lectura'}</div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+          <div className="ui-fef609">
             {onRefresh && <button type="button" onClick={onRefresh} style={refreshBtn}>Actualizar</button>}
-            <div style={{ width:compact ? 46 : 54, height:compact ? 46 : 54, borderRadius:8, background:'#0b0f0c', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:compact ? 19 : 22 }}>
+            <div className="ui-4efd64" style={{ width:compact ? 46 : 54, height:compact ? 46 : 54, fontSize:compact ? 19 : 22 }}>
               AB
             </div>
           </div>
@@ -139,40 +139,40 @@ function Shell({ children, campo, onRefresh, compact = false }) {
 function Card({ title, value, sub }) {
   return (
     <div style={panel}>
-      <div style={{ color:'#69706a', textTransform:'uppercase', fontSize:12, fontWeight:700 }}>{title}</div>
-      <strong style={{ display:'block', fontSize:30, marginTop:8, lineHeight:1 }}>{value || 0}</strong>
-      <div style={{ color:'#69706a', fontSize:13, marginTop:6 }}>{sub}</div>
+      <div className="ui-16b824">{title}</div>
+      <strong className="ui-95163f">{value || 0}</strong>
+      <div className="ui-b2247b">{sub}</div>
     </div>
   )
 }
 
 function Money({ label, value }) {
   return (
-    <div style={{ background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:8, padding:14 }}>
-      <div style={{ color:'#69706a', fontSize:13, fontWeight:700 }}>{label}</div>
-      <strong style={{ fontSize:22, marginTop:6, display:'block' }}>Gs. {fmtGs(value)}</strong>
+    <div className="ui-d61cd5">
+      <div className="ui-646921">{label}</div>
+      <strong className="ui-8b507c">Gs. {fmtGs(value)}</strong>
     </div>
   )
 }
 
 function Row({ title, sub, right }) {
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 1fr) auto', gap:12, alignItems:'center', padding:'13px 0', borderBottom:'1px solid #edf0ed' }}>
-      <div style={{ minWidth:0 }}>
-        <strong style={{ fontSize:15, display:'block', overflowWrap:'anywhere' }}>{title}</strong>
-        <div style={{ color:'#69706a', fontSize:13, marginTop:4, overflowWrap:'anywhere' }}>{sub}</div>
+    <div className="ui-9c9567">
+      <div className="ui-3f9f96">
+        <strong className="ui-33372b">{title}</strong>
+        <div className="ui-442379">{sub}</div>
       </div>
-      <div style={{ color:"#08603f", fontWeight:700, fontSize:13, textAlign:'right', maxWidth:150, overflowWrap:'anywhere' }}>{right}</div>
+      <div className="ui-43c867">{right}</div>
     </div>
   )
 }
 
 function Empty({ text }) {
-  return <div style={panel}><div style={{ color:'#69706a', fontSize:14, textAlign:'center', padding:30 }}>{text}</div></div>
+  return <div style={panel}><div className="ui-7afa5c">{text}</div></div>
 }
 
 function SmallEmpty() {
-  return <div style={{ color:"#697970", textAlign:'center', padding:'24px 0', fontSize:13 }}>Sin datos para mostrar.</div>
+  return <div className="ui-19cc08">Sin datos para mostrar.</div>
 }
 
 const panel = {

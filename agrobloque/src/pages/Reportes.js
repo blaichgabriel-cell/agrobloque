@@ -324,57 +324,57 @@ export default function Reportes({ campoActivo, isGuest = false }) {
   }
 
   return (
-    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
-      <div style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
+    <div className="ui-c1c124">
+      <div className="ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div className="ui-fcfa48">
           <div>
-            <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Análisis</div>
-            <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Reportes</div>
+            <div className="ui-476525">Análisis</div>
+            <div className="ui-136b85">Reportes</div>
           </div>
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={exportarCsv} style={{ height:40, borderRadius:8, background:'#fff', border:"1px solid #e2e9e5", display:'flex', alignItems:'center', justifyContent:'center', gap:6, cursor:'pointer', padding:'0 12px', fontSize:12, fontWeight:700 }}>
-              <i className="ti ti-download" style={{ fontSize:19, color:"#124e38" }} aria-hidden="true"></i>
+          <div className="ui-9c6869">
+            <button className="ui-21fbbe" onClick={exportarCsv}>
+              <i className="ti ti-download ui-a1252a" aria-hidden="true"></i>
               CSV
             </button>
-            <button onClick={imprimirReporte} style={{ height:40, borderRadius:8, background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', gap:6, cursor:'pointer', color:'#fff', padding:'0 12px', fontSize:12, fontWeight:700 }}>
-              <i className="ti ti-printer" style={{ fontSize:19, color:'#fff' }} aria-hidden="true"></i>
+            <button className="ui-310dc2" onClick={imprimirReporte}>
+              <i className="ti ti-printer ui-65edf6" aria-hidden="true"></i>
               PDF resumen
             </button>
-            <button onClick={imprimirCompleto} style={{ height:40, borderRadius:8, background:"#08603f", border:'none', padding:'0 12px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#fff', fontSize:12, fontWeight:700 }}>
+            <button className="ui-296b48" onClick={imprimirCompleto}>
               PDF completo
             </button>
           </div>
         </div>
-        {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:10 }}>{error}</div>}
+        {error && <div className="ui-3d7d20">{error}</div>}
 
         {campos.length > 1 && (
-          <div style={{ display:'flex', gap:5, background:"#e2e9e5", borderRadius:8, padding:4, marginBottom:10 }}>
+          <div className="ui-f68a17">
             {campos.map(c => (
-              <button key={c.id} onClick={() => setCampoSel(c)} style={{ flex:1, padding:8, borderRadius:8, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: campoSel?.id===c.id ? '#212121' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
+              <button className="ui-7cf9f5" key={c.id} onClick={() => setCampoSel(c)} style={{ background: campoSel?.id===c.id ? '#212121' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
             ))}
           </div>
         )}
 
-        <div style={{ display:'flex', gap:5, background:"#e2e9e5", borderRadius:8, padding:4 }}>
+        <div className="ui-32b742">
           {[['mes','Mes'],['trimestre','Trimestre'],['año','Año'],['total','Total']].map(([k,v]) => (
-            <button key={k} onClick={() => setPeriodo(k)} style={{ flex:1, padding:8, borderRadius:8, fontSize:11, fontWeight:600, border:'none', cursor:'pointer', background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
+            <button className="ui-7cf9f5" key={k} onClick={() => setPeriodo(k)} style={{ background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
           ))}
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10 }}>
-          <label style={{ display:'grid', gap:5, fontSize:11, color:"#697970", fontWeight:700 }}>
+        <div className="ui-6e71d6">
+          <label className="ui-1f6266">
             Desde
-            <input type="date" value={fechaDesde} onChange={e => { setPeriodo('custom'); setFechaDesde(e.target.value) }}
-              style={{ border:"1px solid #e2e9e5", borderRadius:8, padding:'10px 12px', fontSize:13, background:'#fff' }} />
+            <input className="ui-13d88e" type="date" value={fechaDesde} onChange={e => { setPeriodo('custom'); setFechaDesde(e.target.value) }}
+              />
           </label>
-          <label style={{ display:'grid', gap:5, fontSize:11, color:"#697970", fontWeight:700 }}>
+          <label className="ui-1f6266">
             Hasta
-            <input type="date" value={fechaHasta} onChange={e => { setPeriodo('custom'); setFechaHasta(e.target.value) }}
-              style={{ border:"1px solid #e2e9e5", borderRadius:8, padding:'10px 12px', fontSize:13, background:'#fff' }} />
+            <input className="ui-13d88e" type="date" value={fechaHasta} onChange={e => { setPeriodo('custom'); setFechaHasta(e.target.value) }}
+              />
           </label>
         </div>
-        <div style={{ background:'#fff', borderRadius:8, padding:'12px', marginTop:10, border:'1px solid #e8ece8' }}>
-          <div style={{ fontSize:12, color:"#697970", fontWeight:700, marginBottom:8 }}>Reportes por modulo</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:6 }}>
+        <div className="ui-7db3dc">
+          <div className="ui-058e8e">Reportes por modulo</div>
+          <div className="ui-94c3e8">
             {[
               ['cosechas', 'Cosechas'],
               ['ventas', 'Ventas'],
@@ -384,8 +384,8 @@ export default function Reportes({ campoActivo, isGuest = false }) {
               ['fumigaciones', 'Fumigaciones'],
               ['contabilidad', 'Contabilidad'],
             ].map(([key, label]) => (
-              <button key={key} onClick={() => imprimirModulo(key)}
-                style={{ border:'1px solid #e8ece8', background:'#fff', borderRadius:8, padding:'9px 7px', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+              <button className="ui-0ce142" key={key} onClick={() => imprimirModulo(key)}
+               >
                 {label}
               </button>
             ))}
@@ -395,42 +395,42 @@ export default function Reportes({ campoActivo, isGuest = false }) {
 
       <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         {loading ? (
-          <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Calculando...</div>
+          <div className="ui-5baa7a">Calculando...</div>
         ) : <>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
-            <div style={{ background:"#124e38", borderRadius:8, padding:'16px 14px', gridColumn:'1 / -1' }}>
-              <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:.05, marginBottom:4 }}>Ganancia neta</div>
-              <div style={{ fontSize:34, fontWeight:700, color: datos.ganancia >= 0 ? '#fff' : '#f08080', letterSpacing:-1, lineHeight:1 }}>
+          <div className="ui-e4712c">
+            <div className="ui-1639e6">
+              <div className="ui-439c50">Ganancia neta</div>
+              <div className="ui-06732b" style={{ color: datos.ganancia >= 0 ? '#fff' : '#f08080' }}>
                 {datos.ganancia !== 0 ? fmtGs(datos.ganancia) : '—'}
               </div>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,0.4)', marginTop:4 }}>
+              <div className="ui-67d00d">
                 {datos.ingresos > 0 && datos.costos > 0 ? `Margen: ${Math.round((datos.ganancia / datos.ingresos) * 100)}%` : 'Sin datos suficientes'}
               </div>
             </div>
-            <div style={{ background:'#fff', borderRadius:8, padding:'14px' }}>
-              <div style={{ fontSize:9, color:"#697970", textTransform:'uppercase', marginBottom:4 }}>Ingresos</div>
-              <div style={{ fontSize:18, fontWeight:700, color:"#124e38", letterSpacing:-.5 }}>{fmtGs(datos.ingresos)}</div>
-              <div style={{ fontSize:10, color:'#b0b0b0', marginTop:2 }}>{fmtKg(datos.kg)} kg</div>
+            <div className="ui-bf0ab5">
+              <div className="ui-031691">Ingresos</div>
+              <div className="ui-c999a1">{fmtGs(datos.ingresos)}</div>
+              <div className="ui-321de5">{fmtKg(datos.kg)} kg</div>
             </div>
-            <div style={{ background:'#fff', borderRadius:8, padding:'14px' }}>
-              <div style={{ fontSize:9, color:"#697970", textTransform:'uppercase', marginBottom:4 }}>Costos</div>
-              <div style={{ fontSize:18, fontWeight:700, color:'#e07b00', letterSpacing:-.5 }}>{fmtGs(datos.costos)}</div>
-              <div style={{ fontSize:10, color:'#b0b0b0', marginTop:2 }}>{isGuest ? 'gastos registrados' : 'jornales + insumos + gastos'}</div>
+            <div className="ui-bf0ab5">
+              <div className="ui-031691">Costos</div>
+              <div className="ui-66b12b">{fmtGs(datos.costos)}</div>
+              <div className="ui-321de5">{isGuest ? 'gastos registrados' : 'jornales + insumos + gastos'}</div>
             </div>
           </div>
 
           {porCultivo.length > 0 && (
-            <div style={{ background:'#fff', borderRadius:8, padding:'16px', marginBottom:10 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#182c25", marginBottom:14 }}>Ingresos por cultivo</div>
+            <div className="ui-481f17">
+              <div className="ui-416edc">Ingresos por cultivo</div>
               {porCultivo.map((c, i) => (
-                <div key={c.nombre} style={{ padding:'10px 0', borderBottom: i < porCultivo.length-1 ? '1px solid #f2f1ef' : 'none' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                    <div style={{ fontSize:13, fontWeight:500, color:"#182c25" }}>{c.nombre}</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#124e38" }}>{fmtGs(c.ingresos)}</div>
+                <div className="ui-416c26" key={c.nombre} style={{ borderBottom: i < porCultivo.length-1 ? '1px solid #f2f1ef' : 'none' }}>
+                  <div className="ui-9b26fa">
+                    <div className="ui-197309">{c.nombre}</div>
+                    <div className="ui-199f15">{fmtGs(c.ingresos)}</div>
                   </div>
-                  <div style={{ display:'flex', justifyContent:'space-between' }}>
-                    <div style={{ fontSize:10, color:"#697970" }}>{fmtKg(c.kg)} kg · {c.registros} cosechas</div>
-                    <div style={{ fontSize:10, color:"#697970" }}>Prom: Gs. {c.precioProm.toLocaleString('es-PY')}/kg</div>
+                  <div className="ui-1141c4">
+                    <div className="ui-552ff3">{fmtKg(c.kg)} kg · {c.registros} cosechas</div>
+                    <div className="ui-552ff3">Prom: Gs. {c.precioProm.toLocaleString('es-PY')}/kg</div>
                   </div>
                 </div>
               ))}
@@ -438,16 +438,16 @@ export default function Reportes({ campoActivo, isGuest = false }) {
           )}
 
           {porBloque.length > 0 && (
-            <div style={{ background:'#fff', borderRadius:8, padding:'16px', marginBottom:10 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#182c25", marginBottom:14 }}>Bloques más productivos</div>
+            <div className="ui-481f17">
+              <div className="ui-416edc">Bloques más productivos</div>
               {porBloque.map((b, i) => (
-                <div key={b.codigo} style={{ padding:'8px 0', borderBottom: i < porBloque.length-1 ? '1px solid #f2f1ef' : 'none' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-                    <div style={{ fontSize:13, fontWeight:500, color:"#182c25" }}>Bloque {b.codigo}</div>
-                    <div style={{ fontSize:12, color:"#697970" }}>{fmtKg(b.kg)} kg</div>
+                <div className="ui-e1deb8" key={b.codigo} style={{ borderBottom: i < porBloque.length-1 ? '1px solid #f2f1ef' : 'none' }}>
+                  <div className="ui-86ffd1">
+                    <div className="ui-197309">Bloque {b.codigo}</div>
+                    <div className="ui-93a7e1">{fmtKg(b.kg)} kg</div>
                   </div>
-                  <div style={{ background:"#f6f8f7", borderRadius:8, height:6, overflow:'hidden' }}>
-                    <div style={{ height:'100%', background:"#124e38", borderRadius:8, width:`${(b.kg / maxKg) * 100}%` }}></div>
+                  <div className="ui-7eb498">
+                    <div className="ui-1bdc5e" style={{ width:`${(b.kg / maxKg) * 100}%` }}></div>
                   </div>
                 </div>
               ))}
@@ -455,27 +455,27 @@ export default function Reportes({ campoActivo, isGuest = false }) {
           )}
 
           {Object.keys(precioHistorial).length > 0 && (
-            <div style={{ background:'#fff', borderRadius:8, padding:'16px', marginBottom:10 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#182c25", marginBottom:14 }}>Evolución de precios</div>
+            <div className="ui-481f17">
+              <div className="ui-416edc">Evolución de precios</div>
               {Object.entries(precioHistorial).map(([cultivo, precios]) => {
                 const min = Math.min(...precios)
                 const max = Math.max(...precios)
                 const prom = Math.round(precios.reduce((s, p) => s + p, 0) / precios.length)
                 return (
-                  <div key={cultivo} style={{ padding:'10px 0', borderBottom:"1px solid #f6f8f7" }}>
-                    <div style={{ fontSize:13, fontWeight:500, color:"#182c25", marginBottom:6 }}>{cultivo}</div>
-                    <div style={{ display:'flex', gap:16 }}>
-                      <div style={{ textAlign:'center' }}>
-                        <div style={{ fontSize:9, color:"#697970", marginBottom:2 }}>Mínimo</div>
-                        <div style={{ fontSize:12, fontWeight:600, color:'#c84040' }}>Gs. {min.toLocaleString('es-PY')}</div>
+                  <div className="ui-1adf21" key={cultivo}>
+                    <div className="ui-ab4f57">{cultivo}</div>
+                    <div className="ui-434ceb">
+                      <div className="ui-13076d">
+                        <div className="ui-2e4d9e">Mínimo</div>
+                        <div className="ui-14267f">Gs. {min.toLocaleString('es-PY')}</div>
                       </div>
-                      <div style={{ textAlign:'center' }}>
-                        <div style={{ fontSize:9, color:"#697970", marginBottom:2 }}>Promedio</div>
-                        <div style={{ fontSize:12, fontWeight:600, color:"#182c25" }}>Gs. {prom.toLocaleString('es-PY')}</div>
+                      <div className="ui-13076d">
+                        <div className="ui-2e4d9e">Promedio</div>
+                        <div className="ui-00c1fb">Gs. {prom.toLocaleString('es-PY')}</div>
                       </div>
-                      <div style={{ textAlign:'center' }}>
-                        <div style={{ fontSize:9, color:"#697970", marginBottom:2 }}>Máximo</div>
-                        <div style={{ fontSize:12, fontWeight:600, color:"#124e38" }}>Gs. {max.toLocaleString('es-PY')}</div>
+                      <div className="ui-13076d">
+                        <div className="ui-2e4d9e">Máximo</div>
+                        <div className="ui-bbdbab">Gs. {max.toLocaleString('es-PY')}</div>
                       </div>
                     </div>
                   </div>
@@ -485,7 +485,7 @@ export default function Reportes({ campoActivo, isGuest = false }) {
           )}
 
           {datos.registros === 0 && (
-            <div style={{ textAlign:'center', padding:'30px 20px', color:"#697970", fontSize:13, background:'#fff', borderRadius:8 }}>
+            <div className="ui-828cd2">
               Sin cosechas registradas en este período.
             </div>
           )}

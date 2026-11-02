@@ -66,56 +66,56 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
   }
 
   return (
-    <section style={{ background:'#fff', borderRadius:8, padding:'16px', marginTop:16, boxShadow:'none' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:12 }}>
+    <section className="ui-0ccf91">
+      <div className="ui-a3f6e0">
         <div>
-          <div style={{ fontSize:16, fontWeight:700, color:"#182c25" }}>{titulo}</div>
-          <div style={{ fontSize:11, color:"#697970", marginTop:2 }}>{notas.length} nota{notas.length === 1 ? '' : 's'}</div>
+          <div className="ui-6dc1df">{titulo}</div>
+          <div className="ui-66d4fa">{notas.length} nota{notas.length === 1 ? '' : 's'}</div>
         </div>
         {!isGuest && (
-          <button type="button" onClick={() => setAbierto(v => !v)}
-            style={{ border:'none', borderRadius:8, background:"#124e38", color:'#fff', padding:'9px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+          <button className="ui-b371e7" type="button" onClick={() => setAbierto(v => !v)}
+           >
             {abierto ? 'Cerrar' : '+ Nota'}
           </button>
         )}
       </div>
 
-      {error && <div style={{ background:'#fff3e8', color:'#b26400', borderRadius:8, padding:'9px 11px', fontSize:12, marginBottom:10 }}>{error}</div>}
+      {error && <div className="ui-ced6bf">{error}</div>}
 
       {abierto && (
-        <div style={{ background:'#f7f7f5', borderRadius:8, padding:12, marginBottom:12 }}>
+        <div className="ui-31eb11">
           <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value }))}
             style={inputStyle} />
           <input value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo:e.target.value }))}
             placeholder="Titulo opcional" style={inputStyle} />
-          <textarea value={form.contenido} onChange={e => setForm(f => ({ ...f, contenido:e.target.value }))}
-            placeholder="Escribir nota..." style={{ ...inputStyle, minHeight:74, resize:'vertical', marginBottom:10 }} />
-          <button type="button" onClick={guardar} disabled={saving}
-            style={{ width:'100%', border:'none', borderRadius:8, background:'#1a5c2e', color:'#fff', padding:12, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          <textarea className="ui-db2152" value={form.contenido} onChange={e => setForm(f => ({ ...f, contenido:e.target.value }))}
+            placeholder="Escribir nota..." style={{ ...inputStyle }} />
+          <button className="ui-c630d0" type="button" onClick={guardar} disabled={saving}
+           >
             {saving ? 'Guardando...' : 'Guardar nota'}
           </button>
         </div>
       )}
 
       {notas.length === 0 ? (
-        <div style={{ color:"#697970", fontSize:13, padding:'8px 0' }}>Sin notas registradas.</div>
+        <div className="ui-58e1e8">Sin notas registradas.</div>
       ) : (
-        <div style={{ display:'grid', gap:8 }}>
+        <div className="ui-b1b744">
           {notas.slice(0, 6).map(n => (
-            <div key={n.id} style={{ background:'#f7f7f5', borderRadius:8, padding:'11px 12px' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', gap:10, marginBottom:5 }}>
-                <div style={{ minWidth:0 }}>
-                  <div style={{ fontSize:12, color:"#697970" }}>{n.fecha}</div>
-                  {n.titulo && <div style={{ fontSize:13, fontWeight:700, color:"#182c25", marginTop:2 }}>{n.titulo}</div>}
+            <div className="ui-62d523" key={n.id}>
+              <div className="ui-7f7e09">
+                <div className="ui-3f9f96">
+                  <div className="ui-93a7e1">{n.fecha}</div>
+                  {n.titulo && <div className="ui-51b484">{n.titulo}</div>}
                 </div>
                 {!isGuest && (
-                  <button type="button" onClick={() => eliminar(n.id)}
-                    style={{ border:'1px solid #ffcccc', background:'transparent', color:'#c84040', borderRadius:8, padding:'5px 9px', fontSize:11, cursor:'pointer' }}>
+                  <button className="ui-55ae91" type="button" onClick={() => eliminar(n.id)}
+                   >
                     Eliminar
                   </button>
                 )}
               </div>
-              <div style={{ fontSize:13, color:'#3b403c', lineHeight:1.45, whiteSpace:'pre-wrap' }}>{n.contenido}</div>
+              <div className="ui-48791d">{n.contenido}</div>
             </div>
           ))}
         </div>

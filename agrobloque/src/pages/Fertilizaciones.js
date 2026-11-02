@@ -186,76 +186,68 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 
   return (
     <Modal busy={saving} onClose={onClose} label="Registrar fertilización" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:250, display:'flex', justifyContent:'center', alignItems:'flex-start', padding:'34px 16px', overflowY:'auto' }}>
-      <div style={{ width:'100%', maxWidth:900, background:'#f7f6f3', borderRadius:'var(--ag-radius)', padding:20, boxShadow:'none' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', marginBottom:16 }}>
+      <div className="ui-eab8be">
+        <div className="ui-dcfe72">
           <div>
-            <div style={{ fontSize:12, color:'#8a948b' }}>{esSemana ? 'Registro semanal por bloques' : 'Aplicacion puntual'}</div>
-            <h2 style={{ margin:'2px 0 0', fontSize:24 }}>{esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar fertilización semanal' : 'Nueva fertilización semanal') : form.edit_grupo ? 'Corregir fertilización' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
+            <div className="ui-5e0192">{esSemana ? 'Registro semanal por bloques' : 'Aplicacion puntual'}</div>
+            <h2 className="ui-944434">{esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar fertilización semanal' : 'Nueva fertilización semanal') : form.edit_grupo ? 'Corregir fertilización' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
           </div>
-          <button aria-label="Cerrar" onClick={onClose} style={{ border:'none', background:'#fff', borderRadius:'var(--ag-radius)', width:40, height:40, cursor:'pointer' }}>
-            <i className="ti ti-x" style={{ fontSize:20 }} />
+          <button className="ui-358cf9" aria-label="Cerrar" onClick={onClose}>
+            <i className="ti ti-x ui-e5e6f8" />
           </button>
         </div>
 
         <Notice tone="error">{error}</Notice><FormHeading number="01" detail="Fecha, preparación y bloques seleccionados">Datos de la aplicación</FormHeading>
-        <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap:10, marginBottom:14 }}>
-          {esSemana && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" className="bl-input" /></label>}
-          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>
+        <div className="ui-c66208" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, 1fr)' }}>
+          {esSemana && <label className="ui-e22579" style={{ gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" className="bl-input" /></label>}
+          <label className="ui-e22579">
             {esSemana ? 'Inicio de la semana' : 'Fecha'}
             <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(e.target.value, 6) } : {}) }))} className="bl-input" />
           </label>
-          {esSemana && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} className="bl-input" /></label>}
-          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} className="bl-input" /></label>
-          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} className="bl-input" /></label>
-          {form.plan_id && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} className="bl-input"><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
-          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Etapa fenológica<input value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" className="bl-input" /></label>
-          <div style={{ display:'grid', alignContent:'center', background:"#edf7f1", border:'1px solid #d6e8d4', borderRadius:'var(--ag-radius)', padding:'10px 12px' }}><span style={{ fontSize:12, color:'#69706a' }}>VOLUMEN TOTAL</span><strong style={{ fontSize:18, color:"#08603f" }}>{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>
-          <div style={{ display:'grid', gap:8, gridColumn:'1 / -1' }}>
-            <div style={{ fontSize:12, color:'#687068', fontWeight:700 }}>Bloques</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+          {esSemana && <label className="ui-e22579">Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} className="bl-input" /></label>}
+          <label className="ui-e22579">Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} className="bl-input" /></label>
+          <label className="ui-e22579">Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} className="bl-input" /></label>
+          {form.plan_id && <label className="ui-e22579">Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} className="bl-input"><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
+          <label className="ui-e22579" style={{ gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Etapa fenológica<input value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" className="bl-input" /></label>
+          <div className="ui-7f9aff"><span className="ui-93a7e1">VOLUMEN TOTAL</span><strong className="ui-b45e7d">{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>
+          <div className="ui-5cb862">
+            <div className="ui-19585d">Bloques</div>
+            <div className="ui-180d23">
               {bloques.map(b => {
                 const activo = (form.bloques_ids || []).includes(b.id)
                 const cultivo = b.plantaciones?.find?.(p => p.activa)?.cultivos?.nombre
                 return (
-                  <button className="ag-small-action" key={b.id} onClick={() => alternarBloque(b.id)} style={{
-                    border: activo ? '1px solid #1f1f1f' : '1px solid #e3e0db',
-                    background: activo ? '#1f1f1f' : '#fff',
-                    color: activo ? '#fff' : '#343a36',
-                    borderRadius: 999,
-                    padding: '9px 12px',
-                    cursor:'pointer',
-                    fontWeight:700,
-                  }}>
+                  <button className="ag-small-action ui-6c1dd7" key={b.id} onClick={() => alternarBloque(b.id)} style={{ border: activo ? '1px solid #1f1f1f' : '1px solid #e3e0db', background: activo ? '#1f1f1f' : '#fff', color: activo ? '#fff' : '#343a36' }}>
                     {b.codigo}{cultivo ? ` - ${cultivo}` : ''}{plantasDelBloque(b) ? ` · ${fmtNum(plantasDelBloque(b))} plantas` : ''}
                   </button>
                 )
               })}
             </div>
-            <div style={{ fontSize:12, color:'#8a948b' }}>{(form.bloques_ids || []).length} bloques seleccionados. {esSemana ? 'Al guardar, la semana queda registrada en el historial de cada bloque.' : 'Se guarda un registro por bloque.'}</div>
+            <div className="ui-5e0192">{(form.bloques_ids || []).length} bloques seleccionados. {esSemana ? 'Al guardar, la semana queda registrada en el historial de cada bloque.' : 'Se guarda un registro por bloque.'}</div>
           </div>
         </div>
 
         <FormHeading number="02" detail="Fórmula NPK, nutriente y dosis por tanque o planta">Preparación nutricional</FormHeading>
-        <div style={{ fontSize:12, fontWeight:700, color:"#08603f", margin:'2px 0 9px' }}>Las cantidades siguientes son por cada tanque.</div>
-        <div style={{ display:'grid', gap:12 }}>
+        <div className="ui-93fd8e">Las cantidades siguientes son por cada tanque.</div>
+        <div className="ui-3dee6e">
           {form.soluciones.map((sol, si) => (
-            <div key={si} className="bl-card" style={{ padding:14, boxShadow:'none' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', marginBottom:10 }}>
-                <input value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solucion A" className="bl-input" style={{ maxWidth:180, fontWeight:700 }} />
+            <div key={si} className="bl-card ui-acd88b">
+              <div className="ui-4c2683">
+                <input value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solucion A" className="bl-input ui-df86fd" />
                 {form.soluciones.length > 1 && (
-                  <button className="ag-small-action" onClick={() => eliminarSolucion(si)} style={{ border:'1px solid #ffd1d1', background:'#fff', color:'#d42f2f', borderRadius:'var(--ag-radius)', padding:'9px 11px', cursor:'pointer' }}>Eliminar</button>
+                  <button className="ag-small-action ui-9f7e00" onClick={() => eliminarSolucion(si)}>Eliminar</button>
                 )}
               </div>
-              <div style={{ display:'grid', gap:8 }}>
+              <div className="ui-b1b744">
                 {sol.productos.map((p, pi) => (
-                  <div key={pi} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 138px 120px 94px 38px', gap:8, alignItems:'center' }}>
-                    <div style={{ display:'grid', gap:6 }}>
+                  <div className="ui-0c313e" key={pi} style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 138px 120px 94px 38px' }}>
+                    <div className="ui-16eb64">
                       <select value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)} className="bl-input">
                         <option value="">Sin inventario</option>
                         {incluirSeleccionados(productos, esProductoFertilizacion, [p.producto_id]).map(prod => <option key={prod.id} value={prod.id}>{prod.nombre} - stock {fmtNum(prod.stock_actual)} {prod.unidad || ''}</option>)}
                       </select>
-                      {productos.filter(esProductoFertilizacion).length === 0 && !p.producto_id && <div style={{ fontSize:11, color:'#8a6b33', lineHeight:1.35 }}>No hay fertilizantes clasificados. Revisá la categoría del producto en Inventario.</div>}
-                      {!p.producto_id && <input value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Escribir producto" className="bl-input" style={{ background:'#f7fbf7', borderColor:'#d6dfd6' }} />}
+                      {productos.filter(esProductoFertilizacion).length === 0 && !p.producto_id && <div className="ui-6d5651">No hay fertilizantes clasificados. Revisá la categoría del producto en Inventario.</div>}
+                      {!p.producto_id && <input value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Escribir producto" className="bl-input ui-b6bf8d" />}
                     </div>
                     <select value={p.modo || 'por_tanque'} onChange={e => actualizarProducto(si, pi, 'modo', e.target.value)} className="bl-input">
                       <option value="por_tanque">Por tanque</option>
@@ -265,29 +257,29 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                     <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} className="bl-input">
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
-                    <button aria-label="Eliminar" onClick={() => eliminarProducto(si, pi)} disabled={sol.productos.length === 1} style={{ border:'none', background:'#f2efeb', borderRadius:'var(--ag-radius)', height:38, cursor: sol.productos.length === 1 ? 'not-allowed' : 'pointer' }}>
+                    <button className="ui-b4e2f5" aria-label="Eliminar" onClick={() => eliminarProducto(si, pi)} disabled={sol.productos.length === 1} style={{ cursor: sol.productos.length === 1 ? 'not-allowed' : 'pointer' }}>
                       <i className="ti ti-trash" />
                     </button>
-                    {p.modo === 'por_planta' && <div style={{ gridColumn:'1 / -1', background:'#edf7f1', borderRadius:'var(--ag-radius)', padding:'8px 10px', color:'#08603f', fontSize:12 }}>
+                    {p.modo === 'por_planta' && <div className="ui-0c6c90">
                       <strong>Total calculado:</strong> {fmtNum((form.bloques_ids || []).reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0) * Number(p.cantidad || 0))} {p.unidad || 'g'} para {fmtNum((form.bloques_ids || []).reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0))} plantas.
                     </div>}
                   </div>
                 ))}
               </div>
-              <button className="ag-small-action" onClick={() => agregarProducto(si)} style={{ marginTop:10, border:'1px solid #e3e0db', background:'#fff', borderRadius:'var(--ag-radius)', padding:'9px 12px', fontWeight:700, cursor:'pointer' }}>+ Producto</button>
+              <button className="ag-small-action ui-69d9b0" onClick={() => agregarProducto(si)}>+ Producto</button>
             </div>
           ))}
         </div>
 
-        <button className="ag-small-action" onClick={agregarSolucion} style={{ marginTop:12, border:'1px solid #e3e0db', background:'#fff', borderRadius:'var(--ag-radius)', padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>+ Solucion</button>
+        <button className="ag-small-action ui-b2096e" onClick={agregarSolucion}>+ Solucion</button>
 
-        <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, marginTop:14 }}>
+        <label className="ui-410276">
           Notas
-          <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicacion por goteo, lote completo, observaciones..." className="bl-input" style={{ minHeight:86, resize:'vertical' }} />
+          <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicacion por goteo, lote completo, observaciones..." className="bl-input ui-c1d38e" />
         </label>
 
-        <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:16 }}>
-          <button className="ag-small-action" onClick={onClose} style={{ border:'1px solid #e3e0db', background:'#fff', borderRadius:'var(--ag-radius)', padding:'11px 14px', fontWeight:700, cursor:'pointer' }}>Cancelar</button>
+        <div className="ui-b691ec">
+          <button className="ag-small-action ui-accd8b" onClick={onClose}>Cancelar</button>
           <button onClick={onSave} disabled={saving} className="bl-btn-solid" style={{ opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios de la semana' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
         </div>
       </div>
@@ -840,79 +832,79 @@ export default function Fertilizaciones({ campoActivo }) {
   }
 
   return (
-    <div className="ag-page" style={{ padding:'38px clamp(16px, 4vw, 48px)', minHeight:'100vh', background:"#f6f8f7" }}>
-      <div style={{ maxWidth:1220, margin:'0 auto' }}>
+    <div className="ag-page ui-629c3b">
+      <div className="ui-c53b97">
         <div className="module-switch" role="tablist" aria-label="Tipo de aplicación"><button type="button" role="tab" aria-selected="false" onClick={() => navigate('/fumigaciones')}><i className="ti ti-shield-check" />Fitosanitario</button><button type="button" role="tab" aria-selected="true" className="active"><i className="ti ti-leaf" />Nutrición y fertirriego</button></div>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:18, marginBottom:20 }}>
+        <div className="ui-9542f4">
           <div>
-            <div style={{ color:'#8a948b', fontSize:13 }}>Aplicaciones reales</div>
-            <h1 style={{ margin:'5px 0 0', fontSize:30, lineHeight:1.05 }}>Fertilizaciones</h1>
+            <div className="ui-35a79d">Aplicaciones reales</div>
+            <h1 className="ui-118f2f">Fertilizaciones</h1>
           </div>
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible} className="bl-btn-solid" style={{ background:'#fff', color:"#08603f", border:'1px solid #dbe6da', opacity:schemaPlanesDisponible ? 1 : .55 }}><i className="ti ti-calendar-week" style={{ marginRight:7 }} />Fertilización semanal</button>
-            <button onClick={() => abrirModal('aplicacion')} className="bl-btn-solid"><i className="ti ti-plus" style={{ marginRight:7 }} />Aplicación puntual</button>
+          <div className="ui-9c6869">
+            <button onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible} className="bl-btn-solid ui-320697" style={{ opacity:schemaPlanesDisponible ? 1 : .55 }}><i className="ti ti-calendar-week ui-52eaee" />Fertilización semanal</button>
+            <button onClick={() => abrirModal('aplicacion')} className="bl-btn-solid"><i className="ti ti-plus ui-52eaee" />Aplicación puntual</button>
           </div>
         </div>
 
-        {error && <div style={{ background:'#fff1f1', border:'1px solid #ffd6d6', color:'#b52525', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:12, fontSize:13 }}>{error}</div>}
-        {success && <div style={{ background:'#edf8ee', border:'1px solid #cce5ce', color:"#08603f", borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:12, fontSize:13 }}>{success}</div>}
-        {!schemaPlanesDisponible && <div style={{ background:'#fff7e8', border:'1px solid #efd49f', color:'#80580e', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:12, fontSize:13 }}>Los planes diarios y semanales se habilitaran despues de ejecutar el SQL preparado para Supabase.</div>}
+        {error && <div className="ui-173cc6">{error}</div>}
+        {success && <div className="ui-fb7aa5">{success}</div>}
+        {!schemaPlanesDisponible && <div className="ui-9536bb">Los planes diarios y semanales se habilitaran despues de ejecutar el SQL preparado para Supabase.</div>}
 
-        <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap:12, marginBottom:18 }}>
-          <div className="nutrition-card" style={{ ...card, padding:18 }}>
-            <div style={{ fontSize:12, color:'#b9beb7' }}>APLICACIONES</div>
-            <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(registrosActivos.length)}</div>
-            <div style={{ fontSize:12, color:'#cdd2cc' }}>registros guardados</div>
+        <div className="ui-9e5e94" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))' }}>
+          <div className="nutrition-card ui-9128d9" style={{ ...card }}>
+            <div className="ui-5e0192">APLICACIONES</div>
+            <div className="ui-0fd91a">{fmtNum(registrosActivos.length)}</div>
+            <div className="ui-d3e9cf">registros guardados</div>
           </div>
-          <div className="bl-card" style={{ padding:18 }}>
-            <div style={{ fontSize:12, color:'#8a948b' }}>BLOQUES APLICADOS</div>
-            <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(totalBloquesAplicados)}</div>
-            <div style={{ fontSize:12, color:'#8a948b' }}>con fertilizacion</div>
+          <div className="bl-card ui-9128d9">
+            <div className="ui-5e0192">BLOQUES APLICADOS</div>
+            <div className="ui-0fd91a">{fmtNum(totalBloquesAplicados)}</div>
+            <div className="ui-5e0192">con fertilizacion</div>
           </div>
-          <div className="bl-card" style={{ padding:18 }}>
-            <div style={{ fontSize:12, color:'#8a948b' }}>ULTIMA FECHA</div>
-            <div style={{ fontSize:22, fontWeight:700 }}>{ultimaFecha ? fmtFecha(ultimaFecha) : '-'}</div>
-            <div style={{ fontSize:12, color:'#8a948b' }}>ultima aplicacion</div>
+          <div className="bl-card ui-9128d9">
+            <div className="ui-5e0192">ULTIMA FECHA</div>
+            <div className="ui-02cbdf">{ultimaFecha ? fmtFecha(ultimaFecha) : '-'}</div>
+            <div className="ui-5e0192">ultima aplicacion</div>
           </div>
-          <div className="bl-card" style={{ padding:18 }}>
-            <div style={{ fontSize:12, color:'#8a948b' }}>BLOQUES ACTIVOS</div>
-            <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(bloques.length)}</div>
-            <div style={{ fontSize:12, color:'#8a948b' }}>disponibles</div>
+          <div className="bl-card ui-9128d9">
+            <div className="ui-5e0192">BLOQUES ACTIVOS</div>
+            <div className="ui-0fd91a">{fmtNum(bloques.length)}</div>
+            <div className="ui-5e0192">disponibles</div>
           </div>
         </div>
 
         {schemaPlanesDisponible && (
-          <div className="bl-card" style={{ padding:18, marginBottom:18 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}><div><div style={{ color:'#8a948b', fontSize:12 }}>RECETAS REUTILIZABLES</div><h2 style={{ margin:'3px 0 0', fontSize:20 }}>Planes semanales guardados</h2></div><span style={{ background:"#edf7f1", color:"#08603f", borderRadius:999, padding:'5px 10px', fontSize:12, fontWeight:700 }}>{planesVigentes.length}</span></div>
-            {planesVigentes.length === 0 ? <div style={{ padding:'18px 0 4px', color:'#8a948b', fontSize:13 }}>Todavia no hay planes semanales guardados.</div> : planesVigentes.map((plan, index) => {
+          <div className="bl-card ui-7997ad">
+            <div className="ui-fbf92c"><div><div className="ui-f8b0a0">RECETAS REUTILIZABLES</div><h2 className="ui-41629d">Planes semanales guardados</h2></div><span className="ui-e2090b">{planesVigentes.length}</span></div>
+            {planesVigentes.length === 0 ? <div className="ui-10861c">Todavia no hay planes semanales guardados.</div> : planesVigentes.map((plan, index) => {
               const tanques = Number(plan.tanques_cantidad) || 1
               const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
               const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los dias' : `Cada ${['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][Number(plan.dia_semana)] || 'semana'}`
-              return <div key={plan.id} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', gap:10, alignItems:'center', padding:'14px 0', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong style={{ fontSize:14 }}>{plan.nombre}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div style={{ color:'#8a948b', fontSize:12, marginTop:4 }}>{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong style={{ color:"#08603f", fontSize:13 }}>{frecuencia}</strong><div style={{ color:'#687068', fontSize:12, marginTop:4 }}>{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div style={{ display:'flex', gap:7, flexWrap:'wrap' }}><button className="ag-small-action" onClick={() => registrarDesdePlan(plan)} disabled={saving} style={{ ...btnNegro, background:"#08603f", padding:'9px 12px' }}>Usar otra semana</button><button className="ag-small-action" onClick={() => abrirEditarPlan(plan)} style={{ border:'1px solid #e3e0db', background:'#fff', color:'#1f1f1f', borderRadius:'var(--ag-radius)', padding:'9px 11px', fontWeight:700, cursor:'pointer' }}>Editar receta</button></div></div>
+              return <div className="ui-8e6c1c" key={plan.id} style={{ gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong className="ui-0cf08e">{plan.nombre}</strong><div className="ui-8174dd">{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div className="ui-72210b">{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong className="ui-7b5575">{frecuencia}</strong><div className="ui-8174dd">{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div className="ui-19255d"><button className="ag-small-action ui-e6110d" onClick={() => registrarDesdePlan(plan)} disabled={saving} style={{ ...btnNegro }}>Usar otra semana</button><button className="ag-small-action ui-51b96d" onClick={() => abrirEditarPlan(plan)}>Editar receta</button></div></div>
             })}
           </div>
         )}
 
-        <div className="bl-card" style={{ overflow:'hidden' }}>
-          <div style={{ display:isMobile ? 'none' : 'grid', gridTemplateColumns:'130px 1fr 1.4fr', gap:12, padding:'13px 16px', borderBottom:'1px solid #ece9e3', color:'#687068', fontSize:12, fontWeight:700 }}>
+        <div className="bl-card ui-3e3b3e">
+          <div className="ui-1e34de" style={{ display:isMobile ? 'none' : 'grid' }}>
             <div>FECHA</div>
             <div>BLOQUES</div>
             <div>DETALLE</div>
           </div>
           {loading ? <Skeleton rows={4} label="Cargando fertilizaciones" /> : grupos.length === 0 ? (
-            <div style={{ padding:38, textAlign:'center', color:'#8a948b' }}>Sin fertilizaciones registradas.</div>
+            <div className="ui-c023a0">Sin fertilizaciones registradas.</div>
           ) : grupos.map((g, idx) => (
-            <div key={g.key || `${g.fecha}-${idx}`} onClick={() => setDetalle(g)} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr' : '130px 1fr 1.4fr', gap:12, padding:'16px', borderBottom: idx === grupos.length - 1 ? 'none' : '1px solid #f0ede8', alignItems:'start', cursor:'pointer', opacity:g.anulada ? .58 : 1, background:g.anulada ? '#faf8f5' : '#fff' }}>
-              <div style={{ fontWeight:700 }}>{g.items.some(i => i.plan_id) ? rangoSemana(g.items[0]) : fmtFecha(g.fecha)}</div>
+            <div className="ui-4a0a5b" key={g.key || `${g.fecha}-${idx}`} onClick={() => setDetalle(g)} style={{ gridTemplateColumns:isMobile ? '1fr' : '130px 1fr 1.4fr', borderBottom: idx === grupos.length - 1 ? 'none' : '1px solid #f0ede8', opacity:g.anulada ? .58 : 1, background:g.anulada ? '#faf8f5' : '#fff' }}>
+              <div className="ui-83e448">{g.items.some(i => i.plan_id) ? rangoSemana(g.items[0]) : fmtFecha(g.fecha)}</div>
               <div>
-                <div style={{ fontWeight:700 }}>{g.items.length} bloque{g.items.length === 1 ? '' : 's'}</div>
-                <div style={{ color:'#687068', fontSize:13 }}>{g.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div>
+                <div className="ui-83e448">{g.items.length} bloque{g.items.length === 1 ? '' : 's'}</div>
+                <div className="ui-a35c15">{g.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div>
               </div>
               <div>
-                <div style={{ fontSize:13, lineHeight:1.45 }}>{resumenSoluciones(g.soluciones) || 'Sin productos detallados'}</div>
-                {g.tanque_litros && <div style={{ marginTop:7, color:g.anulada ? '#a33' : "#08603f", fontSize:12, fontWeight:700 }}>{g.anulada ? 'ANULADA · ' : ''}{g.tanques_cantidad || 1} tanque{Number(g.tanques_cantidad || 1) === 1 ? '' : 's'} × {fmtNum(g.tanque_litros)} L = {fmtNum(Number(g.tanque_litros) * Number(g.tanques_cantidad || 1))} L · {g.estado || 'completa'}</div>}
+                <div className="ui-250da2">{resumenSoluciones(g.soluciones) || 'Sin productos detallados'}</div>
+                {g.tanque_litros && <div className="ui-dde727" style={{ color:g.anulada ? '#a33' : "#08603f" }}>{g.anulada ? 'ANULADA · ' : ''}{g.tanques_cantidad || 1} tanque{Number(g.tanques_cantidad || 1) === 1 ? '' : 's'} × {fmtNum(g.tanque_litros)} L = {fmtNum(Number(g.tanque_litros) * Number(g.tanques_cantidad || 1))} L · {g.estado || 'completa'}</div>}
                 {etapaDeNotas(g.notas) && <div className="phenology-pill"><i className="ti ti-seeding" />{etapaDeNotas(g.notas)}</div>}
-                {notasVisibles(g.notas) && <div style={{ marginTop:8, color:'#687068', fontSize:13 }}>{notasVisibles(g.notas)}</div>}
+                {notasVisibles(g.notas) && <div className="ui-e578db">{notasVisibles(g.notas)}</div>}
               </div>
             </div>
           ))}
@@ -933,13 +925,13 @@ export default function Fertilizaciones({ campoActivo }) {
       )}
       {detalle && (
         <Modal onClose={() => setDetalle(null)} label="Fertilizaciones" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:260, display:'grid', placeItems:'center', padding:16 }} onClick={() => setDetalle(null)}>
-          <div className="ag-surface" onClick={e => e.stopPropagation()} style={{ width:'100%', maxWidth:620, background:'#fff', borderRadius:10, padding:22, maxHeight:'88vh', overflowY:'auto' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}><div><div style={{ fontSize:12, color:'#8a948b' }}>{detalle.items.some(i => i.plan_id) ? 'FERTILIZACIÓN SEMANAL' : 'DETALLE DE APLICACIÓN'}</div><h2 style={{ margin:'4px 0' }}>{detalle.items.some(i => i.plan_id) ? rangoSemana(detalle.items[0]) : fmtFecha(detalle.fecha)}</h2></div><button aria-label="Cerrar" onClick={() => setDetalle(null)} style={{ border:0, background:'#f2efeb', width:38, height:38, borderRadius:'var(--ag-radius)', cursor:'pointer' }}><i className="ti ti-x" /></button></div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'16px 0' }}><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Bloques</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Preparación</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
-            <div style={{ fontSize:13, lineHeight:1.6, padding:'13px 0', borderTop:'1px solid #ece9e3', borderBottom:'1px solid #ece9e3' }}>{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
-            {notasVisibles(detalle.notas) && <div style={{ marginTop:14, color:'#687068' }}>{notasVisibles(detalle.notas)}</div>}
-            {!detalle.anulada && <><div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:18 }}><button onClick={() => abrirEditarAplicacion(detalle)} className="bl-btn-solid">{detalle.items.some(i => i.plan_id) ? 'Editar semana completa' : 'Editar'}</button>{!detalle.items.some(i => i.plan_id) && <button onClick={() => repetirAplicacion(detalle)} className="bl-btn-solid" style={{ background:'#08603f' }}>Repetir hoy</button>}</div><div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid #ece9e3' }}><label style={{ display:'grid', gap:6, fontSize:12, fontWeight:700, color:'#687068' }}>Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" className="bl-input" /></label><button className="ag-small-action" onClick={() => anularAplicacion(detalle)} disabled={saving} style={{ marginTop:9, border:'1px solid #ffd1d1', background:'#fff', color:'#b52525', borderRadius:'var(--ag-radius)', padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>Anular y devolver inventario</button></div></>}
-            {detalle.anulada && <div style={{ marginTop:16, color:'#a33', fontWeight:700 }}>Esta aplicación está anulada.</div>}
+          <div className="ag-surface ui-3e70e0" onClick={e => e.stopPropagation()}>
+            <div className="ui-9f6525"><div><div className="ui-5e0192">{detalle.items.some(i => i.plan_id) ? 'FERTILIZACIÓN SEMANAL' : 'DETALLE DE APLICACIÓN'}</div><h2 className="ui-58c65c">{detalle.items.some(i => i.plan_id) ? rangoSemana(detalle.items[0]) : fmtFecha(detalle.fecha)}</h2></div><button className="ui-52b466" aria-label="Cerrar" onClick={() => setDetalle(null)}><i className="ti ti-x" /></button></div>
+            <div className="ui-091476"><div className="ui-702618"><small className="ui-ae975a">Bloques</small><div className="ui-c6f57e">{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div className="ui-702618"><small className="ui-ae975a">Preparación</small><div className="ui-c6f57e">{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
+            <div className="ui-c4d2a4">{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
+            {notasVisibles(detalle.notas) && <div className="ui-5961cf">{notasVisibles(detalle.notas)}</div>}
+            {!detalle.anulada && <><div className="ui-79954a"><button onClick={() => abrirEditarAplicacion(detalle)} className="bl-btn-solid">{detalle.items.some(i => i.plan_id) ? 'Editar semana completa' : 'Editar'}</button>{!detalle.items.some(i => i.plan_id) && <button onClick={() => repetirAplicacion(detalle)} className="bl-btn-solid ui-d6ff9b">Repetir hoy</button>}</div><div className="ui-b6cf07"><label className="ui-fd4239">Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" className="bl-input" /></label><button className="ag-small-action ui-b4a187" onClick={() => anularAplicacion(detalle)} disabled={saving}>Anular y devolver inventario</button></div></>}
+            {detalle.anulada && <div className="ui-1eb527">Esta aplicación está anulada.</div>}
           </div>
         </Modal>
       )}

@@ -44,10 +44,10 @@ export default function App() {
   }, [])
 
   if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#f0ede8' }}>
-      <div style={{ textAlign:'center' }}>
+    <div className="ui-4787b9">
+      <div className="ui-13076d">
         <LogoHS size={56} />
-        <div style={{ color:'#888', fontSize:13, marginTop:12 }}>Cargando...</div>
+        <div className="ui-c4a8d7">Cargando...</div>
       </div>
     </div>
   )
@@ -56,7 +56,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div style={{ maxWidth:480, margin:'0 auto', minHeight:'100vh', background:"#f6f8f7", position:'relative', paddingBottom:64 }}>
+      <div className="ui-4aa02f">
         <Routes>
           <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo}/>}/>
           <Route path="/mapa" element={<Mapa campoActivo={campoActivo}/>}/>

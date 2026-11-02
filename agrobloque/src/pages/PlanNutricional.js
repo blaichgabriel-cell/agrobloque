@@ -632,32 +632,32 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f6f7f5', padding:isMobile ? '18px 14px 92px' : '30px 28px 44px', color:'#101511', overflowX:'hidden', boxSizing:'border-box' }}>
-      <div style={{ display:'flex', flexDirection:isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems:isMobile ? 'stretch' : 'flex-start', gap:isMobile ? 14 : 20, marginBottom:22 }}>
+    <div className="ui-c58bc1" style={{ padding:isMobile ? '18px 14px 92px' : '30px 28px 44px' }}>
+      <div className="ui-a1239a" style={{ flexDirection:isMobile ? 'column' : 'row', alignItems:isMobile ? 'stretch' : 'flex-start', gap:isMobile ? 14 : 20 }}>
         <div>
-          <div style={{ fontSize:12, color:'#687068', marginBottom:4 }}>Fertirriego y nutricion por cultivo</div>
-          <h1 style={{ margin:0, fontSize:30, lineHeight:1.1, letterSpacing:-1 }}>Plan Nutricional</h1>
+          <div className="ui-476525">Fertirriego y nutricion por cultivo</div>
+          <h1 className="ui-0dbe41">Plan Nutricional</h1>
         </div>
-        <div style={{ display:'flex', gap:10, width:isMobile ? '100%' : 'auto' }}>
-          <button onClick={() => setModo('manual')} style={{ ...btn(modo === 'manual' ? '#212121' : '#fff', modo === 'manual' ? '#fff' : '#212121'), flex:1 }}>Registro manual</button>
-          <button onClick={generarAsistente} disabled={aiLoading} style={{ ...btn('#176a25', '#fff'), flex:1 }}>{aiLoading ? 'Pensando...' : 'Asistente IA'}</button>
+        <div className="ui-871a87" style={{ width:isMobile ? '100%' : 'auto' }}>
+          <button className="ui-da5cd6" onClick={() => setModo('manual')} style={{ ...btn(modo === 'manual' ? '#212121' : '#fff', modo === 'manual' ? '#fff' : '#212121') }}>Registro manual</button>
+          <button className="ui-da5cd6" onClick={generarAsistente} disabled={aiLoading} style={{ ...btn('#176a25', '#fff') }}>{aiLoading ? 'Pensando...' : 'Asistente IA'}</button>
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(150px, 1fr))', gap:isMobile ? 9 : 14, marginBottom:18 }}>
+      <div className="ui-5af431" style={{ gridTemplateColumns:isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(150px, 1fr))', gap:isMobile ? 9 : 14 }}>
         <Kpi label="EC agua base" value={form.ec_agua ? `${form.ec_agua} mS/cm` : '—'} icon="ti-droplet" />
         <Kpi label="EC objetivo" value={form.ec_objetivo ? `${form.ec_objetivo} mS/cm` : '—'} icon="ti-target" />
         <Kpi label="Registros" value={registros.length} icon="ti-clipboard-list" />
         <Kpi label="EC promedio" value={promedioEcFinal ? `${fmt(promedioEcFinal)} mS/cm` : '—'} icon="ti-chart-line" />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr', gap:18, alignItems:'start' }}>
-        <section style={{ ...panel, padding:isMobile ? 16 : 22, minWidth:0 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <h2 style={{ margin:0, fontSize:18 }}>Carga del plan</h2>
-            <span style={{ fontSize:11, color:"#08603f", background:"#edf7f1", borderRadius:8, padding:'5px 9px' }}>{modo === 'asistente' ? 'Asistente IA' : 'Manual'}</span>
+      <div className="ui-b5663f" style={{ gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr' }}>
+        <section className="ui-3f9f96" style={{ ...panel, padding:isMobile ? 16 : 22 }}>
+          <div className="ui-bec839">
+            <h2 className="ui-45f8ab">Carga del plan</h2>
+            <span className="ui-d413c4">{modo === 'asistente' ? 'Asistente IA' : 'Manual'}</span>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr', gap:10 }}>
+          <div className="ui-ea54d1" style={{ gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr' }}>
             <Input label="Fecha" type="date" value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
             <Select label="Bloque principal" value={form.bloque_id} onChange={seleccionarBloquePrincipal}>
               <option value="">Seleccionar bloque</option>
@@ -669,7 +669,7 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             <Select label="Objetivo" value={form.objetivo} onChange={objetivo => setForm(f => ({ ...f, objetivo }))}>
               {objetivos.map(o => <option key={o} value={o}>{o}</option>)}
             </Select>
-            <div style={{ gridColumn:'1 / -1', background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:8, padding:12, fontSize:12, lineHeight:1.45, color:'#4d544e' }}>
+            <div className="ui-d89303">
               {guiaObjetivo(form.objetivo)}
             </div>
             <Input label="Tanque (L)" value={form.tanque_litros} onChange={tanque_litros => setForm(f => ({ ...f, tanque_litros }))} />
@@ -677,53 +677,44 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
             <Input label="EC objetivo" value={form.ec_objetivo} onChange={ec_objetivo => setForm(f => ({ ...f, ec_objetivo }))} />
             <Input label="EC final / estimada" value={form.ec_final} onChange={ec_final => setForm(f => ({ ...f, ec_final }))} />
           </div>
-          <div style={{ marginTop:12, background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:8, padding:12 }}>
-            <div style={{ fontSize:12, color:'#4d544e', fontWeight:700, marginBottom:8 }}>
+          <div className="ui-c3cbe8">
+            <div className="ui-058e8e">
               Bloques que reciben este plan ({bloquesSeleccionados.length})
             </div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+            <div className="ui-096aaf">
               {bloques.map(b => {
                 const seleccionado = (form.bloques_ids || []).includes(b.id)
                 const cultivo = b.plantaciones?.find(p => p.activa)?.cultivos?.nombre
                 return (
-                  <button key={b.id} type="button" onClick={() => alternarBloqueDestino(b.id)} style={{
-                    border:'1px solid #dfe6df',
-                    background: seleccionado ? '#176a25' : '#fff',
-                    color: seleccionado ? '#fff' : '#263026',
-                    borderRadius:999,
-                    padding:'7px 10px',
-                    fontSize:11,
-                    fontWeight:700,
-                    cursor:'pointer',
-                  }}>
+                  <button className="ui-b7ebac" key={b.id} type="button" onClick={() => alternarBloqueDestino(b.id)} style={{ background: seleccionado ? '#176a25' : '#fff', color: seleccionado ? '#fff' : '#263026' }}>
                     {b.codigo}{cultivo ? ` - ${cultivo}` : ''}
                   </button>
                 )
               })}
             </div>
-            <div style={{ fontSize:11, color:'#69706a', marginTop:8 }}>
+            <div className="ui-039074">
               La IA usa el bloque principal como referencia. Al guardar, se crea un registro para cada bloque seleccionado.
             </div>
           </div>
-          <div style={{ marginTop:12, background:estadoEc.bg, color:estadoEc.color, border:'1px solid rgba(0,0,0,0.06)', borderRadius:8, padding:12, fontSize:12, fontWeight:700 }}>
+          <div className="ui-589dab" style={{ background:estadoEc.bg, color:estadoEc.color }}>
             {estadoEc.label}
           </div>
           {bloqueActivo && (
-            <div style={{ marginTop:12, background:'#f7f8f6', border:'1px solid #edf0ed', borderRadius:8, padding:12, fontSize:12, color:'#4d544e' }}>
+            <div className="ui-1ae6b8">
               Bloque seleccionado: <strong>{bloqueActivo.codigo}</strong>
             </div>
           )}
 
-          <div style={{ marginTop:16 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-              <strong style={{ fontSize:13 }}>Productos y dosis</strong>
+          <div className="ui-b0043e">
+            <div className="ui-fbf92c">
+              <strong className="ui-3044b6">Productos y dosis</strong>
               <button onClick={agregarProducto} style={smallBtn}>+ Producto</button>
             </div>
             {(form.productos || []).length === 0 ? (
-              <div style={{ color:"#697970", fontSize:13, background:'#f7f8f6', borderRadius:8, padding:14 }}>Sin productos cargados.</div>
+              <div className="ui-22ff92">Sin productos cargados.</div>
             ) : form.productos.map((p, idx) => (
-              <div key={idx} style={{ marginBottom:8 }}>
-                <div style={{ display:'grid', gridTemplateColumns:isVerySmall ? 'minmax(0, 1fr)' : isMobile ? 'minmax(0, 1fr) 76px 70px' : '1.5fr 80px 80px', gap:8, marginBottom:6 }}>
+              <div className="ui-d51702" key={idx}>
+                <div className="ui-1f7ac0" style={{ gridTemplateColumns:isVerySmall ? 'minmax(0, 1fr)' : isMobile ? 'minmax(0, 1fr) 76px 70px' : '1.5fr 80px 80px' }}>
                   <select value={p.producto_id || ''} onChange={e => {
                     const prod = productos.find(x => x.id === e.target.value)
                     actualizarProducto(idx, {
@@ -741,8 +732,8 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
                   <input value={p.unidad || ''} onChange={e => actualizarProducto(idx, { unidad:e.target.value })} placeholder="Unidad" style={field} />
                 </div>
                 {p.producto && (
-                  <div style={{ display:'flex', flexDirection:isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems:isMobile ? 'flex-start' : 'center', gap:8, padding:'0 2px' }}>
-                    <span style={{ fontSize:11, color:'#69706a' }}>
+                  <div className="ui-7e2b5c" style={{ flexDirection:isMobile ? 'column' : 'row', alignItems:isMobile ? 'flex-start' : 'center' }}>
+                    <span className="ui-51b095">
                       Recomendado: <strong>{p.producto}</strong>{p.producto_inventario ? ` · Inventario: ${p.producto_inventario}` : ''}
                     </span>
                     <EstadoBadge estado={p.estado} />
@@ -751,81 +742,81 @@ export default function PlanNutricional({ campoActivo, isGuest = false }) {
               </div>
             ))}
           </div>
-          <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Notas, advertencias o instrucciones..." style={{ ...field, width:'100%', minHeight:80, resize:'vertical', marginTop:10 }} />
+          <textarea className="ui-dfd9c3" value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Notas, advertencias o instrucciones..." style={{ ...field }} />
           {aiError && (
-            <div style={{ marginTop:10, background:'#fff7e8', border:'1px solid #f1d7a7', color:'#855a10', borderRadius:8, padding:10, fontSize:12 }}>
+            <div className="ui-c76305">
               IA no disponible. Se uso la guia base para no dejarte sin recomendacion.
             </div>
           )}
           {!isGuest && (
-            <div style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr', gap:8, marginTop:12 }}>
-              <button onClick={guardarReceta} disabled={saving || !(form.productos || []).length} style={{ ...btn('#fff', '#212121'), width:'100%' }}>Guardar receta</button>
-              <button onClick={guardar} disabled={saving} style={{ ...btn('#212121', '#fff'), width:'100%' }}>{saving ? 'Guardando...' : 'Guardar plan'}</button>
+            <div className="ui-02fff9" style={{ gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 1fr' }}>
+              <button className="ui-6d5673" onClick={guardarReceta} disabled={saving || !(form.productos || []).length} style={{ ...btn('#fff', '#212121') }}>Guardar receta</button>
+              <button className="ui-6d5673" onClick={guardar} disabled={saving} style={{ ...btn('#212121', '#fff') }}>{saving ? 'Guardando...' : 'Guardar plan'}</button>
             </div>
           )}
         </section>
 
-        <section style={{ ...panel, padding:isMobile ? 16 : 22, minWidth:0 }}>
-          <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Plan sugerido</h2>
-          <div style={{ background:'#0f1410', color:'#fff', borderRadius:8, padding:18, marginBottom:14 }}>
-            <div style={{ fontSize:12, color:'rgba(255,255,255,0.62)', marginBottom:6 }}>Resumen</div>
-            <div style={{ fontSize:20, fontWeight:700 }}>{form.objetivo} {bloqueActivo ? `- ${bloqueActivo.codigo}` : ''}</div>
-            <div style={{ color:'rgba(255,255,255,0.72)', fontSize:13, marginTop:6 }}>Tanque {form.tanque_litros || 0} L · EC estimada {form.ec_final || '—'} mS/cm</div>
+        <section className="ui-3f9f96" style={{ ...panel, padding:isMobile ? 16 : 22 }}>
+          <h2 className="ui-4e7816">Plan sugerido</h2>
+          <div className="ui-97e397">
+            <div className="ui-0ec53a">Resumen</div>
+            <div className="ui-feb8dd">{form.objetivo} {bloqueActivo ? `- ${bloqueActivo.codigo}` : ''}</div>
+            <div className="ui-046880">Tanque {form.tanque_litros || 0} L · EC estimada {form.ec_final || '—'} mS/cm</div>
           </div>
           {(form.productos || []).map((p, idx) => (
-            <div key={idx} style={{ borderBottom:'1px solid #eef0ee', padding:'10px 0' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
-                <span style={{ fontSize:13, fontWeight:700 }}>{p.producto || 'Producto sin definir'}</span>
-                <strong style={{ fontSize:13 }}>{p.cantidad || 0} {p.unidad || ''}</strong>
+            <div className="ui-31da89" key={idx}>
+              <div className="ui-f390bf">
+                <span className="ui-843e0a">{p.producto || 'Producto sin definir'}</span>
+                <strong className="ui-3044b6">{p.cantidad || 0} {p.unidad || ''}</strong>
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', gap:10, marginTop:6, alignItems:'center' }}>
-                <span style={{ fontSize:11, color:'#69706a' }}>{p.nutrientes || p.motivo || 'Recomendacion nutricional'}</span>
+              <div className="ui-5aecaf">
+                <span className="ui-51b095">{p.nutrientes || p.motivo || 'Recomendacion nutricional'}</span>
                 <EstadoBadge estado={p.estado} />
               </div>
-              {p.producto_inventario && <div style={{ fontSize:11, color:"#697970", marginTop:4 }}>Coincide con inventario: {p.producto_inventario}</div>}
+              {p.producto_inventario && <div className="ui-4b3224">Coincide con inventario: {p.producto_inventario}</div>}
             </div>
           ))}
-          <div style={{ marginTop:14, background:'#fff7e8', border:'1px solid #f1d7a7', color:'#855a10', borderRadius:8, padding:12, fontSize:12 }}>
+          <div className="ui-174721">
             Revisar conductividad antes de aplicar. La recomendacion queda editable antes de guardar.
           </div>
         </section>
       </div>
 
-      <section style={{ ...panel, marginTop:18, padding:isMobile ? 16 : 22, minWidth:0 }}>
-        <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Recetas guardadas</h2>
+      <section className="ui-3cb756" style={{ ...panel, padding:isMobile ? 16 : 22 }}>
+        <h2 className="ui-4e7816">Recetas guardadas</h2>
         {recetas.length === 0 ? (
-          <div style={{ color:"#697970", fontSize:13, padding:'10px 0' }}>Sin recetas guardadas en este dispositivo.</div>
+          <div className="ui-a7c0b3">Sin recetas guardadas en este dispositivo.</div>
         ) : recetas.map(receta => (
-          <div key={receta.id} style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 110px 150px', gap:isMobile ? 8 : 12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
+          <div className="ui-4ae148" key={receta.id} style={{ gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '1fr 110px 150px', gap:isMobile ? 8 : 12 }}>
             <span>
-              <strong style={{ display:'block', fontSize:13 }}>{receta.nombre}</strong>
-              <span style={{ display:'block', fontSize:11, color:'#69706a', marginTop:3 }}>{receta.objetivo} - tanque {receta.tanque_litros || '-'} L - {receta.productos?.length || 0} productos</span>
+              <strong className="ui-3e1729">{receta.nombre}</strong>
+              <span className="ui-5a1c21">{receta.objetivo} - tanque {receta.tanque_litros || '-'} L - {receta.productos?.length || 0} productos</span>
             </span>
-            <span style={{ fontSize:12, color:'#69706a' }}>{receta.ec_objetivo ? `${receta.ec_objetivo} EC` : 'Sin EC'}</span>
+            <span className="ui-93a7e1">{receta.ec_objetivo ? `${receta.ec_objetivo} EC` : 'Sin EC'}</span>
             {!isGuest && (
-              <span style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+              <span className="ui-5f9384">
                 <button onClick={() => aplicarReceta(receta)} style={miniAction}>Usar</button>
-                <button onClick={() => eliminarReceta(receta.id)} style={{ ...miniAction, color:'#c84040' }}>Borrar</button>
+                <button className="ui-cc1d5f" onClick={() => eliminarReceta(receta.id)} style={{ ...miniAction }}>Borrar</button>
               </span>
             )}
           </div>
         ))}
       </section>
 
-      <section style={{ ...panel, marginTop:18, padding:isMobile ? 16 : 22, minWidth:0 }}>
-        <h2 style={{ margin:'0 0 14px', fontSize:18 }}>Aplicaciones recientes</h2>
+      <section className="ui-3cb756" style={{ ...panel, padding:isMobile ? 16 : 22 }}>
+        <h2 className="ui-4e7816">Aplicaciones recientes</h2>
         {registros.length === 0 ? (
-          <div style={{ color:"#697970", fontSize:13, padding:'10px 0' }}>Sin registros de plan nutricional.</div>
+          <div className="ui-a7c0b3">Sin registros de plan nutricional.</div>
         ) : registros.map(r => (
-          <div key={r.id} style={{ display:'grid', gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '110px 1fr 90px 90px 180px', gap:isMobile ? 7 : 12, alignItems:'center', borderBottom:'1px solid #eef0ee', padding:'11px 0' }}>
-            <span style={{ fontSize:12, color:'#69706a' }}>{r.fecha}</span>
-            <strong style={{ fontSize:13 }}>{r.bloques?.codigo || 'Sin bloque'} · {r.objetivo}</strong>
-            <span style={{ fontSize:12, color:'#69706a' }}>{r.tanque_litros || '-'} L</span>
-            <span style={{ fontSize:12, fontWeight:700, color:"#08603f" }}>{r.ec_final ? `${r.ec_final} EC` : '-'}</span>
+          <div className="ui-4ae148" key={r.id} style={{ gridTemplateColumns:isMobile ? 'minmax(0, 1fr)' : '110px 1fr 90px 90px 180px', gap:isMobile ? 7 : 12 }}>
+            <span className="ui-93a7e1">{r.fecha}</span>
+            <strong className="ui-3044b6">{r.bloques?.codigo || 'Sin bloque'} · {r.objetivo}</strong>
+            <span className="ui-93a7e1">{r.tanque_litros || '-'} L</span>
+            <span className="ui-515b34">{r.ec_final ? `${r.ec_final} EC` : '-'}</span>
             {!isGuest && (
-              <span style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+              <span className="ui-5f9384">
                 <button onClick={() => copiarRegistro(r)} style={miniAction}>Copiar</button>
-                <button onClick={() => aplicarHoy(r)} disabled={saving} style={{ ...miniAction, background:"#08603f", color:'#fff', borderColor:"#08603f" }}>Aplicar hoy</button>
+                <button className="ui-52184b" onClick={() => aplicarHoy(r)} disabled={saving} style={{ ...miniAction }}>Aplicar hoy</button>
               </span>
             )}
           </div>
@@ -888,13 +879,13 @@ const miniAction = {
 
 function Kpi({ label, value, icon }) {
   return (
-    <div style={{ ...panel, minHeight:92, padding:16, display:'grid', gridTemplateColumns:'44px 1fr', gap:12, alignItems:'center' }}>
-      <span style={{ width:44, height:44, borderRadius:8, background:"#edf7f1", display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <i className={`ti ${icon}`} style={{ fontSize:23, color:"#08603f" }} aria-hidden="true"></i>
+    <div className="ui-11b61e" style={{ ...panel }}>
+      <span className="ui-343c3b">
+        <i className={`${`ti ${icon}`} ui-157cb3`} aria-hidden="true"></i>
       </span>
       <span>
-        <span style={{ display:'block', fontSize:11, textTransform:'uppercase', color:'#69706a' }}>{label}</span>
-        <strong style={{ display:'block', fontSize:19, marginTop:4 }}>{value}</strong>
+        <span className="ui-88e044">{label}</span>
+        <strong className="ui-737dd7">{value}</strong>
       </span>
     </div>
   )
@@ -902,8 +893,8 @@ function Kpi({ label, value, icon }) {
 
 function Input({ label, value, onChange, type = 'text' }) {
   return (
-    <label style={{ display:'grid', gap:5 }}>
-      <span style={{ fontSize:11, color:'#69706a', textTransform:'uppercase', fontWeight:700 }}>{label}</span>
+    <label className="ui-d40836">
+      <span className="ui-8ac5c9">{label}</span>
       <input type={type} value={value || ''} onChange={e => onChange(e.target.value)} style={field} />
     </label>
   )
@@ -911,8 +902,8 @@ function Input({ label, value, onChange, type = 'text' }) {
 
 function Select({ label, value, onChange, children }) {
   return (
-    <label style={{ display:'grid', gap:5 }}>
-      <span style={{ fontSize:11, color:'#69706a', textTransform:'uppercase', fontWeight:700 }}>{label}</span>
+    <label className="ui-d40836">
+      <span className="ui-8ac5c9">{label}</span>
       <select value={value || ''} onChange={e => onChange(e.target.value)} style={field}>{children}</select>
     </label>
   )
@@ -925,7 +916,7 @@ function EstadoBadge({ estado }) {
       ? { label:'Sin stock', color:'#c84040', bg:'#fff0f0' }
       : { label:'No cargado', color:'#8a5a00', bg:'#fff7e8' }
   return (
-    <span style={{ flexShrink:0, borderRadius:999, padding:'4px 8px', background:info.bg, color:info.color, fontSize:10, fontWeight:700 }}>
+    <span className="ui-689d02" style={{ background:info.bg, color:info.color }}>
       {info.label}
     </span>
   )
