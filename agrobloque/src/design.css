@@ -1085,3 +1085,9 @@ html,body { -webkit-tap-highlight-color:transparent; }
   .fert-actions { width:100%; flex-direction:column; }
   .fert-actions>button { width:100%; }
 }
+
+/* Móvil: el panel superior del inicio no se queda pegado ni lleva buscador (Buscar sigue en "Más") */
+@media (max-width:767px) {
+  .ag-overview>.ag-topbar { position:static; }
+  .ag-overview>.ag-topbar .ag-search-link { display:none; }
+}
