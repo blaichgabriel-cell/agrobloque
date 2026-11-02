@@ -27,7 +27,7 @@ export const ACTIONS = [
   { key: 'delete', label: 'Borrar' },
 ]
 
-export const DISABLED_MODULES = ['ventas', 'costos', 'cuentas_pagar', 'reportes', 'historial', 'auditoria']
+export const DISABLED_MODULES = ['cuentas_pagar', 'reportes', 'historial', 'auditoria']
 const ALL_KEYS = MODULES.map(m => m.key).filter(key => !DISABLED_MODULES.includes(key))
 const OPERADOR_KEYS = ALL_KEYS.filter(key => !['configuracion', 'auditoria'].includes(key))
 const LECTURA_KEYS = ALL_KEYS.filter(key => !['asistencia', 'cuentas_pagar', 'configuracion', 'auditoria'].includes(key))
