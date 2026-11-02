@@ -19,7 +19,7 @@ export default function WorkActions({ role, isGuest, onClose }) {
     element.showModal()
     return () => element.close()
   }, [])
-  return <dialog ref={dialog} className="ag-work-dialog" onCancel={onClose} onClose={onClose} aria-labelledby="work-title">
+  return <dialog ref={dialog} className="ag-work-dialog" onCancel={onClose} onClose={() => { if (!dialog.current?.open) onClose() }} aria-labelledby="work-title">
     <div className="ag-section-heading"><div><span className="ag-eyebrow">OPERACIÓN</span><h2 id="work-title">Registrar trabajo</h2></div><button className="ag-icon-button" onClick={onClose} aria-label="Cerrar"><i className="ti ti-x" /></button></div>
     <p className="ag-muted">Elegí el tipo de trabajo para abrir sus registros.</p>
     <div className="ag-work-options">{availableWork(role, isGuest).map(item => <button key={item.key} onClick={() => { onClose(); navigate(item.path) }}><i className={`ti ${item.icon}`} /><span><strong>{item.label}</strong><small>{item.detail}</small></span><i className="ti ti-chevron-right" /></button>)}</div>

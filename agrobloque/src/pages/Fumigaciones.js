@@ -447,7 +447,7 @@ export default function Fumigaciones() {
         </div>
         <div className="ui-66e4a0">
           {[['todos','Todos'],['fumigacion','Fumigacion'],['fertiriego','Fertiriego'],['foliar','Foliar']].map(([k,v]) => (
-            <button className="ag-small-action ui-f9a370" key={k} onClick={() => setFiltro(k)} style={{ background: filtro===k ? '#212121' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>{v}</button>
+            <button className="ag-small-action ui-f9a370" key={k} onClick={() => setFiltro(k)} style={{ background: filtro===k ? '#0F3923' : 'rgba(15,23,42,.06)', color: filtro===k ? '#fff' : 'var(--text-secondary)' }}>{v}</button>
           ))}
         </div>
       </div>
@@ -487,10 +487,10 @@ export default function Fumigaciones() {
                       <i className={`${`ti ${tipo.icon}`} ui-bf83cf`} style={{ color:tipo.color }} aria-hidden="true"></i>
                     </div>
                     <div className="ui-89bd09">
-                      <div className="ui-c9fcf1">
+                      <div className="fm-entry-meta">
                         <span className="ui-d01780" style={{ color:tipo.color, background:tipo.bg }}>{tipo.label}</span>
                         {f.campos?.nombre && <span className="ui-93a7e1">{f.campos.nombre}</span>}
-                        {tanques && <span className="ui-93a7e1">· {tanques}</span>}
+                        {tanques && <span className="ui-93a7e1">{tanques}</span>}
                         {carencia && <span className="ui-80adc3">{carencia}d carencia</span>}
                       </div>
                       {nombresProductos && (
@@ -603,7 +603,7 @@ export default function Fumigaciones() {
             <div className="ui-74cc19">Tipo</div>
             <div className="ui-62b09f">
               {Object.entries(TIPOS).map(([k,v]) => (
-                <button className="ag-small-action ui-371bfd" key={k} onClick={() => setForm(f=>f.tipo === k ? f : ({...f,tipo:k,productos_form:f.productos_form.map(p => ({ ...p, producto_id:'', producto_nombre:p.producto_id ? '' : p.producto_nombre }))}))} style={{ background: form.tipo===k ? '#212121' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
+                <button className="ag-small-action ui-371bfd" key={k} onClick={() => setForm(f=>f.tipo === k ? f : ({...f,tipo:k,productos_form:f.productos_form.map(p => ({ ...p, producto_id:'', producto_nombre:p.producto_id ? '' : p.producto_nombre }))}))} style={{ background: form.tipo===k ? '#0F3923' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
               ))}
             </div>
             <label className="ag-field-label ui-74cc19">Fecha *
@@ -620,7 +620,7 @@ export default function Fumigaciones() {
                   const cultivo = getCultivoBloque(b)
                   const activo = form.bloques_ids.includes(b.id)
                   return (
-                    <div className="ui-ed8e79" key={b.id} onClick={()=>toggleBloque(b.id)} style={{ background: activo ? '#212121' : '#fff', color: activo ? '#fff' : '#555' }}>
+                    <div className="ui-ed8e79" key={b.id} onClick={()=>toggleBloque(b.id)} style={{ background: activo ? '#0F3923' : '#fff', color: activo ? '#fff' : '#555' }}>
                       <div>{b.codigo}</div>
                       <div className="ui-c0a65d" style={{ opacity: activo ? 0.78 : 0.7 }}>{cultivo || 'Sin cultivo'}</div>
                     </div>
@@ -634,7 +634,7 @@ export default function Fumigaciones() {
                 {operarios.map(o => {
                   const activo = form.operarios_nombres?.includes(o.nombre) || normalizarOperarios(form.operario).includes(o.nombre)
                   return (
-                    <button className="ag-small-action ui-a61bd8" key={o.id} type="button" onClick={() => toggleOperario(o.nombre)} style={{ background: activo ? '#212121' : '#fff', color: activo ? '#fff' : '#555' }}>
+                    <button className="ag-small-action ui-a61bd8" key={o.id} type="button" onClick={() => toggleOperario(o.nombre)} style={{ background: activo ? '#0F3923' : '#fff', color: activo ? '#fff' : '#555' }}>
                       {o.nombre}
                     </button>
                   )
@@ -679,7 +679,7 @@ export default function Fumigaciones() {
                       {UNIDADES_USO.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
                   </div>
-                  {prod && <div className="ui-d57e4f" style={{ color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#212121' }}>
+                  {prod && <div className="ui-d57e4f" style={{ color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#0F3923' }}>
                     Stock: {formatearStock(prod.stock_actual, prod.unidad)}
                     {descuento === null ? ' · medida incompatible con el stock' : descuento > 0 ? ` · descuenta ${formatearStock(descuento, prod.unidad)}` : ''}
                     {prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}

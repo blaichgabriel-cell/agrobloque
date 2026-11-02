@@ -362,7 +362,7 @@ export default function Asistencia() {
         {error && <div className="ui-d6d959">{error}</div>}
         <div className="ui-ed8328">
           {campos.map(c => (
-            <button className="ag-small-action ui-4aef65" key={c.id} onClick={() => seleccionarCampo(c)} style={{ background: campoActivo?.id===c.id ? '#212121' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : '#9a9a9a' }}>
+            <button className="ag-small-action ui-4aef65" key={c.id} onClick={() => seleccionarCampo(c)} style={{ background: campoActivo?.id===c.id ? '#0F3923' : 'transparent', color: campoActivo?.id===c.id ? '#fff' : 'var(--text-secondary)' }}>
               {c.nombre}
             </button>
           ))}
@@ -397,7 +397,7 @@ export default function Asistencia() {
             </div>
             <div className="ui-231bd9">
               <button className="ui-59fc42" onClick={() => setModalHistorial(op)}>
-                Adelantos pendientes: <span className="ui-e634e6" style={{ color: getTotalAdelantos(op.id) > 0 ? '#c84040' : '#9a9a9a' }}>Gs. {fmtGs(getTotalAdelantos(op.id))}</span> →
+                Adelantos pendientes: <span className="ui-e634e6" style={{ color: getTotalAdelantos(op.id) > 0 ? '#c84040' : 'var(--text-secondary)' }}>Gs. {fmtGs(getTotalAdelantos(op.id))}</span> →
               </button>
               <button className="ag-small-action ui-d51170" onClick={() => setModalAdelanto(op)}>+ Adelanto</button>
             </div>
@@ -425,7 +425,7 @@ export default function Asistencia() {
               const activo = fechaNotaActual === fecha
               const tieneNota = Boolean((notasDia[fecha]?.trabajos || '').trim())
               return (
-                <button className="ag-small-action ui-d34507" key={dia} onClick={() => setFechaNotaActiva(fecha)} style={{ background: activo ? '#212121' : tieneNota ? '#edf6ec' : '#f8f8f6', color: activo ? '#fff' : tieneNota ? '#176a25' : '#687068' }}>
+                <button className="ag-small-action ui-d34507" key={dia} onClick={() => setFechaNotaActiva(fecha)} style={{ background: activo ? '#0F3923' : tieneNota ? '#edf6ec' : '#f8f8f6', color: activo ? '#fff' : tieneNota ? '#176a25' : '#687068' }}>
                   {DIAS_CORTO[i]}
                 </button>
               )
@@ -479,7 +479,7 @@ export default function Asistencia() {
               {getAdelantosPendientesOperario(modalHistorial.id).map(a => (
               <div className="ag-surface ui-0beb00" key={a.id}>
                 <div className="ui-9b26fa">
-                  <div className="ui-e4e660" style={{ color: esAdelantoPagado(a) ? '#9a9a9a' : '#0a0a0a' }}>
+                  <div className="ui-e4e660" style={{ color: esAdelantoPagado(a) ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
                     Gs. {fmtGs(a.monto)}
                     {esAdelantoPagado(a) && <span className="ui-b97a0d">Pagado</span>}
                   </div>

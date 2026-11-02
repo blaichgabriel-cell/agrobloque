@@ -958,7 +958,7 @@ export default function FichaBloque() {
             ['historial',`Historial (${historial.length})`],
           ].map(([k,v]) => (
             <button className="ag-small-action ui-f9a370" key={k} aria-pressed={seccion === k} onClick={() => setSeccion(k)}
-              style={{ background: seccion===k ? (k==='fertilizacion' ? '#1a5c2e' : '#212121') : '#e8e6e2', color: seccion===k ? '#fff' : '#9a9a9a' }}>
+              style={{ background: seccion===k ? (k==='fertilizacion' ? '#1a5c2e' : '#0F3923') : 'rgba(15,23,42,.06)', color: seccion===k ? '#fff' : 'var(--text-secondary)' }}>
               {v}
             </button>
           ))}
@@ -1358,11 +1358,11 @@ export default function FichaBloque() {
             {abonos.map(a => (
               <div className="ui-d51702" key={a.id}>
                 <div className="ui-bfa195" onClick={() => toggleAbono(a.id)}
-                  style={{ background: form.abonos_ids.includes(a.id) ? '#212121' : '#fff', marginBottom: form.abonos_ids.includes(a.id) ? 6 : 0 }}>
+                  style={{ background: form.abonos_ids.includes(a.id) ? '#0F3923' : '#fff', marginBottom: form.abonos_ids.includes(a.id) ? 6 : 0 }}>
                   <div className="ui-7b138e" style={{ border: form.abonos_ids.includes(a.id) ? 'none' : '1.5px solid #d0d0d0', background: form.abonos_ids.includes(a.id) ? '#fff' : 'transparent' }}>
                     {form.abonos_ids.includes(a.id) && <i className="ti ti-check ui-aa481a" aria-hidden="true"></i>}
                   </div>
-                  <span className="ui-3044b6" style={{ color: form.abonos_ids.includes(a.id) ? '#fff' : '#0a0a0a' }}>{a.nombre}</span>
+                  <span className="ui-3044b6" style={{ color: form.abonos_ids.includes(a.id) ? '#fff' : 'var(--text-primary)' }}>{a.nombre}</span>
                 </div>
                 {form.abonos_ids.includes(a.id) && (
                   <div className="ui-da683d">
@@ -1388,7 +1388,7 @@ export default function FichaBloque() {
               </div>
             ))}
 
-            <button className="ag-small-action ui-ae1eb0" style={{ background: saving ? '#888' : '#212121' }}
+            <button className="ag-small-action ui-ae1eb0" style={{ background: saving ? '#888' : '#0F3923' }}
               onClick={showEditarPlantacion ? guardarEditarPlantacion : guardarNuevaPlantacion} disabled={saving}>
               {saving ? 'Guardando...' : showEditarPlantacion ? 'Guardar cambios' : 'Guardar plantacion'}
             </button>

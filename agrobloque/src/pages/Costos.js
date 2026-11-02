@@ -160,13 +160,13 @@ export default function Costos({ campoActivo, isGuest = false }) {
         {campos.length > 1 && (
           <div className="ui-38410c">
             {campos.map(c => (
-              <button className="ui-7cf9f5" key={c.id} onClick={() => setCampoSel(c)} style={{ background: campoSel?.id===c.id ? '#212121' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
+              <button className="ui-7cf9f5" key={c.id} onClick={() => setCampoSel(c)} style={{ background: campoSel?.id===c.id ? '#0F3923' : 'transparent', color: campoSel?.id===c.id ? '#fff' : 'var(--text-secondary)' }}>{c.nombre}</button>
             ))}
           </div>
         )}
         <div className="ui-32b742">
           {[['mes','Este mes'],['total','Historico']].map(([k,v]) => (
-            <button className="ui-7cf9f5" key={k} onClick={() => setPeriodo(k)} style={{ background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
+            <button className="ui-7cf9f5" key={k} onClick={() => setPeriodo(k)} style={{ background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{v}</button>
           ))}
         </div>
       </div>
@@ -244,7 +244,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
             <div className="ui-ad3529">Tipo</div>
             <div className="ui-06c66f">
               {TIPOS_COSTO.map(t => (
-                <button className="ui-5430d5" key={t.key} onClick={() => setForm(f => ({...f, tipo:t.key}))} style={{ background: form.tipo===t.key ? '#212121' : '#fff', color: form.tipo===t.key ? '#fff' : '#555' }}>
+                <button className="ui-5430d5" key={t.key} onClick={() => setForm(f => ({...f, tipo:t.key}))} style={{ background: form.tipo===t.key ? '#0F3923' : '#fff', color: form.tipo===t.key ? '#fff' : '#555' }}>
                   <i className={`${`ti ${t.icon}`} ui-2592cc`} aria-hidden="true"></i>
                   {t.label}
                 </button>

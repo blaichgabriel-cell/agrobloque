@@ -840,7 +840,7 @@ export default function Fertilizaciones({ campoActivo }) {
             <div className="ui-35a79d">Aplicaciones reales</div>
             <h1 className="ui-118f2f">Fertilizaciones</h1>
           </div>
-          <div className="ui-9c6869">
+          <div className="fert-actions">
             <button onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible} className="bl-btn-solid ui-320697" style={{ opacity:schemaPlanesDisponible ? 1 : .55 }}><i className="ti ti-calendar-week ui-52eaee" />Fertilización semanal</button>
             <button onClick={() => abrirModal('aplicacion')} className="bl-btn-solid"><i className="ti ti-plus ui-52eaee" />Aplicación puntual</button>
           </div>

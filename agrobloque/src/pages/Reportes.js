@@ -350,14 +350,14 @@ export default function Reportes({ campoActivo, isGuest = false }) {
         {campos.length > 1 && (
           <div className="ui-f68a17">
             {campos.map(c => (
-              <button className="ui-7cf9f5" key={c.id} onClick={() => setCampoSel(c)} style={{ background: campoSel?.id===c.id ? '#212121' : 'transparent', color: campoSel?.id===c.id ? '#fff' : '#9a9a9a' }}>{c.nombre}</button>
+              <button className="ui-7cf9f5" key={c.id} onClick={() => setCampoSel(c)} style={{ background: campoSel?.id===c.id ? '#0F3923' : 'transparent', color: campoSel?.id===c.id ? '#fff' : 'var(--text-secondary)' }}>{c.nombre}</button>
             ))}
           </div>
         )}
 
         <div className="ui-32b742">
           {[['mes','Mes'],['trimestre','Trimestre'],['año','Año'],['total','Total']].map(([k,v]) => (
-            <button className="ui-7cf9f5" key={k} onClick={() => setPeriodo(k)} style={{ background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? '#0a0a0a' : '#9a9a9a' }}>{v}</button>
+            <button className="ui-7cf9f5" key={k} onClick={() => setPeriodo(k)} style={{ background: periodo===k ? '#fff' : 'transparent', color: periodo===k ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{v}</button>
           ))}
         </div>
         <div className="ui-6e71d6">
