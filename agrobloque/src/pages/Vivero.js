@@ -57,7 +57,6 @@ function ViveroIcon({ size = 24, color = '#2f741f' }) {
 
 export default function Vivero() {
   const navigate = useNavigate()
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
   const [lotes, setLotes] = useState([])
@@ -349,58 +348,47 @@ export default function Vivero() {
   }
 
   return (
-    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
-      <div className="ag-page-header" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <div style={{ width:44, height:44, borderRadius:'var(--ag-radius)', background:'#eef6ea', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <ViveroIcon size={25} />
-            </div>
-            <div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Plantinero</div>
-              <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Vivero</div>
-            </div>
-          </div>
-          <button aria-label="Agregar registro" onClick={abrirNuevo} style={{ width:42, height:42, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:21 }} aria-hidden="true"></i>
-          </button>
+    <div className="ag-page bl-module-page" data-tone="agua">
+      <header className="bl-page-head">
+        <div className="bl-page-title">
+          <span className="bl-page-icon" aria-hidden="true"><ViveroIcon size={24} color="#fff" /></span>
+          <div><small>Plantinero</small><h1 className="ag-page-title">Vivero</h1></div>
         </div>
+        <button className="ag-primary" aria-label="Agregar lote" onClick={abrirNuevo}><i className="ti ti-plus" aria-hidden="true" />Nuevo lote</button>
+      </header>
 
-        {error && <div style={{ background:'#fff3e8', color:'#a35f00', fontSize:12, padding:'9px 12px', borderRadius:'var(--ag-radius)', marginBottom:12 }}>{error}</div>}
+      {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
 
-        <div style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(4, minmax(0, 1fr))' : '1fr 1fr', gap: isDesktop ? 12 : 8 }}>
-          <Stat label="Lotes activos" value={resumen.activos} sub={`${lotes.length} totales`} />
-          <Stat label="Germinacion" value={`${resumen.germinacion}%`} sub={`${resumen.germinadas} de ${resumen.semillas}`} />
-          <Stat label="Perdidas" value={resumen.perdidas} sub="plantines" />
-          <Stat label="Semillas" value={resumen.semillas} sub="sembradas" />
-        </div>
+      <div className="bl-kpi-row">
+        <Stat label="Lotes activos" value={resumen.activos} sub={`${lotes.length} totales`} />
+        <Stat label="Germinación" value={`${resumen.germinacion}%`} sub={`${resumen.germinadas} de ${resumen.semillas}`} />
+        <Stat label="Pérdidas" value={resumen.perdidas} sub="plantines" />
+        <Stat label="Semillas" value={resumen.semillas} sub="sembradas" />
       </div>
 
-      <div className="ag-page-body" style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
+      <div className="ag-page-body">
         {lotes.length === 0 ? (
-          <div style={{ textAlign:'center', padding:40, color:"#697970", fontSize:13 }}>Sin lotes de vivero registrados</div>
+          <div className="empty-state"><span className="empty-state__icon"><i className="ti ti-seeding" aria-hidden="true" /></span><div><strong>Sin lotes de vivero</strong><p>Registrá el primer lote con «Nuevo lote».</p></div></div>
         ) : (
-          <div className="ag-record-grid" style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
-            {lotes.map(lote => (
-          <div className="ag-surface nursery-lot-card" key={lote.id} onClick={() => setDetalle(lote)} style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, cursor:'pointer', boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}>
-              <div>
-                <div style={{ fontSize:16, fontWeight:700, color:"#182c25" }}>{lote.cultivo}</div>
-                <div style={{ fontSize:12, color:"#08603f", fontWeight:700, marginTop:2 }}>{lote.variedad || 'Sin variedad'}</div>
-                <div style={{ fontSize:12, color:"#697970", marginTop:3 }}>{lote.fecha_siembra} · {lote.campos?.nombre || 'Sin campo'}</div>
-              </div>
-              <span style={{ alignSelf:'flex-start', borderRadius:'var(--ag-radius)', background:'#e8f5e5', color:"#08603f", padding:'4px 9px', fontSize:12, fontWeight:700 }}>
-                {lote.estado}
-              </span>
-            </div>
-            <div className="nursery-lot-data">
-              <Mini label="Semillas" value={lote.cantidad_semillas || 0} />
-              <Mini label="Germinadas" value={lote.germinadas || 0} />
-              <Mini label="Perdidas" value={lote.perdidas || 0} />
-            </div>
-            <div className="germination-progress"><span><b style={{ width:`${Math.min(100, pct(lote.germinadas, lote.cantidad_semillas))}%` }} /></span><small><span>Germinación</span><strong className="numeric-data">{pct(lote.germinadas, lote.cantidad_semillas)}%</strong></small></div>
-          </div>
-        ))}
+          <div className="bl-card-grid">
+            {lotes.map(lote => {
+              const germ = Math.min(100, pct(lote.germinadas, lote.cantidad_semillas))
+              return (
+                <button className="ag-surface nursery-lot-card" key={lote.id} onClick={() => setDetalle(lote)} data-state={lote.estado}>
+                  <span className="nursery-lot-head">
+                    <span className="nursery-ring" style={{ '--p': germ }} role="img" aria-label={`Germinación ${germ}%`}><b className="mono">{germ}%</b></span>
+                    <span className="nursery-lot-title"><strong>{lote.cultivo}</strong><em>{lote.variedad || 'Sin variedad'}</em><small className="mono">{lote.fecha_siembra} · {lote.campos?.nombre || 'Sin campo'}</small></span>
+                    <span className="nursery-state">{lote.estado}</span>
+                  </span>
+                  <span className="nursery-lot-data">
+                    <Mini label="Semillas" value={lote.cantidad_semillas || 0} />
+                    <Mini label="Germinadas" value={lote.germinadas || 0} />
+                    <Mini label="Pérdidas" value={lote.perdidas || 0} />
+                  </span>
+                  <span className="germination-progress"><span><b style={{ width:`${germ}%` }} /></span><small><span>Germinación</span><strong className="numeric-data">{germ}%</strong></small></span>
+                </button>
+              )
+            })}
           </div>
         )}
 
@@ -408,15 +396,15 @@ export default function Vivero() {
       </div>
 
       {detalle && (
-        <div style={overlay} onClick={e => e.target === e.currentTarget && setDetalle(null)}>
-          <div style={sheet}>
+        <div className="bl-overlay" onClick={e => e.target === e.currentTarget && setDetalle(null)}>
+          <div className="bl-sheet">
             <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:14 }}>
               <div>
                 <div style={{ fontSize:12, color:"#697970" }}>Detalle de lote</div>
                 <div style={{ fontSize:22, fontWeight:700 }}>{detalle.cultivo}</div>
                 <div style={{ fontSize:12, color:"#08603f", fontWeight:700 }}>{detalle.variedad || 'Sin variedad'}</div>
               </div>
-              <button aria-label="Cerrar" onClick={() => setDetalle(null)} style={closeBtn}><i className="ti ti-x" /></button>
+              <button aria-label="Cerrar" onClick={() => setDetalle(null)} className="bl-icon-btn"><i className="ti ti-x" /></button>
             </div>
 
             <div style={{ background:'#f7f7f5', borderRadius:'var(--ag-radius)', padding:'4px 14px', marginBottom:14 }}>
@@ -459,16 +447,16 @@ export default function Vivero() {
             ))}
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:14 }}>
-              <button onClick={() => abrirEditar(detalle)} style={secondaryBtn}>Editar lote</button>
-              <button onClick={() => eliminarLote(detalle.id)} style={dangerBtn}>Eliminar</button>
+              <button onClick={() => abrirEditar(detalle)} className="bl-btn bl-btn--ghost">Editar lote</button>
+              <button onClick={() => eliminarLote(detalle.id)} className="bl-btn bl-btn--danger">Eliminar</button>
             </div>
           </div>
         </div>
       )}
 
       {modal && (
-        <div style={overlay}>
-          <div style={sheet}>
+        <div className="bl-overlay">
+          <div className="bl-sheet">
             <div style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>{form.id ? 'Editar lote' : 'Nuevo lote de vivero'}</div>
             <Select label="Campo" value={form.campo_id} onChange={v => setForm(f => ({ ...f, campo_id:v }))} options={campos.map(c => [c.id, c.nombre])} />
             <Field label="Fecha de siembra *" type="date" value={form.fecha_siembra} onChange={v => setForm(f => ({ ...f, fecha_siembra:v }))} />
@@ -491,15 +479,15 @@ export default function Vivero() {
             </div>
             <Select label="Estado" value={form.estado} onChange={v => setForm(f => ({ ...f, estado:v }))} options={estados.map(e => [e, e])} />
             <Field label="Notas" textarea value={form.notas} onChange={v => setForm(f => ({ ...f, notas:v }))} placeholder="Observaciones del lote..." />
-            <button onClick={guardarLote} disabled={saving} style={primaryBtn}>{saving ? 'Guardando...' : 'Guardar lote'}</button>
-            <button onClick={() => setModal(false)} style={secondaryBtn}>Cancelar</button>
+            <button onClick={guardarLote} disabled={saving} className="bl-btn bl-btn--primary">{saving ? 'Guardando...' : 'Guardar lote'}</button>
+            <button onClick={() => setModal(false)} className="bl-btn bl-btn--ghost">Cancelar</button>
           </div>
         </div>
       )}
 
       {modalTratamiento && (
-        <div style={overlay}>
-          <div style={sheet}>
+        <div className="bl-overlay">
+          <div className="bl-sheet">
             <div style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>{tratForm.id ? 'Editar tratamiento' : 'Nuevo tratamiento'}</div>
             <Field label="Fecha *" type="date" value={tratForm.fecha} onChange={v => setTratForm(f => ({ ...f, fecha:v }))} />
             <Field label="Tipo *" value={tratForm.tipo} onChange={v => setTratForm(f => ({ ...f, tipo:v }))} placeholder="Ej: fungicida, fertilizante, enraizante" />
@@ -507,15 +495,15 @@ export default function Vivero() {
             <Field label="Dosis" value={tratForm.dosis} onChange={v => setTratForm(f => ({ ...f, dosis:v }))} />
             <Field label="Responsable" value={tratForm.responsable} onChange={v => setTratForm(f => ({ ...f, responsable:v }))} />
             <Field label="Notas" textarea value={tratForm.notas} onChange={v => setTratForm(f => ({ ...f, notas:v }))} />
-            <button onClick={guardarTratamiento} disabled={saving} style={primaryBtn}>{saving ? 'Guardando...' : tratForm.id ? 'Guardar cambios' : 'Guardar tratamiento'}</button>
-            <button onClick={() => setModalTratamiento(false)} style={secondaryBtn}>Cancelar</button>
+            <button onClick={guardarTratamiento} disabled={saving} className="bl-btn bl-btn--primary">{saving ? 'Guardando...' : tratForm.id ? 'Guardar cambios' : 'Guardar tratamiento'}</button>
+            <button onClick={() => setModalTratamiento(false)} className="bl-btn bl-btn--ghost">Cancelar</button>
           </div>
         </div>
       )}
 
       {modalTrasplante && detalle && (
-        <div style={overlay}>
-          <div style={sheet}>
+        <div className="bl-overlay">
+          <div className="bl-sheet">
             <div style={{ fontSize:18, fontWeight:700, marginBottom:4 }}>Trasplantar a bloque</div>
             <div style={{ fontSize:12, color:'#7d837d', marginBottom:16 }}>
               {detalle.cultivo}{detalle.variedad ? ` - ${detalle.variedad}` : ''} · {detalle.campos?.nombre || 'Sin campo'}
@@ -539,8 +527,8 @@ export default function Vivero() {
               />
               Marcar lote como trasplantado
             </label>
-            <button onClick={guardarTrasplante} disabled={saving} style={primaryBtn}>{saving ? 'Trasplantando...' : 'Crear plantacion en mapa'}</button>
-            <button onClick={() => setModalTrasplante(false)} style={secondaryBtn}>Cancelar</button>
+            <button onClick={guardarTrasplante} disabled={saving} className="bl-btn bl-btn--primary">{saving ? 'Trasplantando...' : 'Crear plantacion en mapa'}</button>
+            <button onClick={() => setModalTrasplante(false)} className="bl-btn bl-btn--ghost">Cancelar</button>
           </div>
         </div>
       )}
@@ -559,7 +547,7 @@ function Stat({ label, value, sub }) {
 }
 
 function Mini({ label, value }) {
-  return <div className="nursery-datum"><span>{label}</span><strong className="numeric-data">{value}</strong></div>
+  return <span className="nursery-datum"><span>{label}</span><strong className="numeric-data">{value}</strong></span>
 }
 
 function Info({ label, value, last }) {
@@ -569,11 +557,11 @@ function Info({ label, value, last }) {
 function Field({ label, value, onChange, type = 'text', placeholder = '', textarea }) {
   return (
     <label style={{ display:'block' }}>
-      <div style={labelStyle}>{label}</div>
+      <div className="bl-label">{label}</div>
       {textarea ? (
         <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...inputStyle, minHeight:72, resize:'vertical' }} />
       ) : (
-        <input type={type} inputMode={type === 'number' ? 'numeric' : undefined} value={value || ''} onChange={e => onChange(e.target.value)} onWheel={type === 'number' ? blurNumberInputOnWheel : undefined} placeholder={placeholder} style={inputStyle} />
+        <input type={type} inputMode={type === 'number' ? 'numeric' : undefined} value={value || ''} onChange={e => onChange(e.target.value)} onWheel={type === 'number' ? blurNumberInputOnWheel : undefined} placeholder={placeholder} className="bl-input" />
       )}
     </label>
   )
@@ -582,8 +570,8 @@ function Field({ label, value, onChange, type = 'text', placeholder = '', textar
 function Select({ label, value, onChange, options }) {
   return (
     <label style={{ display:'block' }}>
-      <div style={labelStyle}>{label}</div>
-      <select value={value || ''} onChange={e => onChange(e.target.value)} style={inputStyle}>
+      <div className="bl-label">{label}</div>
+      <select value={value || ''} onChange={e => onChange(e.target.value)} className="bl-input">
         <option value="">Sin asignar</option>
         {options.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
       </select>
@@ -591,11 +579,7 @@ function Select({ label, value, onChange, options }) {
   )
 }
 
-const overlay = { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.42)', zIndex:120, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }
-const sheet = { background:"#f6f8f7", borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', width:'100%', maxWidth:520, padding:'24px 20px 40px', maxHeight:'90vh', overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none', boxSizing:'border-box' }
 const inputStyle = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:'1px solid #e3e5e1', background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
-const labelStyle = { fontSize:12, color:'#8d938d', marginBottom:6 }
 const primaryBtn = { width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer' }
 const secondaryBtn = { width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:'1px solid #d9ddd8', color:'#555', fontSize:13, fontWeight:700, cursor:'pointer', marginTop:8 }
 const dangerBtn = { ...secondaryBtn, border:'1px solid #ffcccc', color:'#c84040', background:'#fff0f0' }
-const closeBtn = { width:36, height:36, borderRadius:'var(--ag-radius)', border:'1px solid #e1e3df', background:'#fff', cursor:'pointer' }

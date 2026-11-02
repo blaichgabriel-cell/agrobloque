@@ -9,7 +9,6 @@ const hoy = () => new Date().toISOString().slice(0, 10)
 const diasDesde = fecha => fecha ? Math.max(0, Math.floor((new Date(`${hoy()}T12:00:00`) - new Date(`${String(fecha).slice(0, 10)}T12:00:00`)) / 86400000)) : null
 const numero = valor => Number(valor || 0).toLocaleString('es-PY')
 const fechaCorta = valor => valor ? new Date(`${String(valor).slice(0, 10)}T12:00:00`).toLocaleDateString('es-PY', { day:'numeric', month:'short' }) : 'Sin fecha'
-const COLOR_CULTIVO = { 'Morrón':'#d08a24', 'Tomate':'#c7463b', 'Pepino':'#25a866', 'Berenjena':'#9148b5', 'Zapalito':'#d6a11c', 'Zucchini':'#159b82', 'Lechuga':'#4caa5b', 'Tomate Cherry':'#d9584c' }
 const vacio = { letra:'A', numero:'', tipo:'invernadero' }
 
 export default function MapaProfesional({ campoActivo }) {
@@ -65,6 +64,13 @@ export default function MapaProfesional({ campoActivo }) {
     return texto.includes(query.trim().toLowerCase()) && coincideEstado && (cultivo === 'todos' || r.cultivo === cultivo)
   }), [registros, query, estado, cultivo])
 
+  const maxDias = Math.max(1, ...registros.map(r => r.dias || 0))
+  const hileras = useMemo(() => {
+    const grupos = {}
+    filtrados.forEach(r => { const letra = String(r.codigo).split('-')[0] || '·'; (grupos[letra] = grupos[letra] || []).push(r) })
+    return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b, 'es'))
+  }, [filtrados])
+
   const resumen = {
     total: registros.length,
     produccion: registros.filter(r => r.planta && r.activo).length,
@@ -93,35 +99,45 @@ export default function MapaProfesional({ campoActivo }) {
     <Notice tone="error">{error}</Notice>
     <Notice>{success}</Notice>
     <section className="ab-map-kpis" aria-busy={loading}>
-      <Kpi icon="ti-layout-grid" value={loading ? '—' : resumen.total} label="Bloques" />
-      <Kpi icon="ti-leaf" value={loading ? '—' : resumen.produccion} label="En producción" />
-      <Kpi icon="ti-seeding" value={loading ? '—' : resumen.vacios} label="Sin cultivo" />
-      <Kpi icon="ti-alert-triangle" value={loading ? '—' : resumen.atencion} label="Requieren atención" alert={resumen.atencion > 0} />
-      <Kpi icon="ti-plant" value={loading ? '—' : numero(resumen.plantas)} label="Plantas" />
+      <Kpi tone="bloques" icon="ti-layout-grid" value={loading ? '—' : resumen.total} label="Bloques" />
+      <Kpi tone="bloques" icon="ti-leaf" value={loading ? '—' : resumen.produccion} label="En producción" />
+      <Kpi tone="neutral" icon="ti-seeding" value={loading ? '—' : resumen.vacios} label="Sin cultivo" />
+      <Kpi tone="alerta" icon="ti-alert-triangle" value={loading ? '—' : resumen.atencion} label="Requieren atención" alert={resumen.atencion > 0} />
+      <Kpi tone="agua" icon="ti-plant" value={loading ? '—' : numero(resumen.plantas)} label="Plantas" />
     </section>
     <section className="ab-block-toolbar">
       <label className="ab-block-search"><i className="ti ti-search" /><input aria-label="Buscar bloque o cultivo" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar bloque o cultivo…" /></label>
       <div className="ab-status-filters">{[['todos','Todos'],['produccion','En producción'],['atencion','Requieren atención'],['vacio','Sin cultivo']].map(([k,v]) => <button key={k} aria-pressed={estado === k} className={estado === k ? 'active' : ''} onClick={() => setEstado(k)}>{v}</button>)}</div>
       <select aria-label="Filtrar por cultivo" value={cultivo} onChange={e => setCultivo(e.target.value)}><option value="todos">Todos los cultivos</option>{cultivos.map(c => <option key={c} value={c}>{c}</option>)}</select>
-      <div className="segmented-control ab-view-toggle"><button aria-pressed={vista === 'tarjetas'} className={vista === 'tarjetas' ? 'active' : ''} onClick={() => setVista('tarjetas')}><i className="ti ti-layout-grid" />Tarjetas</button><button aria-pressed={vista === 'mapa'} className={vista === 'mapa' ? 'active' : ''} onClick={() => setVista('mapa')}><i className="ti ti-map" />Mapa</button></div>
+      <div className="ab-view-toggle" data-view={vista} role="group" aria-label="Vista de bloques"><button aria-pressed={vista === 'tarjetas'} className={vista === 'tarjetas' ? 'active' : ''} onClick={() => setVista('tarjetas')}><i className="ti ti-layout-grid" />Tarjetas</button><button aria-pressed={vista === 'mapa'} className={vista === 'mapa' ? 'active' : ''} onClick={() => setVista('mapa')}><i className="ti ti-map" />Mapa</button></div>
     </section>
-    {loading ? <div className="ab-block-skeletons" role="status" aria-label="Cargando bloques">{Array.from({length:8}).map((_,i) => <div key={i} />)}</div> : !filtrados.length ? <div className="ab-empty">No hay bloques que coincidan con los filtros.</div> : vista === 'tarjetas' ? <div className="ab-block-grid">{filtrados.map(r => <BlockCard key={r.id} item={r} campo={campoActivo.nombre} onOpen={() => navigate(`/bloque/${r.id}`)} />)}</div> : <div className="ab-field-map">{filtrados.map(r => <BlockCard key={r.id} item={r} campo={campoActivo.nombre} onOpen={() => navigate(`/bloque/${r.id}`)} compact />)}</div>}
+    {loading ? <div className="ab-block-skeletons" role="status" aria-label="Cargando bloques">{Array.from({length:8}).map((_,i) => <div key={i} />)}</div> : !filtrados.length ? <div className="ab-empty">No hay bloques que coincidan con los filtros.</div> : vista === 'tarjetas' ? <div className="ab-block-grid">{filtrados.map(r => <BlockCard key={r.id} item={r} maxDias={maxDias} campo={campoActivo.nombre} onOpen={() => navigate(`/bloque/${r.id}`)} />)}</div> : <div className="ab-field-map">{hileras.map(([letra, items]) => <section className="ab-field-row" key={letra} aria-label={`Hilera ${letra}`}><span className="ab-field-letter">{letra}</span><div>{items.map(r => <BlockTile key={r.id} item={r} onOpen={() => navigate(`/bloque/${r.id}`)} />)}</div></section>)}</div>}
     <NotasPanel modulo="mapa" titulo="Notas de bloques y mapa" />
     {modal && <Modal label="Agregar bloque al campo" busy={saving} onClose={() => setModal(false)} className="ab-modal-backdrop" onClick={e => e.target === e.currentTarget && setModal(false)}><div className="ab-modal"><div className="ab-modal-title"><div><span>NUEVO BLOQUE</span><h2>Agregar al campo</h2></div><button aria-label="Cerrar" disabled={saving} onClick={() => setModal(false)}><i className="ti ti-x" /></button></div><div className="ab-form-two"><label>Letra<input value={form.letra} maxLength={3} onChange={e => setForm(f => ({...f, letra:e.target.value.toUpperCase().replace(/[^A-Z]/g,'')}))} /></label><label>Número<input inputMode="numeric" value={form.numero} onChange={e => setForm(f => ({...f, numero:e.target.value.replace(/[^0-9]/g,'')}))} /></label></div><label className="ab-field-label">Tipo<select value={form.tipo} onChange={e => setForm(f => ({...f, tipo:e.target.value}))}><option value="invernadero">Invernadero</option><option value="campo_abierto">Campo abierto</option></select></label><div className="ab-preview"><span>Vista previa</span><strong>{form.letra || 'A'}-{form.numero || '?'}</strong></div><Notice tone="error">{error}</Notice><button className="ab-save" onClick={guardarBloque} disabled={saving}>{saving ? 'Guardando…' : 'Guardar bloque'}</button></div></Modal>}
   </div>
 }
 
-function Kpi({ icon, value, label, alert }) { return <div className={`kpi-card ab-kpi ${alert ? 'alert' : ''}`}><i className={`ti ${icon}`} /><div><strong className="numeric-data">{value}</strong><span>{label}</span></div></div> }
+function Kpi({ tone, icon, value, label, alert }) { return <div data-tone={tone} className={`kpi-card ab-kpi ${alert ? 'alert' : ''}`}><i className={`ti ${icon}`} aria-hidden="true" /><div><strong className="numeric-data">{value}</strong><span>{label}</span></div></div> }
 
-function BlockCard({ item, campo, onOpen, compact }) {
-  const color = item.atencion ? (item.vencida ? '#c7463b' : '#d08a24') : item.cultivo ? (COLOR_CULTIVO[item.cultivo] || '#25a866') : '#9aa49f'
-  const estado = !item.activo ? 'Inactivo' : item.atencion ? (item.vencida ? 'Atrasado' : 'Atención') : item.cultivo ? 'En producción' : 'Sin cultivo'
+const estadoDe = item => !item.activo ? ['inactive', 'Inactivo'] : item.atencion ? (item.vencida ? ['overdue', 'Atrasado'] : ['attention', 'Atención']) : item.cultivo ? ['active', 'En producción'] : ['empty', 'Sin cultivo']
+
+function BlockCard({ item, maxDias, campo, onOpen }) {
+  const [state, estado] = estadoDe(item)
   const proxima = item.tarea ? `${item.tarea.descripcion} · ${item.tarea.fecha_programada === hoy() ? 'hoy' : fechaCorta(item.tarea.fecha_programada)}` : item.ultima ? `Última: ${item.ultima.label} · ${fechaCorta(item.ultima.fecha)}` : 'Sin actividad programada'
-  return <button className={`ab-block-card ${compact ? 'compact' : ''} ${item.atencion ? 'attention' : ''}`} style={{ '--block-accent':color }} onClick={onOpen}>
+  const progreso = item.dias !== null ? Math.round(item.dias / maxDias * 100) : 0
+  return <button className="ab-block-card" data-state={state} onClick={onOpen}>
     <span className="ab-card-top"><span className="ab-card-type"><i className={`ti ${item.tipo === 'invernadero' ? 'ti-building-cottage' : 'ti-sun'}`} aria-hidden="true" />{item.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}</span><i className="ti ti-arrow-up-right ab-card-arrow" aria-hidden="true" /></span>
-    <span className="ab-card-identity"><strong className="ab-card-code">{item.codigo}</strong><span className="ab-card-crop">{item.cultivo || 'Sin cultivo activo'}<small>{campo}</small></span></span>
-    <span className={`ab-card-status ${!item.activo || !item.cultivo ? 'empty' : item.atencion ? 'attention' : ''}`}><i className={`ti ${item.atencion ? 'ti-alert-circle' : 'ti-circle-filled'}`} aria-hidden="true" />{estado}</span>
-    <span className="ab-card-facts"><span><small>Plantas</small><strong>{numero(item.plantas)}</strong></span><span><small>Edad del cultivo</small><strong>{item.dias !== null ? `${item.dias} días` : '—'}</strong></span></span>
+    <span className="ab-card-identity"><strong className="ab-card-code">{item.codigo}</strong><span className="ab-card-crop">{item.cultivo || 'Sin cultivo activo'}<small>{campo}</small></span>
+      <span className="ab-cycle-ring" style={{ '--p': progreso }} role="img" aria-label={item.dias !== null ? `${item.dias} días de cultivo` : 'Sin cultivo'}><b className="mono">{item.dias ?? '—'}</b><small>días</small></span></span>
+    <span className="ab-card-status"><i aria-hidden="true" />{estado}</span>
+    <span className="ab-card-facts"><span><small>Plantas</small><strong className="mono">{numero(item.plantas)}</strong></span><span><small>Ciclo relativo</small><span className="ab-cycle-bar"><b style={{ width:`${progreso}%` }} /></span></span></span>
     <span className={`ab-card-next ${item.vencida ? 'overdue' : ''}`}><i className="ti ti-calendar-event" aria-hidden="true" /><span>{proxima}</span></span>
+  </button>
+}
+
+function BlockTile({ item, onOpen }) {
+  const [state, estado] = estadoDe(item)
+  return <button className="ab-block-tile" data-state={state} onClick={onOpen} title={`${item.codigo} · ${item.cultivo || 'Sin cultivo'} · ${estado}`}>
+    <strong className="mono">{item.codigo}</strong><span>{item.cultivo || 'Libre'}</span>
   </button>
 }
