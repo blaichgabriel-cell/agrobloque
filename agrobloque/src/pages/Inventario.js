@@ -59,6 +59,8 @@ const INVENTORY_GROUPS = [
   { key:'insumos', label:'Insumos y herramientas', icon:'ti-tool', color:'#54616f', bg:'#eef1f4', defaultCategory:'Otro', matches:[] },
 ]
 
+const INVENTORY_TONES = { semillas:'bloques', nutricion:'agua', fitosanitarios:'alerta', insumos:'neutral' }
+
 function ModalConfirm({ mensaje, onConfirm, onCancel }) {
   return (
     <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
@@ -198,17 +200,8 @@ export default function Inventario() {
 
   const getProductosCat = (catKey) => productos.filter(p => getGrupoProducto(p) === catKey)
 
-  const getBajoStock = (catKey) => getProductosCat(catKey).filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
 
-  const getSinStock = (catKey) => getProductosCat(catKey).filter(p => p.stock_actual <= 0).length
 
-  const getBadge = (catKey) => {
-    const sin = getSinStock(catKey)
-    const bajo = getBajoStock(catKey)
-    if (sin > 0) return { label: `✗ Sin stock`, bg:'#fff0f0', color:'#c84040' }
-    if (bajo > 0) return { label: `⚠ Stock bajo`, bg:'#fff3e8', color:'#c8700a' }
-    return { label: '✓ OK', bg:'#eeeeee', color:'#555' }
-  }
 
   const guardar = async () => {
     if (!form.nombre) return
@@ -280,61 +273,48 @@ export default function Inventario() {
   const bajoStockTotal = productos.filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
 
   return (
-    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+    <div className="ag-page bl-module-page">
       {confirmar && <ModalConfirm mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
       {/* Vista categorías */}
       {!categoriaActiva && (
         <>
-          <div className="ag-page-header" style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
-              <div>
-                <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Depósito</div>
-                <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Inventario</div>
-              </div>
-              <div style={{ display:'flex', gap:8 }}>
-                <button aria-label="Actualizar" onClick={sincronizarAbonosManual} disabled={sincronizandoAbonos}
-                  title="Sincronizar abonos de base"
-                  style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background: sincronizandoAbonos ? '#888' : '#fff', border:"1px solid #e2e9e5", display:'flex', alignItems:'center', justifyContent:'center', cursor: sincronizandoAbonos ? 'default' : 'pointer' }}>
-                  <i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} style={{ color:"#124e38", fontSize:20 }} aria-hidden="true"></i>
-                </button>
-                <button aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
-                  style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                  <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-                </button>
-              </div>
+          <header className="bl-page-head" data-tone="neutral">
+            <div className="bl-page-title">
+              <span className="bl-page-icon" aria-hidden="true"><i className="ti ti-box" /></span>
+              <div><small>Depósito</small><h1 className="ag-page-title">Inventario</h1></div>
             </div>
-            {error && <div style={{ background:'#fff0f0', color:'#c84040', fontSize:12, padding:'8px 12px', borderRadius:'var(--ag-radius)', marginBottom:10 }}>{error}</div>}
-            {bajoStockTotal > 0 && (
-              <div style={{ background:'#fff3e8', borderRadius:'var(--ag-radius)', padding:'10px 14px', display:'flex', alignItems:'center', gap:8 }}>
-                <i className="ti ti-alert-triangle" style={{ color:'#e07b00', fontSize:16 }} aria-hidden="true"></i>
-                <div style={{ fontSize:12, fontWeight:500, color:'#c8700a' }}>{bajoStockTotal} producto{bajoStockTotal>1?'s':''} con stock bajo</div>
-              </div>
-            )}
-          </div>
+            <div className="bl-head-actions">
+              <button className="bl-icon-btn" aria-label="Sincronizar abonos de base" title="Sincronizar abonos de base" onClick={sincronizarAbonosManual} disabled={sincronizandoAbonos}><i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} aria-hidden="true" /></button>
+              <button className="ag-primary" onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}><i className="ti ti-plus" aria-hidden="true" />Nuevo producto</button>
+            </div>
+          </header>
+          {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
+          {bajoStockTotal > 0 && <div className="bl-stock-alert" role="status"><i className="ti ti-alert-triangle" aria-hidden="true" />{bajoStockTotal} producto{bajoStockTotal > 1 ? 's' : ''} con stock bajo o agotado</div>}
 
-          <div className="ag-page-body" style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
-            <div className="ag-record-grid" style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(3, minmax(240px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
+          <div className="inventory-groups">
             {INVENTORY_GROUPS.map(cat => {
               const prods = getProductosCat(cat.key)
-              if (prods.length === 0) return null
-              const badge = getBadge(cat.key)
+              const agotados = prods.filter(p => Number(p.stock_actual) <= 0)
+              const bajos = prods.filter(p => Number(p.stock_actual) > 0 && Number(p.stock_minimo) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo))
+              const ok = prods.length - agotados.length - bajos.length
+              const criticos = [...agotados, ...bajos].slice(0, 3)
+              const share = n => prods.length ? `${n / prods.length * 100}%` : '0%'
               return (
-                <div className="ag-surface inventory-group-card" key={cat.key} onClick={() => { setBusqueda(''); setCategoriaActiva(cat.key) }}
-                  style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, display:'flex', alignItems:'center', gap:12, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
-                  <div style={{ width:44, height:44, borderRadius:'var(--ag-radius)', background:cat.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <i className={`ti ${cat.icon}`} style={{ fontSize:20, color:cat.color }} aria-hidden="true"></i>
-                  </div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:"#182c25" }}>{cat.label}</div>
-                    <div style={{ fontSize:12, color:"#697970", marginTop:2 }}>{prods.length} producto{prods.length>1?'s':''}</div>
-                  </div>
-                  <div style={{ fontSize:12, fontWeight:600, padding:'3px 10px', borderRadius:'var(--ag-radius)', background:badge.bg, color:badge.color }}>{badge.label}</div>
-                  <i className="ti ti-chevron-right" style={{ fontSize:16, color:'#d0d0d0' }} aria-hidden="true"></i>
-                </div>
+                <button className="ag-surface inventory-group-card" key={cat.key} data-tone={INVENTORY_TONES[cat.key]} onClick={() => { setBusqueda(''); setCategoriaActiva(cat.key) }} disabled={!prods.length}>
+                  <span className="inventory-group-head">
+                    <span className="bl-page-icon" aria-hidden="true"><i className={`ti ${cat.icon}`} /></span>
+                    <span><strong>{cat.label}</strong><small>{prods.length ? `${prods.length} producto${prods.length > 1 ? 's' : ''}` : 'Sin productos cargados'}</small></span>
+                    <i className="ti ti-chevron-right" aria-hidden="true" />
+                  </span>
+                  <span className="stock-health" role="img" aria-label={`${ok} con stock, ${bajos.length} bajos, ${agotados.length} agotados`}>
+                    <b className="is-ok" style={{ width:share(ok) }} /><b className="is-low" style={{ width:share(bajos.length) }} /><b className="is-out" style={{ width:share(agotados.length) }} />
+                  </span>
+                  <span className="stock-legend"><span className="is-ok"><i />{ok} OK</span><span className="is-low"><i />{bajos.length} bajos</span><span className="is-out"><i />{agotados.length} agotados</span></span>
+                  {criticos.length > 0 && <span className="stock-critical">{criticos.map(p => <span key={p.id} className={Number(p.stock_actual) <= 0 ? 'is-out' : 'is-low'}><span>{p.nombre}</span><b className="mono">{Number(p.stock_actual || 0).toLocaleString('es-PY')} {p.unidad || ''}</b><span className="stock-level"><i style={{ width:`${getStockPct(p)}%` }} /></span></span>)}</span>}
+                </button>
               )
             })}
-            </div>
           </div>
         </>
       )}

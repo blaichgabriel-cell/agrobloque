@@ -228,19 +228,18 @@ export default function Contabilidad() {
 
   const categorias = form.tipo === 'venta' ? categoriasVenta : categoriasCompra
 
+  const maxMes = Math.max(1, ...resumen.porMes.flatMap(m => [m.ventas, m.compras]))
+
   return (
-    <div className="accounting-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
-      <div style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
-          <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <div style={headerIcon}><i className="ti ti-calculator" style={{ fontSize:26, color:"#08603f" }} aria-hidden="true"></i></div>
-            <div>
-              <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Balance independiente</div>
-              <div style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Contabilidad</div>
-            </div>
+    <div className="accounting-page bl-module-page">
+      <div className="fin-head-wrap">
+        <div className="bl-page-head">
+          <div className="bl-page-title">
+            <span className="bl-page-icon" aria-hidden="true"><i className="ti ti-calculator" /></span>
+            <div><small>Balance independiente</small><h1 className="ag-page-title">Contabilidad</h1></div>
           </div>
-          <button onClick={() => abrirNuevo('compra')} style={addBtn}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:21 }} aria-hidden="true"></i>
+          <button className="bl-btn-solid" aria-label="Nueva compra" onClick={() => abrirNuevo('compra')}>
+            <i className="ti ti-plus" aria-hidden="true" />
           </button>
         </div>
 
@@ -262,10 +261,10 @@ export default function Contabilidad() {
         </div>
 
         <div className="accounting-kpis">
-          <TotalCard label={`Ventas ${meses[mesSeleccionado]}`} value={resumenMes.ventas} tone="green" />
-          <TotalCard label={`Compras ${meses[mesSeleccionado]}`} value={resumenMes.compras} tone="red" />
-          <TotalCard label={`Balance ${meses[mesSeleccionado]}`} value={resumenMes.balance} tone={resumenMes.balance >= 0 ? 'dark' : 'red'} detail={`Margen ${resumenMes.margen.toLocaleString('es-PY', { maximumFractionDigits:1 })}%`} />
-          <TotalCard label="Costo por bloque activo" value={resumenMes.costoPorBloque} tone="dark" detail={bloquesActivos ? `${bloquesActivos} bloques activos` : 'Sin bloques activos'} />
+          <TotalCard icon="ti-trending-up" label={`Ingresos ${meses[mesSeleccionado]}`} value={resumenMes.ventas} tone="in" detail="Ventas registradas" />
+          <TotalCard icon="ti-trending-down" label={`Egresos ${meses[mesSeleccionado]}`} value={resumenMes.compras} tone="out" detail="Compras registradas" />
+          <TotalCard icon="ti-scale" label={`Balance neto ${meses[mesSeleccionado]}`} value={resumenMes.balance} tone={resumenMes.balance >= 0 ? 'net' : 'out'} detail={`Margen ${resumenMes.margen.toLocaleString('es-PY', { maximumFractionDigits:1 })}%`} />
+          <TotalCard icon="ti-layout-grid" label="Costo por bloque activo" value={resumenMes.costoPorBloque} tone="block" detail={bloquesActivos ? `${bloquesActivos} bloques activos` : 'Sin bloques activos'} />
         </div>
       </div>
 
@@ -278,16 +277,15 @@ export default function Contabilidad() {
             </div>
             <div style={{ fontSize:12, color:'#69706a', fontWeight:700 }}>{resumenMes.total} movimientos</div>
           </div>
-          <div style={monthGrid}>
+          <div className="fin-month-grid">
             {resumen.porMes.map(m => {
               const activo = mesSeleccionado === m.idx
               const tieneMovimientos = (m.compras + m.ventas) > 0
               return (
-                <button key={m.nombre} onClick={() => setMesSeleccionado(m.idx)} style={activo ? monthBtnActive : monthBtn}>
-                  <span style={{ fontWeight:700 }}>{m.nombre}</span>
-                  <span style={{ fontSize:10, color: activo ? 'rgba(255,255,255,0.68)' : tieneMovimientos ? '#176a25' : '#9a9f9a' }}>
-                    {tieneMovimientos ? `Gs. ${fmtGs(m.balance)}` : 'Sin movimientos'}
-                  </span>
+                <button key={m.nombre} onClick={() => setMesSeleccionado(m.idx)} className={`fin-month ${activo ? 'is-active' : ''} ${m.balance < 0 ? 'is-negative' : ''}`} aria-pressed={activo}>
+                  <span className="fin-bars" aria-hidden="true"><i className="is-in" style={{ height:`${m.ventas / maxMes * 100}%` }} /><i className="is-out" style={{ height:`${m.compras / maxMes * 100}%` }} /></span>
+                  <strong>{m.nombre}</strong>
+                  <small className="mono">{tieneMovimientos ? `Gs. ${fmtGs(m.balance)}` : 'Sin movimientos'}</small>
                 </button>
               )
             })}
@@ -395,13 +393,12 @@ export default function Contabilidad() {
   )
 }
 
-function TotalCard({ label, value, tone, detail = '' }) {
-  const bg = '#fff'
-  const color = tone === 'red' ? '#a63d3d' : '#176a45'
+function TotalCard({ icon, label, value, tone, detail = '' }) {
   return (
-    <div className="kpi-card accounting-kpi" style={{ background:bg, color }}>
+    <div className="kpi-card accounting-kpi fin-card" data-fin={tone}>
+      <span className="fin-card-icon" aria-hidden="true"><i className={`ti ${icon}`} /></span>
       <div className="kpi-card__label">{label}</div>
-      <div className="kpi-card__value">Gs. {fmtGs(value)}</div>
+      <div className="kpi-card__value"><small>Gs.</small> {fmtGs(value)}</div>
       {detail && <small className="kpi-card__detail">{detail}</small>}
     </div>
   )
@@ -464,29 +461,6 @@ function Empty({ text }) {
   return <div style={{ color:'#8c938d', textAlign:'center', padding:'26px 0', fontSize:13 }}>{text}</div>
 }
 
-const headerIcon = {
-  width:46,
-  height:46,
-  borderRadius:8,
-  background:"#edf7f1",
-  display:'flex',
-  alignItems:'center',
-  justifyContent:'center',
-  flexShrink:0,
-}
-
-const addBtn = {
-  width:42,
-  height:42,
-  borderRadius:8,
-  background:"#124e38",
-  border:'none',
-  display:'flex',
-  alignItems:'center',
-  justifyContent:'center',
-  cursor:'pointer',
-}
-
 const smallAction = {
   border:'none',
   background:'#fff',
@@ -535,33 +509,6 @@ const td = { padding:'10px 8px', borderBottom:'1px solid #f0f2f0', color:'#11161
 const tdRight = { ...td, textAlign:'right' }
 const tf = { padding:'12px 8px', fontWeight:700, background:'#f5f7f5', borderTop:'1px solid #dfe5df' }
 const tfRight = { ...tf, textAlign:'right' }
-
-const monthGrid = {
-  display:'grid',
-  gridTemplateColumns:'repeat(auto-fit, minmax(112px, 1fr))',
-  gap:8,
-}
-
-const monthBtn = {
-  border:'1px solid #e1e7e1',
-  background:'#fff',
-  color:'#111611',
-  borderRadius:8,
-  padding:'10px 11px',
-  cursor:'pointer',
-  display:'grid',
-  gap:4,
-  textAlign:'left',
-  fontSize:12,
-}
-
-const monthBtnActive = {
-  ...monthBtn,
-  background:"#08603f",
-  borderColor:"#08603f",
-  color:'#fff',
-  boxShadow:'none',
-}
 
 
 const iconPill = {

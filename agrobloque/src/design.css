@@ -893,3 +893,93 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search
 }
 .ab-map-page { padding:32px clamp(16px,3vw,42px) 44px; }
 @media (max-width:767px) { .ab-map-page { padding:22px 13px 28px; } }
+.bl-field { display:block; }
+.bl-textarea { min-height:76px; resize:vertical; }
+.ag-notice:not(.is-overdue)>i:first-child { background:var(--grad-neutral); }
+.ag-notice.is-overdue>i:first-child { color:#fff; box-shadow:0 0 0 0 rgba(244,63,94,.4); animation:bl-badge-pulse 2.4s var(--bl-spring) infinite; }
+.ag-notice.is-overdue small { color:#BE123C; font-weight:600; }
+[data-sonner-toast].ag-toast { border:1px solid transparent !important; border-top-color:var(--glass-edge) !important; border-radius:18px !important; background:rgba(255,255,255,.82) !important; -webkit-backdrop-filter:var(--glass-blur) !important; backdrop-filter:var(--glass-blur) !important; color:var(--text-primary) !important; font-family:var(--bl-font-ui) !important; box-shadow:var(--glass-sheen),var(--glass-outline),0 24px 48px -20px rgba(15,23,42,.35) !important; }
+[data-sonner-toast].ag-toast [data-title] { font-weight:700; }
+[data-sonner-toast].ag-toast[data-type='warning'] [data-icon] { color:var(--bl-amber-600); }
+
+/* --- Fertilizaciones (cian) vs Fumigaciones (ambar-coral) ----------------- */
+.bl-card { position:relative; background:var(--glass-bg) !important; -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); border:1px solid transparent !important; border-top-color:var(--glass-edge) !important; border-left-color:var(--glass-edge-2) !important; border-radius:var(--radius-card) !important; box-shadow:var(--glass-sheen),var(--glass-outline),var(--glass-depth) !important; }
+.bl-btn-solid { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:10px 16px; border:0; border-radius:14px; background:var(--mod-grad); color:#fff; font-weight:700; box-shadow:0 10px 22px -10px var(--mod-shadow),inset 0 1px 0 rgba(255,255,255,.2); transition:transform 160ms var(--bl-press),box-shadow 220ms ease; }
+.bl-btn-solid:active { transform:scale(.97); }
+.module-switch { position:relative; padding:5px; border-radius:16px; }
+.module-switch [role='tab'] { min-height:42px; padding:0 18px; border-radius:12px; font-size:13px; }
+.module-switch [role='tab'][aria-selected='true'] { background:var(--mod-grad); color:#fff; box-shadow:0 8px 18px -8px var(--mod-shadow),inset 0 1px 0 rgba(255,255,255,.22); }
+.nutrition-card { border-color:transparent !important; background:linear-gradient(135deg,rgba(2,132,199,.92),rgba(6,182,212,.88)) !important; color:#fff !important; box-shadow:0 18px 36px -18px rgba(2,132,199,.7),inset 0 1px 0 rgba(255,255,255,.25) !important; }
+.nutrition-card * { color:#fff !important; }
+.timeline-entry { position:relative; overflow:hidden; }
+.timeline-entry::before { content:''; position:absolute; inset:0 auto 0 0; width:4px; background:var(--mod-grad); }
+.phytosanitary-page .timeline-entry { border-color:transparent !important; }
+.timeline-date__line { background:linear-gradient(90deg,var(--mod-tint),transparent); }
+.timeline-date__label { background:var(--mod-tint); color:var(--mod-accent); font-family:var(--bl-font-mono); }
+[data-module='agua'] .ag-page h1,[data-module='alerta'] .ag-page h1 { font-family:var(--bl-font-display); font-weight:800; }
+
+/* --- Inventario: 4 rubros con semaforo de stock --------------------------- */
+.bl-head-actions { display:flex; align-items:center; gap:8px; }
+.bl-stock-alert { display:flex; align-items:center; gap:9px; margin-bottom:16px; padding:12px 16px; border:1px solid rgba(217,119,6,.22); border-radius:16px; background:linear-gradient(90deg,rgba(245,158,11,.14),rgba(244,63,94,.08)); color:#9A3412; font-size:13px; font-weight:650; }
+.bl-stock-alert i { font-size:18px; color:var(--bl-amber-600); }
+.inventory-groups { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.inventory-group-card { display:flex !important; flex-direction:column; gap:14px; width:100%; min-height:0; padding:20px !important; text-align:left; color:var(--text-primary); cursor:pointer; }
+.inventory-group-card:disabled { cursor:default; opacity:.7; }
+.inventory-group-head { display:flex; align-items:center; gap:14px; }
+.inventory-group-head>span:nth-child(2) { min-width:0; flex:1; display:flex; flex-direction:column; }
+.inventory-group-head strong { font-family:var(--bl-font-display); font-size:17px; font-weight:750; }
+.inventory-group-head small { color:var(--text-tertiary); font-size:12px; }
+.inventory-group-head>i { color:var(--text-tertiary); font-size:18px; }
+.stock-health { display:flex; height:10px; overflow:hidden; border-radius:999px; background:rgba(15,23,42,.08); }
+.stock-health b { display:block; height:100%; transition:width 600ms var(--bl-spring); }
+.stock-health .is-ok { background:linear-gradient(90deg,#059669,#10B981); }
+.stock-health .is-low { background:linear-gradient(90deg,#F59E0B,#FBBF24); }
+.stock-health .is-out { background:linear-gradient(90deg,#F43F5E,#DC2626); }
+.stock-legend { display:flex; flex-wrap:wrap; gap:14px; color:var(--text-secondary); font-size:12px; font-weight:600; }
+.stock-legend>span { display:inline-flex; align-items:center; gap:6px; }
+.stock-legend i { width:8px; height:8px; border-radius:50%; }
+.stock-legend .is-ok i { background:#10B981; } .stock-legend .is-low i { background:#F59E0B; } .stock-legend .is-out i { background:#F43F5E; box-shadow:0 0 6px #F43F5E; }
+.stock-critical { display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:14px; background:rgba(248,250,252,.75); }
+.stock-critical>span { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 10px; font-size:12px; }
+.stock-critical>span>span:first-child { overflow:hidden; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+.stock-critical .is-out b { color:#BE123C; } .stock-critical .is-low b { color:#B45309; }
+.stock-level { grid-column:1/-1; height:5px; overflow:hidden; border-radius:999px; background:rgba(15,23,42,.08); }
+.stock-level i { display:block; height:100%; border-radius:inherit; }
+.stock-critical .is-out .stock-level i { background:#F43F5E; min-width:4px; } .stock-critical .is-low .stock-level i { background:#F59E0B; }
+
+/* --- Contabilidad ejecutiva (indigo-violeta) ------------------------------- */
+.accounting-page { padding:32px clamp(16px,3vw,42px) 44px; }
+.accounting-page>div { padding:0 !important; }
+.fin-head-wrap { margin-bottom:18px; }
+.fin-card { position:relative; overflow:hidden; display:flex; flex-direction:column; gap:6px; padding:18px 20px !important; }
+.fin-card::after { content:''; position:absolute; inset:auto -30% -60% auto; width:70%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,var(--fin-glow,rgba(99,102,241,.22)),transparent 70%); pointer-events:none; }
+.fin-card[data-fin='in'] { --fin-grad:var(--grad-bloques); --fin-glow:rgba(16,185,129,.22); --fin-ink:#047857; }
+.fin-card[data-fin='out'] { --fin-grad:var(--grad-alerta); --fin-glow:rgba(244,63,94,.2); --fin-ink:#BE123C; }
+.fin-card[data-fin='net'] { --fin-grad:var(--grad-finanzas); --fin-glow:rgba(147,51,234,.25); --fin-ink:#4338CA; }
+.fin-card[data-fin='block'] { --fin-grad:var(--grad-agua); --fin-glow:rgba(6,182,212,.22); --fin-ink:#0369A1; }
+.fin-card-icon { width:38px; height:38px; display:grid; place-items:center; margin-bottom:4px; border-radius:12px; background:var(--fin-grad,var(--grad-finanzas)); color:#fff; font-size:19px; box-shadow:0 8px 16px -8px var(--fin-glow); }
+.fin-card .kpi-card__value { color:var(--fin-ink,var(--text-primary)); font-family:var(--bl-font-mono); font-size:clamp(20px,2vw,26px); }
+.fin-card .kpi-card__value small { color:var(--text-tertiary); font-size:.6em; font-weight:600; }
+.accounting-page section { margin-bottom:16px; }
+.fin-month-grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:8px; margin-top:12px; }
+.fin-month { min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 6px; border:1px solid rgba(15,23,42,.06); border-radius:14px; background:rgba(255,255,255,.6); color:var(--text-primary); transition:transform 220ms var(--bl-spring),background-color 160ms ease,box-shadow 220ms ease; }
+.fin-month strong { font-size:12px; font-weight:700; text-transform:capitalize; }
+.fin-month small { max-width:100%; overflow:hidden; color:var(--text-tertiary); font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
+.fin-month.is-negative small { color:#BE123C; }
+.fin-bars { height:64px; width:100%; display:flex; align-items:flex-end; justify-content:center; gap:4px; }
+.fin-bars i { width:min(12px,35%); min-height:2px; border-radius:6px 6px 2px 2px; transition:height 600ms var(--bl-spring); }
+.fin-bars .is-in { background:linear-gradient(180deg,#10B981,#059669); }
+.fin-bars .is-out { background:linear-gradient(180deg,#F43F5E,#D97706); }
+.fin-month.is-active { border-color:transparent; background:var(--grad-finanzas); box-shadow:0 12px 24px -12px rgba(79,70,229,.7); }
+.fin-month.is-active strong,.fin-month.is-active small { color:#fff; }
+.fin-month.is-active .fin-bars .is-in { background:rgba(255,255,255,.95); } .fin-month.is-active .fin-bars .is-out { background:rgba(255,255,255,.5); }
+.accounting-page table th { color:var(--text-tertiary); }
+.accounting-page table td { font-variant-numeric:tabular-nums; }
+@media (hover:hover) and (pointer:fine) { .fin-month:not(.is-active):hover { transform:translateY(-2px); background:#fff; box-shadow:0 10px 20px -12px rgba(79,70,229,.4); } }
+@media (max-width:1099px) { .fin-month-grid { grid-template-columns:repeat(6,minmax(0,1fr)); } }
+@media (max-width:767px) {
+  .inventory-groups { grid-template-columns:1fr; }
+  .accounting-page { padding:22px 13px 28px; }
+  .fin-month-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .bl-head-actions .ag-primary { padding:0 12px; }
+}

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
-import { blurNumberInputOnWheel, parseLocaleInteger } from '../lib/numbers'
+import { blurNumberInputOnWheel, formatLocaleInteger, parseLocaleInteger } from '../lib/numbers'
 
 const estados = ['sembrado', 'germinando', 'listo', 'trasplantado', 'descartado']
 const hoy = () => new Date().toISOString().split('T')[0]
@@ -141,14 +141,14 @@ export default function Vivero() {
       cultivo: lote.cultivo || '',
       variedad: lote.variedad || '',
       semilla: lote.semilla || '',
-      cantidad_semillas: lote.cantidad_semillas || '',
-      bandejas: lote.bandejas || '',
+      cantidad_semillas: formatLocaleInteger(lote.cantidad_semillas),
+      bandejas: formatLocaleInteger(lote.bandejas),
       sustrato: lote.sustrato || '',
       abono_sustrato: lote.abono_sustrato || '',
       fecha_estimada_trasplante: lote.fecha_estimada_trasplante || '',
       fecha_real_trasplante: lote.fecha_real_trasplante || '',
-      germinadas: lote.germinadas || '',
-      perdidas: lote.perdidas || '',
+      germinadas: formatLocaleInteger(lote.germinadas),
+      perdidas: formatLocaleInteger(lote.perdidas),
       estado: lote.estado || 'sembrado',
       notas: lote.notas || '',
     })
@@ -267,7 +267,7 @@ export default function Vivero() {
     setTrasForm({
       bloque_id: '',
       fecha_real_trasplante: lote.fecha_real_trasplante || hoy(),
-      cantidad_plantas: cantidadSugerida || '',
+      cantidad_plantas: formatLocaleInteger(cantidadSugerida),
       finalizar_lote: true,
     })
     setError('')
@@ -554,14 +554,18 @@ function Info({ label, value, last }) {
   return <div style={{ display:'flex', justifyContent:'space-between', gap:12, padding:'10px 0', borderBottom:last ? 'none' : '1px solid #e8e8e8' }}><span style={{ fontSize:12, color:'#8d938d' }}>{label}</span><strong style={{ fontSize:13, textAlign:'right' }}>{value}</strong></div>
 }
 
+// Los enteros se escriben como texto: un <input type="number"> descarta "41.497" o "1.000.000".
 function Field({ label, value, onChange, type = 'text', placeholder = '', textarea }) {
+  const entero = type === 'number'
   return (
-    <label style={{ display:'block' }}>
+    <label className="bl-field">
       <div className="bl-label">{label}</div>
       {textarea ? (
-        <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...inputStyle, minHeight:72, resize:'vertical' }} />
+        <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="bl-input bl-textarea" />
+      ) : entero ? (
+        <input type="text" inputMode="numeric" autoComplete="off" value={value ?? ''} onChange={e => onChange(e.target.value.replace(/[^0-9.,\s]/g, ''))} onBlur={() => onChange(formatLocaleInteger(value))} onWheel={blurNumberInputOnWheel} placeholder={placeholder || 'Ej: 1.000'} className="bl-input mono" />
       ) : (
-        <input type={type} inputMode={type === 'number' ? 'numeric' : undefined} value={value || ''} onChange={e => onChange(e.target.value)} onWheel={type === 'number' ? blurNumberInputOnWheel : undefined} placeholder={placeholder} className="bl-input" />
+        <input type={type} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="bl-input" />
       )}
     </label>
   )
@@ -579,7 +583,6 @@ function Select({ label, value, onChange, options }) {
   )
 }
 
-const inputStyle = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:'1px solid #e3e5e1', background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
 const primaryBtn = { width:'100%', padding:14, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer' }
 const secondaryBtn = { width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:'1px solid #d9ddd8', color:'#555', fontSize:13, fontWeight:700, cursor:'pointer', marginTop:8 }
 const dangerBtn = { ...secondaryBtn, border:'1px solid #ffcccc', color:'#c84040', background:'#fff0f0' }

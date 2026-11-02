@@ -77,16 +77,6 @@ function useViewportWidth() {
   return width
 }
 
-const inputBase = {
-  width: '100%',
-  border: '1px solid #e3e0db',
-  borderRadius:'var(--ag-radius)',
-  padding: '11px 12px',
-  boxSizing: 'border-box',
-  background: '#fff',
-  fontSize: 14,
-}
-
 const btnNegro = {
   border: 'none',
   background: '#1f1f1f',
@@ -209,16 +199,16 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 
         <Notice tone="error">{error}</Notice><FormHeading number="01" detail="Fecha, preparación y bloques seleccionados">Datos de la aplicación</FormHeading>
         <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap:10, marginBottom:14 }}>
-          {esSemana && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" style={inputBase} /></label>}
+          {esSemana && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" className="bl-input" /></label>}
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>
             {esSemana ? 'Inicio de la semana' : 'Fecha'}
-            <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(e.target.value, 6) } : {}) }))} style={inputBase} />
+            <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(e.target.value, 6) } : {}) }))} className="bl-input" />
           </label>
-          {esSemana && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} style={inputBase} /></label>}
-          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} style={inputBase} /></label>
-          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} style={inputBase} /></label>
-          {form.plan_id && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} style={inputBase}><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
-          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Etapa fenológica<input value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" style={inputBase} /></label>
+          {esSemana && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} className="bl-input" /></label>}
+          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} className="bl-input" /></label>
+          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} className="bl-input" /></label>
+          {form.plan_id && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} className="bl-input"><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
+          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Etapa fenológica<input value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" className="bl-input" /></label>
           <div style={{ display:'grid', alignContent:'center', background:"#edf7f1", border:'1px solid #d6e8d4', borderRadius:'var(--ag-radius)', padding:'10px 12px' }}><span style={{ fontSize:12, color:'#69706a' }}>VOLUMEN TOTAL</span><strong style={{ fontSize:18, color:"#08603f" }}>{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>
           <div style={{ display:'grid', gap:8, gridColumn:'1 / -1' }}>
             <div style={{ fontSize:12, color:'#687068', fontWeight:700 }}>Bloques</div>
@@ -249,9 +239,9 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
         <div style={{ fontSize:12, fontWeight:700, color:"#08603f", margin:'2px 0 9px' }}>Las cantidades siguientes son por cada tanque.</div>
         <div style={{ display:'grid', gap:12 }}>
           {form.soluciones.map((sol, si) => (
-            <div key={si} style={{ ...card, padding:14, boxShadow:'none' }}>
+            <div key={si} className="bl-card" style={{ padding:14, boxShadow:'none' }}>
               <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', marginBottom:10 }}>
-                <input value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solucion A" style={{ ...inputBase, maxWidth:180, fontWeight:700 }} />
+                <input value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solucion A" className="bl-input" style={{ maxWidth:180, fontWeight:700 }} />
                 {form.soluciones.length > 1 && (
                   <button className="ag-small-action" onClick={() => eliminarSolucion(si)} style={{ border:'1px solid #ffd1d1', background:'#fff', color:'#d42f2f', borderRadius:'var(--ag-radius)', padding:'9px 11px', cursor:'pointer' }}>Eliminar</button>
                 )}
@@ -260,19 +250,19 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                 {sol.productos.map((p, pi) => (
                   <div key={pi} style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 138px 120px 94px 38px', gap:8, alignItems:'center' }}>
                     <div style={{ display:'grid', gap:6 }}>
-                      <select value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)} style={inputBase}>
+                      <select value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)} className="bl-input">
                         <option value="">Sin inventario</option>
                         {incluirSeleccionados(productos, esProductoFertilizacion, [p.producto_id]).map(prod => <option key={prod.id} value={prod.id}>{prod.nombre} - stock {fmtNum(prod.stock_actual)} {prod.unidad || ''}</option>)}
                       </select>
                       {productos.filter(esProductoFertilizacion).length === 0 && !p.producto_id && <div style={{ fontSize:11, color:'#8a6b33', lineHeight:1.35 }}>No hay fertilizantes clasificados. Revisá la categoría del producto en Inventario.</div>}
-                      {!p.producto_id && <input value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Escribir producto" style={{ ...inputBase, background:'#f7fbf7', borderColor:'#d6dfd6' }} />}
+                      {!p.producto_id && <input value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Escribir producto" className="bl-input" style={{ background:'#f7fbf7', borderColor:'#d6dfd6' }} />}
                     </div>
-                    <select value={p.modo || 'por_tanque'} onChange={e => actualizarProducto(si, pi, 'modo', e.target.value)} style={inputBase}>
+                    <select value={p.modo || 'por_tanque'} onChange={e => actualizarProducto(si, pi, 'modo', e.target.value)} className="bl-input">
                       <option value="por_tanque">Por tanque</option>
                       <option value="por_planta">Por planta</option>
                     </select>
-                    <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)} placeholder={p.modo === 'por_planta' ? 'Dosis/planta' : 'Cantidad'} type="number" min="0" step="0.01" style={inputBase} />
-                    <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} style={inputBase}>
+                    <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)} placeholder={p.modo === 'por_planta' ? 'Dosis/planta' : 'Cantidad'} type="number" min="0" step="0.01" className="bl-input" />
+                    <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} className="bl-input">
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
                     <button aria-label="Eliminar" onClick={() => eliminarProducto(si, pi)} disabled={sol.productos.length === 1} style={{ border:'none', background:'#f2efeb', borderRadius:'var(--ag-radius)', height:38, cursor: sol.productos.length === 1 ? 'not-allowed' : 'pointer' }}>
@@ -293,12 +283,12 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 
         <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, marginTop:14 }}>
           Notas
-          <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicacion por goteo, lote completo, observaciones..." style={{ ...inputBase, minHeight:86, resize:'vertical' }} />
+          <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicacion por goteo, lote completo, observaciones..." className="bl-input" style={{ minHeight:86, resize:'vertical' }} />
         </label>
 
         <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:16 }}>
           <button className="ag-small-action" onClick={onClose} style={{ border:'1px solid #e3e0db', background:'#fff', borderRadius:'var(--ag-radius)', padding:'11px 14px', fontWeight:700, cursor:'pointer' }}>Cancelar</button>
-          <button onClick={onSave} disabled={saving} style={{ ...btnNegro, opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios de la semana' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
+          <button onClick={onSave} disabled={saving} className="bl-btn-solid" style={{ opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios de la semana' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
         </div>
       </div>
     </Modal>
@@ -859,8 +849,8 @@ export default function Fertilizaciones({ campoActivo }) {
             <h1 style={{ margin:'5px 0 0', fontSize:30, lineHeight:1.05 }}>Fertilizaciones</h1>
           </div>
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible} style={{ ...btnNegro, background:'#fff', color:"#08603f", border:'1px solid #dbe6da', opacity:schemaPlanesDisponible ? 1 : .55 }}><i className="ti ti-calendar-week" style={{ marginRight:7 }} />Fertilización semanal</button>
-            <button onClick={() => abrirModal('aplicacion')} style={{ ...btnNegro }}><i className="ti ti-plus" style={{ marginRight:7 }} />Aplicación puntual</button>
+            <button onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible} className="bl-btn-solid" style={{ background:'#fff', color:"#08603f", border:'1px solid #dbe6da', opacity:schemaPlanesDisponible ? 1 : .55 }}><i className="ti ti-calendar-week" style={{ marginRight:7 }} />Fertilización semanal</button>
+            <button onClick={() => abrirModal('aplicacion')} className="bl-btn-solid"><i className="ti ti-plus" style={{ marginRight:7 }} />Aplicación puntual</button>
           </div>
         </div>
 
@@ -874,17 +864,17 @@ export default function Fertilizaciones({ campoActivo }) {
             <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(registrosActivos.length)}</div>
             <div style={{ fontSize:12, color:'#cdd2cc' }}>registros guardados</div>
           </div>
-          <div style={{ ...card, padding:18 }}>
+          <div className="bl-card" style={{ padding:18 }}>
             <div style={{ fontSize:12, color:'#8a948b' }}>BLOQUES APLICADOS</div>
             <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(totalBloquesAplicados)}</div>
             <div style={{ fontSize:12, color:'#8a948b' }}>con fertilizacion</div>
           </div>
-          <div style={{ ...card, padding:18 }}>
+          <div className="bl-card" style={{ padding:18 }}>
             <div style={{ fontSize:12, color:'#8a948b' }}>ULTIMA FECHA</div>
             <div style={{ fontSize:22, fontWeight:700 }}>{ultimaFecha ? fmtFecha(ultimaFecha) : '-'}</div>
             <div style={{ fontSize:12, color:'#8a948b' }}>ultima aplicacion</div>
           </div>
-          <div style={{ ...card, padding:18 }}>
+          <div className="bl-card" style={{ padding:18 }}>
             <div style={{ fontSize:12, color:'#8a948b' }}>BLOQUES ACTIVOS</div>
             <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(bloques.length)}</div>
             <div style={{ fontSize:12, color:'#8a948b' }}>disponibles</div>
@@ -892,7 +882,7 @@ export default function Fertilizaciones({ campoActivo }) {
         </div>
 
         {schemaPlanesDisponible && (
-          <div style={{ ...card, padding:18, marginBottom:18 }}>
+          <div className="bl-card" style={{ padding:18, marginBottom:18 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}><div><div style={{ color:'#8a948b', fontSize:12 }}>RECETAS REUTILIZABLES</div><h2 style={{ margin:'3px 0 0', fontSize:20 }}>Planes semanales guardados</h2></div><span style={{ background:"#edf7f1", color:"#08603f", borderRadius:999, padding:'5px 10px', fontSize:12, fontWeight:700 }}>{planesVigentes.length}</span></div>
             {planesVigentes.length === 0 ? <div style={{ padding:'18px 0 4px', color:'#8a948b', fontSize:13 }}>Todavia no hay planes semanales guardados.</div> : planesVigentes.map((plan, index) => {
               const tanques = Number(plan.tanques_cantidad) || 1
@@ -903,7 +893,7 @@ export default function Fertilizaciones({ campoActivo }) {
           </div>
         )}
 
-        <div style={{ ...card, overflow:'hidden' }}>
+        <div className="bl-card" style={{ overflow:'hidden' }}>
           <div style={{ display:isMobile ? 'none' : 'grid', gridTemplateColumns:'130px 1fr 1.4fr', gap:12, padding:'13px 16px', borderBottom:'1px solid #ece9e3', color:'#687068', fontSize:12, fontWeight:700 }}>
             <div>FECHA</div>
             <div>BLOQUES</div>
@@ -948,7 +938,7 @@ export default function Fertilizaciones({ campoActivo }) {
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'16px 0' }}><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Bloques</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div style={{ background:'#f6f8f7', padding:13, borderRadius:'var(--ag-radius)' }}><small style={{ color:'#687068' }}>Preparación</small><div style={{ fontWeight:700, marginTop:4 }}>{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
             <div style={{ fontSize:13, lineHeight:1.6, padding:'13px 0', borderTop:'1px solid #ece9e3', borderBottom:'1px solid #ece9e3' }}>{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
             {notasVisibles(detalle.notas) && <div style={{ marginTop:14, color:'#687068' }}>{notasVisibles(detalle.notas)}</div>}
-            {!detalle.anulada && <><div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:18 }}><button onClick={() => abrirEditarAplicacion(detalle)} style={btnNegro}>{detalle.items.some(i => i.plan_id) ? 'Editar semana completa' : 'Editar'}</button>{!detalle.items.some(i => i.plan_id) && <button onClick={() => repetirAplicacion(detalle)} style={{ ...btnNegro, background:'#08603f' }}>Repetir hoy</button>}</div><div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid #ece9e3' }}><label style={{ display:'grid', gap:6, fontSize:12, fontWeight:700, color:'#687068' }}>Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" style={inputBase} /></label><button className="ag-small-action" onClick={() => anularAplicacion(detalle)} disabled={saving} style={{ marginTop:9, border:'1px solid #ffd1d1', background:'#fff', color:'#b52525', borderRadius:'var(--ag-radius)', padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>Anular y devolver inventario</button></div></>}
+            {!detalle.anulada && <><div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:18 }}><button onClick={() => abrirEditarAplicacion(detalle)} className="bl-btn-solid">{detalle.items.some(i => i.plan_id) ? 'Editar semana completa' : 'Editar'}</button>{!detalle.items.some(i => i.plan_id) && <button onClick={() => repetirAplicacion(detalle)} className="bl-btn-solid" style={{ background:'#08603f' }}>Repetir hoy</button>}</div><div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid #ece9e3' }}><label style={{ display:'grid', gap:6, fontSize:12, fontWeight:700, color:'#687068' }}>Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" className="bl-input" /></label><button className="ag-small-action" onClick={() => anularAplicacion(detalle)} disabled={saving} style={{ marginTop:9, border:'1px solid #ffd1d1', background:'#fff', color:'#b52525', borderRadius:'var(--ag-radius)', padding:'10px 13px', fontWeight:700, cursor:'pointer' }}>Anular y devolver inventario</button></div></>}
             {detalle.anulada && <div style={{ marginTop:16, color:'#a33', fontWeight:700 }}>Esta aplicación está anulada.</div>}
           </div>
         </Modal>

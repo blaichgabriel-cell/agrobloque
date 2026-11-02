@@ -78,7 +78,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
       const [plantas, cosechas, tareas, productos, operarios, fumigaciones, fertilizaciones] = await Promise.all([
         ids.length ? read('plantas', supabase.from('plantaciones').select('id, bloque_id, fecha_siembra, cantidad_plantas, densidad_plantas_m2, notas, cultivos(nombre)').eq('activa', true).in('bloque_id', ids)) : [],
         canAccessModule(role, 'cosecha') && ids.length ? read('cosechas', supabase.from('cosechas').select('id, bloque_id, kg_total, fecha, calidad').eq('anulada', false).in('bloque_id', ids).gte('fecha', since).lte('fecha', today)) : [],
-        canAccessModule(role, 'agenda') ? read('tareas', supabase.from('tareas').select('id, bloque_id, descripcion, fecha_programada, completada, responsable, prioridad, anulada').eq('campo_id', campoActivo.id).eq('anulada', false).or('completada.eq.false,completada.is.null').order('fecha_programada', { ascending: true, nullsFirst: false })) : [],
+        canAccessModule(role, 'agenda') ? read('tareas', supabase.from('tareas').select('*').eq('campo_id', campoActivo.id).eq('anulada', false).or('completada.eq.false,completada.is.null').order('fecha_programada', { ascending: true, nullsFirst: false })) : [],
         canAccessModule(role, 'inventario') ? read('productos', supabase.from('productos').select('id, nombre, stock_actual, stock_minimo').eq('activo', true)) : [],
         !isGuest && canAccessModule(role, 'asistencia') ? read('operarios', supabase.from('operarios').select('id').eq('campo_id', campoActivo.id)) : [],
         canAccessModule(role, 'fumigaciones') ? read('fumigaciones', supabase.from('fumigaciones').select('id, fecha, tipo, operario, fumigacion_bloques(bloque_id), fumigacion_productos(productos(nombre))').eq('campo_id', campoActivo.id).eq('anulada', false).lte('fecha', today).order('fecha', { ascending: false }).limit(10)) : [],
@@ -98,7 +98,11 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
   const active = data.bloques.filter(block => block.activo).length
   const monthlyKg = data.cosechas.filter(item => item.fecha >= month).reduce((sum, item) => sum + Number(item.kg_total || 0), 0)
   const lowStock = data.productos.filter(p => Number(p.stock_actual) <= 0 || (Number(p.stock_minimo) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo)))
-  const dueTasks = data.tareas.filter(t => t.fecha_programada && t.fecha_programada <= today)
+  // Una tarea de hoy con hora programada recién vence cuando llega esa hora.
+  const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  const taskTime = t => t.hora_programada ? String(t.hora_programada).slice(0, 5) : ''
+  const isDue = t => Boolean(t.fecha_programada) && (t.fecha_programada < today || (t.fecha_programada === today && (!taskTime(t) || taskTime(t) <= nowTime)))
+  const dueTasks = data.tareas.filter(isDue)
   const shownBlocks = data.bloques.filter(block => {
     const crop = data.plantas.find(p => p.bloque_id === block.id)?.cultivos?.nombre || ''
     return `${block.codigo} ${crop}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()) && (filter === 'todos' || (filter === 'activos' ? block.activo : !block.activo))
@@ -122,7 +126,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
     return { label: day.toLocaleDateString('es-PY', { weekday: 'short', day: 'numeric' }), kg: data.cosechas.filter(c => c.fecha?.slice(0, 10) === key).reduce((s, c) => s + Number(c.kg_total || 0), 0) }
   })
   const notices = [
-    ...data.tareas.slice(0, 3).map(t => ({ id: `t${t.id}`, title: t.descripcion || 'Tarea pendiente', sub: shortDate(t.fecha_programada), icon: 'ti-calendar', path: '/agenda', overdue: t.fecha_programada && t.fecha_programada < today })),
+    ...[...dueTasks, ...data.tareas.filter(t => !isDue(t))].slice(0, 3).map(t => ({ id: `t${t.id}`, title: t.descripcion || 'Tarea pendiente', sub: `${t.fecha_programada === today ? 'Hoy' : shortDate(t.fecha_programada)}${taskTime(t) ? ` · ${taskTime(t)}` : ''}${t.fecha_programada < today ? ' · vencida' : isDue(t) ? ' · es hora' : ''}`, icon: isDue(t) ? 'ti-alarm' : 'ti-calendar', path: '/agenda', overdue: isDue(t) })),
     ...(lowStock.length ? [{ id: 'stock', title: 'Stock bajo de insumos', sub: `${lowStock.length} productos · Inventario general`, icon: 'ti-box', path: '/inventario' }] : []),
   ]
   const nombreCuenta = String(role?.nombre || '').trim()
