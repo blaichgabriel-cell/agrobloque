@@ -983,3 +983,32 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search
   .fin-month-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
   .bl-head-actions .ag-primary { padding:0 12px; }
 }
+
+/* --- Fase 4: auditoria tactil y movil ------------------------------------ */
+.app-button--icon { min-width:44px; min-height:44px; padding:0; }
+@media (pointer:coarse) {
+  button,[role='button'],[role='tab'],.ag-nav-link,select { min-height:44px; }
+  .ag-small-action,.app-button { min-width:44px; }
+}
+html,body { -webkit-tap-highlight-color:transparent; }
+.ag-app [data-app-scroll] { -webkit-overflow-scrolling:touch; }
+.bl-page-head,.ag-page-header { padding-top:env(safe-area-inset-top,0px); }
+@media (max-width:767px) {
+  .ag-topbar { top:calc(8px + env(safe-area-inset-top,0px)); }
+  button,a,[role='button'] { -webkit-user-select:none; user-select:none; }
+}
+/* break-ui: numeros largos, cabeceras y filtros desplazables */
+.ab-kpi>div,.kpi-card>div,.fin-card { min-width:0; }
+.ab-kpi strong,.kpi-card__value,.ag-metric strong { overflow-wrap:anywhere; line-height:1.1; }
+.ab-new-block,.bl-page-head .ag-primary { white-space:nowrap; }
+.ab-status-filters,.module-switch,.SegmentedControl { scrollbar-width:none; }
+.ab-status-filters::-webkit-scrollbar,.module-switch::-webkit-scrollbar,.SegmentedControl::-webkit-scrollbar { display:none; }
+.ab-card-crop,.nursery-lot-title strong,.inventory-group-head strong { overflow-wrap:anywhere; }
+.ab-card-code { max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media (max-width:767px) {
+  .ab-map-header,.bl-page-head { flex-wrap:wrap; }
+  .ab-map-header>div,.bl-page-title { flex:1 1 200px; }
+  .ab-kpi { padding:14px !important; gap:10px; }
+  .ab-kpi>i { width:34px; height:34px; flex-basis:34px; font-size:17px; }
+  .ab-kpi strong { font-size:clamp(16px,5vw,22px); }
+}

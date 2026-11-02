@@ -20,5 +20,7 @@
 ## 3. Estado de la implementación (notas del repo)
 - El sistema vive al final de `src/design.css` (sección "BIO-LUMINESCENT SPATIAL GLASS"): tokens `--bl-*` (capa 1), `--grad-*`, `--glass-*`, `--text-*` (capa 2) y `--mod-*` / `--tone-*` (capa 3). Los tokens heredados (`--forest-*`, `--slate-*`, `--sage-*`) se reasignan ahí.
 - Color por módulo: `data-module` en `.ag-app` (ruta activa, `MODULE_BY_PATH` en `src/App.js`) y `data-tone` en íconos y tarjetas (`bloques`, `agua`, `alerta`, `finanzas`, `neutral`).
-- Código muerto: `src/pages/Dashboard.js` y `DesktopDashboard.js` no se usan (el inicio es `Overview.js`). `index.css` de la raíz no es CSS.
+- Código muerto: `src/pages/Dashboard.js`, `DesktopDashboard.js` y `Mapa.js` no se usan (el inicio es `Overview.js` y `/mapa` es `MapaProfesional.js`). `index.css` de la raíz no es CSS.
 - Pendiente: `design-reference.css` no existe; quedan estilos inline en `src/pages/` por migrar a clases.
+- Clases compartidas para formularios y hojas: `bl-overlay`, `bl-sheet`, `bl-input`, `bl-label`, `bl-btn` (--primary, --ghost, --danger), `bl-btn-solid`, `bl-card`, `bl-icon-btn`.
+- Enteros (plantas, semillas, kilos): input de texto con `inputMode="numeric"`, `formatLocaleInteger` al salir y `parseLocaleInteger` al guardar (`src/lib/numbers.js`). Nunca `type="number"`.
