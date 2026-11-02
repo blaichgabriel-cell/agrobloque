@@ -37,7 +37,9 @@ const formatearCantidadConUnidad = (cantidad, unidad) => {
   return `${stock.cantidad} ${stock.unidad}`
 }
 
-const CATEGORIAS = [
+const PRODUCT_CATEGORIES = [
+  { key:'Semillas',      label:'Semillas',        icon:'ti-seeding',   color:'#3d7a35', bg:'#edf6e9' },
+  { key:'Plantines',     label:'Plantines',       icon:'ti-plant-2',   color:'#4f8c42', bg:'#edf6e9' },
   { key:'Fungicida',     label:'Fungicidas',      icon:'ti-shield',    color:'#e07b00', bg:'#fff3e8' },
   { key:'Insecticida',   label:'Insecticidas',    icon:'ti-bug',       color:'#c84040', bg:'#fff0f0' },
   { key:'Herbicida',     label:'Herbicidas',      icon:'ti-plant',     color:'#8a5a32', bg:'#f7f1ea' },
@@ -46,7 +48,15 @@ const CATEGORIAS = [
   { key:'Foliar',        label:'Foliares',         icon:'ti-leaf',      color:'#2d8a4e', bg:'#edf7ed' },
   { key:'Hidrosoluble',  label:'Hidrosolubles',    icon:'ti-flask',     color:"#124e38", bg:'#eeeeee' },
   { key:'Abono de base', label:'Abonos de base',  icon:'ti-garden-cart',color:"#124e38",bg:'#eeeeee' },
+  { key:'Herramientas',  label:'Herramientas',    icon:'ti-tool',      color:'#54616f', bg:'#eef1f4' },
   { key:'Otro',          label:'Otros',            icon:'ti-package',   color:'#555',   bg:'#f2f1ef' },
+]
+
+const INVENTORY_GROUPS = [
+  { key:'semillas', label:'Semillas y plantines', icon:'ti-seeding', color:'#3d7a35', bg:'#edf6e9', defaultCategory:'Semillas', matches:['semilla','plantin','plantín','bandeja'] },
+  { key:'nutricion', label:'Fertilizantes y nutrientes', icon:'ti-leaf', color:'#08795b', bg:'#e7f5ef', defaultCategory:'Fertilizante', matches:['fertilizante','foliar','hidrosoluble','abono de base','nutriente'] },
+  { key:'fitosanitarios', label:'Agroquímicos / fitosanitarios', icon:'ti-shield-check', color:'#a4650c', bg:'#fff3dc', defaultCategory:'Fungicida', matches:['fungicida','insecticida','herbicida','coadyuvante','agroquímico','fitosanitario'] },
+  { key:'insumos', label:'Insumos y herramientas', icon:'ti-tool', color:'#54616f', bg:'#eef1f4', defaultCategory:'Otro', matches:[] },
 ]
 
 function ModalConfirm({ mensaje, onConfirm, onCancel }) {
@@ -76,6 +86,7 @@ export default function Inventario() {
   const [saving, setSaving] = useState(false)
   const [sincronizandoAbonos, setSincronizandoAbonos] = useState(false)
   const [error, setError] = useState('')
+  const [busqueda, setBusqueda] = useState('')
 
   useEffect(() => { fetchProductos(); fetchCategorias(); fetchMovimientos() }, [])
 
@@ -180,7 +191,12 @@ export default function Inventario() {
 
   const getCatNombre = (p) => p.categorias_producto?.nombre || 'Otro'
 
-  const getProductosCat = (catKey) => productos.filter(p => getCatNombre(p) === catKey)
+  const getGrupoProducto = p => {
+    const nombre = getCatNombre(p).toLowerCase()
+    return INVENTORY_GROUPS.find(group => group.matches.some(match => nombre.includes(match)))?.key || 'insumos'
+  }
+
+  const getProductosCat = (catKey) => productos.filter(p => getGrupoProducto(p) === catKey)
 
   const getBajoStock = (catKey) => getProductosCat(catKey).filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
 
@@ -259,8 +275,8 @@ export default function Inventario() {
   const getStockPct = (p) => p.stock_minimo > 0 ? Math.min(100, Math.round((p.stock_actual / (p.stock_minimo * 3)) * 100)) : p.stock_actual > 0 ? 100 : 0
 
   const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
-  const catActInfo = CATEGORIAS.find(c => c.key === categoriaActiva)
-  const productosCat = categoriaActiva ? getProductosCat(categoriaActiva) : []
+  const catActInfo = INVENTORY_GROUPS.find(c => c.key === categoriaActiva)
+  const productosCat = categoriaActiva ? getProductosCat(categoriaActiva).filter(p => `${p.nombre} ${p.principio_activo || ''}`.toLowerCase().includes(busqueda.toLowerCase())) : []
   const bajoStockTotal = productos.filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
 
   return (
@@ -299,12 +315,12 @@ export default function Inventario() {
 
           <div className="ag-page-body" style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
             <div className="ag-record-grid" style={{ display:'grid', gridTemplateColumns: isDesktop ? 'repeat(3, minmax(240px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
-            {CATEGORIAS.map(cat => {
+            {INVENTORY_GROUPS.map(cat => {
               const prods = getProductosCat(cat.key)
               if (prods.length === 0) return null
               const badge = getBadge(cat.key)
               return (
-                <div className="ag-surface" key={cat.key} onClick={() => setCategoriaActiva(cat.key)}
+                <div className="ag-surface inventory-group-card" key={cat.key} onClick={() => { setBusqueda(''); setCategoriaActiva(cat.key) }}
                   style={{ background:'#fff', borderRadius:'var(--ag-radius)', padding:'14px 16px', marginBottom: isDesktop ? 0 : 8, display:'flex', alignItems:'center', gap:12, cursor:'pointer', boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                   <div style={{ width:44, height:44, borderRadius:'var(--ag-radius)', background:cat.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     <i className={`ti ${cat.icon}`} style={{ fontSize:20, color:cat.color }} aria-hidden="true"></i>
@@ -338,11 +354,12 @@ export default function Inventario() {
                 </div>
                 <div style={{ fontSize:22, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>{catActInfo.label}</div>
               </div>
-              <button aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:categoriaActiva, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
+              <button aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.defaultCategory, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
                 style={{ width:40, height:40, borderRadius:'var(--ag-radius)', background:"#124e38", border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
                 <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
               </button>
             </div>
+            <label className="inventory-search"><i className="ti ti-search" aria-hidden="true" /><input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder={`Buscar en ${catActInfo.label.toLowerCase()}…`} /></label>
           </div>
 
           <div className="ag-page-body" style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
@@ -416,7 +433,7 @@ export default function Inventario() {
 
             <div style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Categoría</div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
-              {CATEGORIAS.map(cat => (
+              {PRODUCT_CATEGORIES.map(cat => (
                 <button className="ag-small-action" key={cat.key} onClick={() => setForm(f => ({...f, categoria_nombre:cat.key}))}
                   style={{ padding:'7px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", fontSize:12, fontWeight:500, cursor:'pointer', background: form.categoria_nombre===cat.key ? '#212121' : '#fff', color: form.categoria_nombre===cat.key ? '#fff' : '#555' }}>
                   {cat.label}

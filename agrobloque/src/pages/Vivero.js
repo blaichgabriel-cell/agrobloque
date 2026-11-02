@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
+import { blurNumberInputOnWheel, parseLocaleInteger } from '../lib/numbers'
 
 const estados = ['sembrado', 'germinando', 'listo', 'trasplantado', 'descartado']
 const hoy = () => new Date().toISOString().split('T')[0]
-const num = (v) => Number(v) || 0
+const num = (v) => parseLocaleInteger(v, 0)
 const pct = (a, b) => b > 0 ? Math.round((num(a) / num(b)) * 100) : 0
 
 const formInicial = {
@@ -296,7 +297,7 @@ export default function Vivero() {
           cultivo_id: cultivoId,
           notas: detalle.variedad ? `Variedad: ${detalle.variedad}` : null,
           fecha_siembra: trasForm.fecha_real_trasplante,
-          cantidad_plantas: trasForm.cantidad_plantas ? Math.round(num(trasForm.cantidad_plantas)) : null,
+          cantidad_plantas: trasForm.cantidad_plantas ? num(trasForm.cantidad_plantas) : null,
           activa: true,
         })
         .select('id')
@@ -308,7 +309,7 @@ export default function Vivero() {
           cultivo_id:cultivoId,
           notas:detalle.variedad ? `Variedad: ${detalle.variedad}` : null,
           fecha_siembra:trasForm.fecha_real_trasplante,
-          densidad_plantas_m2:trasForm.cantidad_plantas || null,
+          densidad_plantas_m2:trasForm.cantidad_plantas ? num(trasForm.cantidad_plantas) : null,
           activa:true,
         }).select('id').single()
       }
@@ -572,7 +573,7 @@ function Field({ label, value, onChange, type = 'text', placeholder = '', textar
       {textarea ? (
         <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...inputStyle, minHeight:72, resize:'vertical' }} />
       ) : (
-        <input type={type} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
+        <input type={type} inputMode={type === 'number' ? 'numeric' : undefined} value={value || ''} onChange={e => onChange(e.target.value)} onWheel={type === 'number' ? blurNumberInputOnWheel : undefined} placeholder={placeholder} style={inputStyle} />
       )}
     </label>
   )

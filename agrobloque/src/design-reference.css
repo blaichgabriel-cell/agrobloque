@@ -199,3 +199,174 @@ button,a,input,select,textarea { -webkit-tap-highlight-color:transparent; }
   html { scroll-behavior:auto; }
   *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }
+
+/* Apple Glass 2026 — material funcional sobre un fondo ambiental */
+:root {
+  --glass-surface:rgba(255,255,255,.72);
+  --glass-surface-strong:rgba(255,255,255,.86);
+  --glass-control:rgba(255,255,255,.6);
+  --glass-edge:rgba(255,255,255,.85);
+  --glass-shadow:0 8px 30px rgba(15,41,30,.05),0 1px 2px rgba(0,0,0,.04);
+  --glass-blur:blur(20px) saturate(180%);
+  --cupertino-focus:0 0 0 3px rgba(22,101,52,.15);
+}
+
+html { background:#edf1ec; }
+body {
+  background:
+    radial-gradient(circle at 12% 8%,rgba(255,250,237,.96) 0,rgba(255,250,237,0) 34%),
+    radial-gradient(circle at 88% 12%,rgba(210,231,218,.78) 0,rgba(232,240,235,0) 38%),
+    radial-gradient(circle at 64% 88%,rgba(226,237,215,.72) 0,rgba(226,237,215,0) 42%),
+    linear-gradient(145deg,#f4efe6 0%,#e8f0eb 52%,#f6f1e8 100%);
+  background-attachment:fixed;
+}
+.ag-app,.ag-app [data-app-scroll],.ag-overview,.ag-page,.accounting-page { background:transparent !important; }
+.ag-page-header { background:transparent !important; }
+
+.ag-panel,.ag-surface,.kpi-card,.ab-kpi,.ab-block-card,.nursery-lot-card,.harvest-table,
+.accounting-page section,.inventory-group-card {
+  border:1px solid var(--glass-edge) !important;
+  background:var(--glass-surface) !important;
+  -webkit-backdrop-filter:var(--glass-blur);
+  backdrop-filter:var(--glass-blur);
+  box-shadow:var(--glass-shadow) !important;
+}
+.ag-panel,.accounting-page section { border-radius:var(--radius-lg) !important; }
+.ag-sidebar {
+  border:1px solid rgba(255,255,255,.62) !important;
+  background:rgba(16,39,28,.82) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+  backdrop-filter:blur(24px) saturate(160%);
+  box-shadow:0 18px 48px rgba(7,29,19,.17),inset 0 1px rgba(255,255,255,.12) !important;
+}
+.ag-topbar {
+  position:sticky;
+  top:12px;
+  z-index:30;
+  padding:8px;
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:22px;
+  background:rgba(255,255,255,.58);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  backdrop-filter:blur(20px) saturate(180%);
+  box-shadow:var(--glass-shadow);
+}
+.ag-search-link,.ag-top-field,.ag-icon-button,.ag-top-account {
+  border-color:rgba(255,255,255,.88) !important;
+  background:rgba(255,255,255,.58) !important;
+  box-shadow:inset 0 1px rgba(255,255,255,.7) !important;
+}
+
+.ag-page-title,h1,h2,h3,.ag-section-heading h2,.ab-map-header h1 { letter-spacing:-.02em !important; font-optical-sizing:auto; }
+.numeric-data,.kpi-card__value,.accounting-kpi,.ag-block-days,.nursery-datum strong,.ag-nav-badge,.ag-notification-badge { font-variant-numeric:tabular-nums lining-nums; }
+
+.ag-title-with-icon { display:flex !important; align-items:center !important; gap:14px !important; min-width:0; }
+.ag-title-with-icon>span {
+  position:static !important;
+  width:44px !important;
+  height:44px !important;
+  flex:0 0 44px !important;
+  display:grid !important;
+  place-items:center;
+  margin:0 !important;
+  border:1px solid rgba(255,255,255,.64) !important;
+  border-radius:14px !important;
+  background:linear-gradient(145deg,#24704d,#115237) !important;
+  box-shadow:inset 0 1px rgba(255,255,255,.24),0 8px 18px rgba(13,78,49,.14) !important;
+}
+.ag-title-with-icon>div { min-width:0; }
+.ag-title-with-icon h2,.ag-title-with-icon small { position:static !important; margin-left:0 !important; }
+.ag-activity-panel .ag-title-with-icon { gap:14px !important; }
+
+input,select,textarea,.ag-block-search,.inventory-search {
+  border:1px solid rgba(255,255,255,.86) !important;
+  background-color:var(--glass-control) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(14px) saturate(160%);
+  box-shadow:inset 0 1px rgba(255,255,255,.76),0 1px 2px rgba(0,0,0,.025);
+  transition:border-color 180ms var(--motion-ease),box-shadow 180ms var(--motion-ease),background-color 180ms var(--motion-ease);
+}
+select {
+  appearance:none;
+  padding-right:38px !important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2344544b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat:no-repeat !important;
+  background-position:right 12px center !important;
+}
+input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search:focus-within,.inventory-search:focus-within {
+  outline:none !important;
+  border-color:rgba(22,101,52,.34) !important;
+  box-shadow:var(--cupertino-focus),inset 0 1px rgba(255,255,255,.9) !important;
+  background-color:rgba(255,255,255,.84) !important;
+}
+
+.module-switch {
+  width:max-content;
+  max-width:100%;
+  display:flex;
+  gap:4px;
+  margin:0 0 18px;
+  padding:4px;
+  overflow-x:auto;
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:14px;
+  background:rgba(255,255,255,.48);
+  -webkit-backdrop-filter:blur(18px) saturate(170%);
+  backdrop-filter:blur(18px) saturate(170%);
+  box-shadow:var(--glass-shadow);
+}
+.module-switch button { min-height:40px; display:flex; align-items:center; gap:8px; padding:0 15px; border:0; border-radius:10px; background:transparent; color:#56655d; font-size:12px; font-weight:700; white-space:nowrap; cursor:pointer; }
+.module-switch button.active { background:rgba(255,255,255,.9); color:#104c34; box-shadow:0 1px 2px rgba(0,0,0,.06),0 5px 14px rgba(18,68,43,.08); }
+.nutrition-card { border-color:rgba(63,158,112,.28) !important; background:linear-gradient(145deg,rgba(235,250,242,.88),rgba(255,255,255,.7)) !important; color:#103d2c !important; }
+.phenology-pill { width:max-content; display:flex; align-items:center; gap:6px; margin-top:8px; padding:5px 9px; border-radius:999px; background:#e7f4ec; color:#176342; font-size:11px; font-weight:700; }
+.phytosanitary-page .timeline-entry { border-color:rgba(204,144,43,.2) !important; }
+
+.inventory-search { min-height:46px; display:flex; align-items:center; gap:9px; margin-top:16px; padding:0 14px; border-radius:13px; }
+.inventory-search input { min-width:0; flex:1; border:0 !important; background:transparent !important; box-shadow:none !important; }
+.inventory-group-card { min-height:84px; }
+
+.accounting-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.accounting-kpi { padding:16px; }
+.accounting-page section { padding:18px !important; }
+.accounting-page table { font-variant-numeric:tabular-nums; }
+
+.agenda-header-actions { display:flex; gap:8px; }
+.agenda-date-grid { display:grid; grid-template-columns:1.35fr 1fr; gap:10px; }
+.agenda-date-grid .ag-field-label { display:grid; gap:6px; margin-bottom:12px; color:#697970; font-size:12px; }
+.agenda-date-grid input { width:100%; min-height:46px; padding:10px 12px; border-radius:12px; }
+.agenda-task-time { display:flex; align-items:center; gap:6px; color:#5d6d63; font-size:12px; font-variant-numeric:tabular-nums; }
+
+.ag-icon-button { position:relative; }
+.ag-notification-badge { position:absolute; top:-4px; right:-4px; min-width:18px; height:18px; display:grid; place-items:center; padding:0 4px; border:2px solid rgba(255,255,255,.9); border-radius:999px; background:#c33d43; color:#fff; font-size:9px; font-weight:800; }
+.ag-count { display:inline-grid; place-items:center; min-width:22px; height:22px; margin-left:6px; padding:0 6px; border-radius:999px; background:#c33d43; color:#fff; font-size:10px; vertical-align:middle; }
+
+[data-sonner-toaster] { z-index:1000 !important; }
+[data-sonner-toast].ag-toast {
+  border:1px solid rgba(255,255,255,.88) !important;
+  border-radius:16px !important;
+  background:rgba(255,255,255,.82) !important;
+  -webkit-backdrop-filter:blur(20px) saturate(180%) !important;
+  backdrop-filter:blur(20px) saturate(180%) !important;
+  box-shadow:0 18px 48px rgba(15,41,30,.16),inset 0 1px rgba(255,255,255,.8) !important;
+}
+
+::selection { background:rgba(47,123,78,.22); color:#0b291d; }
+* { scrollbar-color:rgba(38,83,60,.3) transparent; scrollbar-width:thin; }
+
+@media (max-width:1099px) {
+  .ag-topbar { top:8px; }
+  .accounting-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:620px) {
+  .module-switch { width:100%; }
+  .module-switch button { flex:1; justify-content:center; }
+  .agenda-date-grid { grid-template-columns:1fr; gap:0; }
+  .accounting-kpis { grid-template-columns:1fr 1fr; }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .ag-panel,.ag-surface,.kpi-card,.ag-sidebar,.ag-topbar,.module-switch,[data-sonner-toast].ag-toast { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .ag-panel,.ag-surface,.kpi-card,.ag-topbar,.module-switch,[data-sonner-toast].ag-toast { background:#fff !important; }
+}
+@media (prefers-contrast:more) {
+  .ag-panel,.ag-surface,.kpi-card,.ag-topbar,.module-switch { border-color:rgba(10,35,22,.32) !important; background:rgba(255,255,255,.96) !important; }
+}

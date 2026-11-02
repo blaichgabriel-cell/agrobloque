@@ -5,6 +5,7 @@ import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { ajustarStockSeguro } from '../lib/inventory'
 import { incluirSeleccionados, productoCorrespondeAplicacion } from '../lib/productCategories'
+import { useNavigate } from 'react-router-dom'
 
 const TIPOS = {
   fumigacion: { label:'Fumigacion', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
@@ -118,6 +119,7 @@ const formatFechaLabel = (fecha) => {
 }
 
 export default function Fumigaciones() {
+  const navigate = useNavigate()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [fumigaciones, setFumigaciones] = useState([])
   const [campos, setCampos] = useState([])
@@ -427,10 +429,11 @@ export default function Fumigaciones() {
   const fechasOrdenadas = Object.keys(porFecha).sort((a, b) => b.localeCompare(a))
 
   return (
-    <div className="ag-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+    <div className="ag-page phytosanitary-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
       {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
       <div className="ag-page-header" style={{ background:"#f6f8f7", padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
+        <div className="module-switch" role="tablist" aria-label="Tipo de aplicación"><button type="button" role="tab" aria-selected="true" className="active"><i className="ti ti-shield-check" />Fitosanitario</button><button type="button" role="tab" aria-selected="false" onClick={() => navigate('/fertilizaciones')}><i className="ti ti-leaf" />Nutrición y fertirriego</button></div>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
           <div>
             <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Control fitosanitario</div>

@@ -98,6 +98,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
   const active = data.bloques.filter(block => block.activo).length
   const monthlyKg = data.cosechas.filter(item => item.fecha >= month).reduce((sum, item) => sum + Number(item.kg_total || 0), 0)
   const lowStock = data.productos.filter(p => Number(p.stock_actual) <= 0 || (Number(p.stock_minimo) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo)))
+  const dueTasks = data.tareas.filter(t => t.fecha_programada && t.fecha_programada <= today)
   const shownBlocks = data.bloques.filter(block => {
     const crop = data.plantas.find(p => p.bloque_id === block.id)?.cultivos?.nombre || ''
     return `${block.codigo} ${crop}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()) && (filter === 'todos' || (filter === 'activos' ? block.activo : !block.activo))
@@ -136,7 +137,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
     <header className="ag-topbar">
       <span className="ag-mobile-brand"><b><i className="ti ti-leaf" /></b> El Sembrador</span>
       {can('buscar') && <button className="ag-search-link" onClick={() => navigate('/buscar')}><i className="ti ti-search" /><span>Buscar bloques, cultivos, actividades…</span><kbd>Ctrl K</kbd></button>}
-      {can('alertas') && <button className="ag-icon-button" aria-label="Ver alertas" onClick={() => navigate('/alertas')}><i className="ti ti-bell" /></button>}
+      {can('alertas') && <button className="ag-icon-button" aria-label={`Ver alertas${dueTasks.length ? `, ${dueTasks.length} tareas requieren atención` : ''}`} onClick={() => navigate('/alertas')}><i className="ti ti-bell" />{dueTasks.length > 0 && <span className="ag-notification-badge">{dueTasks.length > 9 ? '9+' : dueTasks.length}</span>}</button>}
       <label className="ag-field-select ag-top-field"><span className="ag-sr-only">Campo activo</span><i className="ti ti-map-pin" /><select value={campoActivo?.id || ''} onChange={e => { const campo = campos.find(c => c.id === e.target.value); if (campo) { setCampoActivo(campo); localStorage.setItem('agrobloque-campo-activo', campo.id) } }}>{!campos.length && <option value="">Sin campos</option>}{campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
       <span className="ag-top-account" aria-label="Usuario actual">{(nombre || 'U').charAt(0).toUpperCase()}</span>
     </header>

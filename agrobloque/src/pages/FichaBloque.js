@@ -4,6 +4,7 @@ import { Skeleton, Modal } from '../components/UI'
 import QRCode from 'qrcode'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
+import { formatLocaleInteger, parseLocaleInteger } from '../lib/numbers'
 
 const diasDesde = (fecha) => {
   if (!fecha) return null
@@ -403,7 +404,7 @@ export default function FichaBloque() {
       bloque_id: id, cultivo_id: form.cultivo_id,
       notas: form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null,
       fecha_siembra: form.fecha_siembra,
-      cantidad_plantas: form.cantidad_plantas ? Math.round(Number(form.cantidad_plantas)) : null,
+      cantidad_plantas: form.cantidad_plantas ? parseLocaleInteger(form.cantidad_plantas, null) : null,
       activa: true
     })
     if (nueva && form.abonos_ids.length > 0) {
@@ -428,7 +429,7 @@ export default function FichaBloque() {
       cultivo_id: form.cultivo_id,
       notas: form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null,
       fecha_siembra: form.fecha_siembra,
-      cantidad_plantas: form.cantidad_plantas ? Math.round(Number(form.cantidad_plantas)) : null,
+      cantidad_plantas: form.cantidad_plantas ? parseLocaleInteger(form.cantidad_plantas, null) : null,
     }, plantacionActiva.id)
     await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionActiva.id)
     if (form.abonos_ids.length > 0) {
@@ -1347,7 +1348,7 @@ export default function FichaBloque() {
             <input style={inpStyle} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({...f, fecha_siembra:e.target.value}))}/></label>
 
             <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Cantidad de plantas
-            <input style={inpStyle} type="number" value={form.cantidad_plantas} onChange={e => setForm(f => ({...f, cantidad_plantas:e.target.value}))} placeholder="Ej: 1000"/></label>
+            <input style={inpStyle} type="text" inputMode="numeric" value={form.cantidad_plantas} onChange={e => setForm(f => ({...f, cantidad_plantas:e.target.value.replace(/[^0-9.,\s]/g, '')}))} onBlur={() => setForm(f => ({...f, cantidad_plantas:formatLocaleInteger(f.cantidad_plantas)}))} placeholder="Ej: 41.497" autoComplete="off"/></label>
 
             <div style={{ fontSize:12, color:"#697970", marginBottom:8 }}>Abonos de base</div>
             <div style={{ display:'flex', gap:7, marginBottom:10 }}>

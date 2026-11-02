@@ -93,7 +93,8 @@ export default function Contabilidad() {
   const resumenMes = useMemo(() => {
     const ventas = movimientosDelMes.filter(m => m.tipo === 'venta').reduce((s, m) => s + (Number(m.monto) || 0), 0)
     const compras = movimientosDelMes.filter(m => m.tipo !== 'venta').reduce((s, m) => s + (Number(m.monto) || 0), 0)
-    return { ventas, compras, balance: ventas - compras, total: movimientosDelMes.length }
+    const balance = ventas - compras
+    return { ventas, compras, balance, rentabilidad:ventas > 0 ? (balance / ventas) * 100 : 0, total: movimientosDelMes.length }
   }, [movimientosDelMes])
 
   const movimientosFiltrados = useMemo(() => {
@@ -215,7 +216,7 @@ export default function Contabilidad() {
   const categorias = form.tipo === 'venta' ? categoriasVenta : categoriasCompra
 
   return (
-    <div style={{ background:"#f6f8f7", minHeight:'100vh' }}>
+    <div className="accounting-page" style={{ background:"#f6f8f7", minHeight:'100vh' }}>
       <div style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
@@ -247,10 +248,11 @@ export default function Contabilidad() {
           </div>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:8 }}>
+        <div className="accounting-kpis">
           <TotalCard label={`Ventas ${meses[mesSeleccionado]}`} value={resumenMes.ventas} tone="green" />
           <TotalCard label={`Compras ${meses[mesSeleccionado]}`} value={resumenMes.compras} tone="red" />
           <TotalCard label={`Balance ${meses[mesSeleccionado]}`} value={resumenMes.balance} tone={resumenMes.balance >= 0 ? 'dark' : 'red'} />
+          <TotalCard label="Rentabilidad del mes" value={resumenMes.rentabilidad} tone={resumenMes.rentabilidad >= 0 ? 'green' : 'red'} percent />
         </div>
       </div>
 
@@ -380,13 +382,13 @@ export default function Contabilidad() {
   )
 }
 
-function TotalCard({ label, value, tone }) {
-  const bg = tone === 'dark' ? '#161a16' : '#fff'
-  const color = tone === 'dark' ? '#fff' : tone === 'red' ? '#c84040' : '#176a25'
+function TotalCard({ label, value, tone, percent = false }) {
+  const bg = '#fff'
+  const color = tone === 'red' ? '#a63d3d' : '#176a45'
   return (
-    <div style={{ background:bg, borderRadius:8, padding:'14px 13px', border:'1px solid #e8ece8' }}>
-      <div style={{ fontSize:10, color: tone === 'dark' ? 'rgba(255,255,255,0.58)' : '#8a918b', textTransform:'uppercase', marginBottom:6 }}>{label}</div>
-      <div style={{ fontSize:18, fontWeight:700, color, letterSpacing:-0.3 }}>Gs. {fmtGs(value)}</div>
+    <div className="kpi-card accounting-kpi" style={{ background:bg, color }}>
+      <div className="kpi-card__label">{label}</div>
+      <div className="kpi-card__value">{percent ? `${Number(value || 0).toLocaleString('es-PY', { maximumFractionDigits:1 })}%` : `Gs. ${fmtGs(value)}`}</div>
     </div>
   )
 }

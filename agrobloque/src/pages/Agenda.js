@@ -2,6 +2,7 @@ import { Modal, FormHeading, Notice, Skeleton } from '../components/UI'
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { toast } from 'sonner'
 
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
@@ -34,7 +35,7 @@ export default function Agenda() {
   const [filtro, setFiltro] = useState('pendientes')
   const [modal, setModal] = useState(false)
   const [confirmar, setConfirmar] = useState(null)
-  const vacio = { id:'', tipo:'fumigacion', descripcion:'', fecha_programada:'', campo_id:'', bloque_id:'', prioridad:'normal', responsable:'' }
+  const vacio = { id:'', tipo:'fumigacion', descripcion:'', fecha_programada:'', hora_programada:'', campo_id:'', bloque_id:'', prioridad:'normal', responsable:'' }
   const [form, setForm] = useState(vacio)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -65,15 +66,21 @@ export default function Agenda() {
   const guardarTarea = async () => {
     if (!form.descripcion || !form.fecha_programada) return setError('Completá la descripción y la fecha.')
     setSaving(true); setError(''); setSuccess('')
-    const payload = { tipo:form.tipo, descripcion:form.descripcion, fecha_programada:form.fecha_programada, campo_id:form.campo_id||null, bloque_id:form.bloque_id||null, prioridad:form.prioridad || 'normal', responsable:form.responsable || null, updated_at:new Date().toISOString() }
-    const { error } = form.id ? await supabase.from('tareas').update(payload).eq('id', form.id) : await supabase.from('tareas').insert({ ...payload, completada:false })
+    const payload = { tipo:form.tipo, descripcion:form.descripcion.trim(), fecha_programada:form.fecha_programada, hora_programada:form.hora_programada || null, campo_id:form.campo_id||null, bloque_id:form.bloque_id||null, prioridad:form.prioridad || 'normal', responsable:form.responsable || null, updated_at:new Date().toISOString() }
+    const ejecutar = datos => form.id ? supabase.from('tareas').update(datos).eq('id', form.id) : supabase.from('tareas').insert({ ...datos, completada:false })
+    let result = await ejecutar(payload)
+    if (result.error && `${result.error.message || ''}`.toLowerCase().includes('hora_programada')) {
+      const { hora_programada, ...compatible } = payload
+      result = await ejecutar(compatible)
+    }
+    const { error } = result
     if (error) { setError('No se pudo guardar la tarea. Revisá la conexión e intentá nuevamente.'); setSaving(false); return }
-    await fetchTareas(); setSaving(false); setModal(false); setSuccess('Tarea guardada correctamente.')
+    await fetchTareas(); setSaving(false); setModal(false); setSuccess('Tarea guardada correctamente.'); toast.success('Tarea guardada', { description:`${payload.descripcion} · ${payload.fecha_programada}${payload.hora_programada ? ` ${payload.hora_programada}` : ''}` })
     setForm(vacio)
   }
 
   const editarTarea = async (t) => {
-    setForm({ id:t.id, tipo:t.tipo || 'otro', descripcion:t.descripcion || '', fecha_programada:t.fecha_programada || '', campo_id:t.campo_id || '', bloque_id:t.bloque_id || '', prioridad:t.prioridad || 'normal', responsable:t.responsable || '' })
+    setForm({ id:t.id, tipo:t.tipo || 'otro', descripcion:t.descripcion || '', fecha_programada:t.fecha_programada || '', hora_programada:t.hora_programada ? String(t.hora_programada).slice(0, 5) : '', campo_id:t.campo_id || '', bloque_id:t.bloque_id || '', prioridad:t.prioridad || 'normal', responsable:t.responsable || '' })
     if (t.campo_id) await fetchBloques(t.campo_id)
     setModal(true)
   }
@@ -85,7 +92,15 @@ export default function Agenda() {
 
   const completarTarea = async (id) => {
     await supabase.from('tareas').update({ completada:true, fecha_completada:hoy }).eq('id', id)
+    toast.success('Tarea completada')
     fetchTareas()
+  }
+
+  const activarNotificaciones = async () => {
+    if (!('Notification' in window)) return toast.error('Este navegador no admite notificaciones.')
+    const permission = await Notification.requestPermission()
+    if (permission === 'granted') toast.success('Notificaciones activadas', { description:'Te avisaremos mientras AgroBloque esté abierto.' })
+    else toast.info('Notificaciones no activadas', { description:'Podés habilitarlas luego desde los permisos del navegador.' })
   }
 
   const eliminarTarea = (id) => {
@@ -124,9 +139,7 @@ export default function Agenda() {
             <div style={{ fontSize:12, color:"#697970", marginBottom:4 }}>Planificación</div>
             <div className="ag-page-title" style={{ fontSize:24, fontWeight:700, color:"#182c25", letterSpacing:-.5 }}>Agenda</div>
           </div>
-          <button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}>
-            <i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i>
-          </button>
+          <div className="agenda-header-actions"><button className="app-button app-button--secondary app-button--icon" aria-label="Activar notificaciones" onClick={activarNotificaciones}><i className="ti ti-bell" aria-hidden="true" /></button><button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i></button></div>
         </div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:4 }}>
           {[['pendientes','Pendientes'],['hoy','Hoy'],['completadas','Completadas'],['todas','Todas']].map(([k,v]) => (
@@ -157,7 +170,7 @@ export default function Agenda() {
                 {badge && <div style={{ fontSize:12, fontWeight:700, padding:'3px 8px', borderRadius:'var(--ag-radius)', background:badge.bg, color:badge.color, flexShrink:0 }}>{badge.label}</div>}
               </div>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:10, borderTop:"1px solid #f6f8f7" }}>
-                <div style={{ fontSize:12, color:'#6b796d' }}>{t.fecha_programada}</div>
+                <div className="agenda-task-time"><i className="ti ti-calendar-event" aria-hidden="true" />{t.fecha_programada}{t.hora_programada ? ` · ${String(t.hora_programada).slice(0, 5)}` : ''}</div>
                 <div style={{ display:'flex', gap:6 }}>
                   <button className="ag-small-action" onClick={() => editarTarea(t)} style={{ padding:'5px 12px', borderRadius:'var(--ag-radius)', border:'1px solid #d9ded9', background:'transparent', fontSize:12, color:'#343a36', cursor:'pointer' }}>Editar</button>
                   {!t.completada && !t.anulada && (
@@ -190,8 +203,7 @@ export default function Agenda() {
             </select></label>
             <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Descripción *
             <textarea style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, minHeight:80, resize:'vertical' }} value={form.descripcion} onChange={e => setForm(f => ({...f, descripcion:e.target.value}))} placeholder="Ej: Fumigar bloques A-2 y A-3"/></label>
-            <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Fecha *
-            <input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} type="date" value={form.fecha_programada} onChange={e => setForm(f => ({...f, fecha_programada:e.target.value}))}/></label>
+            <div className="agenda-date-grid"><label className="ag-field-label">Fecha objetivo *<input type="date" value={form.fecha_programada} onChange={e => setForm(f => ({...f, fecha_programada:e.target.value}))}/></label><label className="ag-field-label">Hora objetivo<input type="time" value={form.hora_programada || ''} onChange={e => setForm(f => ({...f, hora_programada:e.target.value}))}/></label></div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}><div><label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Prioridad<select style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, marginBottom:12 }} value={form.prioridad || 'normal'} onChange={e => setForm(f => ({...f, prioridad:e.target.value}))}><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option></select></label></div><div><label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Responsable<input style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, marginBottom:12, boxSizing:'border-box' }} value={form.responsable || ''} onChange={e => setForm(f => ({...f, responsable:e.target.value}))} placeholder="Opcional" /></label></div></div>
             <label className="ag-field-label" style={{ fontSize:12, color:"#697970", marginBottom:6 }}>Campo (opcional)
             <select style={{ width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }} value={form.campo_id} onChange={e => { setForm(f => ({...f, campo_id:e.target.value, bloque_id:''})); if(e.target.value) fetchBloques(e.target.value) }}>

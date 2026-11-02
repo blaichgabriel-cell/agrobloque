@@ -4,13 +4,17 @@ import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
 import { ajustarStockSeguro } from '../lib/inventory'
 import { esProductoFertilizacion, incluirSeleccionados } from '../lib/productCategories'
+import { useNavigate } from 'react-router-dom'
 
 const UNIDADES = ['kg', 'g', 'cc', 'ml', 'L', 'unidad']
 const hoy = () => new Date().toISOString().split('T')[0]
 const fmtNum = (n) => Number(n || 0).toLocaleString('es-PY')
 const fmtFecha = (fecha) => fecha ? new Date(`${fecha}T00:00:00`).toLocaleDateString('es-PY') : '-'
 const MARCA_FIN_SEMANA = /\s*\[\[semana_fin:(\d{4}-\d{2}-\d{2})\]\]\s*/
-const notasVisibles = (notas = '') => String(notas || '').replace(MARCA_FIN_SEMANA, '').trim()
+const MARCA_ETAPA = /\s*\[\[etapa:([^\]]+)\]\]\s*/
+const etapaDeNotas = (notas = '') => String(notas || '').match(MARCA_ETAPA)?.[1] || ''
+const notasVisibles = (notas = '') => String(notas || '').replace(MARCA_FIN_SEMANA, '').replace(MARCA_ETAPA, '').trim()
+const notasConEtapa = (notas = '', etapa = '') => `${notasVisibles(notas)}${etapa ? ` [[etapa:${etapa.trim()}]]` : ''}`.trim() || null
 const finSemanaRegistro = (registro) => {
   const marcada = String(registro?.notas || '').match(MARCA_FIN_SEMANA)?.[1]
   return marcada || (registro?.plan_id && registro?.fecha ? sumarDias(registro.fecha, 6) : '')
@@ -214,6 +218,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} style={inputBase} /></label>
           <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} style={inputBase} /></label>
           {form.plan_id && <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700 }}>Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} style={inputBase}><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
+          <label style={{ display:'grid', gap:6, fontSize:12, color:'#687068', fontWeight:700, gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Etapa fenológica<input value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" style={inputBase} /></label>
           <div style={{ display:'grid', alignContent:'center', background:"#edf7f1", border:'1px solid #d6e8d4', borderRadius:'var(--ag-radius)', padding:'10px 12px' }}><span style={{ fontSize:12, color:'#69706a' }}>VOLUMEN TOTAL</span><strong style={{ fontSize:18, color:"#08603f" }}>{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>
           <div style={{ display:'grid', gap:8, gridColumn:'1 / -1' }}>
             <div style={{ fontSize:12, color:'#687068', fontWeight:700 }}>Bloques</div>
@@ -240,7 +245,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           </div>
         </div>
 
-        <FormHeading number="02" detail="Cantidades y unidades por solución">Preparación de soluciones</FormHeading>
+        <FormHeading number="02" detail="Fórmula NPK, nutriente y dosis por tanque o planta">Preparación nutricional</FormHeading>
         <div style={{ fontSize:12, fontWeight:700, color:"#08603f", margin:'2px 0 9px' }}>Las cantidades siguientes son por cada tanque.</div>
         <div style={{ display:'grid', gap:12 }}>
           {form.soluciones.map((sol, si) => (
@@ -301,6 +306,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 }
 
 export default function Fertilizaciones({ campoActivo }) {
+  const navigate = useNavigate()
   const width = useViewportWidth()
   const isMobile = width < 1100
   const [bloques, setBloques] = useState([])
@@ -329,6 +335,7 @@ export default function Fertilizaciones({ campoActivo }) {
     tanques_cantidad: '1',
     bloques_ids: [],
     notas: '',
+    etapa_fenologica: '',
     soluciones: [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
   })
 
@@ -433,6 +440,7 @@ export default function Fertilizaciones({ campoActivo }) {
       tanques_cantidad: '1',
       bloques_ids: bloques.length === 1 ? [bloques[0].id] : [],
       notas: '',
+      etapa_fenologica: '',
       soluciones: [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
     })
     setModal(true)
@@ -454,7 +462,7 @@ export default function Fertilizaciones({ campoActivo }) {
       plan_id:grupo.items[0]?.plan_id || '', estado:grupo.estado || 'completa', fecha:grupo.fecha || hoy(),
       fecha_fin:finSemanaRegistro(grupo.items[0]) || planVinculado?.fecha_fin || sumarDias(grupo.fecha || hoy(), 6), nombre_plan:planVinculado?.nombre || '', frecuencia:'semanal', dia_semana:'1',
       tanque_litros:String(grupo.tanque_litros || 200), tanques_cantidad:String(grupo.tanques_cantidad || 1),
-      bloques_ids:grupo.items.map(i => i.bloque_id), notas:notasVisibles(grupo.notas || ''),
+      bloques_ids:grupo.items.map(i => i.bloque_id), notas:notasVisibles(grupo.notas || ''), etapa_fenologica:etapaDeNotas(grupo.notas || ''),
       soluciones:soluciones.length ? soluciones : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
     })
     setDetalle(null)
@@ -482,7 +490,7 @@ export default function Fertilizaciones({ campoActivo }) {
       tipo:'plan', edit_plan_id:plan.id, plan_id:'', estado:'completa', fecha:plan.fecha_inicio || hoy(),
       fecha_fin:plan.fecha_fin || sumarDias(hoy(), 6), nombre_plan:plan.nombre || '', frecuencia:plan.frecuencia || 'semanal',
       dia_semana:String(plan.dia_semana ?? 1), tanque_litros:String(plan.tanque_litros || 200),
-      tanques_cantidad:String(plan.tanques_cantidad || 1), bloques_ids:[plan.bloque_id], notas:plan.notas || '',
+      tanques_cantidad:String(plan.tanques_cantidad || 1), bloques_ids:[plan.bloque_id], notas:notasVisibles(plan.notas || ''), etapa_fenologica:etapaDeNotas(plan.notas || ''),
       soluciones:Array.isArray(plan.soluciones) && plan.soluciones.length ? plan.soluciones : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
     })
     setModal(true)
@@ -589,7 +597,7 @@ export default function Fertilizaciones({ campoActivo }) {
           tanques_cantidad: tanquesCantidad,
           litros_preparados: tanqueLitros * tanquesCantidad,
           soluciones: solucionesLimpias.map(sol => ({ ...sol, productos:sol.productos.map(({ unidad_stock, ...p }) => p) })),
-          notas: form.notas || null,
+          notas: notasConEtapa(form.notas, form.etapa_fenologica),
         }
       })
       let planResult
@@ -623,7 +631,7 @@ export default function Fertilizaciones({ campoActivo }) {
           }
         }),
       }))
-      const notasSemana = `${[form.nombre_plan?.trim() && `Semana: ${form.nombre_plan.trim()}`, form.notas].filter(Boolean).join(' · ')} [[semana_fin:${form.fecha_fin}]]`.trim()
+      const notasSemana = `${[form.nombre_plan?.trim() && `Semana: ${form.nombre_plan.trim()}`, notasConEtapa(form.notas, form.etapa_fenologica)].filter(Boolean).join(' · ')} [[semana_fin:${form.fecha_fin}]]`.trim()
       const aplicacionesSemana = bloquesDestino.map(bloque_id => {
         const bloque = bloques.find(b => b.id === bloque_id)
         return {
@@ -721,7 +729,7 @@ export default function Fertilizaciones({ campoActivo }) {
         tanques_cantidad: form.estado === 'suspendida' ? 0 : tanquesCantidad,
         estado: form.estado || 'completa',
         dosis_alcance: solucionesLimpias.some(sol => sol.productos.some(p => p.modo === 'por_planta')) ? 'por_planta' : 'por_tanque',
-        notas: form.es_semanal ? `${notasVisibles(form.notas)} [[semana_fin:${form.fecha_fin || sumarDias(form.fecha, 6)}]]`.trim() : (form.notas || null),
+        notas: form.es_semanal ? `${notasConEtapa(form.notas, form.etapa_fenologica) || ''} [[semana_fin:${form.fecha_fin || sumarDias(form.fecha, 6)}]]`.trim() : notasConEtapa(form.notas, form.etapa_fenologica),
         soluciones: solucionesPorBloque(bloque),
       }
     })
@@ -780,7 +788,7 @@ export default function Fertilizaciones({ campoActivo }) {
           tanques_cantidad:tanquesCantidad,
           litros_preparados:tanqueLitros * tanquesCantidad,
           soluciones:solucionesLimpias.map(sol => ({ ...sol, productos:sol.productos.map(({ unidad_stock, ...p }) => p) })),
-          notas:form.notas || null,
+          notas:notasConEtapa(form.notas, form.etapa_fenologica),
           activo:false,
           updated_at:new Date().toISOString(),
         }).eq('id', planId)
@@ -825,7 +833,7 @@ export default function Fertilizaciones({ campoActivo }) {
       fecha:fechaInicio, fecha_fin:sumarDias(fechaInicio, 6), nombre_plan:plan.nombre || '', frecuencia:'semanal',
       dia_semana:String(plan.dia_semana ?? 1), tanque_litros:String(plan.tanque_litros || 200),
       tanques_cantidad:String(plan.tanques_cantidad || 1), bloques_ids:(relacionados.length ? relacionados : [plan]).map(item => item.bloque_id),
-      notas:plan.notas || '', soluciones:Array.isArray(plan.soluciones) && plan.soluciones.length ? plan.soluciones : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
+      notas:notasVisibles(plan.notas || ''), etapa_fenologica:etapaDeNotas(plan.notas || ''), soluciones:Array.isArray(plan.soluciones) && plan.soluciones.length ? plan.soluciones : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
     })
     setModal(true)
   }
@@ -844,6 +852,7 @@ export default function Fertilizaciones({ campoActivo }) {
   return (
     <div className="ag-page" style={{ padding:'38px clamp(16px, 4vw, 48px)', minHeight:'100vh', background:"#f6f8f7" }}>
       <div style={{ maxWidth:1220, margin:'0 auto' }}>
+        <div className="module-switch" role="tablist" aria-label="Tipo de aplicación"><button type="button" role="tab" aria-selected="false" onClick={() => navigate('/fumigaciones')}><i className="ti ti-shield-check" />Fitosanitario</button><button type="button" role="tab" aria-selected="true" className="active"><i className="ti ti-leaf" />Nutrición y fertirriego</button></div>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:18, marginBottom:20 }}>
           <div>
             <div style={{ color:'#8a948b', fontSize:13 }}>Aplicaciones reales</div>
@@ -860,7 +869,7 @@ export default function Fertilizaciones({ campoActivo }) {
         {!schemaPlanesDisponible && <div style={{ background:'#fff7e8', border:'1px solid #efd49f', color:'#80580e', borderRadius:'var(--ag-radius)', padding:'12px 14px', marginBottom:12, fontSize:13 }}>Los planes diarios y semanales se habilitaran despues de ejecutar el SQL preparado para Supabase.</div>}
 
         <div style={{ display:'grid', gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap:12, marginBottom:18 }}>
-          <div style={{ ...card, padding:18, background:'#1f1f1f', color:'#fff' }}>
+          <div className="nutrition-card" style={{ ...card, padding:18 }}>
             <div style={{ fontSize:12, color:'#b9beb7' }}>APLICACIONES</div>
             <div style={{ fontSize:28, fontWeight:700 }}>{fmtNum(registrosActivos.length)}</div>
             <div style={{ fontSize:12, color:'#cdd2cc' }}>registros guardados</div>
@@ -912,6 +921,7 @@ export default function Fertilizaciones({ campoActivo }) {
               <div>
                 <div style={{ fontSize:13, lineHeight:1.45 }}>{resumenSoluciones(g.soluciones) || 'Sin productos detallados'}</div>
                 {g.tanque_litros && <div style={{ marginTop:7, color:g.anulada ? '#a33' : "#08603f", fontSize:12, fontWeight:700 }}>{g.anulada ? 'ANULADA · ' : ''}{g.tanques_cantidad || 1} tanque{Number(g.tanques_cantidad || 1) === 1 ? '' : 's'} × {fmtNum(g.tanque_litros)} L = {fmtNum(Number(g.tanque_litros) * Number(g.tanques_cantidad || 1))} L · {g.estado || 'completa'}</div>}
+                {etapaDeNotas(g.notas) && <div className="phenology-pill"><i className="ti ti-seeding" />{etapaDeNotas(g.notas)}</div>}
                 {notasVisibles(g.notas) && <div style={{ marginTop:8, color:'#687068', fontSize:13 }}>{notasVisibles(g.notas)}</div>}
               </div>
             </div>

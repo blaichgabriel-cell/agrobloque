@@ -29,6 +29,8 @@ import Historial from './pages/Historial'
 import NavBar from './components/NavBar'
 import { canAccessModule, filterTabsByRole, normalizeRole } from './lib/permissions'
 import { textoErrorProfesional } from './lib/errors'
+import { Toaster } from 'sonner'
+import TaskNotifications from './components/TaskNotifications'
 
 export function LogoHS({ size = 48 }) {
   return (
@@ -240,6 +242,8 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
 
   return (
     <div className="ag-app" style={{ display: 'flex', minHeight: '100dvh', background: dashboardDesktop ? '#f6f8f5' : '#f2f1ef' }}>
+      <Toaster position="top-right" richColors closeButton theme="light" mobileOffset={12} toastOptions={{ className:'ag-toast' }} />
+      <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
       <ConnectionStatus />
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
