@@ -490,7 +490,7 @@ export default function Reportes({ campoActivo, isGuest = false }) {
             </div>
           )}
         </>}
-        <NotasPanel modulo="reportes" titulo="Blog de notas de reportes" />
+        <NotasPanel modulo="reportes" titulo="Bloc de notas de reportes" />
       </div>
     </div>
   )

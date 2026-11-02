@@ -141,9 +141,9 @@ export default function Agenda() {
           </div>
           <div className="agenda-header-actions"><button className="app-button app-button--secondary app-button--icon" aria-label="Activar notificaciones" onClick={activarNotificaciones}><i className="ti ti-bell" aria-hidden="true" /></button><button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus" style={{ color:'#fff', fontSize:20 }} aria-hidden="true"></i></button></div>
         </div>
-        <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:4 }}>
+        <div className="SegmentedControl agenda-segments" role="tablist" aria-label="Filtrar tareas">
           {[['pendientes','Pendientes'],['hoy','Hoy'],['completadas','Completadas'],['todas','Todas']].map(([k,v]) => (
-            <button className="ag-small-action" key={k} onClick={() => setFiltro(k)} style={{ padding:'7px 14px', borderRadius:'var(--ag-radius)', border:'none', fontSize:12, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', background: filtro===k ? '#212121' : '#e8e6e2', color: filtro===k ? '#fff' : '#9a9a9a' }}>{v}</button>
+            <button className={filtro === k ? 'active' : ''} role="tab" aria-selected={filtro === k} key={k} onClick={() => setFiltro(k)}>{v}</button>
           ))}
         </div>
       </div>

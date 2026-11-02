@@ -44,6 +44,7 @@ export default function Contabilidad() {
   const [filtro, setFiltro] = useState('todos')
   const [anho, setAnho] = useState(anhoActual())
   const [mesSeleccionado, setMesSeleccionado] = useState(mesActual())
+  const [bloquesActivos, setBloquesActivos] = useState(0)
 
   useEffect(() => { fetchMovimientos() }, [anho])
 
@@ -51,13 +52,18 @@ export default function Contabilidad() {
     setLoading(true)
     const desde = `${anho}-01-01`
     const hasta = `${anho}-12-31`
-    const { data, error } = await supabase
-      .from('contabilidad_movimientos')
-      .select('*')
-      .gte('fecha', desde)
-      .lte('fecha', hasta)
-      .order('fecha', { ascending: false })
-      .order('created_at', { ascending: false })
+    const [movimientosResult, bloquesResult] = await Promise.all([
+      supabase
+        .from('contabilidad_movimientos')
+        .select('*')
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase.from('bloques').select('id', { count:'exact', head:true }).eq('activo', true),
+    ])
+    const { data, error } = movimientosResult
+    setBloquesActivos(Number(bloquesResult.count) || 0)
 
     if (error) {
       setError('Falta ejecutar el SQL de contabilidad en Supabase.')
@@ -94,8 +100,15 @@ export default function Contabilidad() {
     const ventas = movimientosDelMes.filter(m => m.tipo === 'venta').reduce((s, m) => s + (Number(m.monto) || 0), 0)
     const compras = movimientosDelMes.filter(m => m.tipo !== 'venta').reduce((s, m) => s + (Number(m.monto) || 0), 0)
     const balance = ventas - compras
-    return { ventas, compras, balance, rentabilidad:ventas > 0 ? (balance / ventas) * 100 : 0, total: movimientosDelMes.length }
-  }, [movimientosDelMes])
+    return {
+      ventas,
+      compras,
+      balance,
+      margen: ventas > 0 ? (balance / ventas) * 100 : 0,
+      costoPorBloque: bloquesActivos > 0 ? compras / bloquesActivos : 0,
+      total: movimientosDelMes.length,
+    }
+  }, [movimientosDelMes, bloquesActivos])
 
   const movimientosFiltrados = useMemo(() => {
     if (filtro === 'todos') return movimientosDelMes
@@ -251,8 +264,8 @@ export default function Contabilidad() {
         <div className="accounting-kpis">
           <TotalCard label={`Ventas ${meses[mesSeleccionado]}`} value={resumenMes.ventas} tone="green" />
           <TotalCard label={`Compras ${meses[mesSeleccionado]}`} value={resumenMes.compras} tone="red" />
-          <TotalCard label={`Balance ${meses[mesSeleccionado]}`} value={resumenMes.balance} tone={resumenMes.balance >= 0 ? 'dark' : 'red'} />
-          <TotalCard label="Rentabilidad del mes" value={resumenMes.rentabilidad} tone={resumenMes.rentabilidad >= 0 ? 'green' : 'red'} percent />
+          <TotalCard label={`Balance ${meses[mesSeleccionado]}`} value={resumenMes.balance} tone={resumenMes.balance >= 0 ? 'dark' : 'red'} detail={`Margen ${resumenMes.margen.toLocaleString('es-PY', { maximumFractionDigits:1 })}%`} />
+          <TotalCard label="Costo por bloque activo" value={resumenMes.costoPorBloque} tone="dark" detail={bloquesActivos ? `${bloquesActivos} bloques activos` : 'Sin bloques activos'} />
         </div>
       </div>
 
@@ -328,9 +341,9 @@ export default function Contabilidad() {
               <div style={eyebrow}>Compras y ventas</div>
               <h2 style={sectionTitle}>Historial de {meses[mesSeleccionado]} {anho}</h2>
             </div>
-            <div style={segmented}>
+            <div className="SegmentedControl" role="tablist" aria-label="Filtrar movimientos">
               {['todos', 'compra', 'venta'].map(k => (
-                <button key={k} onClick={() => setFiltro(k)} style={filtro === k ? segActive : segBtn}>
+                <button className={filtro === k ? 'active' : ''} role="tab" aria-selected={filtro === k} key={k} onClick={() => setFiltro(k)}>
                   {k === 'todos' ? 'Todos' : k === 'compra' ? 'Compras' : 'Ventas'}
                 </button>
               ))}
@@ -346,7 +359,7 @@ export default function Contabilidad() {
           ))}
         </section>
 
-        <NotasPanel modulo="contabilidad" titulo="Blog de notas de contabilidad" />
+        <NotasPanel modulo="contabilidad" titulo="Bloc de notas de contabilidad" />
       </div>
 
       {modal && (
@@ -382,13 +395,14 @@ export default function Contabilidad() {
   )
 }
 
-function TotalCard({ label, value, tone, percent = false }) {
+function TotalCard({ label, value, tone, detail = '' }) {
   const bg = '#fff'
   const color = tone === 'red' ? '#a63d3d' : '#176a45'
   return (
     <div className="kpi-card accounting-kpi" style={{ background:bg, color }}>
       <div className="kpi-card__label">{label}</div>
-      <div className="kpi-card__value">{percent ? `${Number(value || 0).toLocaleString('es-PY', { maximumFractionDigits:1 })}%` : `Gs. ${fmtGs(value)}`}</div>
+      <div className="kpi-card__value">Gs. {fmtGs(value)}</div>
+      {detail && <small className="kpi-card__detail">{detail}</small>}
     </div>
   )
 }
@@ -549,9 +563,6 @@ const monthBtnActive = {
   boxShadow:'none',
 }
 
-const segmented = { display:'flex', gap:4, background:'#eef0ee', padding:4, borderRadius:8 }
-const segBtn = { border:'none', borderRadius:9, background:'transparent', padding:'7px 9px', fontSize:11, fontWeight:700, color:'#737a74', cursor:'pointer' }
-const segActive = { ...segBtn, background:'#fff', color:'#111611', boxShadow:'none' }
 
 const iconPill = {
   width:42,

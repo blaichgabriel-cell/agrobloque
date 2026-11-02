@@ -404,7 +404,7 @@ export default function Vivero() {
           </div>
         )}
 
-        <NotasPanel modulo="vivero" titulo="Blog de notas del vivero" />
+        <NotasPanel modulo="vivero" titulo="Bloc de notas del vivero" />
       </div>
 
       {detalle && (

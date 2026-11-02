@@ -161,7 +161,7 @@ export default function Mapa({ campoActivo }) {
             })}
           </div>
         )}
-        <NotasPanel modulo="mapa" titulo="Blog de notas de mapa" />
+        <NotasPanel modulo="mapa" titulo="Bloc de notas de mapa" />
       </div>
 
       {modalBloque && (

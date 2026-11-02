@@ -447,7 +447,7 @@ export default function Asistencia() {
             style={{ width:'100%', minHeight:92, resize:'vertical', border:"1px solid #e2e9e5", borderRadius:'var(--ag-radius)', background:'#f8f8f6', padding:12, fontSize:13, color:"#182c25", lineHeight:1.45 }}
           />
         </div>
-        <NotasPanel modulo="asistencia" titulo="Blog de notas de asistencia" />
+        <NotasPanel modulo="asistencia" titulo="Bloc de notas de asistencia" />
       </div>
 
       {modalPersonal && (

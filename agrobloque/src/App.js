@@ -241,30 +241,15 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   }, [])
 
   return (
-    <div className="ag-app" style={{ display: 'flex', minHeight: '100dvh', background: dashboardDesktop ? '#f6f8f5' : '#f2f1ef' }}>
+    <div className={`ag-app ${dashboardDesktop ? 'is-dashboard' : ''}`}>
       <Toaster position="top-right" richColors closeButton theme="light" mobileOffset={12} toastOptions={{ className:'ag-toast' }} />
       <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
       <ConnectionStatus />
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
-      <div data-app-scroll style={{
-        flex: 1,
-        marginLeft: isDesktop ? SIDEBAR_WIDTH : 0,
-        height: '100dvh',
-        minHeight: '100dvh',
-        background: dashboardDesktop ? '#f6f8f5' : '#f2f1ef',
-        paddingBottom: isDesktop ? 0 : 64,
-        maxWidth: isDesktop ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100%',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        scrollBehavior: 'auto',
-      }}>
-        <div style={{
-          maxWidth: dashboardDesktop ? 'none' : (isDesktop ? 1440 : 1080),
-          width: '100%',
-          margin: dashboardDesktop ? 0 : '0 auto',
-          minHeight: '100dvh',
-        }}>
+      <div data-app-scroll style={{ marginLeft:isDesktop ? SIDEBAR_WIDTH : 0, maxWidth:isDesktop ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100%' }}>
+        <div className="ag-content-shell" style={{ maxWidth:dashboardDesktop ? 'none' : (isDesktop ? 1440 : 1080) }}>
+          <div className="ag-route-stage" key={location.pathname}>
           <Routes>
             <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role}/>}/>
             <Route path="/buscar" element={<ProtectedRoute role={role} moduleKey="buscar"><Buscador/></ProtectedRoute>}/>
@@ -291,6 +276,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
             <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role}/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
+          </div>
         </div>
       </div>
 

@@ -428,7 +428,7 @@ export default function Cosecha() {
         })}
           </div>
         )}
-        <NotasPanel modulo="cosecha" titulo="Blog de notas de cosecha" />
+        <NotasPanel modulo="cosecha" titulo="Bloc de notas de cosecha" />
       </div>
 
       {modal && (

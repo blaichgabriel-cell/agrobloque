@@ -576,7 +576,7 @@ export default function Ventas() {
             })}
           </div>
         )}
-        <NotasPanel modulo="ventas" titulo="Blog de notas de ventas" />
+        <NotasPanel modulo="ventas" titulo="Bloc de notas de ventas" />
       </div>
 
       {modal && (

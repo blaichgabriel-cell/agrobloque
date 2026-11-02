@@ -508,7 +508,7 @@ export default function Fumigaciones() {
             })}
           </div>
         ))}
-        <NotasPanel modulo="fumigaciones" titulo="Blog de notas de fumigaciones" />
+        <NotasPanel modulo="fumigaciones" titulo="Bloc de notas de fumigaciones" />
       </div>
 
       {/* Detalle */}

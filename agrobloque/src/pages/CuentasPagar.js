@@ -335,7 +335,7 @@ export default function CuentasPagar() {
           ))}
         </div>
 
-        <NotasPanel modulo="cuentas_pagar" titulo="Blog de notas de cuentas a pagar" />
+        <NotasPanel modulo="cuentas_pagar" titulo="Bloc de notas de cuentas a pagar" />
       </div>
 
       {modalProveedor && (

@@ -234,7 +234,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
           })}
         </div>
         </div>
-        <NotasPanel modulo="costos" titulo="Blog de notas de costos" />
+        <NotasPanel modulo="costos" titulo="Bloc de notas de costos" />
       </div>
 
       {modal && (

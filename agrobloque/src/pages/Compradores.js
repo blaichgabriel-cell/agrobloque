@@ -178,7 +178,7 @@ export default function Compradores() {
         })}
           </div>
         )}
-        <NotasPanel modulo="compradores" titulo="Blog de notas de compradores" />
+        <NotasPanel modulo="compradores" titulo="Bloc de notas de compradores" />
       </div>
 
       {modal && (
