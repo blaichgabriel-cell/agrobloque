@@ -324,7 +324,7 @@ export default function DesktopDashboard({ campoActivo, setCampoActivo, isGuest 
         <div>
           <h1 style={{ margin: 0, fontSize: 32, letterSpacing: -1.2, lineHeight: 1.1 }}>Hola, {nombreUsuario}</h1>
           <div style={{ color: '#656b66', fontSize: 15, marginTop: 8 }}>
-            Resumen general de {campoActivo?.nombre || 'El Sembrador'}
+            Resumen general de {campoActivo?.nombre || 'AgroBloque'}
           </div>
         </div>
 

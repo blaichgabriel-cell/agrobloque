@@ -985,3 +985,12 @@
 .ui-268af1.ui-268af1.ui-268af1{padding:10px 6px;border-radius:14px;border:1px solid #e8e6e2;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
 .ui-7bf93e.ui-7bf93e.ui-7bf93e{position:fixed;bottom:0;left:0;right:0;display:flex;border-top:0.5px solid #e8e6e2;background:#f9f8f6;padding-bottom:env(safe-area-inset-bottom,0px);z-index:50}
 .ui-6bceb6.ui-6bceb6.ui-6bceb6{width:4px;height:4px;border-radius:50%;background:var(--grad-capsule)}
+
+/* Identidad multiempresa */
+.ag-brand>div:last-child,.ag-mobile-brand { min-width:0; }
+.ag-brand strong { max-width:142px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ag-brand-mark.has-logo { overflow:hidden; background:#fff; border:1px solid rgba(15,41,30,.1); }
+.ag-brand-mark.has-logo img { width:100%; height:100%; object-fit:cover; }
+.ag-mobile-brand { max-width:min(54vw,240px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.organization-color-field { display:grid; grid-template-columns:48px minmax(0,1fr); gap:10px; align-items:center; margin-bottom:12px; }
+.organization-color-field input[type='color'] { width:48px; height:44px; padding:4px; border:1px solid rgba(15,41,30,.14); border-radius:12px; background:#fff; cursor:pointer; }

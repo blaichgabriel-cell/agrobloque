@@ -50,6 +50,8 @@ export const DEFAULT_ROLE = {
   acciones: {},
   canWrite: false,
   label: ROLE_LABELS.lectura,
+  organizacionId: null,
+  organizacion: null,
 }
 
 const normalizeActions = (acciones, permisos, rol) => {
@@ -66,14 +68,6 @@ const normalizeActions = (acciones, permisos, rol) => {
 
 export const normalizeRole = (roleRow, fallbackEmail = '') => {
   const email = (fallbackEmail || roleRow?.email || '').trim().toLowerCase()
-  // Compatibilidad con las dos cuentas existentes del propietario.
-  // Toni siempre recibe el perfil operativo, incluso sin una fila de roles.
-  if (email === 'agrobloquetoni@gmail.com') {
-    roleRow = { ...roleRow, email, nombre: 'Toni', rol: 'operador',
-      permisos: [...ALL_KEYS.filter(key => key !== 'asistencia'), 'configuracion'] }
-  } else if (!roleRow && email) {
-    roleRow = { email, rol: 'admin', activo: true }
-  }
   const habilitado = Boolean(roleRow && roleRow.activo !== false && ['admin', 'operador', 'lectura'].includes(roleRow.rol))
   const rol = habilitado ? roleRow.rol : 'lectura'
   const base = rol === 'admin' ? ALL_KEYS : rol === 'operador' ? OPERADOR_KEYS : LECTURA_KEYS
@@ -90,6 +84,8 @@ export const normalizeRole = (roleRow, fallbackEmail = '') => {
     acciones,
     canWrite: Object.values(acciones).some(lista => lista.includes('create') || lista.includes('edit') || lista.includes('delete')),
     label: ROLE_LABELS[rol] || ROLE_LABELS.admin,
+    organizacionId: roleRow?.organizacion_id || null,
+    organizacion: roleRow?.organizacion || null,
   }
 }
 
@@ -104,9 +100,9 @@ export const canAccessModule = (role, moduleKey) => {
   if (!role) return false
   // Contabilidad contiene informacion sensible: durante la prueba solo se
   // habilita para administradores y la cuenta propietaria.
-  if (moduleKey === 'contabilidad' && role.rol !== 'admin' && role.email !== 'agrobloquetoni@gmail.com') return false
+  if (moduleKey === 'contabilidad' && role.rol !== 'admin') return false
   if (moduleKey === 'asistencia' && role.rol !== 'admin') return false
-  if (moduleKey === 'configuracion' && role.rol !== 'admin' && role.email !== 'agrobloquetoni@gmail.com') return false
+  if (moduleKey === 'configuracion' && role.rol !== 'admin') return false
   if (!moduleKey || moduleKey === 'inicio') return true
   if (!role) return true
   if (role.rol === 'admin') return true

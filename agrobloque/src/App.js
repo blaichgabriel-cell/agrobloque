@@ -32,6 +32,8 @@ import { textoErrorProfesional } from './lib/errors'
 import { Toaster } from 'sonner'
 import TaskNotifications from './components/TaskNotifications'
 
+const DEFAULT_ORGANIZATION = { id:null, nombre:'AgroBloque', logo_url:null, color_primario:'#0F3923' }
+
 export function LogoHS({ size = 48 }) {
   return (
     <div className="ui-a1c952" style={{ width: size, height: size, borderRadius: Math.round(size * 0.28), fontSize: Math.round(size * 0.46) }}>
@@ -41,11 +43,11 @@ export function LogoHS({ size = 48 }) {
 }
 
 function StartupScreen() {
-  return <div className="ag-startup" role="status" aria-live="polite" aria-label="Abriendo El Sembrador">
+  return <div className="ag-startup" role="status" aria-live="polite" aria-label="Abriendo AgroBloque">
     <div className="ag-startup-glow" aria-hidden="true" />
     <div className="ag-startup-brand">
       <span className="ag-startup-mark"><i className="ti ti-leaf" /></span>
-      <div><strong>El Sembrador</strong><small>Gestión del campo</small></div>
+      <div><strong>AgroBloque</strong><small>Gestión agrícola</small></div>
     </div>
     <div className="ag-startup-progress" aria-hidden="true"><span /></div>
     <p>Preparando tu campo…</p>
@@ -182,7 +184,7 @@ function ConnectionStatus() {
   return <div className="ag-offline"><i className="ti ti-wifi-off" /> Sin conexión. No cierres la aplicación hasta recuperar internet.</div>
 }
 
-function DesktopSidebar({ isGuest = false, role }) {
+function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZATION }) {
   const tabs = filterTabsByRole(allTabs, role, isGuest)
   const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
   const [alertCount, setAlertCount] = useState(0)
@@ -202,7 +204,7 @@ function DesktopSidebar({ isGuest = false, role }) {
     { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
   ]
   return <aside className="ag-sidebar" aria-label="Navegación principal">
-    <div className="ag-brand"><span className="ag-brand-mark" aria-hidden="true"><i className="ti ti-leaf" /></span><div><strong>El Sembrador</strong><small>Gestión del campo</small></div></div>
+    <div className="ag-brand"><span className={`ag-brand-mark ${organization.logo_url ? 'has-logo' : ''}`} style={!organization.logo_url ? { background:organization.color_primario || '#0F3923' } : undefined} aria-hidden="true">{organization.logo_url ? <img src={organization.logo_url} alt="" /> : <i className="ti ti-leaf" />}</span><div><strong title={organization.nombre}>{organization.nombre || 'AgroBloque'}</strong><small>AgroBloque</small></div></div>
     <nav className="ag-sidebar-nav">{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone={toneFromPath(tab.path)} aria-hidden="true"><MenuIcon icon={tab.icon} size={17} color="currentColor" /></span><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
@@ -220,7 +222,7 @@ const MODULE_BY_PATH = {
 const moduleFromPath = pathname => MODULE_BY_PATH['/' + (pathname.split('/')[1] || '')] || 'bloques'
 const toneFromPath = path => MODULE_BY_PATH[path] || 'neutral'
 
-function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
+function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organization, setOrganization }) {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1100)
   const location = useLocation()
   const dashboardDesktop = isDesktop && location.pathname === '/'
@@ -236,13 +238,13 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
       <Toaster position="top-right" richColors closeButton theme="light" mobileOffset={12} toastOptions={{ className:'ag-toast' }} />
       <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
       <ConnectionStatus />
-      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
+      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} />}
 
       <div data-app-scroll>
         <div className="ag-content-shell">
           <div className="ag-route-stage" key={location.pathname}>
           <Routes>
-            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role}/>}/>
+            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} organization={organization}/>}/>
             <Route path="/buscar" element={<ProtectedRoute role={role} moduleKey="buscar"><Buscador/></ProtectedRoute>}/>
             <Route path="/alertas" element={<ProtectedRoute role={role} moduleKey="alertas"><Alertas/></ProtectedRoute>}/>
             <Route path="/historial" element={<ProtectedRoute role={role} moduleKey="historial"><Historial campoActivo={campoActivo}/></ProtectedRoute>}/>
@@ -264,7 +266,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
             <Route path="/reportes" element={<ProtectedRoute role={role} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
             <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="auditoria"><Auditoria/></ProtectedRoute>}/>
-            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role}/></ProtectedRoute>}/>
+            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role} organization={organization} onOrganizationUpdate={setOrganization}/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
           </div>
@@ -283,6 +285,7 @@ export default function App() {
   const [dataError, setDataError] = useState('')
   const [role, setRole] = useState(normalizeRole(null))
   const [roleUserId, setRoleUserId] = useState(null)
+  const [organization, setOrganization] = useState(DEFAULT_ORGANIZATION)
   const guestPath = Boolean(guestToken)
   const passwordSetupPath = authAction === 'set-password'
 
@@ -292,6 +295,11 @@ export default function App() {
       window.history.scrollRestoration = 'manual'
     }
   }, [])
+
+  useEffect(() => {
+    const company = String(organization?.nombre || '').trim()
+    document.title = company && company !== 'AgroBloque' ? `${company} · AgroBloque` : 'AgroBloque'
+  }, [organization?.nombre])
 
   const limpiarSesionRota = async (mensaje) => {
     setDataError(mensaje)
@@ -351,15 +359,31 @@ export default function App() {
     let cancelled = false
     setRole(normalizeRole(null))
     setRoleUserId(null)
+    setOrganization(DEFAULT_ORGANIZATION)
     if (!session?.user?.id || guestPath) return
     const cargarPermisos = async () => {
       const email = session.user.email || ''
       const { data, error } = await supabase.from('app_user_roles').select('*').eq('email', email.toLowerCase()).maybeSingle()
       if (cancelled) return
+      let organizationData = null
+      const organizationRequest = data?.organizacion_id
+        ? supabase.from('organizaciones').select('id,nombre,slug,logo_url,telefono,email,color_primario,activo').eq('id', data.organizacion_id).maybeSingle()
+        : supabase.from('organizaciones').select('id').limit(1)
+      const { data: orgResult, error: organizationError } = await organizationRequest
+      const tenantModeEnabled = !organizationError
+      if (!error && data?.organizacion_id) {
+        const org = Array.isArray(orgResult) ? orgResult[0] : orgResult
+        organizationData = org || null
+      }
+      if (cancelled) return
       const perfilNombre = session.user.user_metadata?.nombre || session.user.user_metadata?.full_name || session.user.user_metadata?.name || ''
-      const filaRol = data ? { ...data, nombre:perfilNombre || data.nombre } : null
+      const legacyRole = !tenantModeEnabled && !data
+        ? { email, nombre:perfilNombre, rol:email.toLowerCase() === 'agrobloquetoni@gmail.com' ? 'operador' : 'admin', activo:true }
+        : null
+      const filaRol = data ? { ...data, nombre:perfilNombre || data.nombre, organizacion:organizationData } : legacyRole
       const rolNormalizado = normalizeRole(error ? null : filaRol, email)
       setRole(perfilNombre ? { ...rolNormalizado, nombre:perfilNombre } : rolNormalizado)
+      setOrganization(organizationData || DEFAULT_ORGANIZATION)
       setRoleUserId(session.user.id)
     }
     cargarPermisos()
@@ -466,7 +490,7 @@ export default function App() {
           <p>Tu cuenta todavía no tiene acceso habilitado. Pedí al administrador que configure tus permisos.</p>
           <button onClick={() => forceLocalSignOut()}>Cerrar sesión</button>
         </div>
-      ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} />}
+      ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} organization={organization} setOrganization={setOrganization} />}
     </BrowserRouter>
   )
 }

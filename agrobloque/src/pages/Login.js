@@ -13,7 +13,7 @@ function AgroBloqueLogo({ compact = false, light = false }) {
         <path d="M21 51c8-5.1 17.3-6.6 27.8-4.2" stroke="#76b947" strokeWidth="2.4" strokeLinecap="round" opacity=".78" />
       </svg>
       <div>
-        <div className="login-brand-name">El Sembrador</div>
+        <div className="login-brand-name">AgroBloque</div>
         {!compact && <div className="login-brand-tag">Gestión agrícola simple y completa</div>}
       </div>
     </div>
@@ -90,7 +90,7 @@ export default function Login({ mode = 'login', session = null }) {
 
   return (
     <main className="agrobloque-login">
-      <section className="login-hero" aria-label="El Sembrador">
+      <section className="login-hero" aria-label="AgroBloque">
         <AgroBloqueLogo light />
         <div className="login-copy">
           <h1>Tu campo, <span>siempre bajo control.</span></h1>
@@ -127,7 +127,7 @@ export default function Login({ mode = 'login', session = null }) {
           {!isPasswordSetup && <button className="login-reset" type="button" onClick={handlePasswordReset} disabled={loading}>Primera vez o ¿olvidaste tu contraseña?</button>}
           <div className="login-help">{isPasswordSetup ? 'Tu contraseña es privada y el administrador no puede verla.' : 'Acceso exclusivo para usuarios autorizados.'}</div>
           <div className="login-security"><i className="ti ti-shield-lock" />Conexión segura y datos protegidos</div>
-          <div className="login-footer">El Sembrador · Gestión agrícola simple y completa</div>
+          <div className="login-footer">AgroBloque · Gestión agrícola simple y completa</div>
         </div>
       </section>
     </main>

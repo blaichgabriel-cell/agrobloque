@@ -1,5 +1,5 @@
+import React, { useState, useEffect, useRef } from 'react'
 import { Modal } from '../components/UI'
-﻿import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createProvisioningAuthClient, forceLocalSignOut, supabase } from '../lib/supabase'
 import { descargarJson } from '../lib/exporters'
@@ -138,7 +138,7 @@ const comprimirFotoPerfil = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
-export default function Configuracion({ role }) {
+export default function Configuracion({ role, organization = { nombre:'AgroBloque' }, onOrganizationUpdate }) {
   const navigate = useNavigate()
   const fotoRef = useRef()
   const [modal, setModal] = useState(null)
@@ -157,6 +157,7 @@ export default function Configuracion({ role }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [ultimoBackup, setUltimoBackup] = useState('')
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const esAdmin = role?.rol === 'admin'
 
   useEffect(() => {
@@ -178,6 +179,10 @@ export default function Configuracion({ role }) {
       email: user.email,
       foto: typeof window !== 'undefined' ? (window.localStorage.getItem(FOTO_PERFIL_KEY) || '') : ''
     })
+    if (user) {
+      const { data: platformAdmin } = await supabase.rpc('is_platform_admin')
+      setIsPlatformAdmin(platformAdmin === true)
+    }
     if (!esAdmin) return
     const [{ data: c }, { data: cu }, { data: op }, { data: ab }, { data: comp }, { data: bl }, { data: inv }, { data: rolData }] = await Promise.all([
       supabase.from('campos').select('*').order('nombre'),
@@ -290,6 +295,70 @@ export default function Configuracion({ role }) {
       setSuccess('Contrasena actualizada correctamente')
       setForm({})
     } catch (e) { setError('Error: ' + e.message) }
+    setLoading(false)
+  }
+
+  const guardarEmpresa = async () => {
+    const nombre = String(form.nombre || '').trim()
+    if (nombre.length < 2) { setError('El nombre de la empresa debe tener al menos 2 caracteres'); return }
+    if (!organization?.id) {
+      setError('Primero ejecutá el SQL multiempresa-organizaciones-2026-11-02.sql en Supabase.')
+      return
+    }
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const payload = {
+        nombre,
+        telefono: String(form.telefono || '').trim() || null,
+        email: String(form.email || '').trim().toLowerCase() || null,
+        logo_url: String(form.logo_url || '').trim() || null,
+        color_primario: /^#[0-9a-f]{6}$/i.test(String(form.color_primario || '')) ? form.color_primario : '#0F3923',
+      }
+      const { data, error } = await supabase.from('organizaciones').update(payload).eq('id', organization.id).select('*').single()
+      if (error) throw error
+      onOrganizationUpdate?.(data)
+      setForm(data)
+      setSuccess('Identidad de la empresa actualizada')
+    } catch (e) { setError('No se pudo guardar la empresa: ' + e.message) }
+    setLoading(false)
+  }
+
+  const crearEmpresaCliente = async () => {
+    const nombre = String(form.nombre || '').trim()
+    const ownerEmail = String(form.owner_email || '').trim().toLowerCase()
+    if (nombre.length < 2) { setError('Ingresá el nombre de la empresa'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) { setError('Ingresá un email válido para el dueño'); return }
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const { data, error } = await supabase.rpc('provision_organization', {
+        p_nombre: nombre,
+        p_owner_email: ownerEmail,
+      })
+      if (error) throw error
+      if (!data?.ok) throw new Error(data?.error || 'No se pudo crear la empresa')
+
+      const authClient = createProvisioningAuthClient()
+      const redirectTo = `${window.location.origin}/?auth_action=set-password`
+      const { data: signupData, error: signupError } = await authClient.auth.signUp({
+        email: ownerEmail,
+        password: crearContrasenaTemporal(),
+        options: {
+          emailRedirectTo: redirectTo,
+          data: { nombre, rol: 'admin', organizacion_id: data.organizacion_id },
+        },
+      })
+      const yaRegistrado = /already|registered|exists|existe|registrad/i.test(signupError?.message || '') || signupData?.user?.identities?.length === 0
+      if (signupError && !yaRegistrado) throw signupError
+      if (yaRegistrado) {
+        const { error: resetError } = await authClient.auth.resetPasswordForEmail(ownerEmail, { redirectTo })
+        if (resetError) throw resetError
+      }
+
+      setForm({ nombre:'', owner_email:'' })
+      setSuccess(`Empresa creada. Enviamos la invitación a ${ownerEmail}.`)
+    } catch (e) {
+      setError('No se pudo crear la empresa: ' + (e.message || 'verificá la migración multiempresa'))
+    }
     setLoading(false)
   }
 
@@ -441,6 +510,7 @@ export default function Configuracion({ role }) {
         acciones: form.acciones && typeof form.acciones === 'object' ? form.acciones : null,
         activo: form.activo !== false,
         notas: form.notas || null,
+        ...(organization?.id ? { organizacion_id: organization.id } : {}),
       }
       const debeInvitar = !form.id || form.invitar_real
       const { error: roleError } = form.id
@@ -495,6 +565,7 @@ export default function Configuracion({ role }) {
 
   const menuItems = [
     { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email }) },
+    { icon:'ti-building-community', title:'Empresa', sub: organization?.nombre || 'Configurar identidad', color:'#176a45', bg:'#edf6ec', action: () => abrir('empresa', { ...organization }) },
     { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', action: () => abrir('campos') },
     { icon:'ti-seeding', title:'Cultivos', sub: cultivos.length + ' cultivos', color:"#124e38", bg:'#eeeeee', action: () => abrir('cultivos') },
     { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
@@ -506,7 +577,8 @@ export default function Configuracion({ role }) {
     { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:"#08603f", bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:true }) },
     { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:"#124e38", bg:'#eeeeee', action: () => navigate('/auditoria') },
     { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Ultimo: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
-  ].filter((_, index) => esAdmin || index === 0)
+    { icon:'ti-building-plus', title:'Nueva empresa', sub:'Dar de alta un nuevo cliente', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => abrir('nuevaEmpresa', { nombre:'', owner_email:'' }) },
+  ].filter((item, index) => (esAdmin || index === 0) && (!item.platformOnly || isPlatformAdmin))
 
   return (
     <div className="ag-page ui-c1c124">
@@ -597,6 +669,52 @@ export default function Configuracion({ role }) {
 
             {error && <div className="ui-e136cb">{error}</div>}
             {success && <div className="ui-c90154">{success}</div>}
+
+            {modal === 'empresa' && <>
+              <div className="ui-c7b1b6">Identidad de la empresa</div>
+              <div className="ui-7d5827">Este nombre aparece en la barra lateral y en el acceso de invitados. AgroBloque sigue siendo la marca del producto.</div>
+              <div className="ag-surface ui-e446b2">
+                <label className="ag-field-label ui-486335">Nombre comercial
+                  <input style={inp} value={form.nombre || ''} maxLength="100" onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Horticultura San José" />
+                </label>
+                <label className="ag-field-label ui-486335">Email de la empresa
+                  <input style={inp} type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email:e.target.value }))} placeholder="contacto@empresa.com" />
+                </label>
+                <label className="ag-field-label ui-486335">Teléfono
+                  <input style={inp} type="tel" value={form.telefono || ''} onChange={e => setForm(f => ({ ...f, telefono:e.target.value }))} placeholder="+595 ..." />
+                </label>
+                <label className="ag-field-label ui-486335">URL del logotipo (opcional)
+                  <input style={inp} type="url" value={form.logo_url || ''} onChange={e => setForm(f => ({ ...f, logo_url:e.target.value }))} placeholder="https://..." />
+                </label>
+                <label className="ag-field-label ui-486335">Color principal
+                  <div className="organization-color-field">
+                    <input type="color" value={form.color_primario || '#0F3923'} onChange={e => setForm(f => ({ ...f, color_primario:e.target.value }))} aria-label="Color principal de la empresa" />
+                    <input style={{ ...inp, marginBottom:0 }} value={form.color_primario || '#0F3923'} onChange={e => setForm(f => ({ ...f, color_primario:e.target.value }))} pattern="#[0-9A-Fa-f]{6}" placeholder="#0F3923" />
+                  </div>
+                </label>
+                <button style={saveBtn('#176a25')} onClick={guardarEmpresa} disabled={loading}>{loading ? 'Guardando...' : 'Guardar empresa'}</button>
+              </div>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
+
+            {modal === 'nuevaEmpresa' && <>
+              <div className="ui-c7b1b6">Nueva empresa cliente</div>
+              <div className="ui-7d5827">Crea un espacio de datos aislado y envía al dueño un correo para definir su contraseña.</div>
+              <div className="ag-surface ui-e446b2">
+                <label className="ag-field-label ui-486335">Nombre comercial
+                  <input style={inp} value={form.nombre || ''} maxLength="100" onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Horticultura San José" />
+                </label>
+                <label className="ag-field-label ui-486335">Email del dueño
+                  <input style={inp} type="email" value={form.owner_email || ''} onChange={e => setForm(f => ({ ...f, owner_email:e.target.value }))} placeholder="dueno@empresa.com" />
+                </label>
+                <div className="ui-ca26cd" role="note">
+                  <i className="ti ti-shield-lock ui-6f7515" aria-hidden="true" />
+                  <span>La nueva empresa no podrá ver datos de otros clientes. Su dueño será administrador únicamente de ese espacio.</span>
+                </div>
+                <button style={saveBtn('#176a25')} onClick={crearEmpresaCliente} disabled={loading}>{loading ? 'Creando...' : 'Crear empresa y enviar invitación'}</button>
+              </div>
+              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+            </>}
 
             {modal === 'invitados' && <>
               <div className="ui-8decf3">Invitados de solo lectura</div>

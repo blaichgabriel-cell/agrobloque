@@ -19,7 +19,7 @@ const relativeDate = (value, today) => {
 }
 const empty = { bloques: [], plantas: [], cosechas: [], tareas: [], productos: [], operarios: [], fumigaciones: [], fertilizaciones: [] }
 
-export default function Overview({ campoActivo, setCampoActivo, isGuest = false, role }) {
+export default function Overview({ campoActivo, setCampoActivo, isGuest = false, role, organization }) {
   const navigate = useNavigate()
   const [campos, setCampos] = useState([])
   const [data, setData] = useState(empty)
@@ -139,7 +139,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
 
   return <div className="ag-overview">
     <header className="ag-topbar">
-      <span className="ag-mobile-brand"><b><i className="ti ti-leaf" /></b> El Sembrador</span>
+      <span className="ag-mobile-brand" title={organization?.nombre || 'AgroBloque'}><b><i className="ti ti-leaf" /></b> {organization?.nombre || 'AgroBloque'}</span>
       {can('buscar') && <button className="ag-search-link" onClick={() => navigate('/buscar')}><i className="ti ti-search" /><span>Buscar bloques, cultivos, actividades…</span><kbd>Ctrl K</kbd></button>}
       {can('alertas') && <button className={`ag-icon-button ${dueTasks.length ? 'has-alerts' : ''}`} aria-label={`Ver alertas${dueTasks.length ? `, ${dueTasks.length} tareas requieren atención` : ''}`} onClick={() => navigate('/alertas')}><i className="ti ti-bell" />{dueTasks.length > 0 && <span className="ag-notification-badge">{dueTasks.length > 9 ? '9+' : dueTasks.length}</span>}</button>}
       <label className="ag-field-select ag-top-field"><span className="ag-sr-only">Campo activo</span><i className="ti ti-map-pin" /><select value={campoActivo?.id || ''} onChange={e => { const campo = campos.find(c => c.id === e.target.value); if (campo) { setCampoActivo(campo); localStorage.setItem('agrobloque-campo-activo', campo.id) } }}>{!campos.length && <option value="">Sin campos</option>}{campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select><span className="ag-live" title="Conectado a la base de datos"><span className="ag-live-dot" aria-hidden="true" />En línea</span></label>

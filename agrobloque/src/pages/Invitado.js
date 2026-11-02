@@ -46,7 +46,7 @@ export default function Invitado() {
   const sectionColumns = compact ? '1fr' : '1fr 1fr'
 
   return (
-    <Shell campo={data?.campo?.nombre} onRefresh={cargar} compact={compact}>
+    <Shell company={data?.organizacion?.nombre} campo={data?.campo?.nombre} onRefresh={cargar} compact={compact}>
       <div className="ui-fa705b" style={{ gridTemplateColumns:statsColumns, gap:compact ? 10 : 12 }}>
         <Card title="Bloques activos" value={stats.bloques_activos} sub={`de ${stats.bloques_total || 0} totales`} />
         <Card title="Plantaciones" value={stats.plantaciones_activas} sub="activas" />
@@ -113,14 +113,14 @@ function useWindowWidth() {
   return width
 }
 
-function Shell({ children, campo, onRefresh, compact = false }) {
+function Shell({ children, company = 'AgroBloque', campo, onRefresh, compact = false }) {
   return (
     <div className="ui-bc1e10" style={{ padding:compact ? '14px 12px 28px' : 20 }}>
       <div className="ui-6d87e9">
         <header className="ui-477274">
           <div className="ui-3f9f96">
             <div className="ui-d1cf09">AgroBloque - Invitado</div>
-            <h1 className="ui-227a72" style={{ fontSize:compact ? 25 : 30 }}>El Sembrador</h1>
+            <h1 className="ui-227a72" style={{ fontSize:compact ? 25 : 30 }}>{company || 'AgroBloque'}</h1>
             <div className="ui-374162">{campo || 'Vista de solo lectura'}</div>
           </div>
           <div className="ui-fef609">
