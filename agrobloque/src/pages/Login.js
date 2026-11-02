@@ -4,7 +4,7 @@ import { clearLocalAuth, supabase } from '../lib/supabase'
 function AgroBloqueLogo({ compact = false, light = false }) {
   const color = light ? '#ffffff' : '#103d2b'
   return (
-    <div className={`login-brand ${compact ? 'login-brand-compact' : ''}`}>
+    <div className={`login-brand ${compact ? 'login-brand-compact' : ''} ${light ? 'is-light' : ''}`}>
       <svg width={compact ? 48 : 64} height={compact ? 48 : 64} viewBox="0 0 64 64" fill="none" aria-hidden="true">
         <rect width="64" height="64" rx="18" fill={light ? 'rgba(255,255,255,.13)' : '#edf5eb'} />
         <path d="M17 46 29.5 17h7L49 46h-8l-2.6-6.8H27.6L25 46h-8Z" fill={color} />
@@ -13,8 +13,8 @@ function AgroBloqueLogo({ compact = false, light = false }) {
         <path d="M21 51c8-5.1 17.3-6.6 27.8-4.2" stroke="#76b947" strokeWidth="2.4" strokeLinecap="round" opacity=".78" />
       </svg>
       <div>
-        <div className="login-brand-name" style={{ color }}>El Sembrador</div>
-        {!compact && <div className="login-brand-tag" style={{ color: light ? 'rgba(255,255,255,.72)' : '#69756d' }}>Gestión agrícola simple y completa</div>}
+        <div className="login-brand-name">El Sembrador</div>
+        {!compact && <div className="login-brand-tag">Gestión agrícola simple y completa</div>}
       </div>
     </div>
   )
@@ -90,16 +90,10 @@ export default function Login({ mode = 'login', session = null }) {
 
   return (
     <main className="agrobloque-login">
-      <style>{`
-        .agrobloque-login{min-height:100dvh;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(390px,.75fr);background:#f8f7f2;color:#102019;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-        .login-hero{position:relative;min-height:100dvh;padding:54px 58px;display:flex;flex-direction:column;justify-content:space-between;background-image:linear-gradient(90deg,rgba(4,24,16,.87) 0%,rgba(7,33,22,.61) 50%,rgba(7,25,17,.12) 100%),linear-gradient(0deg,rgba(3,15,10,.5),transparent 48%),url('/assets/agrobloque-login-hero.png');background-size:cover;background-position:center}
-        .login-brand{display:flex;align-items:center;gap:16px}.login-brand-name{font-size:34px;font-weight:850;letter-spacing:-1.6px;line-height:1}.login-brand-tag{font-size:13px;margin-top:7px;letter-spacing:.45px}.login-copy{max-width:650px;margin:auto 0}.login-copy h1{font-size:clamp(44px,4.2vw,68px);line-height:1.02;letter-spacing:-3px;color:#fff;margin:0 0 18px}.login-copy p{max-width:540px;color:rgba(255,255,255,.76);font-size:17px;line-height:1.6;margin:0}.login-features{display:flex;gap:10px;flex-wrap:wrap;margin-top:32px}.login-feature{border:1px solid rgba(255,255,255,.22);background:rgba(6,31,20,.5);-webkit-backdrop-filter:blur(12px) saturate(130%);backdrop-filter:blur(12px) saturate(130%);border-radius:14px;padding:12px 15px;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.12)}.login-feature i{font-size:18px;color:#a9dc83}.login-hero-foot{color:rgba(255,255,255,.55);font-size:11px;letter-spacing:1.6px;text-transform:uppercase}.login-panel{padding:42px clamp(30px,4vw,68px);display:flex;flex-direction:column;justify-content:center;position:relative}.login-mobile-brand{display:none}.login-form{width:100%;max-width:440px;margin:auto}.login-form h2{font-size:34px;letter-spacing:-1.2px;margin:0 0 8px;color:#103d2b}.login-intro{font-size:14px;color:#69756d;margin:0 0 34px}.login-label{display:block;font-size:12px;font-weight:750;color:#29362f;margin-bottom:8px}.login-field{height:54px;border:1px solid #dce3dc;border-radius:13px;background:#fff;display:flex;align-items:center;padding:0 15px;gap:11px;margin-bottom:18px;transition:border-color .18s,box-shadow .18s}.login-field:focus-within{border-color:#397a53;box-shadow:0 0 0 4px rgba(57,122,83,.12),0 8px 22px rgba(16,61,43,.06)}.login-field i{font-size:19px;color:#879188}.login-field input{border:0;outline:0;background:transparent;width:100%;font-size:16px;color:#17221b}.login-field input:focus-visible{outline:0}.login-field button{border:0;background:transparent;padding:5px;color:#607066;cursor:pointer;min-width:44px;min-height:44px}.login-submit{width:100%;height:56px;border:0;border-radius:13px;background:linear-gradient(135deg,#123f2d,#0a5133);color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 14px 30px rgba(15,69,44,.2);display:flex;align-items:center;justify-content:center;gap:10px}.login-submit:disabled{opacity:.65;cursor:wait}.login-error{display:flex;align-items:flex-start;gap:9px;color:#8e2f2f;background:#fff5f4;border:1px solid #efd5d2;padding:11px 12px;border-radius:10px;font-size:12px;line-height:1.45;margin-bottom:16px}.login-error i{font-size:18px;flex:0 0 auto}.login-message{color:#1a5c2e;background:#edfaf3;border:1px solid #cde6d5;padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.45;margin-bottom:16px}.login-reset{display:block;margin:14px auto 0;border:0;background:transparent;color:#235f46;font-size:12px;font-weight:700;cursor:pointer;padding:6px;min-height:44px}.login-reset:hover{text-decoration:underline}.login-reset:focus-visible{outline:3px solid rgba(79,145,57,.2);outline-offset:2px;border-radius:6px}.login-reset:disabled{opacity:.55;cursor:wait}.login-help{margin-top:20px;text-align:center;color:#78847c;font-size:12px}.login-footer{text-align:center;color:#9aa39c;font-size:11px;padding-top:28px}.login-security{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;color:#8a958e;font-size:11px}
-        @media(max-width:820px){.agrobloque-login{display:block;background:#f8f7f2}.login-hero{min-height:285px;padding:26px 22px 70px;background-image:linear-gradient(0deg,rgba(5,29,19,.88),rgba(5,27,18,.22)),url('/assets/agrobloque-login-hero.png');background-position:58% center}.login-hero>.login-brand,.login-hero-foot{display:none}.login-copy{margin:auto 0 0}.login-copy h1{font-size:34px;letter-spacing:-1.7px;margin-bottom:10px}.login-copy p{font-size:13px;line-height:1.45;max-width:330px}.login-features{display:none}.login-panel{min-height:calc(100vh - 250px);margin-top:-34px;border-radius:28px 28px 0 0;background:#f8f7f2;padding:27px 22px 30px}.login-mobile-brand{display:block;margin-bottom:25px}.login-brand-compact .login-brand-name{font-size:24px}.login-form{margin:0 auto}.login-form h2{font-size:27px}.login-intro{margin-bottom:25px}.login-footer{padding-top:24px}}
-      `}</style>
       <section className="login-hero" aria-label="El Sembrador">
         <AgroBloqueLogo light />
         <div className="login-copy">
-          <h1>Tu campo, siempre bajo control.</h1>
+          <h1>Tu campo, <span>siempre bajo control.</span></h1>
           <p>Organizá cultivos, tareas, inventario y producción desde un solo lugar, con información clara para tomar mejores decisiones.</p>
           <div className="login-features">
             <span className="login-feature"><i className="ti ti-map-2" />Gestión por bloques</span>

@@ -11,13 +11,14 @@
   - En superficies claras de cristal (Sidebar, tarjetas generales, tablas): Texto principal SIEMPRE oscuro `#0F172A`, secundario `#475569`. PROHIBIDO poner fondo oscuro en el Sidebar con letras negras.
   - En superficies Hero oscuras (`linear-gradient(135deg, #061A14 0%, #0D2E22 50%, #0F172A 100%)`): Texto SIEMPRE blanco `#FFFFFF` y sub-tarjetas de cristal ahumado `rgba(255, 255, 255, 0.08)` con borde `rgba(255, 255, 255, 0.18)`.
 - Codificación Multicolor por Módulo:
-  - Bloques y Cosecha: Gradientes Esmeralda-Lima (`#059669` a `#34D399`).
-  - Vivero y Fertilizaciones/Riego: Gradientes Cian-Turquesa (`#0284C7` a `#2DD4BF`).
+  - Bloques y Cosecha: Gradientes Esmeralda-Lima (`#059669` a `#10B981`).
+  - Vivero y Fertilizaciones/Riego: Gradientes Cian-Turquesa (`#0284C7` a `#06B6D4`).
   - Fumigaciones y Alertas: Gradientes Ámbar-Coral (`#D97706` a `#F43F5E`).
-  - Contabilidad y Finanzas: Gradientes Índigo-Violeta (`#4F46E5` a `#A855F7`).
+  - Contabilidad y Finanzas: Gradientes Índigo-Violeta (`#4F46E5` a `#9333EA`).
 - Tipografía: Google Fonts `'Plus Jakarta Sans'` para títulos, `'Inter'` para UI, y `'JetBrains Mono'` (`tabular-nums`) para códigos de bloque (`A-1`), kilos, días, plantas y montos de dinero.
 
 ## 3. Estado de la implementación (notas del repo)
-- La capa base vive al final de `src/design.css` (sección "Bio-Luminescent Spatial Glass"): tokens `--bl-*`, fondo mesh, `.spatial-glass`, color por módulo.
-- El color por módulo se resuelve con `data-module` en `.ag-app` (`src/App.js`, `MODULE_BY_PATH`) y las variables `--mod-gradient`, `--mod-accent`, `--mod-tint`.
-- Pendiente: `design-reference.css` no existe; quedan ~1.900 estilos inline en `src/pages/` por migrar a clases.
+- El sistema vive al final de `src/design.css` (sección "BIO-LUMINESCENT SPATIAL GLASS"): tokens `--bl-*` (capa 1), `--grad-*`, `--glass-*`, `--text-*` (capa 2) y `--mod-*` / `--tone-*` (capa 3). Los tokens heredados (`--forest-*`, `--slate-*`, `--sage-*`) se reasignan ahí.
+- Color por módulo: `data-module` en `.ag-app` (ruta activa, `MODULE_BY_PATH` en `src/App.js`) y `data-tone` en íconos y tarjetas (`bloques`, `agua`, `alerta`, `finanzas`, `neutral`).
+- Código muerto: `src/pages/Dashboard.js` y `DesktopDashboard.js` no se usan (el inicio es `Overview.js`). `index.css` de la raíz no es CSS.
+- Pendiente: `design-reference.css` no existe; quedan estilos inline en `src/pages/` por migrar a clases.

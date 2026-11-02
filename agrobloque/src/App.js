@@ -111,7 +111,6 @@ const allTabs = [
 ]
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
-const SIDEBAR_WIDTH = 260
 
 const getStoredCampoId = () => {
   if (typeof window === 'undefined') return null
@@ -223,7 +222,7 @@ function DesktopSidebar({ isGuest = false, role }) {
     <div className="ag-brand"><span className="ag-brand-mark" aria-hidden="true"><i className="ti ti-leaf" /></span><div><strong>El Sembrador</strong><small>Gestión del campo</small></div></div>
     <nav className="ag-sidebar-nav">{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
-      return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><MenuIcon icon={tab.icon} size={20} color="currentColor" /><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
+      return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone={toneFromPath(tab.path)} aria-hidden="true"><MenuIcon icon={tab.icon} size={17} color="currentColor" /></span><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
     })}</nav>
     <div className="ag-sidebar-footer">{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
   </aside>
@@ -236,6 +235,7 @@ const MODULE_BY_PATH = {
   '/contabilidad': 'finanzas', '/cuentas-pagar': 'finanzas', '/costos': 'finanzas', '/ventas': 'finanzas', '/reportes': 'finanzas',
 }
 const moduleFromPath = pathname => MODULE_BY_PATH['/' + (pathname.split('/')[1] || '')] || 'bloques'
+const toneFromPath = path => MODULE_BY_PATH[path] || 'neutral'
 
 function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1100)
@@ -249,14 +249,14 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role }) {
   }, [])
 
   return (
-    <div className={`ag-app ${dashboardDesktop ? 'is-dashboard' : ''}`} data-module={moduleFromPath(location.pathname)}>
+    <div className={`ag-app ${isDesktop ? 'has-dock' : ''} ${dashboardDesktop ? 'is-dashboard' : ''}`} data-module={moduleFromPath(location.pathname)}>
       <Toaster position="top-right" richColors closeButton theme="light" mobileOffset={12} toastOptions={{ className:'ag-toast' }} />
       <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
       <ConnectionStatus />
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} />}
 
-      <div data-app-scroll style={{ marginLeft:isDesktop ? SIDEBAR_WIDTH : 0, maxWidth:isDesktop ? `calc(100vw - ${SIDEBAR_WIDTH}px)` : '100%' }}>
-        <div className="ag-content-shell" style={{ maxWidth:dashboardDesktop ? 'none' : (isDesktop ? 1440 : 1080) }}>
+      <div data-app-scroll>
+        <div className="ag-content-shell">
           <div className="ag-route-stage" key={location.pathname}>
           <Routes>
             <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role}/>}/>
