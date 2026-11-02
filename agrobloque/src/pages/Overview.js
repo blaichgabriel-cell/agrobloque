@@ -181,7 +181,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
 
 function Metric({ loading, icon, label, value, detail, warning, compact, onClick }) {
   const Tag = onClick ? 'button' : 'div'
-  return <Tag onClick={onClick} className={`kpi-card ag-metric ${onClick ? 'is-clickable' : ''} ${warning ? 'is-warning' : ''} ${compact ? 'is-compact' : ''}`}><span className="ag-metric-icon"><i className={`ti ${icon}`} /></span><div><span className="ag-metric-label">{label}</span><strong className={`numeric-data ${loading ? 'ag-skeleton-value' : ''}`} aria-busy={loading || undefined}>{value}</strong><small>{detail}</small></div></Tag>
+  return <Tag onClick={onClick} className={`kpi-card ag-metric hero-kpi-card ${onClick ? 'is-clickable' : ''} ${warning ? 'is-warning' : ''} ${compact ? 'is-compact' : ''}`}><span className="ag-metric-icon"><i className={`ti ${icon}`} /></span><div><span className="ag-metric-label">{label}</span><strong className={`numeric-data ${loading ? 'ag-skeleton-value' : ''}`} aria-busy={loading || undefined}>{value}</strong><small>{detail}</small></div></Tag>
 }
 
 function ProductionChart({ days }) {

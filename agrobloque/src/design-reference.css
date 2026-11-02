@@ -370,3 +370,75 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search
 @media (prefers-contrast:more) {
   .ag-panel,.ag-surface,.kpi-card,.ag-topbar,.module-switch { border-color:rgba(10,35,22,.32) !important; background:rgba(255,255,255,.96) !important; }
 }
+
+/* Contraste definitivo: navegación clara y métricas sobre hero oscuro. */
+.ag-sidebar {
+  border:1px solid rgba(255,255,255,.9) !important;
+  background:rgba(255,255,255,.78) !important;
+  color:#334155 !important;
+  -webkit-backdrop-filter:blur(20px) saturate(180%) !important;
+  backdrop-filter:blur(20px) saturate(180%) !important;
+  box-shadow:0 10px 30px rgba(15,41,30,.06),inset 0 1px rgba(255,255,255,.82) !important;
+}
+.ag-sidebar .ag-brand,
+.ag-sidebar .ag-brand strong,
+.ag-sidebar .ag-brand-mark,
+.ag-sidebar .ag-profile,
+.ag-sidebar .ag-profile-link { color:#334155 !important; }
+.ag-sidebar .ag-brand { border-bottom-color:rgba(15,41,30,.08) !important; }
+.ag-sidebar .ag-brand small,
+.ag-sidebar .ag-nav-group h2,
+.ag-sidebar .ag-nav-group-label,
+.ag-sidebar .ag-profile small,
+.ag-sidebar .ag-profile-link i { color:#64748b !important; }
+.ag-sidebar .ag-nav-link { color:#334155 !important; }
+.ag-sidebar .ag-nav-link:hover,
+.ag-sidebar .ag-profile-link:hover { background:rgba(15,41,30,.05) !important; color:#0f3923 !important; }
+.ag-sidebar .ag-nav-link[aria-current='page'] {
+  background:#0f3923 !important;
+  color:#fff !important;
+  box-shadow:0 7px 18px rgba(15,57,35,.15) !important;
+}
+.ag-sidebar .ag-nav-link[aria-current='page'] i { color:#fff !important; }
+.ag-sidebar .ag-sidebar-footer { border-color:rgba(15,41,30,.09) !important; }
+.ag-sidebar .ag-profile { border-color:rgba(15,41,30,.09) !important; background:rgba(255,255,255,.38) !important; }
+.ag-sidebar .ag-avatar { background:#dcecdf !important; color:#0f3923 !important; }
+.ag-sidebar .ag-signout { color:#52635b !important; }
+
+.ag-hero .hero-kpi-card,
+.ag-hero .ag-metric.hero-kpi-card {
+  border:1px solid rgba(255,255,255,.16) !important;
+  border-radius:16px !important;
+  background:rgba(255,255,255,.08) !important;
+  -webkit-backdrop-filter:blur(12px) !important;
+  backdrop-filter:blur(12px) !important;
+  box-shadow:inset 0 1px rgba(255,255,255,.06) !important;
+  color:#fff !important;
+}
+.ag-hero .hero-kpi-card .ag-metric-label,
+.ag-hero .hero-kpi-card small { color:rgba(255,255,255,.75) !important; opacity:1 !important; }
+.ag-hero .hero-kpi-card strong { color:#fff !important; font-weight:700 !important; }
+.ag-hero .hero-kpi-card.is-clickable:hover { background:rgba(255,255,255,.12) !important; border-color:rgba(255,255,255,.23) !important; }
+
+.ag-blocks-panel .ag-block-search,
+.ag-blocks-panel .ag-block-tools select {
+  border:1px solid rgba(15,41,30,.12) !important;
+  background-color:#f8faf9 !important;
+  box-shadow:inset 0 1px rgba(255,255,255,.8) !important;
+}
+.ag-blocks-panel .ag-block-search input { background:transparent !important; }
+
+@media (max-width:767px) {
+  .ag-hero .hero-kpi-card,
+  .ag-hero .ag-metric.hero-kpi-card { padding:13px !important; }
+}
+
+@media (prefers-reduced-transparency:reduce) {
+  .ag-sidebar { background:#fff !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .ag-hero .hero-kpi-card { background:rgba(35,66,52,.9) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+}
+
+@media (prefers-contrast:more) {
+  .ag-sidebar { border-color:rgba(15,41,30,.28) !important; background:#fff !important; }
+  .ag-hero .hero-kpi-card { border-color:rgba(255,255,255,.52) !important; background:rgba(0,0,0,.36) !important; }
+}
