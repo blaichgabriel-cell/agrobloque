@@ -242,7 +242,14 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
 
   return (
     <div className={`ag-app ${isDesktop ? 'has-dock' : ''} ${dashboardDesktop ? 'is-dashboard' : ''}`} data-module={moduleFromPath(location.pathname)}>
-      <Toaster position="top-right" richColors closeButton theme="light" mobileOffset={12} toastOptions={{ className:'ag-toast' }} />
+      <Toaster
+        position={isDesktop ? 'top-right' : 'bottom-center'}
+        richColors
+        closeButton
+        theme="light"
+        mobileOffset={{ top:'calc(env(safe-area-inset-top, 0px) + 12px)', right:12, bottom:'calc(env(safe-area-inset-bottom, 0px) + 86px)', left:12 }}
+        toastOptions={{ className:'ag-toast', duration:6000 }}
+      />
       <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
       <ConnectionStatus />
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} />}

@@ -9,30 +9,43 @@ const localDate = () => {
 
 const notificationsEnabled = () => typeof window !== 'undefined' && window.localStorage.getItem('agrobloque-notificaciones') === 'on' && window.Notification?.permission === 'granted'
 
-const notifyTask = task => {
+const taskNotificationKey = (task, today) => `agrobloque-task-notified:${task.id}:${today}`
+
+const taskIsDue = (task, today, currentTime) => {
+  const scheduledTime = task.hora_programada ? String(task.hora_programada).slice(0, 5) : ''
+  if (task.fecha_programada === today && scheduledTime && currentTime < scheduledTime) return false
+  return !sessionStorage.getItem(taskNotificationKey(task, today))
+}
+
+const notifyTasks = tasks => {
   const today = localDate()
   const now = new Date()
   const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-  const scheduledTime = task.hora_programada ? String(task.hora_programada).slice(0, 5) : ''
-  if (task.fecha_programada === today && scheduledTime && currentTime < scheduledTime) return
-  const key = `agrobloque-task-notified:${task.id}:${today}`
-  if (sessionStorage.getItem(key)) return
-  const overdue = task.fecha_programada < today
-  const time = scheduledTime ? ` · ${scheduledTime}` : ''
-  toast.warning(overdue ? 'Tarea vencida' : 'Tarea programada para hoy', {
-    id:key,
-    description:`${task.descripcion || 'Tarea pendiente'}${time}`,
-    duration:8000,
+  const pending = (tasks || []).filter(task => taskIsDue(task, today, currentTime))
+  if (!pending.length) return
+  const overdue = pending.filter(task => task.fecha_programada < today).length
+  const first = pending[0]
+  const firstTime = first.hora_programada ? ` · ${String(first.hora_programada).slice(0, 5)}` : ''
+  const title = pending.length === 1
+    ? (overdue ? 'Tarea vencida' : 'Tarea programada para hoy')
+    : `${pending.length} tareas requieren atención`
+  const description = pending.length === 1
+    ? `${first.descripcion || 'Tarea pendiente'}${firstTime}`
+    : `${overdue ? `${overdue} vencida${overdue === 1 ? '' : 's'} · ` : ''}${first.descripcion || 'Revisá la agenda del campo'}`
+  const summaryKey = `agrobloque-task-summary:${today}`
+  toast.warning(title, {
+    id:summaryKey,
+    description,
     action:{ label:'Ver agenda', onClick:() => { window.location.href = '/agenda' } },
   })
   if (notificationsEnabled()) {
-    new Notification(overdue ? 'AgroBloque · Tarea vencida' : 'AgroBloque · Tarea de hoy', {
-      body:`${task.descripcion || 'Tarea pendiente'}${time}`,
+    new Notification(`AgroBloque · ${title}`, {
+      body:description,
       icon:'/logo192.png',
-      tag:key,
+      tag:summaryKey,
     })
   }
-  sessionStorage.setItem(key, '1')
+  pending.forEach(task => sessionStorage.setItem(taskNotificationKey(task, today), '1'))
 }
 
 const notifyStock = product => {
@@ -56,7 +69,7 @@ export default function TaskNotifications({ enabled = true }) {
         supabase.from('productos').select('id,nombre,stock_actual,stock_minimo').eq('activo', true),
       ])
       if (!active) return
-      if (!tareas.error) (tareas.data || []).forEach(notifyTask)
+      if (!tareas.error) notifyTasks(tareas.data || [])
       if (!productos.error) (productos.data || []).filter(producto => Number(producto.stock_actual || 0) <= 0 || (Number(producto.stock_minimo || 0) > 0 && Number(producto.stock_actual || 0) <= Number(producto.stock_minimo || 0))).slice(0, 4).forEach(notifyStock)
     }
     check()
