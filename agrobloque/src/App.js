@@ -5,6 +5,7 @@ import { Skeleton } from './components/UI'
 import ErrorBoundary from './components/ErrorBoundary'
 import Login from './pages/Login'
 import Dashboard from './pages/Overview'
+import Onboarding from './pages/Onboarding'
 import NavBar from './components/NavBar'
 import { canAccessModule, filterTabsByRole, normalizeRole } from './lib/permissions'
 import { textoErrorProfesional } from './lib/errors'
@@ -277,6 +278,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
             <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="auditoria"><Auditoria/></ProtectedRoute>}/>
             <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role} organization={organization} onOrganizationUpdate={setOrganization}/></ProtectedRoute>}/>
+            <Route path="/primeros-pasos" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Onboarding preview organization={organization}/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
           </Suspense>
@@ -298,6 +300,7 @@ export default function App() {
   const [role, setRole] = useState(normalizeRole(null))
   const [roleUserId, setRoleUserId] = useState(null)
   const [organization, setOrganization] = useState(DEFAULT_ORGANIZATION)
+  const [fieldsState, setFieldsState] = useState('idle')
   const guestPath = Boolean(guestToken)
   const passwordSetupPath = authAction === 'set-password'
 
@@ -406,13 +409,16 @@ export default function App() {
     if (guestPath) return
     if (!session && !guestPath) {
       setCampoActivo(null)
+      setFieldsState('idle')
       return
     }
 
     let cancelled = false
     const cargarCampoActivo = async () => {
+      setFieldsState('loading')
       const { data, error } = await supabase.from('campos').select('*').order('nombre')
       if (error) {
+        setFieldsState('error')
         console.error('Error cargando campos', error)
         if (guestPath) {
           setDataError(textoErrorProfesional(error, { modulo:'Invitados / Campos', accion:'leer' }))
@@ -425,6 +431,7 @@ export default function App() {
       }
       if (cancelled) return
       if (!data || data.length === 0) {
+        setFieldsState('empty')
         if (guestPath) {
           setDataError('El link fue validado, pero Supabase no devolvio campos para el invitado. Ejecuta el SQL supabase/invitados_fix_total_2026_06_18.sql y revisa que el link tenga campo permitido.')
         }
@@ -432,6 +439,7 @@ export default function App() {
       }
       const { data: bloques, error: bloquesError } = await supabase.from('bloques').select('campo_id')
       if (bloquesError) {
+        setFieldsState('error')
         console.error('Error cargando bloques', bloquesError)
         if (guestPath) {
           setDataError(textoErrorProfesional(bloquesError, { modulo:'Invitados / Bloques', accion:'leer' }))
@@ -449,6 +457,7 @@ export default function App() {
         const guardado = getStoredCampoId()
         return elegirCampoConDatos(data, bloquesPorCampo, guardado)
       })
+      setFieldsState('ready')
     }
 
     cargarCampoActivo()
@@ -502,6 +511,8 @@ export default function App() {
           <p>Tu cuenta todavía no tiene acceso habilitado. Pedí al administrador que configure tus permisos.</p>
           <button onClick={() => forceLocalSignOut()}>Cerrar sesión</button>
         </div>
+      ) : fieldsState === 'empty' && role.rol === 'admin' && organization?.id ? (
+        <Onboarding organization={organization} onComplete={({ organization:nextOrganization, campo }) => { setOrganization(nextOrganization); setCampoActivo(campo); setFieldsState('ready') }}/>
       ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} organization={organization} setOrganization={setOrganization} />}
     </BrowserRouter>
   )
