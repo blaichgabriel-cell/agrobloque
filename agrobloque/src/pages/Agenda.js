@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { toast } from 'sonner'
+import { moonPhase, MOON_PHASES } from '../lib/moon'
 
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
@@ -13,17 +14,6 @@ const TIPOS = {
 }
 
 const fechaLocal = fecha => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
-const FASES_LUNARES = [
-  { icon:'🌑', label:'Luna nueva' }, { icon:'🌒', label:'Creciente' }, { icon:'🌓', label:'Cuarto creciente' }, { icon:'🌔', label:'Gibosa creciente' },
-  { icon:'🌕', label:'Luna llena' }, { icon:'🌖', label:'Gibosa menguante' }, { icon:'🌗', label:'Cuarto menguante' }, { icon:'🌘', label:'Menguante' },
-]
-const faseLunar = fecha => {
-  const referencia = Date.UTC(2000, 0, 6, 18, 14)
-  const ciclo = 29.53058867
-  const dias = (Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 12) - referencia) / 86400000
-  const edad = ((dias % ciclo) + ciclo) % ciclo
-  return FASES_LUNARES[Math.round((edad / ciclo) * 8) % 8]
-}
 
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
@@ -59,6 +49,15 @@ export default function Agenda() {
   const hoy = new Date().toISOString().split('T')[0]
 
   useEffect(() => { fetchTareas(); fetchCampos() }, [])
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const fecha = new URLSearchParams(window.location.search).get('fecha')
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fecha || '')) {
+      setForm({ ...vacio, fecha_programada:fecha })
+      setModal(true)
+      window.history.replaceState({}, '', '/agenda')
+    }
+  }, [])
 
   const fetchTareas = async () => {
     setLoading(true)
@@ -272,7 +271,7 @@ function AgendaCalendar({ tareas, mes, hoy, onMes, onHoy, onCreate, onTask }) {
     <div className="lunar-calendar__weekdays">{['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(dia => <span key={dia}>{dia}</span>)}</div>
     <div className="lunar-calendar__grid">{dias.map(fecha => {
       const clave = fechaLocal(fecha)
-      const fase = faseLunar(fecha)
+      const fase = moonPhase(fecha)
       const items = tareasPorFecha[clave] || []
       const fuera = fecha.getMonth() !== mes.getMonth()
       return <div className={`lunar-day ${fuera ? 'is-outside' : ''} ${clave === hoy ? 'is-today' : ''}`} key={clave}>
@@ -280,6 +279,6 @@ function AgendaCalendar({ tareas, mes, hoy, onMes, onHoy, onCreate, onTask }) {
         <div className="lunar-day__tasks">{items.slice(0, 3).map(tarea => { const tipo = TIPOS[tarea.tipo] || TIPOS.otro; return <button key={tarea.id} onClick={() => onTask(tarea)} title={tarea.descripcion}><i style={{ background:tipo.color }} />{tarea.hora_programada ? `${String(tarea.hora_programada).slice(0,5)} ` : ''}{tarea.descripcion}</button> })}{items.length > 3 && <span>+{items.length - 3} más</span>}</div>
       </div>
     })}</div>
-    <div className="lunar-calendar__legend"><span>La fase lunar es informativa.</span><span>{FASES_LUNARES.filter((_, i) => i % 2 === 0).map(fase => `${fase.icon} ${fase.label}`).join(' · ')}</span></div>
+    <div className="lunar-calendar__legend"><span>Cálculo astronómico aproximado; no constituye una recomendación agronómica.</span><span>{MOON_PHASES.filter((_, i) => i % 2 === 0).map(fase => `${fase.icon} ${fase.label}`).join(' · ')}</span></div>
   </section>
 }

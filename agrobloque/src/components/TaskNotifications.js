@@ -7,6 +7,8 @@ const localDate = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
+const notificationsEnabled = () => typeof window !== 'undefined' && window.localStorage.getItem('agrobloque-notificaciones') === 'on' && window.Notification?.permission === 'granted'
+
 const notifyTask = task => {
   const today = localDate()
   const now = new Date()
@@ -23,7 +25,7 @@ const notifyTask = task => {
     duration:8000,
     action:{ label:'Ver agenda', onClick:() => { window.location.href = '/agenda' } },
   })
-  if ('Notification' in window && Notification.permission === 'granted') {
+  if (notificationsEnabled()) {
     new Notification(overdue ? 'AgroBloque · Tarea vencida' : 'AgroBloque · Tarea de hoy', {
       body:`${task.descripcion || 'Tarea pendiente'}${time}`,
       icon:'/logo192.png',
@@ -33,15 +35,29 @@ const notifyTask = task => {
   sessionStorage.setItem(key, '1')
 }
 
+const notifyStock = product => {
+  if (!notificationsEnabled()) return
+  const today = localDate()
+  const key = `agrobloque-stock-notified:${product.id}:${today}`
+  if (localStorage.getItem(key)) return
+  const agotado = Number(product.stock_actual || 0) <= 0
+  try { new Notification(agotado ? 'AgroBloque · Producto agotado' : 'AgroBloque · Stock bajo', { body:`${product.nombre} · disponible ${product.stock_actual || 0}`, icon:'/logo192.png', tag:key }) } catch {}
+  localStorage.setItem(key, '1')
+}
+
 export default function TaskNotifications({ enabled = true }) {
   useEffect(() => {
     if (!enabled) return undefined
     let active = true
     const check = async () => {
       const today = localDate()
-      const { data, error } = await supabase.from('tareas').select('*').eq('completada', false).eq('anulada', false).lte('fecha_programada', today).order('fecha_programada').limit(8)
-      if (!active || error) return
-      ;(data || []).forEach(notifyTask)
+      const [tareas, productos] = await Promise.all([
+        supabase.from('tareas').select('*').eq('completada', false).eq('anulada', false).lte('fecha_programada', today).order('fecha_programada').limit(8),
+        supabase.from('productos').select('id,nombre,stock_actual,stock_minimo').eq('activo', true),
+      ])
+      if (!active) return
+      if (!tareas.error) (tareas.data || []).forEach(notifyTask)
+      if (!productos.error) (productos.data || []).filter(producto => Number(producto.stock_actual || 0) <= 0 || (Number(producto.stock_minimo || 0) > 0 && Number(producto.stock_actual || 0) <= Number(producto.stock_minimo || 0))).slice(0, 4).forEach(notifyStock)
     }
     check()
     const timer = window.setInterval(check, 60000)

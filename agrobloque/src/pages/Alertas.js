@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const hoyIso = () => new Date().toISOString().slice(0, 10)
+const NOTIFICATION_KEY = 'agrobloque-notificaciones'
 const diasEntre = (fecha) => {
   if (!fecha) return 0
   return Math.floor((new Date(hoyIso() + 'T00:00:00') - new Date(fecha + 'T00:00:00')) / 86400000)
@@ -19,6 +20,7 @@ export default function Alertas() {
   const [loading, setLoading] = useState(true)
   const [alertas, setAlertas] = useState([])
   const [mensaje, setMensaje] = useState('')
+  const [notificaciones, setNotificaciones] = useState(() => typeof window !== 'undefined' && window.localStorage.getItem(NOTIFICATION_KEY) === 'on' && window.Notification?.permission === 'granted')
 
   useEffect(() => { cargar() }, [])
 
@@ -163,7 +165,31 @@ export default function Alertas() {
       return true
     })
     setAlertas(visibles)
+    if (typeof window !== 'undefined' && window.localStorage.getItem(NOTIFICATION_KEY) === 'on' && window.Notification?.permission === 'granted') {
+      visibles.filter(a => a.tipo !== 'baja').slice(0, 3).forEach(alerta => {
+        const claveAviso = `agrobloque-alerta:${hoy}:${alerta.clave}`
+        if (window.localStorage.getItem(claveAviso)) return
+        try { new Notification(`AgroBloque · ${alerta.titulo}`, { body:alerta.detalle, icon:'/logo192.png', tag:alerta.clave }) } catch {}
+        window.localStorage.setItem(claveAviso, '1')
+      })
+    }
     setLoading(false)
+  }
+
+  const activarNotificaciones = async () => {
+    if (!('Notification' in window)) return setMensaje('Este navegador no permite notificaciones.')
+    if (notificaciones) {
+      window.localStorage.removeItem(NOTIFICATION_KEY)
+      setNotificaciones(false)
+      setMensaje('Avisos del navegador desactivados en AgroBloque.')
+      return
+    }
+    const permiso = await Notification.requestPermission()
+    if (permiso !== 'granted') return setMensaje('El navegador no autorizó las notificaciones. Podés habilitarlas desde el candado de la barra de direcciones.')
+    window.localStorage.setItem(NOTIFICATION_KEY, 'on')
+    setNotificaciones(true)
+    setMensaje('Notificaciones activadas. AgroBloque te avisará sobre tareas y alertas mientras la aplicación esté abierta.')
+    cargar()
   }
 
   const gestionar = async (alerta, estado) => {
@@ -190,11 +216,10 @@ export default function Alertas() {
             <div className="ui-93a7e1">Control operativo</div>
             <h1 className="ui-ee8706">Alertas inteligentes</h1>
           </div>
-          <button className="ui-27d7de" aria-label="Actualizar" onClick={cargar}>
-            <i className="ti ti-refresh ui-e5e6f8" aria-hidden="true"></i>
-          </button>
+          <div className="alerts-header-actions"><button className={`alerts-notification-button ${notificaciones ? 'is-active' : ''}`} onClick={activarNotificaciones}><i className={`ti ${notificaciones ? 'ti-bell-check' : 'ti-bell'}`} />{notificaciones ? 'Avisos activos' : 'Activar avisos'}</button><button className="ui-27d7de" aria-label="Actualizar" onClick={cargar}><i className="ti ti-refresh ui-e5e6f8" aria-hidden="true"></i></button></div>
         </div>
         {mensaje && <div className="ui-ab0dc2">{mensaje}</div>}
+        <div className="alerts-notification-note"><i className="ti ti-info-circle" /><span>Los avisos del navegador funcionan mientras AgroBloque está abierto. Las notificaciones con la aplicación cerrada requieren activar el servicio push del servidor.</span></div>
 
         <div className="ui-9420ec">
           <Stat label="Altas" value={resumen.alta} color="#c84040" />

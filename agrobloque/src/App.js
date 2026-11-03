@@ -8,6 +8,7 @@ import Mapa from './pages/MapaProfesional'
 import FichaBloque from './pages/FichaBloque'
 import Configuracion from './pages/Configuracion'
 import Agenda from './pages/Agenda'
+import Calendario from './pages/Calendario'
 import Asistencia from './pages/Asistencia'
 import Cosecha from './pages/Cosecha'
 import Ventas from './pages/Ventas'
@@ -78,6 +79,7 @@ const allTabs = [
   { path:'/', icon:'ti-home', label:'Inicio' },
   { path:'/mapa', icon:'ti-map', label:'Mapa' },
   { path:'/agenda', icon:'ti-calendar', label:'Agenda' },
+  { path:'/calendario', icon:'ti-calendar-month', label:'Calendario' },
   { path:'/vivero', icon:'vivero-icon', label:'Vivero' },
   { path:'/asistencia', icon:'ti-users', label:'Asistencia' },
   { path:'/cosecha', icon:'ti-cut', label:'Cosecha' },
@@ -201,7 +203,7 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
     }).catch(() => {})
   }, [role?.email])
   const groups = [
-    { title: 'CAMPO', paths: ['/', '/mapa', '/agenda', '/vivero'] },
+    { title: 'CAMPO', paths: ['/', '/mapa', '/agenda', '/calendario', '/vivero'] },
     { title: 'OPERACIÓN', paths: ['/cosecha', '/fumigaciones', '/fertilizaciones', '/inventario', '/asistencia'] },
     { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/rentabilidad', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
   ]
@@ -216,7 +218,7 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
 }
 
 const MODULE_BY_PATH = {
-  '/': 'bloques', '/mapa': 'bloques', '/bloque': 'bloques', '/cosecha': 'bloques',
+  '/': 'bloques', '/mapa': 'bloques', '/bloque': 'bloques', '/cosecha': 'bloques', '/calendario': 'bloques',
   '/vivero': 'agua', '/fertilizaciones': 'agua', '/plan-nutricional': 'agua',
   '/fumigaciones': 'alerta', '/alertas': 'alerta',
   '/contabilidad': 'finanzas', '/cuentas-pagar': 'finanzas', '/costos': 'finanzas', '/rentabilidad': 'finanzas', '/ventas': 'finanzas', '/reportes': 'finanzas',
@@ -253,6 +255,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/mapa" element={<ProtectedRoute role={role} moduleKey="mapa"><Mapa campoActivo={campoActivo}/></ProtectedRoute>}/>
             <Route path="/bloque/:id" element={<ProtectedRoute role={role} moduleKey="mapa"><FichaBloque/></ProtectedRoute>}/>
             <Route path="/agenda" element={<ProtectedRoute role={role} moduleKey="agenda"><Agenda/></ProtectedRoute>}/>
+            <Route path="/calendario" element={<ProtectedRoute role={role} moduleKey="agenda"><Calendario/></ProtectedRoute>}/>
             <Route path="/vivero" element={<ProtectedRoute role={role} moduleKey="vivero"><Vivero/></ProtectedRoute>}/>
             <Route path="/asistencia" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="asistencia"><Asistencia/></ProtectedRoute>}/>
             <Route path="/cosecha" element={<ProtectedRoute role={role} moduleKey="cosecha"><Cosecha/></ProtectedRoute>}/>

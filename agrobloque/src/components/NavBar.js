@@ -5,6 +5,7 @@ import WorkActions, { availableWork } from './WorkActions'
 
 const moreTabs = [
   { path: '/agenda', icon: 'ti-calendar', label: 'Agenda' },
+  { path: '/calendario', icon: 'ti-calendar-month', label: 'Calendario' },
   { path: '/buscar', icon: 'ti-search', label: 'Buscar' },
   { path: '/mapa', icon: 'ti-map', label: 'Mapa' },
   { path: '/vivero', icon: 'vivero-icon', label: 'Vivero' },

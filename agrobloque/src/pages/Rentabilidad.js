@@ -33,13 +33,15 @@ export default function Rentabilidad({ campoActivo }) {
   const [datos, setDatos] = useState({ bloques:[], plantaciones:[], ventas:[], costos:[], fumigaciones:[], fertilizaciones:[], productos:[], muertes:[] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
+  const [preciosDisponibles, setPreciosDisponibles] = useState(true)
   const bloqueSolicitado = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('bloque') : null
 
   useEffect(() => {
     if (!campoActivo?.id) return
     let activo = true
     const cargar = async () => {
-      setLoading(true); setError('')
+      setLoading(true); setError(''); setPreciosDisponibles(true)
       try {
         const { data:bloques, error:bloquesError } = await supabase.from('bloques').select('id,codigo,campo_id').eq('campo_id', campoActivo.id).order('codigo')
         if (bloquesError) throw bloquesError
@@ -48,13 +50,27 @@ export default function Rentabilidad({ campoActivo }) {
           if (activo) setDatos({ bloques:[], plantaciones:[], ventas:[], costos:[], fumigaciones:[], fertilizaciones:[], productos:[], muertes:[] })
           return
         }
+        const cargarProductos = async () => {
+          const conPrecio = await supabase.from('productos').select('id,unidad,precio_unitario')
+          if (!conPrecio.error) return conPrecio
+          if (!String(conPrecio.error.message || '').includes('precio_unitario')) return conPrecio
+          if (activo) setPreciosDisponibles(false)
+          return supabase.from('productos').select('id,unidad')
+        }
+        const cargarFumigaciones = async () => {
+          const conPrecio = await supabase.from('fumigaciones').select('id,fecha,anulada,fumigacion_bloques(bloque_id),fumigacion_productos(dosis,descuento_stock,productos(precio_unitario))').eq('campo_id', campoActivo.id)
+          if (!conPrecio.error) return conPrecio
+          if (!String(conPrecio.error.message || '').includes('precio_unitario')) return conPrecio
+          if (activo) setPreciosDisponibles(false)
+          return supabase.from('fumigaciones').select('id,fecha,anulada,fumigacion_bloques(bloque_id),fumigacion_productos(dosis,descuento_stock)').eq('campo_id', campoActivo.id)
+        }
         const resultados = await Promise.all([
           supabase.from('plantaciones').select('id,bloque_id,fecha_siembra,cantidad_plantas,densidad_plantas_m2,activa,cultivos(nombre)').in('bloque_id', ids).eq('activa', true),
           supabase.from('ventas').select('id,fecha,bloque_id,total,kg_total,precio_kg,monto_cobrado,estado_cobro').in('bloque_id', ids),
           supabase.from('costos').select('id,fecha,bloque_id,campo_id,monto,tipo,descripcion').eq('campo_id', campoActivo.id),
-          supabase.from('fumigaciones').select('id,fecha,anulada,fumigacion_bloques(bloque_id),fumigacion_productos(dosis,descuento_stock,productos(precio_unitario))').eq('campo_id', campoActivo.id),
+          cargarFumigaciones(),
           supabase.from('fertilizaciones').select('id,fecha,bloque_id,anulada,soluciones').in('bloque_id', ids),
-          supabase.from('productos').select('id,unidad,precio_unitario'),
+          cargarProductos(),
         ])
         const primerError = resultados.find(r => r.error)?.error
         if (primerError) throw primerError
@@ -69,12 +85,12 @@ export default function Rentabilidad({ campoActivo }) {
           fumigaciones:resultados[3].data || [], fertilizaciones:resultados[4].data || [], productos:resultados[5].data || [], muertes:muertesResultado.data || [],
         })
       } catch (e) {
-        if (activo) setError(`No se pudo calcular la rentabilidad: ${e.message || 'error desconocido'}`)
+        if (activo) setError('No pudimos actualizar todos los datos financieros en este momento.')
       } finally { if (activo) setLoading(false) }
     }
     cargar()
     return () => { activo = false }
-  }, [campoActivo?.id])
+  }, [campoActivo?.id, retry])
 
   const calculo = useMemo(() => {
     const productos = new Map(datos.productos.map(p => [p.id, p]))
@@ -128,9 +144,10 @@ export default function Rentabilidad({ campoActivo }) {
       <div className="profitability-field"><i className="ti ti-map-pin" /><span>{campoActivo?.nombre || 'Campo'}</span></div>
     </div>
     <div className="profitability-body">
-      {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
+      {error && <div className="profitability-soft-state" role="alert"><span><i className="ti ti-refresh-alert" /></span><div><strong>La información necesita actualizarse</strong><p>{error}</p></div><button onClick={() => setRetry(valor => valor + 1)}>Reintentar</button></div>}
       {loading ? <Skeleton rows={5} label="Calculando rentabilidad" /> : <>
         <FinancialChart data={calculo.meses} />
+        {!preciosDisponibles && <div className="profitability-info"><i className="ti ti-info-circle" /><span><strong>Costos de insumos todavía no incluidos.</strong> El gráfico sí muestra ventas y costos manuales. Para sumar fertilizantes y fitosanitarios hay que habilitar el precio unitario del inventario.</span></div>}
         {calculo.sinAsignar > 0 && <div className="profitability-warning"><i className="ti ti-info-circle" /><span><strong>{fmtGs(calculo.sinAsignar)} sin asignar a un bloque.</strong> Este importe no se divide entre plantas para evitar mostrar un cálculo engañoso.</span></div>}
         <section className="profitability-section">
           <div className="profitability-section-title"><div><h2>{bloqueSolicitado ? 'Plantación del bloque' : 'Plantaciones activas'}</h2><p>La recuperación se calcula con dinero cobrado, no solamente con ventas registradas.</p></div><span>{filasVisibles.length}</span></div>
@@ -146,14 +163,15 @@ function FinancialChart({ data }) {
   const puntos = campo => data.map((item, index) => `${28 + index * 92},${142 - (item[campo] / maximo) * 108}`).join(' ')
   const totalIngresos = data.reduce((s, item) => s + item.ingresos, 0)
   const totalCostos = data.reduce((s, item) => s + item.costos, 0)
+  const hayDatos = totalIngresos > 0 || totalCostos > 0
   return <section className="profitability-chart-card">
     <div className="profitability-chart-head"><div><small>ÚLTIMOS 6 MESES</small><h2>Ingresos y costos</h2></div><div className="profitability-chart-summary"><span><i className="income" />Ingresos <strong>{fmtGs(totalIngresos)}</strong></span><span><i className="cost" />Costos <strong>{fmtGs(totalCostos)}</strong></span><span className={totalIngresos - totalCostos >= 0 ? 'positive' : 'negative'}>Resultado <strong>{fmtGs(totalIngresos - totalCostos)}</strong></span></div></div>
-    <div className="profitability-chart-wrap"><svg viewBox="0 0 520 175" role="img" aria-label="Comparación de ingresos y costos de los últimos seis meses">
+    <div className={`profitability-chart-wrap ${hayDatos ? '' : 'is-empty'}`}><svg viewBox="0 0 520 175" role="img" aria-label="Comparación de ingresos y costos de los últimos seis meses">
       {[34,70,106,142].map(y => <line key={y} x1="20" x2="500" y1={y} y2={y} className="profit-grid-line" />)}
       <polyline points={puntos('ingresos')} className="profit-line income" />
       <polyline points={puntos('costos')} className="profit-line cost" />
       {data.map((item, index) => <g key={item.key}><circle cx={28 + index * 92} cy={142 - (item.ingresos / maximo) * 108} r="4" className="profit-dot income" /><circle cx={28 + index * 92} cy={142 - (item.costos / maximo) * 108} r="4" className="profit-dot cost" /><text x={28 + index * 92} y="166" textAnchor="middle">{item.label}</text></g>)}
-    </svg></div>
+    </svg>{!hayDatos && <div className="profitability-chart-empty"><i className="ti ti-chart-line" /><strong>El gráfico está listo</strong><span>Aparecerá cuando registres una venta o un costo.</span></div>}</div>
   </section>
 }
 
