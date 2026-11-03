@@ -575,6 +575,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:"#124e38", bg:'#eeeeee', action: () => navigate('/auditoria') },
     { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Ultimo: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
     { icon:'ti-building-plus', title:'Nueva empresa', sub:'Dar de alta un nuevo cliente', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => abrir('nuevaEmpresa', { nombre:'', owner_email:'' }) },
+    { icon:'ti-presentation', title:'Vista nuevo cliente', sub:'Probar el primer ingreso sin guardar datos', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => navigate('/primeros-pasos') },
   ].filter((item, index) => (esAdmin || index === 0) && (!item.platformOnly || isPlatformAdmin))
 
   return (
