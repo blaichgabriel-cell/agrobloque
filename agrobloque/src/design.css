@@ -1091,3 +1091,139 @@ html,body { -webkit-tap-highlight-color:transparent; }
   .ag-overview>.ag-topbar { position:static; }
   .ag-overview>.ag-topbar .ag-search-link { display:none; }
 }
+
+/* ==========================================================================
+   Páginas añadidas después del rediseño: Calendario, Agenda mensual,
+   Rentabilidad, avisos y selector de fertilización. Sus clases base viven en
+   design-reference.css; aquí se reescriben con .ag-app para ganar prioridad
+   sin editar ese archivo (que sigue pudiendo recibir cambios ajenos).
+   ========================================================================== */
+.ag-app .lunar-calendar,.ag-app .calendar-moon-today,.ag-app .calendar-soft-state,.ag-app .profitability-chart-card,.ag-app .profitability-section,.ag-app .profitability-field,.ag-app .fert-mode-picker>button {
+  border:1px solid transparent; border-top-color:var(--glass-edge); border-left-color:var(--glass-edge-2); background:var(--glass-bg);
+  -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); color:var(--text-primary);
+  box-shadow:var(--glass-sheen),var(--glass-outline),0 24px 48px -28px rgba(15,23,42,.28);
+}
+
+/* Cabeceras de página */
+.ag-app .calendar-page,.ag-app .profitability-page { min-height:0; background:transparent; }
+.ag-app .calendar-page__hero,.ag-app .profitability-header { padding:32px clamp(16px,3vw,42px) 18px; border-bottom:0; background:transparent; align-items:flex-end; }
+.ag-app .calendar-page__hero>div:first-child>small,.ag-app .profitability-header small { color:var(--text-tertiary); font-size:11px; font-weight:700; letter-spacing:.1em; }
+.ag-app .calendar-page__hero p,.ag-app .profitability-header p { color:var(--text-secondary); font-size:14px; }
+.ag-app .calendar-page__body,.ag-app .profitability-body { padding:8px clamp(16px,3vw,42px) 120px; }
+.ag-app .profitability-field { min-height:44px; border-radius:14px; color:var(--text-primary); font-size:13px; font-weight:650; }
+.ag-app .profitability-field i { color:var(--bl-indigo-600); }
+.ag-app .calendar-moon-today { border-radius:16px; }
+.ag-app .calendar-moon-today>span { filter:none; }
+.ag-app .calendar-moon-today small { color:var(--text-tertiary); font-size:10px; }
+.ag-app .calendar-moon-today strong { color:var(--text-primary); font-size:13px; }
+
+/* Calendario mensual (página y vista de Agenda) */
+.ag-app .lunar-calendar { border-radius:26px; }
+.ag-app .lunar-calendar__header { border-bottom:1px solid rgba(15,23,42,.06); }
+.ag-app .lunar-calendar__header small { color:var(--text-tertiary); font-size:11px; }
+.ag-app .lunar-calendar__header h2 { font-family:var(--bl-font-display); color:var(--text-primary); }
+.ag-app .lunar-calendar__header button { min-width:44px; min-height:44px; border:1px solid rgba(15,23,42,.08); border-radius:13px; background:rgba(255,255,255,.8); color:var(--text-primary); transition:transform 160ms var(--bl-press),background-color 160ms ease; }
+.ag-app .lunar-calendar__header button:active { transform:scale(.96); }
+.ag-app .lunar-calendar__weekdays { border-bottom:1px solid rgba(15,23,42,.06); background:rgba(241,245,249,.6); }
+.ag-app .lunar-calendar__weekdays span { color:var(--text-secondary); font-size:11px; }
+.ag-app .lunar-day { border-color:rgba(15,23,42,.06); background:transparent; }
+.ag-app .lunar-day.is-outside { background:rgba(241,245,249,.35); opacity:.45; }
+.ag-app .lunar-day.is-today { background:rgba(16,185,129,.08); box-shadow:inset 0 0 0 2px var(--bl-emerald-500); }
+.ag-app .lunar-day__date { color:var(--text-primary); }
+.ag-app .lunar-day__date strong { font-family:var(--bl-font-mono); font-variant-numeric:tabular-nums; font-size:12px; font-weight:700; }
+.ag-app .lunar-day.is-today .lunar-day__date strong { background:var(--grad-bloques); box-shadow:0 8px 16px -8px rgba(16,185,129,.8); }
+.ag-app .lunar-day__date span { filter:none; }
+.ag-app .lunar-day__tasks button { background:rgba(15,23,42,.05); color:var(--text-secondary); font-size:11px; }
+.ag-app .lunar-day__tasks>span { color:var(--text-tertiary); font-size:10px; }
+.ag-app .lunar-calendar__legend { background:rgba(241,245,249,.5); color:var(--text-secondary); font-size:11px; }
+.ag-app .calendar-soft-state { border-style:dashed; border-color:rgba(15,23,42,.14); border-radius:22px; color:var(--text-secondary); }
+.ag-app .calendar-soft-state>i { color:var(--bl-emerald-600); }
+.ag-app .calendar-soft-state strong { color:var(--text-primary); }
+.ag-app .agenda-view-switch { border:1px solid rgba(15,23,42,.06); background:rgba(241,245,249,.7); border-radius:16px; }
+.ag-app .agenda-view-switch button { min-height:44px; border-radius:12px; color:var(--text-secondary); font-size:13px; font-weight:650; transition:background-color 200ms ease,color 200ms ease,box-shadow 200ms ease; }
+.ag-app .agenda-view-switch button.active { background:var(--grad-capsule); color:#fff; box-shadow:0 10px 20px -10px rgba(15,57,35,.7); }
+
+/* Rentabilidad (módulo Finanzas: índigo-violeta; ingresos verde, costos ámbar) */
+.ag-app .profitability-chart-card,.ag-app .profitability-section { border-radius:26px; }
+.ag-app .profitability-chart-head small { color:var(--text-tertiary); font-size:11px; }
+.ag-app .profitability-chart-head h2,.ag-app .profitability-section-title h2 { font-family:var(--bl-font-display); color:var(--text-primary); }
+.ag-app .profitability-chart-summary span { color:var(--text-secondary); font-size:11px; }
+.ag-app .profitability-chart-summary strong { color:var(--text-primary); font-family:var(--bl-font-mono); font-size:14px; font-variant-numeric:tabular-nums; }
+.ag-app .profitability-chart-summary span i.income { background:var(--bl-emerald-500); }
+.ag-app .profitability-chart-summary span i.cost { background:var(--bl-amber-600); }
+.ag-app .profit-line.income { stroke:var(--bl-emerald-500); filter:drop-shadow(0 4px 6px rgba(16,185,129,.35)); }
+.ag-app .profit-line.cost { stroke:var(--bl-amber-600); filter:drop-shadow(0 4px 6px rgba(217,119,6,.3)); }
+.ag-app .profit-dot.income { fill:var(--bl-emerald-500); }
+.ag-app .profit-dot.cost { fill:var(--bl-amber-600); }
+.ag-app .profit-grid-line { stroke:rgba(15,23,42,.07); }
+.ag-app .profitability-chart-wrap text { fill:var(--text-tertiary); font-size:11px; }
+.ag-app .positive,.ag-app .profitability-chart-summary .positive strong { color:var(--bl-emerald-600) !important; }
+.ag-app .negative,.ag-app .profitability-chart-summary .negative strong { color:#BE123C !important; }
+.ag-app .profitability-chart-empty { color:var(--text-secondary); }
+.ag-app .profitability-chart-empty i { color:var(--bl-indigo-600); }
+.ag-app .profitability-chart-empty strong { color:var(--text-primary); }
+.ag-app .profitability-section-title p { color:var(--text-secondary); }
+.ag-app .profitability-section-title>span { min-width:34px; height:34px; border-radius:11px; background:var(--grad-finanzas); box-shadow:0 10px 18px -10px rgba(79,70,229,.8); color:#fff; font-family:var(--bl-font-mono); font-size:13px; }
+.ag-app .plantation-profit-card { position:relative; border:1px solid rgba(15,23,42,.06); border-radius:22px; background:rgba(255,255,255,.72); box-shadow:var(--glass-sheen),0 18px 36px -26px rgba(15,23,42,.35); overflow:hidden; }
+.ag-app .plantation-profit-card::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--grad-finanzas); }
+.ag-app .plantation-profit-head small { color:var(--text-tertiary); font-family:var(--bl-font-mono); font-size:11px; }
+.ag-app .plantation-profit-head h3 { font-family:var(--bl-font-display); color:var(--text-primary); }
+.ag-app .plantation-profit-head span { color:var(--text-secondary); font-size:12px; }
+.ag-app .plantation-profit-head>strong { font-size:10px; }
+.ag-app .plantation-profit-head>strong b { font-family:var(--bl-font-mono); font-size:16px; font-variant-numeric:tabular-nums; }
+.ag-app .plantation-profit-progress>div { color:var(--text-secondary); font-size:12px; }
+.ag-app .plantation-profit-progress>div strong { font-family:var(--bl-font-mono); color:var(--text-primary); }
+.ag-app .plantation-profit-progress progress { height:10px; background:rgba(15,23,42,.07); }
+.ag-app .plantation-profit-progress progress::-webkit-progress-bar { background:rgba(15,23,42,.07); }
+.ag-app .plantation-profit-progress progress::-webkit-progress-value { background:var(--grad-finanzas); }
+.ag-app .plantation-profit-progress progress::-moz-progress-bar { background:var(--grad-finanzas); }
+.ag-app .plantation-profit-metrics>div { border:0; border-radius:14px; background:rgba(241,245,249,.75); }
+.ag-app .plantation-profit-metrics span,.ag-app .plantation-profit-metrics small { color:var(--text-secondary); font-size:11px; }
+.ag-app .plantation-profit-metrics strong { color:var(--text-primary); font-family:var(--bl-font-mono); font-size:14px; font-variant-numeric:tabular-nums; }
+.ag-app .profitability-warning,.ag-app .profitability-soft-state,.ag-app .fert-ad-hoc-note { border:1px solid rgba(245,158,11,.28); border-radius:18px; background:rgba(245,158,11,.1); color:#78350F; }
+.ag-app .profitability-warning i,.ag-app .fert-ad-hoc-note>i { color:var(--bl-amber-600); }
+.ag-app .profitability-soft-state>span { border-radius:13px; background:var(--grad-alerta); color:#fff; }
+.ag-app .profitability-soft-state strong { color:#78350F; }
+.ag-app .profitability-soft-state button { min-height:44px; border:1px solid rgba(15,23,42,.1); border-radius:13px; background:rgba(255,255,255,.85); color:var(--text-primary); }
+.ag-app .profitability-info { border:1px solid rgba(99,102,241,.22); border-radius:18px; background:rgba(99,102,241,.08); color:var(--text-secondary); font-size:12px; }
+.ag-app .profitability-info i { color:var(--bl-indigo-600); }
+.ag-app .profitability-info strong { color:var(--text-primary); }
+
+/* Selector plan / aplicación puntual en Fertilizaciones (cian y ámbar-coral) */
+.ag-app .fert-mode-picker>button { border-radius:22px; transition:transform 200ms var(--bl-spring),box-shadow 200ms ease; }
+.ag-app .fert-mode-picker>button:hover { border-color:rgba(255,255,255,.95); transform:translateY(-2px); }
+.ag-app .fert-mode-picker>button:active { transform:scale(.985); }
+.ag-app .fert-mode-picker small { color:var(--text-secondary); font-size:12px; }
+.ag-app .fert-mode-icon { border-radius:14px; background:var(--grad-agua); color:#fff; box-shadow:0 10px 18px -10px rgba(6,182,212,.8); }
+.ag-app .fert-mode-icon.is-extra { background:var(--grad-alerta); box-shadow:0 10px 18px -10px rgba(244,63,94,.7); }
+.ag-app .fert-actions>span { color:var(--text-secondary); font-size:12px; }
+.ag-app .fert-record-kind { color:var(--text-tertiary); font-size:10px; }
+
+/* Avisos del navegador (Alertas) */
+.ag-app .alerts-notification-button { min-height:44px; border:1px solid rgba(15,23,42,.08); border-radius:14px; background:rgba(255,255,255,.8); color:var(--text-primary); font-size:12px; transition:transform 160ms var(--bl-press),background-color 160ms ease; }
+.ag-app .alerts-notification-button:active { transform:scale(.97); }
+.ag-app .alerts-notification-button.is-active { border-color:rgba(16,185,129,.3); background:rgba(16,185,129,.12); color:var(--bl-emerald-600); }
+.ag-app .alerts-notification-note { border-radius:14px; background:rgba(241,245,249,.7); color:var(--text-secondary); font-size:12px; }
+.ag-app .alerts-notification-note i { color:var(--bl-emerald-600); }
+
+/* Móvil */
+@media (max-width:760px) {
+  .ag-app .calendar-page__hero,.ag-app .profitability-header { padding:22px 13px 14px; }
+  .ag-app .calendar-page__body,.ag-app .profitability-body { padding:6px 13px 120px; }
+  .ag-app .lunar-calendar,.ag-app .profitability-chart-card,.ag-app .profitability-section { border-radius:22px; }
+  .ag-app .lunar-day__tasks button { background:rgba(15,23,42,.06); }
+  .ag-app .alerts-notification-button { font-size:0; min-width:44px; justify-content:center; }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .ag-app .lunar-calendar,.ag-app .calendar-moon-today,.ag-app .calendar-soft-state,.ag-app .profitability-chart-card,.ag-app .profitability-section,.ag-app .profitability-field,.ag-app .fert-mode-picker>button { background:#fff; -webkit-backdrop-filter:none; backdrop-filter:none; }
+}
+.ag-app .lunar-calendar__header h2 { text-transform:none; }
+.ag-app .lunar-calendar__header h2::first-letter { text-transform:uppercase; }
+@media (max-width:760px) {
+  .ag-app .profitability-field { align-self:flex-start; }
+  .ag-app .plantation-profit-metrics { gap:6px; }
+  .ag-app .plantation-profit-metrics>div { display:grid; grid-template-columns:1fr auto; align-items:baseline; gap:1px 10px; padding:10px 12px; }
+  .ag-app .plantation-profit-metrics>div>strong { grid-column:2; grid-row:1; margin:0; text-align:right; }
+  .ag-app .plantation-profit-metrics>div>span { grid-column:1; grid-row:1; }
+  .ag-app .plantation-profit-metrics>div>small { grid-column:1/-1; grid-row:2; }
+}

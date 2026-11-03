@@ -557,9 +557,6 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     await fetchAll()
   }
 
-  const inp = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
-  const saveBtn = (color = '#212121') => ({ width:'100%', padding:14, borderRadius:'var(--ag-radius)', background: color, border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer' })
-  const cancelBtn = { width:'100%', padding:12, borderRadius:'var(--ag-radius)', background:'transparent', border:"1px solid #e2e9e5", fontSize:13, color:"#697970", cursor:'pointer', marginTop:8 }
   const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:"1px solid #f6f8f7" }
   const addBtn = { width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px dashed #d4b89a', background:'#eeeeee', fontSize:13, color:"#124e38", cursor:'pointer', marginTop:8, fontWeight:500 }
 
@@ -675,26 +672,26 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
               <div className="ui-7d5827">Este nombre aparece en la barra lateral y en el acceso de invitados. AgroBloque sigue siendo la marca del producto.</div>
               <div className="ag-surface ui-e446b2">
                 <label className="ag-field-label ui-486335">Nombre comercial
-                  <input style={inp} value={form.nombre || ''} maxLength="100" onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Horticultura San José" />
+                  <input className="bl-input" value={form.nombre || ''} maxLength="100" onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Horticultura San José" />
                 </label>
                 <label className="ag-field-label ui-486335">Email de la empresa
-                  <input style={inp} type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email:e.target.value }))} placeholder="contacto@empresa.com" />
+                  <input className="bl-input" type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email:e.target.value }))} placeholder="contacto@empresa.com" />
                 </label>
                 <label className="ag-field-label ui-486335">Teléfono
-                  <input style={inp} type="tel" value={form.telefono || ''} onChange={e => setForm(f => ({ ...f, telefono:e.target.value }))} placeholder="+595 ..." />
+                  <input className="bl-input" type="tel" value={form.telefono || ''} onChange={e => setForm(f => ({ ...f, telefono:e.target.value }))} placeholder="+595 ..." />
                 </label>
                 <label className="ag-field-label ui-486335">URL del logotipo (opcional)
-                  <input style={inp} type="url" value={form.logo_url || ''} onChange={e => setForm(f => ({ ...f, logo_url:e.target.value }))} placeholder="https://..." />
+                  <input className="bl-input" type="url" value={form.logo_url || ''} onChange={e => setForm(f => ({ ...f, logo_url:e.target.value }))} placeholder="https://..." />
                 </label>
                 <label className="ag-field-label ui-486335">Color principal
                   <div className="organization-color-field">
                     <input type="color" value={form.color_primario || '#0F3923'} onChange={e => setForm(f => ({ ...f, color_primario:e.target.value }))} aria-label="Color principal de la empresa" />
-                    <input style={{ ...inp, marginBottom:0 }} value={form.color_primario || '#0F3923'} onChange={e => setForm(f => ({ ...f, color_primario:e.target.value }))} pattern="#[0-9A-Fa-f]{6}" placeholder="#0F3923" />
+                    <input className="bl-input" style={{ marginBottom:0 }} value={form.color_primario || '#0F3923'} onChange={e => setForm(f => ({ ...f, color_primario:e.target.value }))} pattern="#[0-9A-Fa-f]{6}" placeholder="#0F3923" />
                   </div>
                 </label>
-                <button style={saveBtn('#176a25')} onClick={guardarEmpresa} disabled={loading}>{loading ? 'Guardando...' : 'Guardar empresa'}</button>
+                <button className="bl-btn bl-btn--primary" onClick={guardarEmpresa} disabled={loading}>{loading ? 'Guardando...' : 'Guardar empresa'}</button>
               </div>
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'nuevaEmpresa' && <>
@@ -702,18 +699,18 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
               <div className="ui-7d5827">Crea un espacio de datos aislado y envía al dueño un correo para definir su contraseña.</div>
               <div className="ag-surface ui-e446b2">
                 <label className="ag-field-label ui-486335">Nombre comercial
-                  <input style={inp} value={form.nombre || ''} maxLength="100" onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Horticultura San José" />
+                  <input className="bl-input" value={form.nombre || ''} maxLength="100" onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Horticultura San José" />
                 </label>
                 <label className="ag-field-label ui-486335">Email del dueño
-                  <input style={inp} type="email" value={form.owner_email || ''} onChange={e => setForm(f => ({ ...f, owner_email:e.target.value }))} placeholder="dueno@empresa.com" />
+                  <input className="bl-input" type="email" value={form.owner_email || ''} onChange={e => setForm(f => ({ ...f, owner_email:e.target.value }))} placeholder="dueno@empresa.com" />
                 </label>
                 <div className="ui-ca26cd" role="note">
                   <i className="ti ti-shield-lock ui-6f7515" aria-hidden="true" />
                   <span>La nueva empresa no podrá ver datos de otros clientes. Su dueño será administrador únicamente de ese espacio.</span>
                 </div>
-                <button style={saveBtn('#176a25')} onClick={crearEmpresaCliente} disabled={loading}>{loading ? 'Creando...' : 'Crear empresa y enviar invitación'}</button>
+                <button className="bl-btn bl-btn--primary" onClick={crearEmpresaCliente} disabled={loading}>{loading ? 'Creando...' : 'Crear empresa y enviar invitación'}</button>
               </div>
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'invitados' && <>
@@ -722,13 +719,13 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
 
               <div className="ag-surface ui-e446b2">
                 <label className="ag-field-label ui-486335">Crear link
-                <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del invitado"/></label>
+                <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del invitado"/></label>
                 <label className="ag-field-label ui-13e1ed">Campo permitido
-                <select style={inp} value={form.campo_id||''} onChange={e=>setForm(f=>({...f,campo_id:e.target.value}))}>
+                <select className="bl-input" value={form.campo_id||''} onChange={e=>setForm(f=>({...f,campo_id:e.target.value}))}>
                   <option value="">Todos los campos</option>
                   {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select></label>
-                <select style={inp} value={form.dias||'30'} onChange={e=>setForm(f=>({...f,dias:e.target.value}))}>
+                <select className="bl-input" value={form.dias||'30'} onChange={e=>setForm(f=>({...f,dias:e.target.value}))}>
                   <option value="7">Vence en 7 dias</option>
                   <option value="30">Vence en 30 dias</option>
                   <option value="90">Vence en 90 dias</option>
@@ -739,14 +736,14 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                   ayuda="Elegí exactamente a que apartados puede entrar este invitado."
                   onChange={permisos => setForm(f => ({ ...f, permisos }))}
                 />
-                <button style={saveBtn('#176a25')} onClick={crearInvitado} disabled={loading}>{loading ? 'Creando...' : 'Crear acceso invitado'}</button>
+                <button className="bl-btn bl-btn--primary" onClick={crearInvitado} disabled={loading}>{loading ? 'Creando...' : 'Crear acceso invitado'}</button>
               </div>
 
               {linkInvitado && (
                 <div className="ui-b7f0a4">
                   <div className="ui-db4b65">Link creado</div>
                   <div className="ui-3164c8">{linkInvitado}</div>
-                  <button style={saveBtn('#212121')} onClick={copiarLinkInvitado}>Copiar link</button>
+                  <button className="bl-btn bl-btn--primary" onClick={copiarLinkInvitado}>Copiar link</button>
                 </div>
               )}
 
@@ -780,9 +777,9 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
 
               <div className="ag-surface ui-e446b2">
                 <label className="ag-field-label ui-486335">{form.id ? 'Editar usuario' : 'Agregar usuario'}
-                <input style={inp} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="correo@empresa.com"/></label>
-                <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre"/>
-                <select style={inp} value={form.rol||'operador'} onChange={e=>setForm(f=>({...f,rol:e.target.value}))}>
+                <input className="bl-input" type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="correo@empresa.com"/></label>
+                <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre"/>
+                <select className="bl-input" value={form.rol||'operador'} onChange={e=>setForm(f=>({...f,rol:e.target.value}))}>
                   <option value="admin">Admin</option>
                   <option value="operador">Operador</option>
                   <option value="lectura">Solo lectura</option>
@@ -809,8 +806,8 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                     <span>Al crear el usuario enviaremos un email para que defina su contrasena. El administrador no necesita conocerla.</span>
                   </div>
                 )}
-                <textarea className="ui-d303ae" style={{ ...inp }} value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
-                <button style={saveBtn('#176a25')} onClick={guardarRol} disabled={loading}>{loading ? 'Enviando...' : (form.id ? 'Guardar cambios' : 'Crear usuario y enviar invitacion')}</button>
+                <textarea className="ui-d303ae bl-input"  value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
+                <button className="bl-btn bl-btn--primary" onClick={guardarRol} disabled={loading}>{loading ? 'Enviando...' : (form.id ? 'Guardar cambios' : 'Crear usuario y enviar invitacion')}</button>
               </div>
 
               <div className="ag-surface ui-9a7f69">
@@ -830,7 +827,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                   </div>
                 ))}
               </div>
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'cuenta' && <>
@@ -858,34 +855,34 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
               {/* Nombre */}
               <div className="ag-surface ui-e446b2">
                 <label className="ag-field-label ui-486335">Nombre
-                <input className="ui-d51702" style={{ ...inp }} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/></label>
-                <button style={saveBtn()} onClick={guardarNombre} disabled={loading}>{loading?'Guardando...':'Guardar nombre'}</button>
+                <input className="ui-d51702 bl-input"  value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/></label>
+                <button className="bl-btn bl-btn--primary" onClick={guardarNombre} disabled={loading}>{loading?'Guardando...':'Guardar nombre'}</button>
               </div>
 
               {/* Email */}
               <div className="ag-surface ui-e446b2">
                 <label className="ag-field-label ui-486335">Email
-                <input className="ui-d51702" style={{ ...inp }} type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/></label>
+                <input className="ui-d51702 bl-input"  type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/></label>
                 <div className="ui-51eea9">Si cambias el email, recibiras un link de confirmacion</div>
-                <button style={saveBtn('#1a5c2e')} onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
+                <button className="bl-btn bl-btn--primary" onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
               </div>
 
               {/* Contrasena */}
               <div className="ag-surface ui-e446b2">
                 <label className="ag-field-label ui-486335">Contrasena
-                <input className="ui-d51702" style={{ ...inp }} type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contrasena"/></label>
-                <input className="ui-d51702" style={{ ...inp }} type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contrasena"/>
-                <button style={saveBtn('#c84040')} onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contrasena'}</button>
+                <input className="ui-d51702 bl-input"  type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contrasena"/></label>
+                <input className="ui-d51702 bl-input"  type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contrasena"/>
+                <button className="bl-btn bl-btn--danger" onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contrasena'}</button>
               </div>
 
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
             </>}
 
             {/* -- CAMPOS -- */}
             {modal === 'campos' && <>
               <div className="ui-c7b1b6">Campos</div>
               {campos.map(c => (<div key={c.id} style={listItem}><div className="ui-0aae41">{c.nombre}</div></div>))}
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
             </>}
 
             {/* -- CULTIVOS -- */}
@@ -901,15 +898,15 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                 </div>
               ))}
               <button style={addBtn} onClick={() => abrir('editarCultivo',{})}>+ Agregar cultivo</button>
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'editarCultivo' && <>
               <div className="ui-c7b1b6">{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
               <div className="ui-74cc19">Nombre</div>
-              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morron"/>
-              <button style={saveBtn()} onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={cancelBtn} onClick={() => abrir('cultivos')}>Volver</button>
+              <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morron"/>
+              <button className="bl-btn bl-btn--primary" onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button className="bl-btn bl-btn--ghost" onClick={() => abrir('cultivos')}>Volver</button>
             </>}
 
             {/* -- OPERARIOS -- */}
@@ -930,15 +927,15 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                   <button style={addBtn} onClick={() => abrir('editarOperario',{campo_id:campo.id})}>+ Agregar a {campo.nombre}</button>
                 </div>
               ))}
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'editarOperario' && <>
               <div className="ui-c7b1b6">{form.id?'Editar operario':'Nuevo operario'}</div>
               <div className="ui-74cc19">Nombre</div>
-              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
-              <button style={saveBtn()} onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={cancelBtn} onClick={() => abrir('operarios')}>Volver</button>
+              <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
+              <button className="bl-btn bl-btn--primary" onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button className="bl-btn bl-btn--ghost" onClick={() => abrir('operarios')}>Volver</button>
             </>}
 
             {/* -- ABONOS -- */}
@@ -954,15 +951,15 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                 </div>
               ))}
               <button style={addBtn} onClick={() => abrir('editarAbono',{})}>+ Agregar abono</button>
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'editarAbono' && <>
               <div className="ui-c7b1b6">{form.id?'Editar abono':'Nuevo abono'}</div>
               <div className="ui-74cc19">Nombre</div>
-              <input style={inp} value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
-              <button style={saveBtn()} onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={cancelBtn} onClick={() => abrir('abonos')}>Volver</button>
+              <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
+              <button className="bl-btn bl-btn--primary" onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button className="bl-btn bl-btn--ghost" onClick={() => abrir('abonos')}>Volver</button>
             </>}
 
             {/* -- BLOQUES -- */}
@@ -982,7 +979,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                   </div>
                 </div>
               ))}
-              <button style={cancelBtn} onClick={cerrar}>Cerrar</button>
+              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
             </>}
 
             {modal === 'editarBloque' && <>
@@ -995,8 +992,8 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                   </button>
                 ))}
               </div>
-              <button style={saveBtn()} onClick={guardarBloque} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button style={cancelBtn} onClick={() => abrir('bloques')}>Volver</button>
+              <button className="bl-btn bl-btn--primary" onClick={guardarBloque} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+              <button className="bl-btn bl-btn--ghost" onClick={() => abrir('bloques')}>Volver</button>
             </>}
 
           </div>

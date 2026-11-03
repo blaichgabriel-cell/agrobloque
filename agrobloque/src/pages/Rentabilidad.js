@@ -132,7 +132,7 @@ export default function Rentabilidad({ campoActivo }) {
       costos:datos.costos.filter(c => mesClave(c.fecha) === mes.key).reduce((s, c) => s + Number(c.monto || 0), 0)
         + datos.fertilizaciones.filter(f => !f.anulada && mesClave(f.fecha) === mes.key).reduce((s, f) => s + costoFertilizacion(f, productos), 0)
         + datos.fumigaciones.filter(f => !f.anulada && mesClave(f.fecha) === mes.key).reduce((s, f) => s + (f.fumigacion_productos || []).reduce((t, item) => t + Number(item.descuento_stock ?? item.dosis ?? 0) * Number(item.productos?.precio_unitario || 0), 0), 0),
-    }))
+    })).map(mes => ({ ...mes, ingresos:Number.isFinite(mes.ingresos) ? mes.ingresos : 0, costos:Number.isFinite(mes.costos) ? mes.costos : 0 }))
     const sinAsignar = datos.costos.filter(c => !c.bloque_id).reduce((s, c) => s + Number(c.monto || 0), 0)
     return { filas, meses:mesesGrafico, sinAsignar }
   }, [datos])
