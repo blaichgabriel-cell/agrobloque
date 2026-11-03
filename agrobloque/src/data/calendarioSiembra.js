@@ -1,3 +1,4 @@
+// Transcripción normalizada de la guía regional compartida por el productor.
 export const CALENDARIO_SIEMBRA = [
   ['Acelga','15 mar. – ago.','50 a 60','0,2 × 0,15','12','Bandeja y trasplante','80–100','creciente'],
   ['Achicoria','15 mar. – ago.','800 a 900','0,3 × 0,35','0,8','Bandeja y trasplante','80–100','creciente'],
