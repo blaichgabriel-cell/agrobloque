@@ -92,6 +92,7 @@ export const normalizeRole = (roleRow, fallbackEmail = '') => {
 export const moduleForPath = (path = '/') => {
   if (path === '/' || path === '') return 'inicio'
   if (path.startsWith('/bloque/')) return 'mapa'
+  if (path.startsWith('/rentabilidad')) return 'costos'
   return MODULES.find(m => path === m.path || path.startsWith(`${m.path}/`))?.key || 'inicio'
 }
 

@@ -12,6 +12,19 @@ const TIPOS = {
   otro:        { label:'Otro',        icon:'ti-pin',     color:'#555',    bg:'#f2f1ef' },
 }
 
+const fechaLocal = fecha => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
+const FASES_LUNARES = [
+  { icon:'🌑', label:'Luna nueva' }, { icon:'🌒', label:'Creciente' }, { icon:'🌓', label:'Cuarto creciente' }, { icon:'🌔', label:'Gibosa creciente' },
+  { icon:'🌕', label:'Luna llena' }, { icon:'🌖', label:'Gibosa menguante' }, { icon:'🌗', label:'Cuarto menguante' }, { icon:'🌘', label:'Menguante' },
+]
+const faseLunar = fecha => {
+  const referencia = Date.UTC(2000, 0, 6, 18, 14)
+  const ciclo = 29.53058867
+  const dias = (Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 12) - referencia) / 86400000
+  const edad = ((dias % ciclo) + ciclo) % ciclo
+  return FASES_LUNARES[Math.round((edad / ciclo) * 8) % 8]
+}
+
 function ModalConfirm({ onConfirm, onCancel }) {
   return (
     <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
@@ -33,6 +46,8 @@ export default function Agenda() {
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
   const [filtro, setFiltro] = useState('pendientes')
+  const [vista, setVista] = useState('lista')
+  const [mesVisible, setMesVisible] = useState(() => { const fecha = new Date(); fecha.setDate(1); return fecha })
   const [modal, setModal] = useState(false)
   const [confirmar, setConfirmar] = useState(null)
   const vacio = { id:'', tipo:'fumigacion', descripcion:'', fecha_programada:'', hora_programada:'', campo_id:'', bloque_id:'', prioridad:'normal', responsable:'' }
@@ -146,11 +161,25 @@ export default function Agenda() {
             <button className={filtro === k ? 'active' : ''} role="tab" aria-selected={filtro === k} key={k} onClick={() => setFiltro(k)}>{v}</button>
           ))}
         </div>
+        <div className="agenda-view-switch" role="tablist" aria-label="Vista de agenda">
+          <button type="button" className={vista === 'lista' ? 'active' : ''} aria-selected={vista === 'lista'} onClick={() => setVista('lista')}><i className="ti ti-list" />Lista</button>
+          <button type="button" className={vista === 'calendario' ? 'active' : ''} aria-selected={vista === 'calendario'} onClick={() => setVista('calendario')}><i className="ti ti-calendar-month" />Calendario lunar</button>
+        </div>
       </div>
 
       <div className="ag-page-body" style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
         <Notice tone="error">{!modal && error}</Notice><Notice>{success}</Notice>
-        {loading ? <Skeleton rows={3} label="Cargando agenda" /> : tareasFiltradas.length === 0 ? (
+        {loading ? <Skeleton rows={3} label="Cargando agenda" /> : vista === 'calendario' ? (
+          <AgendaCalendar
+            tareas={tareasFiltradas}
+            mes={mesVisible}
+            hoy={hoy}
+            onMes={delta => setMesVisible(actual => { const siguiente = new Date(actual); siguiente.setMonth(siguiente.getMonth() + delta); return siguiente })}
+            onHoy={() => { const fecha = new Date(); fecha.setDate(1); setMesVisible(fecha) }}
+            onCreate={fecha => { setForm({ ...vacio, fecha_programada:fecha }); setModal(true) }}
+            onTask={editarTarea}
+          />
+        ) : tareasFiltradas.length === 0 ? (
           <div className="empty-state"><span className="empty-state__icon"><i className="ti ti-calendar-check" aria-hidden="true" /></span><div><strong>No hay tareas {filtro === 'pendientes' ? 'pendientes' : 'en esta vista'}</strong><p>Agregá una tarea para organizar el próximo trabajo del campo.</p><button className="app-button app-button--secondary" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus" aria-hidden="true" />Crear tarea</button></div></div>
         ) : (
           <div className="ag-record-grid ui-998b74" style={{ gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
@@ -226,4 +255,31 @@ export default function Agenda() {
       )}
     </div>
   )
+}
+
+function AgendaCalendar({ tareas, mes, hoy, onMes, onHoy, onCreate, onTask }) {
+  const inicio = new Date(mes.getFullYear(), mes.getMonth(), 1)
+  const desplazamiento = (inicio.getDay() + 6) % 7
+  const primera = new Date(inicio); primera.setDate(1 - desplazamiento)
+  const dias = Array.from({ length:42 }, (_, indice) => { const fecha = new Date(primera); fecha.setDate(primera.getDate() + indice); return fecha })
+  const tareasPorFecha = tareas.reduce((mapa, tarea) => {
+    const clave = fechaLocal(new Date(`${tarea.fecha_programada}T12:00:00`))
+    mapa[clave] = [...(mapa[clave] || []), tarea]
+    return mapa
+  }, {})
+  return <section className="lunar-calendar" aria-label={`Calendario de ${mes.toLocaleDateString('es-PY', { month:'long', year:'numeric' })}`}>
+    <div className="lunar-calendar__header"><div><small>AGENDA DEL CAMPO</small><h2>{mes.toLocaleDateString('es-PY', { month:'long', year:'numeric' })}</h2></div><div><button onClick={() => onMes(-1)} aria-label="Mes anterior"><i className="ti ti-chevron-left" /></button><button onClick={onHoy}>Hoy</button><button onClick={() => onMes(1)} aria-label="Mes siguiente"><i className="ti ti-chevron-right" /></button></div></div>
+    <div className="lunar-calendar__weekdays">{['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(dia => <span key={dia}>{dia}</span>)}</div>
+    <div className="lunar-calendar__grid">{dias.map(fecha => {
+      const clave = fechaLocal(fecha)
+      const fase = faseLunar(fecha)
+      const items = tareasPorFecha[clave] || []
+      const fuera = fecha.getMonth() !== mes.getMonth()
+      return <div className={`lunar-day ${fuera ? 'is-outside' : ''} ${clave === hoy ? 'is-today' : ''}`} key={clave}>
+        <button className="lunar-day__date" onClick={() => onCreate(clave)} aria-label={`Crear tarea el ${fecha.toLocaleDateString('es-PY')}. ${fase.label}`}><strong>{fecha.getDate()}</strong><span title={fase.label} aria-label={fase.label}>{fase.icon}</span></button>
+        <div className="lunar-day__tasks">{items.slice(0, 3).map(tarea => { const tipo = TIPOS[tarea.tipo] || TIPOS.otro; return <button key={tarea.id} onClick={() => onTask(tarea)} title={tarea.descripcion}><i style={{ background:tipo.color }} />{tarea.hora_programada ? `${String(tarea.hora_programada).slice(0,5)} ` : ''}{tarea.descripcion}</button> })}{items.length > 3 && <span>+{items.length - 3} más</span>}</div>
+      </div>
+    })}</div>
+    <div className="lunar-calendar__legend"><span>La fase lunar es informativa.</span><span>{FASES_LUNARES.filter((_, i) => i % 2 === 0).map(fase => `${fase.icon} ${fase.label}`).join(' · ')}</span></div>
+  </section>
 }

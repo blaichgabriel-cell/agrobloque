@@ -15,6 +15,7 @@ import Inventario from './pages/Inventario'
 import Fumigaciones from './pages/Fumigaciones'
 import Fertilizaciones from './pages/Fertilizaciones'
 import Costos from './pages/Costos'
+import Rentabilidad from './pages/Rentabilidad'
 import Contabilidad from './pages/Contabilidad'
 import FacturasRecibidas from './pages/FacturasRecibidas'
 import CuentasPagar from './pages/CuentasPagar'
@@ -85,6 +86,7 @@ const allTabs = [
   { path:'/fumigaciones', icon:'ti-spray', label:'Fumigaciones' },
   { path:'/fertilizaciones', icon:'ti-leaf', label:'Fertilizaciones' },
   { path:'/costos', icon:'ti-coin', label:'Costos' },
+  { path:'/rentabilidad', icon:'ti-chart-line', label:'Rentabilidad' },
   { path:'/contabilidad', icon:'ti-calculator', label:'Contabilidad' },
   { path:'/cuentas-pagar', icon:'ti-receipt-2', label:'Cuentas a pagar' },
   { path:'/reportes', icon:'ti-chart-bar', label:'Reportes' },
@@ -201,7 +203,7 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
   const groups = [
     { title: 'CAMPO', paths: ['/', '/mapa', '/agenda', '/vivero'] },
     { title: 'OPERACIÓN', paths: ['/cosecha', '/fumigaciones', '/fertilizaciones', '/inventario', '/asistencia'] },
-    { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
+    { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/rentabilidad', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
   ]
   return <aside className="ag-sidebar" aria-label="Navegación principal">
     <div className="ag-brand"><span className={`ag-brand-mark ${organization.logo_url ? 'has-logo' : ''}`} style={!organization.logo_url ? { background:organization.color_primario || '#0F3923' } : undefined} aria-hidden="true">{organization.logo_url ? <img src={organization.logo_url} alt="" /> : <i className="ti ti-leaf" />}</span><div><strong title={organization.nombre}>{organization.nombre || 'AgroBloque'}</strong><small>AgroBloque</small></div></div>
@@ -217,7 +219,7 @@ const MODULE_BY_PATH = {
   '/': 'bloques', '/mapa': 'bloques', '/bloque': 'bloques', '/cosecha': 'bloques',
   '/vivero': 'agua', '/fertilizaciones': 'agua', '/plan-nutricional': 'agua',
   '/fumigaciones': 'alerta', '/alertas': 'alerta',
-  '/contabilidad': 'finanzas', '/cuentas-pagar': 'finanzas', '/costos': 'finanzas', '/ventas': 'finanzas', '/reportes': 'finanzas',
+  '/contabilidad': 'finanzas', '/cuentas-pagar': 'finanzas', '/costos': 'finanzas', '/rentabilidad': 'finanzas', '/ventas': 'finanzas', '/reportes': 'finanzas',
 }
 const moduleFromPath = pathname => MODULE_BY_PATH['/' + (pathname.split('/')[1] || '')] || 'bloques'
 const toneFromPath = path => MODULE_BY_PATH[path] || 'neutral'
@@ -260,6 +262,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/fertilizaciones" element={<ProtectedRoute role={role} moduleKey="plan_nutricional"><Fertilizaciones campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/plan-nutricional" element={<Navigate to="/fertilizaciones"/>}/>
             <Route path="/costos" element={<ProtectedRoute role={role} moduleKey="costos"><Costos campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
+            <Route path="/rentabilidad" element={<ProtectedRoute role={role} moduleKey="costos"><Rentabilidad campoActivo={campoActivo}/></ProtectedRoute>}/>
             <Route path="/contabilidad" element={<ProtectedRoute role={role} moduleKey="contabilidad"><Contabilidad/></ProtectedRoute>}/>
             <Route path="/contabilidad/facturas" element={<ProtectedRoute role={role} moduleKey="contabilidad"><FacturasRecibidas/></ProtectedRoute>}/>
             <Route path="/cuentas-pagar" element={<ProtectedRoute role={role} moduleKey="cuentas_pagar"><CuentasPagar/></ProtectedRoute>}/>

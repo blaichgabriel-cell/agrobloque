@@ -944,6 +944,7 @@ export default function FichaBloque() {
             <button className="ag-small-action ui-0ea43e" type="button" onClick={() => abrirCargaRapida('fumigaciones')}><i className="ti ti-spray" aria-hidden="true" /> Fumigación <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
             <button className="ag-small-action ui-228318" type="button" onClick={() => abrirCargaRapida('fertilizacion')}><i className="ti ti-leaf" aria-hidden="true" /> Fertilización <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
             <button className="ag-small-action ui-f0ca92" type="button" onClick={() => abrirCargaRapida('cosecha')}><i className="ti ti-cut" aria-hidden="true" /> Cosecha <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
+            <button className="ag-small-action ui-f0ca92" type="button" onClick={() => navigate(`/rentabilidad?bloque=${bloque.id}`)}><i className="ti ti-chart-line" aria-hidden="true" /> Rentabilidad <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
           </div>
         </div>
 

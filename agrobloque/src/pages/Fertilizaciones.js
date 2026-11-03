@@ -17,7 +17,7 @@ const notasVisibles = (notas = '') => String(notas || '').replace(MARCA_FIN_SEMA
 const notasConEtapa = (notas = '', etapa = '') => `${notasVisibles(notas)}${etapa ? ` [[etapa:${etapa.trim()}]]` : ''}`.trim() || null
 const finSemanaRegistro = (registro) => {
   const marcada = String(registro?.notas || '').match(MARCA_FIN_SEMANA)?.[1]
-  return marcada || (registro?.plan_id && registro?.fecha ? sumarDias(registro.fecha, 6) : '')
+  return marcada || ''
 }
 const rangoSemana = (registro) => {
   const fin = finSemanaRegistro(registro)
@@ -189,15 +189,17 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
       <div className="ui-eab8be">
         <div className="ui-dcfe72">
           <div>
-            <div className="ui-5e0192">{esSemana ? 'Registro semanal por bloques' : 'Aplicacion puntual'}</div>
-            <h2 className="ui-944434">{esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar fertilización semanal' : 'Nueva fertilización semanal') : form.edit_grupo ? 'Corregir fertilización' : form.plan_id ? 'Registrar aplicacion del plan' : 'Nueva fertilizacion'}</h2>
+            <div className="ui-5e0192">{esSemana ? 'Programación por bloques' : form.plan_id ? 'Aplicación del plan' : 'Fuera del plan'}</div>
+            <h2 className="ui-944434">{esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar plan semanal' : 'Nuevo plan semanal') : form.edit_grupo ? 'Corregir aplicación' : form.plan_id ? 'Registrar aplicación del plan' : 'Aplicación puntual del día'}</h2>
           </div>
           <button className="ui-358cf9" aria-label="Cerrar" onClick={onClose}>
             <i className="ti ti-x ui-e5e6f8" />
           </button>
         </div>
 
-        <Notice tone="error">{error}</Notice><FormHeading number="01" detail="Fecha, preparación y bloques seleccionados">Datos de la aplicación</FormHeading>
+        <Notice tone="error">{error}</Notice>
+        {!esSemana && !form.plan_id && <div className="fert-ad-hoc-note"><i className="ti ti-bolt" /><div><strong>Aplicación extraordinaria</strong><span>Usá esta opción cuando aplicás hoy un producto que no estaba previsto. Se registra en el historial y descuenta inventario sin modificar el plan semanal.</span></div></div>}
+        <FormHeading number="01" detail="Fecha, preparación y bloques seleccionados">Datos de la aplicación</FormHeading>
         <div className="ui-c66208" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, 1fr)' }}>
           {esSemana && <label className="ui-e22579" style={{ gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" className="bl-input" /></label>}
           <label className="ui-e22579">
@@ -597,77 +599,26 @@ export default function Fertilizaciones({ campoActivo }) {
       const { data:planesGuardados, error: planError } = planResult
       if (planError) { setSaving(false); return setError(`No se pudo guardar la semana: ${planError.message}`) }
       const planesCreados = planesGuardados || []
-      const planPorBloque = new Map(planesCreados.map(plan => [plan.bloque_id, plan]))
-      const grupoId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null
-      const solucionesPorBloque = (bloque) => solucionesLimpias.map(sol => ({
-        nombre:sol.nombre,
-        productos:sol.productos.map(p => {
-          const { unidad_stock, ...producto } = p
-          if (p.modo !== 'por_planta') return producto
-          return {
-            ...producto,
-            cantidad:Number(p.cantidad || 0) * plantasDelBloque(bloque),
-            dosis_por_planta:Number(p.cantidad || 0),
-            unidad_dosis:p.unidad,
-            plantas_calculadas:plantasDelBloque(bloque),
-          }
-        }),
-      }))
-      const notasSemana = `${[form.nombre_plan?.trim() && `Semana: ${form.nombre_plan.trim()}`, notasConEtapa(form.notas, form.etapa_fenologica)].filter(Boolean).join(' · ')} [[semana_fin:${form.fecha_fin}]]`.trim()
-      const aplicacionesSemana = bloquesDestino.map(bloque_id => {
-        const bloque = bloques.find(b => b.id === bloque_id)
-        return {
-          bloque_id,
-          grupo_id:grupoId,
-          plantacion_id:bloque?.plantaciones?.find(p => p.activa)?.id || null,
-          plan_id:planPorBloque.get(bloque_id)?.id || null,
-          fecha:form.fecha,
-          tanque_litros:tanqueLitros,
-          tanques_cantidad:tanquesCantidad,
-          estado:'completa',
-          dosis_alcance:solucionesLimpias.some(sol => sol.productos.some(p => p.modo === 'por_planta')) ? 'por_planta' : 'por_tanque',
-          notas:notasSemana,
-          soluciones:solucionesPorBloque(bloque),
-        }
-      })
-      const { error:aplicacionError } = await supabase.from('fertilizaciones').insert(aplicacionesSemana)
-      if (aplicacionError) {
-        setSaving(false)
-        setError(`La semana se creó, pero no se pudo guardar en los bloques: ${aplicacionError.message}`)
-        return
-      }
-
-      const descuentos = {}
-      solucionesLimpias.flatMap(sol => sol.productos).forEach(p => {
-        if (!p.producto_id) return
-        const cantidadUso = p.modo === 'por_planta'
-          ? Number(p.cantidad || 0) * bloquesDestino.reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0)
-          : Number(p.cantidad || 0) * tanquesCantidad
-        const cantidadStock = convertirAStock(cantidadUso, p.unidad, p.unidad_stock)
-        if (cantidadStock > 0) descuentos[p.producto_id] = (descuentos[p.producto_id] || 0) + cantidadStock
-      })
-      for (const [productoId, descuento] of Object.entries(descuentos)) {
-        const { data:prodActual } = await supabase.from('productos').select('stock_actual').eq('id', productoId).single()
-        if (prodActual) await ajustarStockSeguro({ productoId, delta:-descuento, tipo:'consumo_fertilizacion', modulo:'Fertilizaciones', referenciaId:grupoId || form.fecha, detalle:`Semana aplicada en ${bloquesDestino.length} bloque(s)`, stockActual:prodActual.stock_actual })
-      }
-
-      if (planesCreados.length) {
-        await supabase.from('fertilizacion_plan_aplicaciones').insert(planesCreados.map(plan => ({
-          plan_id:plan.id,
-          bloque_id:plan.bloque_id,
-          plantacion_id:bloques.find(b => b.id === plan.bloque_id)?.plantaciones?.find(p => p.activa)?.id || null,
-          fecha:form.fecha,
-          litros_aplicados:tanqueLitros * tanquesCantidad,
-          tanques_aplicados:tanquesCantidad,
-          estado:'completa',
-          productos:aplicacionesSemana.find(item => item.bloque_id === plan.bloque_id)?.soluciones || [],
-          notas:notasSemana,
-        })))
-      }
-      await registrarAuditoria({ accion:'Registro fertilizacion semanal', modulo:'Fertilizaciones', tabla:'fertilizaciones', registroId:grupoId || '', detalle:`${bloquesDestino.length} bloques · ${form.fecha} a ${form.fecha_fin}` })
+      await Promise.all(planesCreados.map(plan => supabase.from('tareas').update({ anulada:true, cancelada:true, anulada_motivo:'Plan reprogramado', updated_at:new Date().toISOString() }).eq('origen_tipo', 'fertilizacion_plan').eq('origen_id', plan.id).eq('completada', false)))
+      const tareasPlan = planesCreados.flatMap(plan => fechasDelPlan(plan.fecha_inicio, plan.fecha_fin, plan.frecuencia, plan.dia_semana).map(fecha => ({
+        tipo:'fertiriego',
+        descripcion:`Fertilización planificada · ${plan.nombre}`,
+        fecha_programada:fecha,
+        campo_id:plan.campo_id || campoActivo?.id || null,
+        bloque_id:plan.bloque_id,
+        prioridad:'normal',
+        responsable:null,
+        completada:false,
+        origen_tipo:'fertilizacion_plan',
+        origen_id:plan.id,
+      })))
+      const { error:tareasError } = tareasPlan.length ? await supabase.from('tareas').insert(tareasPlan) : { error:null }
+      await registrarAuditoria({ accion:'Creo plan semanal de fertilizacion', modulo:'Fertilizaciones', tabla:'fertilizacion_planes', registroId:planesCreados[0]?.id || '', detalle:`${bloquesDestino.length} bloques · ${form.fecha} a ${form.fecha_fin}` })
       setSaving(false)
       setModal(false)
-      setSuccess(`Fertilización semanal guardada en ${bloquesDestino.length} bloque${bloquesDestino.length === 1 ? '' : 's'}. Ya aparece en cada historial.`)
+      setSuccess(tareasError
+        ? `El plan semanal quedó guardado, pero no se pudieron crear sus tareas: ${tareasError.message}`
+        : `Plan semanal guardado. Se agregaron ${tareasPlan.length} tarea${tareasPlan.length === 1 ? '' : 's'} al calendario. El inventario se descontará al registrar cada aplicación.`)
       await cargarDatos()
       return
     }
@@ -705,7 +656,7 @@ export default function Fertilizaciones({ campoActivo }) {
         bloque_id,
         grupo_id:grupoId,
         plantacion_id: bloque?.plantaciones?.find(p => p.activa)?.id || null,
-        plan_id: form.plan_id || null,
+        plan_id: form.plan_ids_by_block?.[bloque_id] || form.plan_id || null,
         fecha: form.fecha,
         tanque_litros: tanqueLitros,
         tanques_cantidad: form.estado === 'suspendida' ? 0 : tanquesCantidad,
@@ -777,19 +728,24 @@ export default function Fertilizaciones({ campoActivo }) {
       }))
     }
 
-    if (form.plan_id && !form.edit_grupo) {
-      const { error: seguimientoError } = await supabase.from('fertilizacion_plan_aplicaciones').insert({
-        plan_id: form.plan_id,
-        bloque_id: bloquesDestino[0],
-        plantacion_id: bloques.find(b => b.id === bloquesDestino[0])?.plantaciones?.find(p => p.activa)?.id || null,
-        fecha: form.fecha,
-        litros_aplicados: form.estado === 'suspendida' ? 0 : tanqueLitros * tanquesCantidad,
-        tanques_aplicados: form.estado === 'suspendida' ? 0 : tanquesCantidad,
-        estado: form.estado || 'completa',
-        productos: payloads[0]?.soluciones || [],
-        notas: form.notas || null,
-      })
+    if ((form.plan_id || form.plan_ids_by_block) && !form.edit_grupo) {
+      const seguimiento = payloads.filter(item => item.plan_id).map(item => ({
+        plan_id:item.plan_id,
+        bloque_id:item.bloque_id,
+        plantacion_id:item.plantacion_id,
+        fecha:form.fecha,
+        litros_aplicados:form.estado === 'suspendida' ? 0 : tanqueLitros * tanquesCantidad,
+        tanques_aplicados:form.estado === 'suspendida' ? 0 : tanquesCantidad,
+        estado:form.estado || 'completa',
+        productos:item.soluciones || [],
+        notas:form.notas || null,
+      }))
+      const { error: seguimientoError } = seguimiento.length ? await supabase.from('fertilizacion_plan_aplicaciones').insert(seguimiento) : { error:null }
       if (seguimientoError) setError(`La fertilizacion se guardo, pero fallo el seguimiento del plan: ${seguimientoError.message}`)
+      const planIdsAplicados = [...new Set(seguimiento.map(item => item.plan_id).filter(Boolean))]
+      if (planIdsAplicados.length) {
+        await supabase.from('tareas').update({ completada:true, fecha_completada:form.fecha, updated_at:new Date().toISOString() }).eq('origen_tipo', 'fertilizacion_plan').in('origen_id', planIdsAplicados).eq('fecha_programada', form.fecha)
+      }
     }
 
     await registrarAuditoria({
@@ -820,6 +776,31 @@ export default function Fertilizaciones({ campoActivo }) {
     setModal(true)
   }
 
+  const aplicarPlanHoy = (plan) => {
+    setError('')
+    setSuccess('')
+    const relacionados = planes.filter(item => item.nombre === plan.nombre && item.fecha_inicio === plan.fecha_inicio && item.fecha_fin === plan.fecha_fin && JSON.stringify(item.soluciones || []) === JSON.stringify(plan.soluciones || []))
+    const seleccionados = relacionados.length ? relacionados : [plan]
+    setForm({
+      tipo:'aplicacion',
+      plan_id:plan.id,
+      plan_ids_by_block:Object.fromEntries(seleccionados.map(item => [item.bloque_id, item.id])),
+      estado:'completa',
+      fecha:hoy(),
+      fecha_fin:'',
+      nombre_plan:plan.nombre || '',
+      frecuencia:'semanal',
+      dia_semana:String(plan.dia_semana ?? 1),
+      tanque_litros:String(plan.tanque_litros || 200),
+      tanques_cantidad:String(plan.tanques_cantidad || 1),
+      bloques_ids:seleccionados.map(item => item.bloque_id),
+      notas:`Aplicación del plan: ${plan.nombre || 'Plan semanal'}`,
+      etapa_fenologica:etapaDeNotas(plan.notas || ''),
+      soluciones:Array.isArray(plan.soluciones) && plan.soluciones.length ? plan.soluciones : [{ nombre:'A', productos:[{ nombre:'', cantidad:'', unidad:'kg', modo:'por_tanque' }] }],
+    })
+    setModal(true)
+  }
+
   const pausarPlan = async (plan) => {
     setError('')
     setSuccess('')
@@ -840,15 +821,17 @@ export default function Fertilizaciones({ campoActivo }) {
             <div className="ui-35a79d">Aplicaciones reales</div>
             <h1 className="ui-118f2f">Fertilizaciones</h1>
           </div>
-          <div className="fert-actions">
-            <button onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible} className="bl-btn-solid ui-320697" style={{ opacity:schemaPlanesDisponible ? 1 : .55 }}><i className="ti ti-calendar-week ui-52eaee" />Fertilización semanal</button>
-            <button onClick={() => abrirModal('aplicacion')} className="bl-btn-solid"><i className="ti ti-plus ui-52eaee" />Aplicación puntual</button>
-          </div>
+          <div className="fert-actions"><span>Elegí cómo querés registrar</span></div>
         </div>
 
         {error && <div className="ui-173cc6">{error}</div>}
         {success && <div className="ui-fb7aa5">{success}</div>}
         {!schemaPlanesDisponible && <div className="ui-9536bb">Los planes diarios y semanales se habilitaran despues de ejecutar el SQL preparado para Supabase.</div>}
+
+        <div className="fert-mode-picker">
+          <button type="button" onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible}><span className="fert-mode-icon"><i className="ti ti-calendar-week" /></span><span><strong>Plan semanal</strong><small>Programá la fórmula, los bloques y los días de una semana.</small></span><i className="ti ti-chevron-right" /></button>
+          <button type="button" onClick={() => abrirModal('aplicacion')}><span className="fert-mode-icon is-extra"><i className="ti ti-bolt" /></span><span><strong>Aplicación puntual</strong><small>Registrá ahora un producto que surgió fuera del plan.</small></span><i className="ti ti-chevron-right" /></button>
+        </div>
 
         <div className="ui-9e5e94" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))' }}>
           <div className="nutrition-card ui-9128d9" style={{ ...card }}>
@@ -880,7 +863,7 @@ export default function Fertilizaciones({ campoActivo }) {
               const tanques = Number(plan.tanques_cantidad) || 1
               const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
               const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los dias' : `Cada ${['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][Number(plan.dia_semana)] || 'semana'}`
-              return <div className="ui-8e6c1c" key={plan.id} style={{ gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong className="ui-0cf08e">{plan.nombre}</strong><div className="ui-8174dd">{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div className="ui-72210b">{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong className="ui-7b5575">{frecuencia}</strong><div className="ui-8174dd">{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div className="ui-19255d"><button className="ag-small-action ui-e6110d" onClick={() => registrarDesdePlan(plan)} disabled={saving} style={{ ...btnNegro }}>Usar otra semana</button><button className="ag-small-action ui-51b96d" onClick={() => abrirEditarPlan(plan)}>Editar receta</button></div></div>
+              return <div className="ui-8e6c1c" key={plan.id} style={{ gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong className="ui-0cf08e">{plan.nombre}</strong><div className="ui-8174dd">{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div className="ui-72210b">{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong className="ui-7b5575">{frecuencia}</strong><div className="ui-8174dd">{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div className="ui-19255d"><button className="ag-small-action ui-e6110d" onClick={() => aplicarPlanHoy(plan)} disabled={saving} style={{ ...btnNegro }}>Aplicar hoy</button><button className="ag-small-action ui-51b96d" onClick={() => registrarDesdePlan(plan)}>Repetir semana</button><button className="ag-small-action ui-51b96d" onClick={() => abrirEditarPlan(plan)}>Editar plan</button></div></div>
             })}
           </div>
         )}
@@ -895,7 +878,7 @@ export default function Fertilizaciones({ campoActivo }) {
             <div className="ui-c023a0">Sin fertilizaciones registradas.</div>
           ) : grupos.map((g, idx) => (
             <div className="ui-4a0a5b" key={g.key || `${g.fecha}-${idx}`} onClick={() => setDetalle(g)} style={{ gridTemplateColumns:isMobile ? '1fr' : '130px 1fr 1.4fr', borderBottom: idx === grupos.length - 1 ? 'none' : '1px solid #f0ede8', opacity:g.anulada ? .58 : 1, background:g.anulada ? '#faf8f5' : '#fff' }}>
-              <div className="ui-83e448">{g.items.some(i => i.plan_id) ? rangoSemana(g.items[0]) : fmtFecha(g.fecha)}</div>
+                <div className="ui-83e448">{g.items.some(i => i.plan_id) ? rangoSemana(g.items[0]) : fmtFecha(g.fecha)}<small className="fert-record-kind">{g.items.some(i => i.plan_id) ? 'PLAN SEMANAL' : 'PUNTUAL'}</small></div>
               <div>
                 <div className="ui-83e448">{g.items.length} bloque{g.items.length === 1 ? '' : 's'}</div>
                 <div className="ui-a35c15">{g.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div>

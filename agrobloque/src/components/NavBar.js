@@ -15,6 +15,7 @@ const moreTabs = [
   { path: '/fumigaciones', icon: 'ti-spray', label: 'Fumigaciones' },
   { path: '/fertilizaciones', icon: 'ti-leaf', label: 'Fertilizaciones' },
   { path: '/costos', icon: 'ti-coin', label: 'Costos' },
+  { path: '/rentabilidad', icon: 'ti-chart-line', label: 'Rentabilidad' },
   { path: '/contabilidad', icon: 'ti-calculator', label: 'Contabilidad' },
   { path: '/cuentas-pagar', icon: 'ti-receipt-2', label: 'Cuentas a pagar' },
   { path: '/reportes', icon: 'ti-chart-bar', label: 'Reportes' },
