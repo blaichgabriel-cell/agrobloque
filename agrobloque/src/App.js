@@ -1,38 +1,40 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { authAction, forceLocalSignOut, guestToken, supabase } from './lib/supabase'
 import { Skeleton } from './components/UI'
+import ErrorBoundary from './components/ErrorBoundary'
 import Login from './pages/Login'
 import Dashboard from './pages/Overview'
-import Mapa from './pages/MapaProfesional'
-import FichaBloque from './pages/FichaBloque'
-import Configuracion from './pages/Configuracion'
-import Agenda from './pages/Agenda'
-import Calendario from './pages/Calendario'
-import Asistencia from './pages/Asistencia'
-import Cosecha from './pages/Cosecha'
-import Ventas from './pages/Ventas'
-import Inventario from './pages/Inventario'
-import Fumigaciones from './pages/Fumigaciones'
-import Fertilizaciones from './pages/Fertilizaciones'
-import Costos from './pages/Costos'
-import Rentabilidad from './pages/Rentabilidad'
-import Contabilidad from './pages/Contabilidad'
-import FacturasRecibidas from './pages/FacturasRecibidas'
-import CuentasPagar from './pages/CuentasPagar'
-import Reportes from './pages/Reportes'
-import Compradores from './pages/Compradores'
-import Vivero from './pages/Vivero'
-import Invitado from './pages/Invitado'
-import Buscador from './pages/Buscador'
-import Alertas from './pages/Alertas'
-import Auditoria from './pages/Auditoria'
-import Historial from './pages/Historial'
 import NavBar from './components/NavBar'
 import { canAccessModule, filterTabsByRole, normalizeRole } from './lib/permissions'
 import { textoErrorProfesional } from './lib/errors'
 import { Toaster } from 'sonner'
 import TaskNotifications from './components/TaskNotifications'
+
+const Mapa = lazy(() => import('./pages/MapaProfesional'))
+const FichaBloque = lazy(() => import('./pages/FichaBloque'))
+const Configuracion = lazy(() => import('./pages/Configuracion'))
+const Agenda = lazy(() => import('./pages/Agenda'))
+const Calendario = lazy(() => import('./pages/Calendario'))
+const Asistencia = lazy(() => import('./pages/Asistencia'))
+const Cosecha = lazy(() => import('./pages/Cosecha'))
+const Ventas = lazy(() => import('./pages/Ventas'))
+const Inventario = lazy(() => import('./pages/Inventario'))
+const Fumigaciones = lazy(() => import('./pages/Fumigaciones'))
+const Fertilizaciones = lazy(() => import('./pages/Fertilizaciones'))
+const Costos = lazy(() => import('./pages/Costos'))
+const Rentabilidad = lazy(() => import('./pages/Rentabilidad'))
+const Contabilidad = lazy(() => import('./pages/Contabilidad'))
+const FacturasRecibidas = lazy(() => import('./pages/FacturasRecibidas'))
+const CuentasPagar = lazy(() => import('./pages/CuentasPagar'))
+const Reportes = lazy(() => import('./pages/Reportes'))
+const Compradores = lazy(() => import('./pages/Compradores'))
+const Vivero = lazy(() => import('./pages/Vivero'))
+const Invitado = lazy(() => import('./pages/Invitado'))
+const Buscador = lazy(() => import('./pages/Buscador'))
+const Alertas = lazy(() => import('./pages/Alertas'))
+const Auditoria = lazy(() => import('./pages/Auditoria'))
+const Historial = lazy(() => import('./pages/Historial'))
 
 const DEFAULT_ORGANIZATION = { id:null, nombre:'AgroBloque', logo_url:null, color_primario:'#0F3923' }
 
@@ -247,6 +249,8 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
       <div data-app-scroll>
         <div className="ag-content-shell">
           <div className="ag-route-stage" key={location.pathname}>
+          <ErrorBoundary resetKey={location.pathname}>
+          <Suspense fallback={<Skeleton rows={3} label="Cargando pantalla" />}>
           <Routes>
             <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} organization={organization}/>}/>
             <Route path="/buscar" element={<ProtectedRoute role={role} moduleKey="buscar"><Buscador/></ProtectedRoute>}/>
@@ -275,6 +279,8 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role} organization={organization} onOrganizationUpdate={setOrganization}/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
+          </Suspense>
+          </ErrorBoundary>
           </div>
         </div>
       </div>
@@ -458,7 +464,7 @@ export default function App() {
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
-        <Route path="/invitado/:token" element={<Invitado />} />
+        <Route path="/invitado/:token" element={<Suspense fallback={<Skeleton rows={3} label="Cargando" />}><Invitado /></Suspense>} />
         <Route path="*" element={<Navigate to={`/invitado/${guestToken}`} />} />
       </Routes>
     </BrowserRouter>

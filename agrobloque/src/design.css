@@ -1227,3 +1227,13 @@ html,body { -webkit-tap-highlight-color:transparent; }
   .ag-app .plantation-profit-metrics>div>span { grid-column:1; grid-row:1; }
   .ag-app .plantation-profit-metrics>div>small { grid-column:1/-1; grid-row:2; }
 }
+
+/* Aviso cuando una pantalla falla (ErrorBoundary) */
+.bl-error-state { max-width:440px; margin:12vh auto 0; padding:32px 24px; display:grid; justify-items:center; gap:10px; text-align:center; border:1px solid transparent; border-top-color:var(--glass-edge); border-left-color:var(--glass-edge-2); border-radius:26px; background:var(--glass-bg-strong); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); color:var(--text-primary); box-shadow:var(--glass-sheen),var(--glass-outline),0 30px 60px -34px rgba(15,23,42,.4); }
+.bl-error-state__icon { width:56px; height:56px; display:grid; place-items:center; border-radius:18px; background:var(--grad-alerta); color:#fff; font-size:26px; box-shadow:0 14px 26px -12px rgba(244,63,94,.6); }
+.bl-error-state h2 { margin:6px 0 0; font-size:20px; }
+.bl-error-state p { margin:0; color:var(--text-secondary); font-size:14px; line-height:1.5; }
+.bl-error-state__actions { width:100%; display:grid; gap:8px; margin-top:10px; }
+.bl-error-state__actions .bl-btn { margin-top:0; text-decoration:none; }
+@media (max-width:767px) { .bl-error-state { margin:8vh 13px 0; } }
+@media (prefers-reduced-transparency:reduce) { .bl-error-state { background:#fff; -webkit-backdrop-filter:none; backdrop-filter:none; } }

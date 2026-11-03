@@ -20,8 +20,8 @@
 ## 3. Estado de la implementación (notas del repo)
 - El sistema vive al final de `src/design.css` (sección "BIO-LUMINESCENT SPATIAL GLASS"): tokens `--bl-*` (capa 1), `--grad-*`, `--glass-*`, `--text-*` (capa 2) y `--mod-*` / `--tone-*` (capa 3). Los tokens heredados (`--forest-*`, `--slate-*`, `--sage-*`) se reasignan ahí.
 - Color por módulo: `data-module` en `.ag-app` (ruta activa, `MODULE_BY_PATH` en `src/App.js`) y `data-tone` en íconos y tarjetas (`bloques`, `agua`, `alerta`, `finanzas`, `neutral`).
-- Código muerto: `src/pages/Dashboard.js`, `DesktopDashboard.js` y `Mapa.js` no se usan (el inicio es `Overview.js` y `/mapa` es `MapaProfesional.js`). `index.css` de la raíz no es CSS.
 - `src/design-reference.css` es generado: guarda los estilos que eran inline como clases `.ui-xxxxxx` (selector triple para conservar su prioridad) con los colores viejos mapeados a tokens. Para estilos nuevos usar clases con nombre en `design.css`, no agregar ahí ni volver a `style={{}}`.
+- Páginas nuevas de terceros (Calendario, Rentabilidad…) traen sus clases en `design-reference.css`; se rediseñan en `design.css` con prefijo `.ag-app` para ganar prioridad sin editar ese archivo.
 - Siguen inline solo los valores dinámicos (anchos de barras, ternarios por tamaño de pantalla), unos 300.
 - Clases compartidas para formularios y hojas: `bl-overlay`, `bl-sheet`, `bl-input`, `bl-label`, `bl-btn` (--primary, --ghost, --danger), `bl-btn-solid`, `bl-card`, `bl-icon-btn`.
 - Enteros (plantas, semillas, kilos): input de texto con `inputMode="numeric"`, `formatLocaleInteger` al salir y `parseLocaleInteger` al guardar (`src/lib/numbers.js`). Nunca `type="number"`.
