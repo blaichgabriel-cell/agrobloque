@@ -1237,3 +1237,34 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .bl-error-state__actions .bl-btn { margin-top:0; text-decoration:none; }
 @media (max-width:767px) { .bl-error-state { margin:8vh 13px 0; } }
 @media (prefers-reduced-transparency:reduce) { .bl-error-state { background:#fff; -webkit-backdrop-filter:none; backdrop-filter:none; } }
+
+/* Corrección móvil: cabecera visible bajo notch/barra del navegador */
+@media (max-width:1099px) {
+  .ag-app [data-app-scroll] {
+    height:100dvh;
+    padding-top:env(safe-area-inset-top,0px);
+  }
+  .ag-app .bl-page-head,.ag-app .ag-page-header { padding-top:0; }
+  .ag-app .ag-topbar { top:10px; }
+}
+@media (max-width:767px) {
+  .ag-app .ag-overview { width:100%; min-width:0; padding:8px 10px 20px; }
+  .ag-app .ag-overview>.ag-topbar {
+    position:relative;
+    top:auto;
+    width:100%;
+    min-width:0;
+    min-height:58px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin:0 0 10px;
+    padding:7px;
+  }
+  .ag-app .ag-overview>.ag-topbar .ag-search-link,.ag-app .ag-overview>.ag-topbar .ag-top-field { display:none; }
+  .ag-app .ag-mobile-brand { min-width:0; max-width:none; flex:1 1 auto; padding-left:3px; overflow:hidden; }
+  .ag-app .ag-mobile-brand>b { width:34px; height:34px; flex:0 0 34px; display:grid; place-items:center; border-radius:11px; background:var(--grad-bloques); color:#fff; }
+  .ag-app .ag-mobile-brand>span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ag-app .ag-overview>.ag-topbar .ag-icon-button,.ag-app .ag-overview>.ag-topbar .ag-top-account { width:44px; height:44px; flex:0 0 44px; }
+  .ag-app .ag-hero { width:100%; margin:0; }
+}
