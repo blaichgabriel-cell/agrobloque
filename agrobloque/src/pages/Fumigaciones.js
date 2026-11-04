@@ -279,7 +279,7 @@ export default function Fumigaciones() {
 
   const guardarRelacionesFumigacion = async (fumigacionId) => {
     if (form.bloques_ids.length > 0) {
-      await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => {
+      const { error: bloquesError } = await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => {
         const bloque = bloques.find(x => x.id === b)
         return {
           fumigacion_id: fumigacionId,
@@ -288,6 +288,7 @@ export default function Fumigaciones() {
           plantacion_id_snapshot: getPlantacionActivaId(bloque),
         }
       }))
+      if (bloquesError) throw bloquesError
     }
 
     const prods = form.productos_form.filter(p => (p.producto_id || p.producto_nombre?.trim()) && p.cantidad)

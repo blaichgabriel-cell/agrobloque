@@ -138,7 +138,7 @@ const comprimirFotoPerfil = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
-export default function Configuracion({ role, organization = { nombre:'AgroBloque' }, onOrganizationUpdate }) {
+export default function Configuracion({ role, organization = { nombre:'AgroBloque' }, onOrganizationUpdate, theme = 'light', onThemeToggle }) {
   const navigate = useNavigate()
   const fotoRef = useRef()
   const [modal, setModal] = useState(null)
@@ -618,6 +618,11 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
       </div>
 
       <div className="ui-1a3247">
+        <button type="button" className="ag-surface ag-theme-setting" onClick={onThemeToggle} role="switch" aria-checked={theme === 'dark'}>
+          <span className="ag-theme-setting__icon" aria-hidden="true"><i className={`ti ${theme === 'dark' ? 'ti-moon-stars' : 'ti-sun'}`} /></span>
+          <span className="ag-theme-setting__copy"><strong>Apariencia</strong><small>{theme === 'dark' ? 'Modo oscuro activado' : 'Modo claro activado'}</small></span>
+          <span className="ag-theme-toggle__track" aria-hidden="true"><span className="ag-theme-toggle__thumb" /></span>
+        </button>
         {menuItems.map((it, i) => (
           <div className="ag-surface ui-f40337" key={i} onClick={it.action}>
             <div className="ui-3044e7" style={{ background: it.bg || '#f2f1ef' }}>

@@ -11,6 +11,7 @@ import { canAccessModule, filterTabsByRole, normalizeRole } from './lib/permissi
 import { textoErrorProfesional } from './lib/errors'
 import { Toaster } from 'sonner'
 import TaskNotifications from './components/TaskNotifications'
+import ThemeToggle from './components/ThemeToggle'
 
 const Mapa = lazy(() => import('./pages/MapaProfesional'))
 const FichaBloque = lazy(() => import('./pages/FichaBloque'))
@@ -191,7 +192,7 @@ function ConnectionStatus() {
   return <div className="ag-offline"><i className="ti ti-wifi-off" /> Sin conexión. No cierres la aplicación hasta recuperar internet.</div>
 }
 
-function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZATION }) {
+function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZATION, theme, onThemeToggle }) {
   const tabs = filterTabsByRole(allTabs, role, isGuest)
   const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
   const [alertCount, setAlertCount] = useState(0)
@@ -216,7 +217,7 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone={toneFromPath(tab.path)} aria-hidden="true"><MenuIcon icon={tab.icon} size={17} color="currentColor" /></span><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
     })}</nav>
-    <div className="ag-sidebar-footer">{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
+    <div className="ag-sidebar-footer"><ThemeToggle theme={theme} onToggle={onThemeToggle} />{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
   </aside>
 }
 
@@ -229,7 +230,7 @@ const MODULE_BY_PATH = {
 const moduleFromPath = pathname => MODULE_BY_PATH['/' + (pathname.split('/')[1] || '')] || 'bloques'
 const toneFromPath = path => MODULE_BY_PATH[path] || 'neutral'
 
-function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organization, setOrganization }) {
+function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organization, setOrganization, theme, onThemeToggle }) {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1100)
   const location = useLocation()
   const dashboardDesktop = isDesktop && location.pathname === '/'
@@ -246,13 +247,13 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
         position={isDesktop ? 'top-right' : 'bottom-center'}
         richColors
         closeButton
-        theme="light"
+        theme={theme}
         mobileOffset={{ top:'calc(env(safe-area-inset-top, 0px) + 12px)', right:12, bottom:'calc(env(safe-area-inset-bottom, 0px) + 86px)', left:12 }}
         toastOptions={{ className:'ag-toast', duration:6000 }}
       />
       <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
       <ConnectionStatus />
-      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} />}
+      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} theme={theme} onThemeToggle={onThemeToggle} />}
 
       <div data-app-scroll>
         <div className="ag-content-shell">
@@ -284,7 +285,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/reportes" element={<ProtectedRoute role={role} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
             <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="auditoria"><Auditoria/></ProtectedRoute>}/>
-            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role} organization={organization} onOrganizationUpdate={setOrganization}/></ProtectedRoute>}/>
+            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role} organization={organization} onOrganizationUpdate={setOrganization} theme={theme} onThemeToggle={onThemeToggle}/></ProtectedRoute>}/>
             <Route path="/primeros-pasos" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Onboarding preview organization={organization}/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
@@ -308,6 +309,12 @@ export default function App() {
   const [roleUserId, setRoleUserId] = useState(null)
   const [organization, setOrganization] = useState(DEFAULT_ORGANIZATION)
   const [fieldsState, setFieldsState] = useState('idle')
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === 'undefined') return 'light'
+    const stored = window.localStorage.getItem('agrobloque-theme')
+    if (stored === 'light' || stored === 'dark') return stored
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
   const guestPath = Boolean(guestToken)
   const passwordSetupPath = authAction === 'set-password'
 
@@ -317,6 +324,13 @@ export default function App() {
       window.history.scrollRestoration = 'manual'
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+    window.localStorage.setItem('agrobloque-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     const company = String(organization?.nombre || '').trim()
@@ -391,18 +405,14 @@ export default function App() {
       const organizationRequest = data?.organizacion_id
         ? supabase.from('organizaciones').select('id,nombre,slug,logo_url,telefono,email,color_primario,activo').eq('id', data.organizacion_id).maybeSingle()
         : supabase.from('organizaciones').select('id').limit(1)
-      const { data: orgResult, error: organizationError } = await organizationRequest
-      const tenantModeEnabled = !organizationError
+      const { data: orgResult } = await organizationRequest
       if (!error && data?.organizacion_id) {
         const org = Array.isArray(orgResult) ? orgResult[0] : orgResult
         organizationData = org || null
       }
       if (cancelled) return
       const perfilNombre = session.user.user_metadata?.nombre || session.user.user_metadata?.full_name || session.user.user_metadata?.name || ''
-      const legacyRole = !tenantModeEnabled && !data
-        ? { email, nombre:perfilNombre, rol:email.toLowerCase() === 'agrobloquetoni@gmail.com' ? 'operador' : 'admin', activo:true }
-        : null
-      const filaRol = data ? { ...data, nombre:perfilNombre || data.nombre, organizacion:organizationData } : legacyRole
+      const filaRol = data ? { ...data, nombre:perfilNombre || data.nombre, organizacion:organizationData } : null
       const rolNormalizado = normalizeRole(error ? null : filaRol, email)
       setRole(perfilNombre ? { ...rolNormalizado, nombre:perfilNombre } : rolNormalizado)
       setOrganization(organizationData || DEFAULT_ORGANIZATION)
@@ -520,7 +530,7 @@ export default function App() {
         </div>
       ) : fieldsState === 'empty' && role.rol === 'admin' && organization?.id ? (
         <Onboarding organization={organization} onComplete={({ organization:nextOrganization, campo }) => { setOrganization(nextOrganization); setCampoActivo(campo); setFieldsState('ready') }}/>
-      ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} organization={organization} setOrganization={setOrganization} />}
+      ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} organization={organization} setOrganization={setOrganization} theme={theme} onThemeToggle={() => setTheme(current => current === 'dark' ? 'light' : 'dark')} />}
     </BrowserRouter>
   )
 }
