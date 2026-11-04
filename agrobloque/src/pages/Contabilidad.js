@@ -413,7 +413,7 @@ function Movimiento({ mov, onEdit, onDelete }) {
       </div>
       <div className="ui-3f9f96">
         <div className="ui-36eedc">
-          <strong className="ui-aebc78">{mov.descripcion}</strong>
+          <strong className="ui-aebc78" title={mov.descripcion}>{mov.descripcion}</strong>
           <span className="ui-3c74d4" style={{ background: venta ? '#edf6ec' : '#fff0f0', color: venta ? '#176a25' : '#c84040' }}>
             {venta ? 'Venta' : 'Compra'}
           </span>

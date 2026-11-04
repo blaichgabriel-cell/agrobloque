@@ -11,6 +11,7 @@ import { canAccessModule, filterTabsByRole, normalizeRole } from './lib/permissi
 import { textoErrorProfesional } from './lib/errors'
 import { Toaster } from 'sonner'
 import TaskNotifications from './components/TaskNotifications'
+import SheetGestures from './components/SheetGestures'
 import ThemeToggle from './components/ThemeToggle'
 
 const Mapa = lazy(() => import('./pages/MapaProfesional'))
@@ -252,6 +253,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
         toastOptions={{ className:'ag-toast', duration:6000 }}
       />
       <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
+      <SheetGestures />
       <ConnectionStatus />
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} theme={theme} onThemeToggle={onThemeToggle} />}
 

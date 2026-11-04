@@ -263,7 +263,7 @@ export default function Inventario() {
     }})
   }
 
-  const getStockColor = (p) => p.stock_actual <= 0 ? '#c84040' : p.stock_actual <= p.stock_minimo ? '#e07b00' : '#212121'
+  const getStockColor = (p) => p.stock_actual <= 0 ? '#c84040' : p.stock_actual <= p.stock_minimo ? '#e07b00' : 'var(--text-primary)'
   const getStockBg = (p) => p.stock_actual <= 0 ? '#fff0f0' : p.stock_actual <= p.stock_minimo ? '#fff3e8' : '#eeeeee'
   const getStockPct = (p) => p.stock_minimo > 0 ? Math.min(100, Math.round((p.stock_actual / (p.stock_minimo * 3)) * 100)) : p.stock_actual > 0 ? 100 : 0
 
@@ -353,7 +353,7 @@ export default function Inventario() {
               <div className="ag-surface ui-9a7f69" key={p.id} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                 <div className="ui-f81471">
                   <div className="ui-da5cd6">
-                    <div className="ui-788a2f">{p.nombre}</div>
+                    <div className="ui-788a2f" title={p.nombre}>{p.nombre}</div>
                     <div className="ui-a8f171">{p.principio_activo || '—'}</div>
                   </div>
                   <div className="ui-f6e3d7">

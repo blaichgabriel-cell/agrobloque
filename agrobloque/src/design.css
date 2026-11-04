@@ -1230,7 +1230,9 @@ html,body { -webkit-tap-highlight-color:transparent; }
 
 /* Selector plan / aplicación puntual en Fertilizaciones (cian y ámbar-coral) */
 .ag-app .fert-mode-picker>button { border-radius:22px; transition:transform 200ms var(--bl-spring),box-shadow 200ms ease; }
-.ag-app .fert-mode-picker>button:hover { border-color:rgba(255,255,255,.95); transform:translateY(-2px); }
+/* El :hover solo con puntero real; en táctil se queda pegado tras el toque. */
+@media (hover:hover) and (pointer:fine) { .ag-app .fert-mode-picker>button:hover { border-color:rgba(255,255,255,.95); transform:translateY(-2px); } }
+@media (hover:none) { .ag-app .fert-mode-picker>button:hover { border-color:rgba(15,41,30,.1); transform:none; } }
 .ag-app .fert-mode-picker>button:active { transform:scale(.985); }
 .ag-app .fert-mode-picker small { color:var(--text-secondary); font-size:12px; }
 .ag-app .fert-mode-icon { border-radius:14px; background:var(--grad-agua); color:#fff; box-shadow:0 10px 18px -10px rgba(6,182,212,.8); }
@@ -1410,4 +1412,88 @@ html,body { -webkit-tap-highlight-color:transparent; }
 [data-theme='dark'] [data-sonner-toast].ag-toast { background:rgba(18,31,26,.94) !important; border-color:rgba(255,255,255,.1) !important; }
 @media (prefers-reduced-motion:reduce) {
   .ag-theme-toggle__track,.ag-theme-toggle__thumb { transition:none; }
+}
+
+/* ============================================================
+   MÓVIL TÁCTIL: objetivos de 44px, hojas inferiores, tablas y cifras largas
+   ============================================================ */
+
+/* Objetivos táctiles de 44x44 mínimo en botones (iconos de acción, cierres, filtros, pasos −/+). */
+@media (pointer:coarse), (max-width:1099px) {
+  button { min-width:44px !important; min-height:44px !important; }
+  select { min-height:44px !important; }
+  /* La celda del calendario es el botón: su zona táctil crece con ::after sin agrandar la fila. */
+  .lunar-day__date { min-width:0 !important; min-height:36px !important; position:relative; }
+  .lunar-day__date::after { content:''; position:absolute; inset:-4px; }
+  .lunar-day__tasks button { min-width:0 !important; min-height:30px !important; }
+  /* iOS hace zoom al enfocar un campo de menos de 16px: se corrige el tamaño, no se bloquea el zoom. */
+  input:not([type='checkbox']):not([type='radio']),select,textarea { font-size:16px !important; }
+  /* Campos de búsqueda: el contenedor lleva el borde, no el input interior (evita el doble marco). */
+  .inventory-search input,.ag-block-search input { min-height:0; border:0 !important; background:transparent !important; box-shadow:none !important; }
+}
+
+/* Márgenes laterales que respetan el notch en horizontal. */
+@media (max-width:1099px) {
+  .ag-overview { padding-left:max(14px,env(safe-area-inset-left)); padding-right:max(14px,env(safe-area-inset-right)); }
+  .ag-bottom-nav { left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); }
+
+  /* Tablas: se desplazan en horizontal dentro de su contenedor, con inercia, sin arrastrar la pantalla. */
+  :where(div,section,article):has(>table) { overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; scrollbar-width:thin; }
+  table td,table th { overflow-wrap:anywhere; }
+}
+
+/* Hoja inferior de cristal para «Más» (módulos administrativos): sube desde el borde, con tirador. */
+@keyframes ag-sheet-up { from { transform:translateY(100%); } to { transform:none; } }
+@media (max-width:1099px) {
+  .ag-more-backdrop { z-index:80; background:rgba(4,19,14,.42); }
+  .ag-more-menu { left:0; right:0; bottom:0; z-index:81; max-height:min(78dvh,calc(100dvh - 48px)); padding:10px 16px calc(18px + env(safe-area-inset-bottom,0px)); border:1px solid transparent; border-top-color:var(--glass-edge); border-radius:26px 26px 0 0; background:var(--glass-bg-strong); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); box-shadow:var(--glass-sheen),var(--glass-outline),0 -24px 60px -28px rgba(15,23,42,.45); animation:ag-sheet-up 320ms cubic-bezier(.32,.72,0,1) both; }
+  .ag-more-menu h2 { margin:6px 0 14px; font-family:var(--bl-font-display); font-size:18px; font-weight:800; }
+}
+
+/* Tirador de las hojas inferiores (modales de carga que emergen desde el borde en móvil). */
+@media (max-width:1099px) {
+  .ag-more-menu::before { content:''; display:block; width:40px; height:5px; margin:0 auto 6px; border-radius:3px; background:var(--text-tertiary); opacity:.4; }
+}
+@media (max-width:767px) {
+  .bl-sheet::before,.ag-modal-overlay>div::before,.ag-work-dialog::before,[data-sheet]::before { content:''; display:block; width:40px; height:5px; margin:-8px auto 14px; border-radius:3px; background:var(--text-tertiary); opacity:.4; }
+  .bl-sheet,.ag-modal-overlay>div,.ag-work-dialog,.ag-more-menu,[data-sheet] { overscroll-behavior:contain; }
+}
+@media (prefers-reduced-motion:reduce) { .ag-more-menu { animation:none; } }
+
+/* Cifras de dinero largas (hasta 9-12 dígitos) no se parten: la letra se ajusta al ancho de la tarjeta. */
+.fin-card { container-type:inline-size; }
+.fin-card .kpi-card__value { overflow-wrap:normal; white-space:nowrap; font-size:clamp(12px,11cqw,26px); font-variant-numeric:tabular-nums; }
+.fin-card .kpi-card__value small { display:block; font-size:.6em; }
+
+/* Filas de movimientos: en móvil el importe y las acciones bajan a una segunda línea. */
+.ag-app .ui-aebc78 { min-width:0; overflow-wrap:anywhere; }
+.ag-app .ui-3044b6 { white-space:nowrap; font-variant-numeric:tabular-nums; }
+@media (max-width:767px) {
+  .ag-app .ui-bd5fd3.ui-bd5fd3.ui-bd5fd3 { grid-template-columns:42px minmax(0,1fr); row-gap:8px; }
+  .ag-app .ui-bd5fd3>.ui-11f4c8.ui-11f4c8.ui-11f4c8 { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; gap:10px; padding-left:53px; }
+  .ag-app .ui-aebc78,.ag-app .ui-7aa842 { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden; }
+}
+
+/* Modo oscuro: textos y cifras de estas filas con contraste legible. */
+[data-theme='dark'] .ag-app .ui-aebc78.ui-aebc78 { color:var(--text-primary); }
+[data-theme='dark'] .ag-app .ui-7aa842.ui-7aa842 { color:var(--text-tertiary); }
+[data-theme='dark'] .ag-app .ui-3044b6[style*='rgb(23, 106, 37)'] { color:#34d399 !important; }
+[data-theme='dark'] .ag-app .ui-3044b6[style*='rgb(200, 64, 64)'] { color:#fb7185 !important; }
+
+/* Nombres largos de agroquímicos: se quiebran y se recortan a 3 líneas; la cifra del stock nunca se parte. */
+.ag-app .ui-788a2f { min-width:0; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; overflow:hidden; }
+.ag-app .ui-02cbdf { white-space:nowrap; font-variant-numeric:tabular-nums; }
+
+/* Modo oscuro: los accesos de la hoja «Más» eran blancos con texto claro. */
+[data-theme='dark'] .ag-more-menu button { border:var(--border-subtle); background:rgba(255,255,255,.06); color:var(--text-primary); }
+[data-theme='dark'] .ag-more-menu button[aria-current='page'] { background:var(--sage-200); color:var(--text-primary); }
+[data-theme='dark'] .ag-small-action[style*='rgb(85, 85, 85)'] { color:var(--text-secondary) !important; }
+
+/* Filtros en fila con desplazamiento: los botones no se encogen, así el texto nunca sobresale del botón. */
+.ab-status-filters button { flex:0 0 auto; }
+
+/* Inicio en tableta (768-1099px): misma cabecera que en móvil, en una sola fila y sin la barra de búsqueda pegada. */
+@media (max-width:1099px) {
+  .ag-overview>.ag-topbar { position:static; grid-template-columns:minmax(0,1fr); grid-auto-flow:column; grid-auto-columns:auto; }
+  .ag-overview>.ag-topbar .ag-search-link { display:none; }
 }
