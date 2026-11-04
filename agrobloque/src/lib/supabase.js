@@ -1,7 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
+import { toast } from 'sonner';
+import { createWriteGuard } from './writeGuard';
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://utdlehbifdfiliozxbif.supabase.co';
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZGxlaGJpZmRmaWxpb3p4YmlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODI0ODgsImV4cCI6MjA5NDQ1ODQ4OH0.VX99wvuZ258SDOcEG-ijFYo64RFAlWoKpsEU7C4R92U';
+
+const notifyWriteProblem = ({ kind, id, title, description }) => {
+  console.error(title, description);
+  (kind === 'warning' ? toast.warning : toast.error)(title, { id, description, duration: 9000 });
+};
+const guardedFetch = typeof window !== 'undefined'
+  ? createWriteGuard((...args) => window.fetch(...args), notifyWriteProblem)
+  : undefined;
 
 const getAuthActionFromUrl = () => {
   if (typeof window === 'undefined') return '';
@@ -40,7 +50,7 @@ export const createProvisioningAuthClient = () => createClient(supabaseUrl, supa
   },
 });
 
-const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { auth });
+const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { auth, ...(guardedFetch ? { global: { fetch: guardedFetch } } : {}) });
 const supabaseGuestClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false,
