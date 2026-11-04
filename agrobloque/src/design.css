@@ -1653,3 +1653,8 @@ html,body { -webkit-tap-highlight-color:transparent; }
 
 /* Texto blanco sobre el degradado esmeralda: el extremo claro (#10B981) daba 2,5:1; en oscuro se usa el tramo #047857-#059669 (≥3,8:1). */
 [data-theme='dark'] { --grad-bloques:linear-gradient(135deg,#047857 0%,#059669 100%); }
+
+/* Con una hoja o modal abierto la barra inferior no debe quedar encima (en iOS tapaba los botones de confirmar). */
+@media (max-width:1099px) {
+  .ag-app:has([data-ag-modal],.bl-overlay,.ag-work-dialog[open]) .ag-bottom-nav { visibility:hidden; pointer-events:none; }
+}

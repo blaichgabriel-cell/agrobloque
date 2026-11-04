@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 export function Skeleton({ rows = 3, label = 'Cargando información' }) {
   return <div className="ag-skeleton-group" role="status" aria-label={label} aria-busy="true">
@@ -57,5 +58,9 @@ export function Modal({ children, onClose, busy = false, label = 'Detalle o regi
       if (previous?.isConnected) previous.focus({ preventScroll: true })
     }
   }, [])
-  return <div {...props} ref={root} className={`ag-modal-overlay ${className}`} role="dialog" aria-modal="true" aria-label={label} aria-busy={busy || undefined} tabIndex={-1} data-ag-modal="true">{children}</div>
+  const overlay = <div {...props} ref={root} className={`ag-modal-overlay ${className}`} role="dialog" aria-modal="true" aria-label={label} aria-busy={busy || undefined} tabIndex={-1} data-ag-modal="true">{children}</div>
+  // Se monta fuera del contenedor con scroll de la página: en iOS ese contenedor atrapa el z-index y la barra inferior
+  // quedaba por encima del diálogo, tapando los botones. `.ag-app` conserva los estilos con ese prefijo.
+  const host = typeof document !== 'undefined' ? (document.querySelector('.ag-app') || document.body) : null
+  return host ? createPortal(overlay, host) : overlay
 }
