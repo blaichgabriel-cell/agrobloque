@@ -1497,3 +1497,159 @@ html,body { -webkit-tap-highlight-color:transparent; }
   .ag-overview>.ag-topbar { position:static; grid-template-columns:minmax(0,1fr); grid-auto-flow:column; grid-auto-columns:auto; }
   .ag-overview>.ag-topbar .ag-search-link { display:none; }
 }
+
+/* ============================================================
+   MODO OSCURO: contraste de superficies interiores y textos de estado
+   Las superficies suaves (`rgba(241,245,249,.7)`, blanco translúcido, `#fff` inline) eran claras:
+   en oscuro quedaban grises con texto claro encima. Aquí se vuelven vidrio oscuro con tokens.
+   ============================================================ */
+[data-theme='dark'] {
+  --dk-soft:rgba(255,255,255,.055);
+  --dk-soft-2:rgba(255,255,255,.09);
+  --dk-line:rgba(255,255,255,.1);
+  --dk-active:rgba(16,185,129,.22);
+  --dk-green:#34d399; --dk-red:#fb7185; --dk-amber:#fbbf24; --dk-blue:#38bdf8; --dk-violet:#a5b4fc;
+}
+
+/* Superficies suaves de componentes con nombre. */
+[data-theme='dark'] .ag-search-link,
+[data-theme='dark'] .ag-top-field,
+[data-theme='dark'] .ag-block-labels,
+[data-theme='dark'] .ab-status-filters,
+[data-theme='dark'] .ab-view-toggle,
+[data-theme='dark'] .ab-card-facts,
+[data-theme='dark'] .stock-critical,
+[data-theme='dark'] .fin-month,
+[data-theme='dark'] .bl-icon-btn,
+[data-theme='dark'] .ag-app .lunar-calendar__weekdays,
+[data-theme='dark'] .ag-app .lunar-calendar__legend,
+[data-theme='dark'] .ag-app .lunar-calendar__header button,
+[data-theme='dark'] .ag-app .calendar-view-switch,
+[data-theme='dark'] .ag-app .agenda-view-switch,
+[data-theme='dark'] .ag-app .plantation-profit-card,
+[data-theme='dark'] .ag-app .plantation-profit-metrics>div,
+[data-theme='dark'] .ag-app .profitability-soft-state button,
+[data-theme='dark'] .ag-app .alerts-notification-note,
+[data-theme='dark'] .ag-app .alerts-notification-button,
+[data-theme='dark'] .ag-search-link kbd { background:var(--dk-soft); border-color:var(--dk-line); color:var(--text-primary); }
+[data-theme='dark'] .ag-search-link { color:var(--text-secondary); }
+[data-theme='dark'] .ag-app .lunar-day.is-outside { background:rgba(255,255,255,.02); }
+[data-theme='dark'] .harvest-table__head { background:var(--dk-soft) !important; }
+
+/* Botón activo de los selectores de vista (antes blanco con texto claro). */
+[data-theme='dark'] .ab-status-filters button.active,
+[data-theme='dark'] .ab-view-toggle button.active,
+[data-theme='dark'] .ag-app .calendar-view-switch button.active,
+[data-theme='dark'] .ag-app .agenda-view-switch button.active { background:var(--dk-active); color:var(--text-primary); box-shadow:inset 0 0 0 1px rgba(52,211,153,.45); }
+[data-theme='dark'] .ab-view-toggle::before { background:var(--dk-active); }
+[data-theme='dark'] .ab-status-filters button:not(.active),
+[data-theme='dark'] .ab-view-toggle button:not(.active),
+[data-theme='dark'] .ag-app .calendar-view-switch button:not(.active),
+[data-theme='dark'] .ag-app .agenda-view-switch button:not(.active) { color:var(--text-secondary); }
+
+/* Fondos neutros claros puestos en línea por las pantallas antiguas. */
+[data-theme='dark'] [style*='background: rgb(255, 255, 255)'],
+[data-theme='dark'] [style*='background: rgb(250, 251, 248)'],
+[data-theme='dark'] [style*='background: rgb(248, 248, 246)'],
+[data-theme='dark'] [style*='background: rgb(245, 247, 245)'],
+[data-theme='dark'] [style*='background: rgb(242, 241, 239)'],
+[data-theme='dark'] [style*='background: rgb(238, 238, 238)'],
+[data-theme='dark'] [style*='background: rgb(226, 233, 229)'] { background:var(--dk-soft) !important; color:var(--text-primary); border-color:var(--dk-line) !important; }
+/* Etiquetas con tinte (verde, rojo, ámbar, azul): tinte translúcido en vez de pastel. */
+[data-theme='dark'] [style*='background: rgb(237, 246, 236)'],
+[data-theme='dark'] [style*='background: rgb(240, 247, 239)'] { background:rgba(16,185,129,.16) !important; }
+[data-theme='dark'] [style*='background: rgb(255, 240, 240)'] { background:rgba(244,63,94,.16) !important; }
+[data-theme='dark'] [style*='background: rgb(255, 244, 232)'],
+[data-theme='dark'] [style*='background: rgb(255, 243, 232)'] { background:rgba(245,158,11,.16) !important; }
+[data-theme='dark'] [style*='background: rgb(230, 241, 251)'] { background:rgba(6,182,212,.16) !important; }
+
+/* Colores de texto pensados para fondo claro, puestos en línea: versión clara equivalente. */
+[data-theme='dark'] [style*='color: rgb(18, 21, 18)'],
+[data-theme='dark'] [style*='color: rgb(17, 22, 17)'],
+[data-theme='dark'] [style*='color: rgb(52, 58, 54)'],
+[data-theme='dark'] [style*='color: rgb(15, 57, 35)'],
+[data-theme='dark'] [style*='color: rgb(33, 33, 33)'] { color:var(--text-primary) !important; }
+[data-theme='dark'] [style*='color: rgb(104, 112, 104)'],
+[data-theme='dark'] [style*='color: rgb(106, 113, 107)'],
+[data-theme='dark'] [style*='color: rgb(139, 146, 139)'],
+[data-theme='dark'] [style*='color: rgb(101, 116, 108)'],
+[data-theme='dark'] [style*='color: rgb(107, 121, 109)'],
+[data-theme='dark'] [style*='color: rgb(93, 109, 100)'],
+[data-theme='dark'] [style*='color: rgb(85, 85, 85)'],
+[data-theme='dark'] [style*='color: rgb(102, 102, 102)'] { color:var(--text-tertiary) !important; }
+[data-theme='dark'] [style*='color: rgb(23, 106, 37)'],
+[data-theme='dark'] [style*='color: rgb(8, 96, 63)'],
+[data-theme='dark'] [style*='color: rgb(4, 120, 87)'] { color:var(--dk-green) !important; }
+[data-theme='dark'] [style*='color: rgb(190, 18, 60)'],
+[data-theme='dark'] [style*='color: rgb(200, 64, 64)'] { color:var(--dk-red) !important; }
+[data-theme='dark'] [style*='color: rgb(224, 123, 0)'],
+[data-theme='dark'] [style*='color: rgb(200, 112, 10)'],
+[data-theme='dark'] [style*='color: rgb(180, 83, 9)'] { color:var(--dk-amber) !important; }
+[data-theme='dark'] [style*='color: rgb(3, 105, 161)'] { color:var(--dk-blue) !important; }
+[data-theme='dark'] [style*='color: rgb(67, 56, 202)'] { color:var(--dk-violet) !important; }
+
+/* Cifras de Contabilidad y estados con tinta oscura de tema claro. */
+[data-theme='dark'] .fin-card[data-fin='in'] { --fin-ink:var(--dk-green); }
+[data-theme='dark'] .fin-card[data-fin='out'] { --fin-ink:var(--dk-red); }
+[data-theme='dark'] .fin-card[data-fin='net'] { --fin-ink:var(--dk-violet); }
+[data-theme='dark'] .fin-card[data-fin='block'] { --fin-ink:var(--dk-blue); }
+[data-theme='dark'] .status-pill.ag-status,
+[data-theme='dark'] .ag-live,
+[data-theme='dark'] .ag-text-button.ag-outline-button { color:var(--dk-green); }
+[data-theme='dark'] .status-pill.ag-status.is-preparing { color:var(--dk-amber); }
+/* Generado a partir de design-reference.css: clases .ui-* con color o fondo de tema claro. */
+[data-theme='dark'] :is(.ui-55ae91,.ui-0a41d9,.ui-d6d959,.ui-14c146,.ui-9392ce,.ui-ea5cb1,.ui-e136cb,.ui-fce2c6,.ui-77d570,.ui-0a7db6,.ui-00b236,.ui-432170,.ui-bf3abc,.ui-eafd27,.ui-173cc6,.ui-b4a187,.ui-ee3408,.ui-a3fc3f,.ui-4a5507,.ui-d4abad,.ui-05757f,.ui-98ffc9,.ui-66a70e,.ui-6ae6fb,.ui-b58c47,.ui-fa2a44,.ui-79fbe7,.ui-939a40,.ui-cc1d5f,.ui-3d7d20,.ui-14267f,.ui-690a60,.ui-132fe6,.ui-242114,.ui-5cff60,.ui-bd1935,.ui-ee01f4,.ui-375820) { color:var(--dk-red) !important; }
+[data-theme='dark'] :is(.ui-2bc228,.ui-aebc78) { color:var(--text-primary) !important; }
+[data-theme='dark'] :is(.ui-612696,.ui-2cf511,.ui-7aa842) { color:var(--text-tertiary) !important; }
+[data-theme='dark'] :is(.ui-80adc3,.ui-d2a157,.ui-e010db,.ui-66b12b) { color:var(--dk-amber) !important; }
+[data-theme='dark'] :is(.ui-ab0dc2) { background:rgba(16,185,129,.16) !important; }
+[data-theme='dark'] :is(.ui-ed8328,.ui-5452f4,.ui-f2a366,.ui-5d3c26,.ui-e960d5,.ui-38410c,.ui-32b742,.ui-e7ea3c,.ui-8e4804,.ui-c58bc1,.ui-f68a17,.ui-da9b72,.ui-796353) { background:var(--dk-soft) !important; }
+
+
+/* Componentes con nombre: textos y fondos de tema claro. */
+[data-theme='dark'] :is(.SegmentedControl,.module-switch,.ag-segmented) button:not(.active) { color:var(--text-secondary); }
+[data-theme='dark'] :is(.ab-cycle-ring,.nursery-ring)::before { background:var(--surface-glass-solid); box-shadow:inset 0 1px 2px rgba(0,0,0,.45); }
+[data-theme='dark'] .ab-card-next.overdue,
+[data-theme='dark'] .ag-notice.is-overdue small { color:var(--dk-red); }
+[data-theme='dark'] .bl-stock-alert { color:var(--dk-amber); }
+[data-theme='dark'] .bl-stock-alert b { color:inherit; }
+[data-theme='dark'] .stock-critical .is-out b { color:var(--dk-red); }
+[data-theme='dark'] .stock-critical .is-low b { color:var(--dk-amber); }
+[data-theme='dark'] .profitability-header p,
+[data-theme='dark'] .agenda-task-time { color:var(--text-tertiary); }
+[data-theme='dark'] .timeline-date__label { color:var(--dk-amber); }
+[data-theme='dark'] .ag-app .positive,
+[data-theme='dark'] .ag-small-action.ui-9f0a77,
+[data-theme='dark'] .ui-e2090b { color:var(--dk-green) !important; }
+/* Rótulos blancos al 45-50 % sobre verde oscuro quedaban justo bajo 4,5:1. */
+[data-theme='dark'] :is(.ui-d773dd,.ui-8a137e,.ui-5ff7eb,.ui-280a4b,.ui-9a9517,.ui-e571fd) { color:rgba(255,255,255,.72) !important; }
+
+/* Iconos con color de tema claro puesto en línea o por clase. */
+[data-theme='dark'] [style*='color: rgb(10, 10, 10)'],
+[data-theme='dark'] [style*='color: rgb(28, 33, 29)'] { color:var(--text-primary) !important; }
+[data-theme='dark'] [style*='color: rgb(79, 86, 80)'] { color:var(--text-tertiary) !important; }
+[data-theme='dark'] [style*='color: rgb(18, 78, 56)'],
+[data-theme='dark'] [style*='color: rgb(23, 106, 69)'],
+[data-theme='dark'] .ui-3dd9b4 { color:var(--dk-green) !important; }
+[data-theme='dark'] [style*='color: rgb(24, 95, 165)'],
+[data-theme='dark'] [style*='color: rgb(2, 132, 199)'] { color:var(--dk-blue) !important; }
+[data-theme='dark'] [style*='color: rgb(79, 70, 229)'],
+[data-theme='dark'] .ag-theme-toggle__icon,
+[data-theme='dark'] .ag-app .profitability-field i,
+[data-theme='dark'] .ag-app .profitability-chart-empty i { color:var(--dk-violet) !important; }
+[data-theme='dark'] .ui-4416e1 { color:var(--text-tertiary) !important; }
+
+/* Hojas y modales: superficie oscura (los modales con .ag-modal-overlay seguían blancos) y opciones del diálogo «Registrar». */
+[data-theme='dark'] .ag-modal-overlay>div { background:rgba(14,26,21,.97) !important; color:var(--text-primary); }
+[data-theme='dark'] .ag-work-options button,
+[data-theme='dark'] .ag-work-dialog .ag-icon-button { border-color:var(--dk-line); background:var(--dk-soft); color:var(--text-primary); }
+[data-theme='dark'] [style*='color: rgb(105, 112, 106)'],
+[data-theme='dark'] [style*='color: rgb(138, 145, 139)'] { color:var(--text-tertiary) !important; }
+[data-theme='dark'] [style*='background: rgb(246, 248, 247)'] { background:rgba(14,26,21,.98) !important; color:var(--text-primary); }
+[data-theme='dark'] .ui-a2fc39 { color:var(--dk-green) !important; }
+
+/* Insignias blancas sobre coral: #E11D48 da 4,7:1 (con #F43F5E eran 3,7:1). */
+.ag-nav-badge,.ag-notification-badge,.ag-count { background:#E11D48; }
+
+/* Texto blanco sobre el degradado esmeralda: el extremo claro (#10B981) daba 2,5:1; en oscuro se usa el tramo #047857-#059669 (≥3,8:1). */
+[data-theme='dark'] { --grad-bloques:linear-gradient(135deg,#047857 0%,#059669 100%); }
