@@ -499,6 +499,17 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
 
   const guardarRol = async () => {
     if (!form.email || !form.rol) return
+    const password = String(form.password || '')
+    const passwordConfirm = String(form.password_confirm || '')
+    const configuraAcceso = !form.id || Boolean(password || passwordConfirm)
+    if (configuraAcceso && password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres.')
+      return
+    }
+    if (configuraAcceso && password !== passwordConfirm) {
+      setError('Las contraseñas no coinciden.')
+      return
+    }
     setLoading(true); setError(''); setSuccess('')
     try {
       const payload = {
@@ -512,40 +523,25 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
         notas: form.notas || null,
         ...(organization?.id ? { organizacion_id: organization.id } : {}),
       }
-      const debeInvitar = !form.id || form.invitar_real
-      const { error: roleError } = form.id
-        ? await supabase.from('app_user_roles').update(payload).eq('id', form.id)
-        : await supabase.from('app_user_roles').insert(payload)
-      if (roleError) throw roleError
-
-      if (debeInvitar) {
-        const authClient = createProvisioningAuthClient()
-        const redirectTo = `${window.location.origin}/?auth_action=set-password`
-        let enviarRecuperacion = Boolean(form.id)
-
-        if (!form.id) {
-          const { data: signupData, error: signupError } = await authClient.auth.signUp({
-            email: payload.email,
-            password: crearContrasenaTemporal(),
-            options: {
-              emailRedirectTo: redirectTo,
-              data: { nombre: payload.nombre || '', rol: payload.rol },
-            },
-          })
-          const yaRegistrado = /already|registered|exists|existe|registrad/i.test(signupError?.message || '') || signupData?.user?.identities?.length === 0
-          if (signupError && !yaRegistrado) throw signupError
-          enviarRecuperacion = yaRegistrado
-        }
-
-        if (enviarRecuperacion) {
-          const { error: resetError } = await authClient.auth.resetPasswordForEmail(payload.email, { redirectTo })
-          if (resetError) throw resetError
-        }
+      if (configuraAcceso) {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData?.session?.access_token
+        if (!token) throw new Error('Tu sesión venció. Volvé a ingresar e intentá otra vez.')
+        const response = await fetch('/api/invitar-usuario', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+          body: JSON.stringify({ ...payload, password }),
+        })
+        const result = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(result.error || 'No se pudo crear la cuenta de acceso.')
+      } else {
+        const { error: roleError } = await supabase.from('app_user_roles').update(payload).eq('id', form.id)
+        if (roleError) throw roleError
       }
 
       await fetchAll()
-      abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:true })
-      setSuccess(debeInvitar ? 'Invitacion enviada. El usuario debe abrir el email y crear su contrasena.' : 'Permiso actualizado.')
+      abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, password:'', password_confirm:'', mostrar_password:false })
+      setSuccess(configuraAcceso ? 'Usuario habilitado. Ya puede ingresar con el correo y la contraseña que definiste.' : 'Permiso actualizado.')
     } catch (e) {
       setError('No se pudo guardar: ' + (e.message || 'Ejecuta primero el SQL profesional.'))
     }
@@ -571,7 +567,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
     { icon:'ti-receipt-2', title:'Cuentas a pagar', sub:'Creditos con proveedores', color:"#08603f", bg:'#edf6ec', action: () => navigate('/cuentas-pagar') },
     { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:"#08603f", bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30', permisos: [] }) },
-    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:"#08603f", bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, invitar_real:true }) },
+    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:"#08603f", bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, password:'', password_confirm:'', mostrar_password:false }) },
     { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:"#124e38", bg:'#eeeeee', action: () => navigate('/auditoria') },
     { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Ultimo: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
     { icon:'ti-building-plus', title:'Nueva empresa', sub:'Dar de alta un nuevo cliente', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => abrir('nuevaEmpresa', { nombre:'', owner_email:'' }) },
@@ -779,7 +775,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
             {/* -- CUENTA -- */}
             {modal === 'roles' && <>
               <div className="ui-8decf3">Usuarios y permisos</div>
-              <div className="ui-7d5827">Cada usuario nuevo recibe un email seguro para crear su propia contrasena.</div>
+              <div className="ui-7d5827">Definí el correo y una contraseña inicial. Compartí esos datos con la persona por un canal privado.</div>
 
               <div className="ag-surface ui-e446b2">
                 <label className="ag-field-label ui-486335">{form.id ? 'Editar usuario' : 'Agregar usuario'}
@@ -790,6 +786,16 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                   <option value="operador">Operador</option>
                   <option value="lectura">Solo lectura</option>
                 </select>
+                <label className="ag-field-label ui-486335">{form.id ? 'Nueva contraseña (opcional)' : 'Contraseña inicial'}
+                  <input className="bl-input" type={form.mostrar_password ? 'text' : 'password'} value={form.password||''} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Mínimo 8 caracteres" minLength="8" autoComplete="new-password"/>
+                </label>
+                <label className="ag-field-label ui-486335">{form.id ? 'Repetir nueva contraseña' : 'Repetir contraseña'}
+                  <input className="bl-input" type={form.mostrar_password ? 'text' : 'password'} value={form.password_confirm||''} onChange={e=>setForm(f=>({...f,password_confirm:e.target.value}))} placeholder="Escribila nuevamente" minLength="8" autoComplete="new-password"/>
+                </label>
+                <label className="ui-fc5f0c">
+                  <input type="checkbox" checked={Boolean(form.mostrar_password)} onChange={e=>setForm(f=>({...f,mostrar_password:e.target.checked}))}/>
+                  Mostrar contraseña
+                </label>
                 <PermisosSelector
                   permisos={form.permisos}
                   ayuda="Elegí exactamente a que apartados puede entrar este usuario."
@@ -801,19 +807,12 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                   rol={form.rol || 'operador'}
                   onChange={acciones => setForm(f => ({ ...f, acciones }))}
                 />
-                {form.id ? (
-                  <label className="ui-fc5f0c">
-                    <input type="checkbox" checked={Boolean(form.invitar_real)} onChange={e=>setForm(f=>({...f,invitar_real:e.target.checked}))}/>
-                    Reenviar email para crear la contrasena
-                  </label>
-                ) : (
-                  <div className="ui-ca26cd" role="note">
-                    <i className="ti ti-mail-check ui-6f7515" aria-hidden="true" />
-                    <span>Al crear el usuario enviaremos un email para que defina su contrasena. El administrador no necesita conocerla.</span>
-                  </div>
-                )}
+                <div className="ui-ca26cd" role="note">
+                  <i className="ti ti-shield-lock ui-6f7515" aria-hidden="true" />
+                  <span>AgroBloque no guarda esta contraseña en sus tablas. Supabase la protege y después no podrá mostrarse nuevamente.</span>
+                </div>
                 <textarea className="ui-d303ae bl-input"  value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
-                <button className="bl-btn bl-btn--primary" onClick={guardarRol} disabled={loading}>{loading ? 'Enviando...' : (form.id ? 'Guardar cambios' : 'Crear usuario y enviar invitacion')}</button>
+                <button className="bl-btn bl-btn--primary" onClick={guardarRol} disabled={loading}>{loading ? 'Guardando...' : (form.id ? ((form.password || form.password_confirm) ? 'Guardar y actualizar acceso' : 'Guardar cambios') : 'Crear usuario')}</button>
               </div>
 
               <div className="ag-surface ui-9a7f69">
@@ -827,7 +826,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                       <div className="ui-2f9f8e">{r.email} - {r.rol}</div>
                     </div>
                     <div className="ui-52e666">
-                      <button className="ag-small-action ui-1283df" onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, invitar_real:false })}>Editar</button>
+                      <button className="ag-small-action ui-1283df" onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, password:'', password_confirm:'', mostrar_password:false })}>Editar</button>
                       <button className="ag-small-action ui-0a7db6" onClick={() => eliminarRol(r.id)}>Borrar</button>
                     </div>
                   </div>
