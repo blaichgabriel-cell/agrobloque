@@ -104,6 +104,9 @@ export default function FichaBloque() {
 
   const [seccion, setSeccion] = useState('plantacion')
   const [historialDetalle, setHistorialDetalle] = useState(null)
+  const [historialCiclo, setHistorialCiclo] = useState(null)
+  const [historialCicloLoading, setHistorialCicloLoading] = useState(false)
+  const [historialCicloError, setHistorialCicloError] = useState('')
   const [incidenciaDetalle, setIncidenciaDetalle] = useState(null)
 
   const [showEditarPlantacion, setShowEditarPlantacion] = useState(false)
@@ -131,6 +134,8 @@ export default function FichaBloque() {
     }
     setSeccion('plantacion')
     setHistorialDetalle(null)
+    setHistorialCiclo(null)
+    setHistorialCicloError('')
     setFertDetalle(null)
     setIncidenciaDetalle(null)
     fetchData()
@@ -771,6 +776,57 @@ export default function FichaBloque() {
     return p.notas.startsWith('Variedad: ') ? p.notas.replace('Variedad: ', '') : null
   }
 
+  const abrirHistorialDetalle = async (plantacion) => {
+    setHistorialDetalle(plantacion)
+    setHistorialCiclo(null)
+    setHistorialCicloError('')
+    setHistorialCicloLoading(true)
+
+    const inicio = plantacion.fecha_siembra || '2000-01-01'
+    const ciclos = [plantacionActiva, ...historial]
+      .filter(Boolean)
+      .filter(ciclo => ciclo.fecha_siembra)
+      .sort((a, b) => String(a.fecha_siembra).localeCompare(String(b.fecha_siembra)))
+    const siguiente = ciclos.find(ciclo => String(ciclo.fecha_siembra) > String(inicio))
+    const finExclusivo = siguiente?.fecha_siembra || null
+    const conPeriodo = (query, campo = 'fecha') => {
+      let resultado = query.gte(campo, inicio)
+      if (finExclusivo) resultado = resultado.lt(campo, finExclusivo)
+      return resultado
+    }
+    const dentroDelPeriodo = (fecha) => fecha && fecha >= inicio && (!finExclusivo || fecha < finExclusivo)
+
+    const resultados = await Promise.all([
+      conPeriodo(supabase.from('cosechas').select('id, fecha, kg_total, calidad, notas, precio_kg, anulada, compradores(nombre)').eq('bloque_id', id)).order('fecha', { ascending:false }),
+      supabase.from('fumigacion_bloques').select('fumigaciones(id, fecha, tipo, operario, notas, tanques_cantidad, tanque_litros, anulada, fumigacion_productos(*, productos(nombre, unidad, carencia_dias)))').eq('bloque_id', id),
+      conPeriodo(supabase.from('fertilizaciones').select('id, fecha, notas, soluciones, anulada, plan_id').eq('bloque_id', id)).order('fecha', { ascending:false }),
+      supabase.from('muertes_plantas').select('id, fecha, cantidad, causa, descripcion').eq('plantacion_id', plantacion.id).order('fecha', { ascending:false }),
+      supabase.from('fotos_bloque').select('id, fecha, url').eq('plantacion_id', plantacion.id).order('fecha', { ascending:false }),
+      conPeriodo(supabase.from('costos').select('id, fecha, tipo, descripcion, monto').eq('bloque_id', id)).order('fecha', { ascending:false }),
+      conPeriodo(supabase.from('ventas').select('id, fecha, producto, kg_total, precio_kg, total, monto_cobrado, estado_cobro, compradores(nombre)').eq('bloque_id', id)).order('fecha', { ascending:false }),
+    ])
+
+    const errores = resultados.map(r => r.error?.message).filter(Boolean)
+    const fumigacionesCiclo = (resultados[1].data || [])
+      .map(item => item.fumigaciones)
+      .filter(fumigacion => fumigacion && dentroDelPeriodo(fumigacion.fecha) && !fumigacion.anulada)
+      .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))
+
+    setHistorialCiclo({
+      inicio,
+      finExclusivo,
+      cosechas:(resultados[0].data || []).filter(item => !item.anulada),
+      fumigaciones:fumigacionesCiclo,
+      fertilizaciones:(resultados[2].data || []).filter(item => !item.anulada),
+      muertes:resultados[3].data || [],
+      fotos:resultados[4].data || [],
+      costos:resultados[5].data || [],
+      ventas:resultados[6].data || [],
+    })
+    setHistorialCicloError(errores.length ? 'Algunos datos del ciclo no se pudieron consultar. Se muestra toda la información disponible.' : '')
+    setHistorialCicloLoading(false)
+  }
+
   const totalKgCiclo = cosechasCiclo.reduce((s, c) => s + Number(c.kg_total), 0)
   const cantidadPlantasActiva = Number(plantacionActiva?.cantidad_plantas ?? plantacionActiva?.densidad_plantas_m2 ?? 0)
   const kgPorPlanta = cantidadPlantasActiva && totalKgCiclo > 0
@@ -848,10 +904,23 @@ export default function FichaBloque() {
 
   // Vista detalle de ciclo historico
   if (historialDetalle) {
+    const cosechasHistoricas = historialCiclo?.cosechas || []
+    const fumigacionesHistoricas = historialCiclo?.fumigaciones || []
+    const fertilizacionesHistoricas = historialCiclo?.fertilizaciones || []
+    const muertesHistoricas = historialCiclo?.muertes || []
+    const ventasHistoricas = historialCiclo?.ventas || []
+    const costosHistoricos = historialCiclo?.costos || []
+    const fotosHistoricas = historialCiclo?.fotos || []
+    const plantasIniciales = Number(historialDetalle.cantidad_plantas ?? historialDetalle.densidad_plantas_m2 ?? 0)
+    const kilosCosechados = cosechasHistoricas.reduce((total, cosecha) => total + Number(cosecha.kg_total || 0), 0)
+    const plantasPerdidas = muertesHistoricas.reduce((total, muerte) => total + Number(muerte.cantidad || 0), 0)
+    const ingresoTotal = ventasHistoricas.reduce((total, venta) => total + Number(venta.total || (Number(venta.kg_total || 0) * Number(venta.precio_kg || 0))), 0)
+    const costoTotal = costosHistoricos.reduce((total, costo) => total + Number(costo.monto || 0), 0)
+    const finVisible = historialCiclo?.finExclusivo ? sumarDiasFecha(historialCiclo.finExclusivo, -1) : null
     return (
-      <div className="ag-page ui-c1c124">
+      <div className="ag-page ui-c1c124 cycle-history-page">
         {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-        <div className="ui-327143">
+        <div className="ui-327143 cycle-history-head">
           <button className="ag-small-action ui-7347f9" onClick={() => setHistorialDetalle(null)}>
             <i className="ti ti-arrow-left ui-b45e7d" aria-hidden="true"></i>
             <span className="ui-fe5017">Historial</span>
@@ -859,23 +928,63 @@ export default function FichaBloque() {
           <div className="ui-72161c">
             {historialDetalle.cultivos?.nombre}{getVariedad(historialDetalle) ? `  -  ${getVariedad(historialDetalle)}` : ''}
           </div>
-          <div className="ui-93a7e1">Bloque {bloque.codigo}  -  {historialDetalle.fecha_siembra || 'Sin fecha'}</div>
+          <div className="ui-93a7e1">Bloque {bloque.codigo} · {historialDetalle.fecha_siembra || 'Sin fecha'}{finVisible ? ` al ${finVisible}` : ''}</div>
         </div>
-        <div className="ui-1a3247">
-          <div className="ag-surface ui-49272e">
+        <div className="ui-1a3247 cycle-history-content">
+          {historialCicloError && <div className="ag-feedback ag-feedback-error">{historialCicloError}</div>}
+
+          <div className="ag-surface ui-49272e cycle-history-overview">
             <div className="ui-486335">Datos del ciclo</div>
-            {[
-              ['Cultivo', historialDetalle.cultivos?.nombre || '-'],
-              ['Variedad', getVariedad(historialDetalle) || '-'],
-              ['Fecha siembra', historialDetalle.fecha_siembra || '-'],
-              ['Plantas', (historialDetalle.cantidad_plantas ?? historialDetalle.densidad_plantas_m2) ? `${Number(historialDetalle.cantidad_plantas ?? historialDetalle.densidad_plantas_m2).toLocaleString('es-PY')}` : '-'],
-            ].map(([k,v]) => (
-              <div className="ui-a7a997" key={k}>
-                <div className="ui-93a7e1">{k}</div>
-                <div className="ui-0993fa">{v}</div>
-              </div>
-            ))}
+            <div className="cycle-history-data-grid">
+              {[
+                ['Cultivo', historialDetalle.cultivos?.nombre || '-'],
+                ['Variedad', getVariedad(historialDetalle) || '-'],
+                ['Fecha siembra', historialDetalle.fecha_siembra || '-'],
+                ['Fin del ciclo', finVisible || 'Sin fecha registrada'],
+                ['Plantas iniciales', plantasIniciales ? plantasIniciales.toLocaleString('es-PY') : '-'],
+                ['Plantas perdidas', plantasPerdidas.toLocaleString('es-PY')],
+              ].map(([k,v]) => <div className="cycle-history-datum" key={k}><span>{k}</span><strong>{v}</strong></div>)}
+            </div>
           </div>
+
+          {historialCicloLoading ? <Skeleton rows={6} label="Cargando el historial completo del ciclo" /> : <>
+            <div className="cycle-history-kpis">
+              <div className="kpi-card"><span className="kpi-card__label">Rendimiento total</span><strong className="kpi-card__value numeric-data">{fmtKg(kilosCosechados)} kg</strong><small className="kpi-card__detail">{cosechasHistoricas.length} cosecha{cosechasHistoricas.length === 1 ? '' : 's'}</small></div>
+              <div className="kpi-card"><span className="kpi-card__label">Rendimiento por planta</span><strong className="kpi-card__value numeric-data">{plantasIniciales && kilosCosechados ? `${fmtKg(kilosCosechados / plantasIniciales)} kg` : '-'}</strong><small className="kpi-card__detail">sobre la cantidad inicial</small></div>
+              <div className="kpi-card"><span className="kpi-card__label">Ingresos registrados</span><strong className="kpi-card__value numeric-data">Gs. {fmtGs(ingresoTotal)}</strong><small className="kpi-card__detail">{ventasHistoricas.length} venta{ventasHistoricas.length === 1 ? '' : 's'}</small></div>
+              <div className="kpi-card"><span className="kpi-card__label">Resultado directo</span><strong className="kpi-card__value numeric-data">Gs. {fmtGs(ingresoTotal - costoTotal)}</strong><small className="kpi-card__detail">ingresos menos costos cargados</small></div>
+            </div>
+
+            <CycleSection icon="ti-cut" title="Cosechas y rendimiento" count={cosechasHistoricas.length} empty="No se registraron cosechas en este ciclo.">
+              {cosechasHistoricas.map(cosecha => <CycleRow key={cosecha.id} date={cosecha.fecha} title={`${fmtKg(cosecha.kg_total)} kg${cosecha.calidad ? ` · ${cosecha.calidad}` : ''}`} detail={[cosecha.compradores?.nombre, cosecha.precio_kg ? `Gs. ${fmtGs(cosecha.precio_kg)}/kg` : '', cosecha.notas].filter(Boolean).join(' · ')} />)}
+            </CycleSection>
+
+            <CycleSection icon="ti-spray" title="Fumigaciones" count={fumigacionesHistoricas.length} empty="No se registraron fumigaciones en este ciclo.">
+              {fumigacionesHistoricas.map(fumigacion => {
+                const productos = (fumigacion.fumigacion_productos || []).map(item => `${item.productos?.nombre || item.producto_nombre || 'Producto'}${item.dosis ? ` · ${item.dosis}` : ''}`).join(' + ')
+                const caldo = fumigacion.tanques_cantidad && fumigacion.tanque_litros ? `${fumigacion.tanques_cantidad} × ${fumigacion.tanque_litros} L` : ''
+                return <CycleRow key={fumigacion.id} date={fumigacion.fecha} title={fumigacion.tipo || 'Fumigación'} detail={[productos, caldo, fumigacion.operario, fumigacion.notas].filter(Boolean).join(' · ')} />
+              })}
+            </CycleSection>
+
+            <CycleSection icon="ti-leaf" title="Fertilizaciones" count={fertilizacionesHistoricas.length} empty="No se registraron fertilizaciones en este ciclo.">
+              {fertilizacionesHistoricas.map(fertilizacion => {
+                const productos = (fertilizacion.soluciones || []).map(solucion => `${solucion.nombre ? `Sol. ${solucion.nombre}: ` : ''}${(solucion.productos || []).map(producto => `${producto.nombre || 'Producto'} ${producto.cantidad || ''} ${producto.unidad || ''}`.trim()).join(' + ')}`).join(' · ')
+                return <CycleRow key={fertilizacion.id} date={fertilizacion.fecha} title={productos || 'Fertilización registrada'} detail={notasFertilizacionVisibles(fertilizacion.notas)} />
+              })}
+            </CycleSection>
+
+            <CycleSection icon="ti-chart-line" title="Ventas y costos" count={ventasHistoricas.length + costosHistoricos.length} empty="No se registraron ventas ni costos directos en este ciclo.">
+              {[...ventasHistoricas.map(venta => ({ id:`v-${venta.id}`, fecha:venta.fecha, titulo:`Venta · Gs. ${fmtGs(venta.total || (Number(venta.kg_total || 0) * Number(venta.precio_kg || 0)))}`, detalle:[venta.producto, venta.compradores?.nombre, venta.estado_cobro].filter(Boolean).join(' · ') })), ...costosHistoricos.map(costo => ({ id:`c-${costo.id}`, fecha:costo.fecha, titulo:`Costo · Gs. ${fmtGs(costo.monto)}`, detalle:[costo.tipo, costo.descripcion].filter(Boolean).join(' · ') }))].sort((a,b) => String(b.fecha).localeCompare(String(a.fecha))).map(item => <CycleRow key={item.id} date={item.fecha} title={item.titulo} detail={item.detalle} />)}
+            </CycleSection>
+
+            <CycleSection icon="ti-heart-broken" title="Pérdidas de plantas" count={muertesHistoricas.length} empty="No se registraron pérdidas de plantas en este ciclo.">
+              {muertesHistoricas.map(muerte => <CycleRow key={muerte.id} date={muerte.fecha} title={`${Number(muerte.cantidad || 0).toLocaleString('es-PY')} planta${Number(muerte.cantidad) === 1 ? '' : 's'} · ${muerte.causa || 'Sin causa'}`} detail={muerte.descripcion} />)}
+            </CycleSection>
+
+            {fotosHistoricas.length > 0 && <section className="ag-surface cycle-history-section"><div className="cycle-history-section__head"><span><i className="ti ti-photo" aria-hidden="true" /><strong>Fotos del ciclo</strong></span><em>{fotosHistoricas.length}</em></div><div className="cycle-history-photos">{fotosHistoricas.map(foto => <img key={foto.id} src={foto.url} alt={`Registro del ${foto.fecha || 'ciclo'}`} loading="lazy" />)}</div></section>}
+          </>}
+
           <div className="ag-surface ui-49272e">
             <div className="ui-486335">Abonos de base utilizados</div>
             {(historialDetalle.plantacion_abonos || []).length > 0 ? historialDetalle.plantacion_abonos.map(abono => (
@@ -1290,7 +1399,7 @@ export default function FichaBloque() {
             {historial.length === 0 ? (
               <div className="ui-5baa7a">Sin ciclos anteriores</div>
             ) : historial.map(p => (
-              <div className="ag-surface ui-4aac8a" key={p.id} onClick={() => setHistorialDetalle(p)}
+              <div className="ag-surface ui-4aac8a" key={p.id} onClick={() => abrirHistorialDetalle(p)}
                >
                 <div className="ui-da5cd6">
                   <div className="ui-451b76">
@@ -1565,42 +1674,43 @@ export default function FichaBloque() {
       )}
 
       {showNuevaFertilizacion && (
-        <Modal onClose={() => setShowNuevaFertilizacion(false)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}
+        <Modal onClose={() => setShowNuevaFertilizacion(false)} busy={savingFert} label="Nueva fertilización" className="fert-quick-modal"
           onClick={e => e.target===e.currentTarget && setShowNuevaFertilizacion(false)}>
-          <div className="ui-6c907f" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-99efa8">Nueva fertilizacion</div>
-            <div className="ui-fe1408">Elegi uno o varios bloques. Se guarda un registro separado por cada bloque.</div>
+          <div className="fert-dialog">
+            <header className="fert-dialog__header">
+              <span className="fert-dialog__icon"><i className="ti ti-leaf" aria-hidden="true" /></span>
+              <div><span>Aplicación puntual</span><h2>Nueva fertilización</h2><p>Registrá la mezcla aplicada y vinculala a uno o varios bloques.</p></div>
+              <button type="button" className="fert-dialog__close" aria-label="Cerrar" onClick={() => setShowNuevaFertilizacion(false)}><i className="ti ti-x" aria-hidden="true" /></button>
+            </header>
 
-            <label className="ag-field-label ui-74cc19">Fecha *
-            <input style={inpStyle} type="date" value={formFert.fecha} onChange={e => setFormFert(f => ({...f, fecha:e.target.value}))}/></label>
+            <div className="fert-dialog__body">
+            <label className="fert-field">Fecha de aplicación *
+            <input className="fert-control" type="date" value={formFert.fecha} onChange={e => setFormFert(f => ({...f, fecha:e.target.value}))}/></label>
 
-            <div className="ui-74cc19">Bloques *</div>
-            <div className="ag-surface ui-91fc48">
-              <div className="ui-096aaf">
+            <fieldset className="fert-block-picker">
+              <legend>Bloques tratados *</legend>
+              <div className="fert-block-picker__grid">
                 {(bloquesCampo.length ? bloquesCampo : [{ id, codigo: bloque.codigo }]).map(b => {
                   const seleccionado = (formFert.bloques_ids || []).includes(b.id)
                   const cultivo = b.plantaciones?.find(p => p.activa)?.cultivos?.nombre
                   return (
-                    <button className="ag-small-action ui-59cb66" key={b.id} type="button" onClick={() => alternarBloqueFertilizacion(b.id)} style={{ background: seleccionado ? '#1a5c2e' : '#f8f8f8', color: seleccionado ? '#fff' : '#263026' }}>
-                      {b.codigo}{cultivo ? ` - ${cultivo}` : ''}
+                    <button className="fert-block-option" data-selected={seleccionado || undefined} aria-pressed={seleccionado} key={b.id} type="button" onClick={() => alternarBloqueFertilizacion(b.id)}>
+                      <i className={`ti ${seleccionado ? 'ti-circle-check-filled' : 'ti-circle'}`} aria-hidden="true" /><span><strong>Bloque {b.codigo}</strong>{cultivo && <small>{cultivo}</small>}</span>
                     </button>
                   )
                 })}
               </div>
-              <div className="ui-80c1d8">
+              <div className="fert-block-picker__summary">
                 {(formFert.bloques_ids || []).length || 0} bloque{(formFert.bloques_ids || []).length === 1 ? '' : 's'} seleccionado{(formFert.bloques_ids || []).length === 1 ? '' : 's'}
               </div>
-            </div>
+            </fieldset>
 
             {/* Soluciones */}
             {formFert.soluciones.map((sol, si) => (
-              <div className="ag-surface ui-f3f33f" key={si}>
-                <div className="ui-b3c308">
-                  <div className="ui-2a9780">
-                    <div className="ui-73f54d">
-                      <span className="ui-5f32fb">{sol.nombre}</span>
-                    </div>
-                    <input className="ui-a25fd0"
+              <section className="fert-solution-card" key={si}>
+                <div className="fert-solution-card__head">
+                  <span className="fert-solution-card__badge">{si + 1}</span>
+                  <label>Nombre de la solución<input className="fert-control"
                      
                       value={sol.nombre}
                       onChange={e => {
@@ -1608,75 +1718,72 @@ export default function FichaBloque() {
                         sols[si] = { ...sols[si], nombre: e.target.value }
                         setFormFert(f => ({ ...f, soluciones: sols }))
                       }}
-                      placeholder="Nombre sol."
-                    />
-                  </div>
+                      placeholder="Ej: Solución A"
+                    /></label>
                   {formFert.soluciones.length > 1 && (
-                    <button aria-label="Eliminar" className="ag-small-action ui-fa2a44" onClick={() => eliminarSolucion(si)}
+                    <button type="button" aria-label="Eliminar solución" className="fert-icon-action" onClick={() => eliminarSolucion(si)}
                      >
-                      <i className="ti ti-trash ui-0cf08e" aria-hidden="true"></i>
+                      <i className="ti ti-trash" aria-hidden="true"></i>
                     </button>
                   )}
                 </div>
 
                 {sol.productos.map((prod, pi) => (
-                  <div className="ui-01389d" key={pi}>
-                    <input className="ui-f3cd63"
+                  <div className="fert-product-row" key={pi}>
+                    <label className="fert-product-row__name">Producto<input className="fert-control"
                      
-                      type="text" placeholder="Producto (ej: KCL)"
+                      type="text" placeholder="Ej: KCL"
                       value={prod.nombre}
                       onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)}
-                    />
-                    <input className="ui-3e1ed4"
+                    /></label>
+                    <label>Cantidad<input className="fert-control numeric-data"
                      
-                      type="text" placeholder="Cant."
+                      type="text" inputMode="decimal" placeholder="0"
                       value={prod.cantidad}
                       onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)}
-                    />
-                    <select className="ui-30e3bd"
+                    /></label>
+                    <label>Unidad<select className="fert-control"
                      
                       value={prod.unidad}
                       onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)}>
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
-                    </select>
+                    </select></label>
                     {sol.productos.length > 1 && (
-                      <button aria-label="Cerrar" className="ag-small-action ui-79fbe7" onClick={() => eliminarProducto(si, pi)}
+                      <button type="button" aria-label="Quitar producto" className="fert-icon-action fert-product-row__remove" onClick={() => eliminarProducto(si, pi)}
                        >
-                        <i className="ti ti-x ui-3044b6" aria-hidden="true"></i>
+                        <i className="ti ti-x" aria-hidden="true"></i>
                       </button>
                     )}
                   </div>
                 ))}
 
-                <button className="ag-small-action ui-a0678b" onClick={() => agregarProducto(si)}
+                <button type="button" className="fert-add-row" onClick={() => agregarProducto(si)}
                  >
-                  + Agregar producto
+                  <i className="ti ti-plus" aria-hidden="true" /> Agregar producto
                 </button>
-              </div>
+              </section>
             ))}
 
-            <button className="ag-small-action ui-5fcb3d" onClick={agregarSolucion}
+            <button type="button" className="fert-add-solution" onClick={agregarSolucion}
              >
-              + Agregar solucion
+              <i className="ti ti-layers-subtract" aria-hidden="true" /> Agregar otra solución
             </button>
 
-            <label className="ag-field-label ui-74cc19">Notas (opcional)
-            <textarea className="ui-dc8f36"
-              style={{ ...inpStyle }}
+            <label className="fert-field">Notas (opcional)
+            <textarea className="fert-control fert-textarea"
               value={formFert.notas}
               onChange={e => setFormFert(f => ({...f, notas:e.target.value}))}
               placeholder="Observaciones, ajustes del ingeniero..."/></label>
+            </div>
 
-            <button className="ag-small-action ui-978577"
-              style={{ background: savingFert ? '#888' : '#1a5c2e' }}
+            <footer className="fert-dialog__footer">
+            <button type="button" className="fert-dialog__cancel"
+              onClick={() => setShowNuevaFertilizacion(false)} disabled={savingFert}>Cancelar</button>
+            <button type="button" className="fert-dialog__save"
               onClick={guardarFertilizacion} disabled={savingFert}>
-              {savingFert ? 'Guardando...' : 'Guardar fertilizacion'}
+              {savingFert ? <><i className="ti ti-loader-2" aria-hidden="true" /> Guardando...</> : <><i className="ti ti-check" aria-hidden="true" /> Guardar fertilización</>}
             </button>
-            <button className="ag-small-action ui-9d2a4a"
-             
-              onClick={() => setShowNuevaFertilizacion(false)}>
-              Cancelar
-            </button>
+            </footer>
           </div>
         </Modal>
       )}
@@ -1702,5 +1809,27 @@ export default function FichaBloque() {
         </Modal>
       )}
     </div>
+  )
+}
+
+function CycleSection({ icon, title, count, empty, children }) {
+  const contenido = React.Children.toArray(children).filter(Boolean)
+  return (
+    <section className="ag-surface cycle-history-section">
+      <div className="cycle-history-section__head">
+        <span><i className={`ti ${icon}`} aria-hidden="true" /><strong>{title}</strong></span>
+        <em>{count}</em>
+      </div>
+      {contenido.length ? <div className="cycle-history-list">{contenido}</div> : <div className="cycle-history-empty">{empty}</div>}
+    </section>
+  )
+}
+
+function CycleRow({ date, title, detail }) {
+  return (
+    <article className="cycle-history-row">
+      <time>{date || '-'}</time>
+      <div><strong>{title}</strong>{detail && <p>{detail}</p>}</div>
+    </article>
   )
 }
