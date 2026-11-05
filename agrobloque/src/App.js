@@ -282,7 +282,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/costos" element={<ProtectedRoute role={role} moduleKey="costos"><Costos campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/rentabilidad" element={<ProtectedRoute role={role} moduleKey="costos"><Rentabilidad campoActivo={campoActivo}/></ProtectedRoute>}/>
             <Route path="/contabilidad" element={<ProtectedRoute role={role} moduleKey="contabilidad"><Contabilidad/></ProtectedRoute>}/>
-            <Route path="/contabilidad/facturas" element={<ProtectedRoute role={role} moduleKey="contabilidad"><FacturasRecibidas/></ProtectedRoute>}/>
+            <Route path="/contabilidad/facturas" element={<ProtectedRoute role={role} moduleKey="contabilidad"><FacturasRecibidas role={role}/></ProtectedRoute>}/>
             <Route path="/cuentas-pagar" element={<ProtectedRoute role={role} moduleKey="cuentas_pagar"><CuentasPagar/></ProtectedRoute>}/>
             <Route path="/reportes" element={<ProtectedRoute role={role} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>

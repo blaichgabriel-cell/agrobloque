@@ -13,7 +13,7 @@ const inicial = {
   categoria: 'Insumos', descripcion: '', notas: '', confianza: 0, textoExtraido: '',
 }
 
-export default function FacturasRecibidas() {
+export default function FacturasRecibidas({ role }) {
   const navigate = useNavigate()
   const inputRef = useRef(null)
   const [facturas, setFacturas] = useState([])
@@ -104,7 +104,10 @@ export default function FacturasRecibidas() {
       const userId = authData?.user?.id
       if (!userId) throw new Error('La sesion vencio. Inicia sesion nuevamente.')
       const safeName = archivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      storagePath = `${userId}/${crypto.randomUUID()}-${safeName}`
+      // Multiempresa: la carpeta raiz es la organizacion (organizacion_id/usuario_id/archivo.pdf).
+      // Sin organizacion (base anterior) se mantiene la ruta vieja usuario_id/archivo.pdf.
+      const carpeta = role?.organizacionId ? `${role.organizacionId}/${userId}` : userId
+      storagePath = `${carpeta}/${crypto.randomUUID()}-${safeName}`
       const upload = await supabase.storage.from('facturas-contabilidad').upload(storagePath, archivo, {
         contentType: 'application/pdf', upsert: false,
       })
