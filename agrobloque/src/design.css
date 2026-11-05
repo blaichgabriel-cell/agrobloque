@@ -1417,7 +1417,14 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .cycle-history-datum strong { color:var(--text-primary); font-size:14px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .cycle-history-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
 .cycle-history-kpis .kpi-card { padding:17px !important; }
-.cycle-history-kpis .kpi-card__value { font-size:22px; }
+.cycle-history-kpi { display:flex !important; min-width:0; flex-direction:column; align-items:stretch; justify-content:flex-start; container-type:inline-size; }
+.cycle-history-kpi .kpi-card__label,.cycle-history-kpi .kpi-card__value,.cycle-history-kpi .kpi-card__detail { display:block; width:100%; min-width:0; }
+.cycle-history-kpi .kpi-card__label { min-height:17px; line-height:1.35; }
+.cycle-history-kpi .kpi-card__value { margin-top:10px; overflow:visible; overflow-wrap:normal; white-space:nowrap; font-size:clamp(18px,8.5cqw,24px); line-height:1.05; }
+.cycle-history-kpi .kpi-card__detail { margin-top:10px; line-height:1.35; }
+.cycle-history-money { display:flex !important; align-items:baseline; gap:6px; letter-spacing:-.035em; }
+.cycle-history-money__currency { flex:0 0 auto; font-family:var(--bl-font-display); font-size:.62em; font-weight:750; letter-spacing:0; }
+.cycle-history-money>span:last-child { min-width:0; }
 .cycle-history-section { overflow:hidden; padding:0 !important; }
 .cycle-history-section__head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:17px 19px; border-bottom:var(--border-subtle); }
 .cycle-history-section__head>span { display:flex; align-items:center; gap:10px; min-width:0; }
@@ -1517,6 +1524,10 @@ html,body { -webkit-tap-highlight-color:transparent; }
   .fert-dialog__footer>* { flex:1; }
   .nursery-photo-uploader__head { align-items:flex-start; flex-direction:column; }
   .nursery-photo-preview,.nursery-photo-gallery>div { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:520px) {
+  .cycle-history-kpis { grid-template-columns:1fr; }
+  .cycle-history-kpi .kpi-card__value { font-size:clamp(20px,8cqw,26px); }
 }
 [data-theme='dark'] [data-sonner-toast].ag-toast { background:rgba(18,31,26,.94) !important; border-color:rgba(255,255,255,.1) !important; }
 @media (prefers-reduced-motion:reduce) {
