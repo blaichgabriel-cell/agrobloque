@@ -1,3 +1,7 @@
+-- NO EJECUTAR (revisado el 2026-11-06): en Supabase ya estan aplicadas las politicas
+-- facturas_archivos_organizacion_* (leer: toda la empresa; borrar: quien subio o un admin).
+-- Este script las reemplazaria por otras mas estrictas (cada usuario solo veria sus archivos).
+
 -- AgroBloque: compatibilidad segura de Storage para facturas multiempresa.
 -- Ejecutar DESPUES de:
 --   1) multiempresa-organizaciones-2026-11-02.sql
