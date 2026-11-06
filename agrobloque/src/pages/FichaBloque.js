@@ -494,11 +494,11 @@ export default function FichaBloque() {
   }
 
   const guardarMuerte = async () => {
-    if (!formMuerte.cantidad) return
+    if (!parseLocaleInteger(formMuerte.cantidad, null)) return
     setSaving(true)
     await supabase.from('muertes_plantas').insert({
       bloque_id: id, plantacion_id: plantacionActiva?.id,
-      cantidad: Number(formMuerte.cantidad),
+      cantidad: parseLocaleInteger(formMuerte.cantidad, null),
       causa: formMuerte.causa,
       descripcion: formMuerte.descripcion || null,
       fecha: new Date().toISOString().split('T')[0]
@@ -1517,7 +1517,7 @@ export default function FichaBloque() {
             <div className="ui-c7b1b6">Registrar muerte de plantas</div>
 
             <label className="ag-field-label ui-74cc19">Cantidad de plantas *
-            <input style={inpStyle} type="number" value={formMuerte.cantidad} onChange={e => setFormMuerte(f => ({...f, cantidad:e.target.value}))} placeholder="Ej: 5"/></label>
+            <input style={inpStyle} type="text" inputMode="numeric" autoComplete="off" value={formMuerte.cantidad} onChange={e => setFormMuerte(f => ({...f, cantidad:e.target.value.replace(/[^0-9.,\s]/g, '')}))} onBlur={() => setFormMuerte(f => ({...f, cantidad:formatLocaleInteger(f.cantidad)}))} placeholder="Ej: 5"/></label>
 
             <div className="ui-74cc19">Causa</div>
             <div className="ui-1e850e">
