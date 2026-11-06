@@ -4,6 +4,12 @@ const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://utdlehbifdfil
 const anonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZGxlaGJpZmRmaWxpb3p4YmlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODI0ODgsImV4cCI6MjA5NDQ1ODQ4OH0.VX99wvuZ258SDOcEG-ijFYo64RFAlWoKpsEU7C4R92U'
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+const ROLES_VALIDOS = ['admin', 'operador', 'lectura']
+const ERROR_OTRA_EMPRESA = 'Ese correo ya pertenece a otra empresa y no se puede modificar desde aqui.'
+
+// `_` y `%` son comodines de ILIKE: se escapan para comparar el correo tal cual.
+const escapeLike = value => value.replace(/[\\%_]/g, '\\$&')
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Metodo no permitido.' })
@@ -38,23 +44,35 @@ module.exports = async function handler(req, res) {
     if (!adminRole || adminRole.activo === false || adminRole.rol !== 'admin') {
       throw new Error('Solo un administrador puede invitar usuarios reales.')
     }
+    if (!adminRole.organizacion_id) throw new Error('Tu usuario no tiene una empresa asignada.')
 
     const body = req.body || {}
     const email = String(body.email || '').trim().toLowerCase()
     const password = String(body.password || '')
+    const rol = body.rol || 'operador'
     if (!email || !email.includes('@')) throw new Error('Email invalido.')
     if (password.length < 8) throw new Error('La contrasena debe tener al menos 8 caracteres.')
+    if (!ROLES_VALIDOS.includes(rol)) throw new Error('Rol invalido.')
 
     const rolePayload = {
       email,
       nombre: body.nombre || null,
-      rol: body.rol || 'operador',
+      rol,
       permisos: body.permisos || null,
       acciones: body.acciones || null,
       activo: body.activo !== false,
       notas: body.notas || null,
       organizacion_id: adminRole.organizacion_id,
     }
+
+    // Un administrador solo puede tocar usuarios de su propia empresa. Se mira el rol por correo
+    // (sin distinguir mayusculas) y, si ya existe la cuenta, tambien por su user_id, antes de
+    // cambiar la contrasena o el rol de nadie.
+    const { data: rolesPorCorreo, error: rolesError } = await serviceClient
+      .from('app_user_roles')
+      .select('id, user_id, organizacion_id')
+      .ilike('email', escapeLike(email))
+    if (rolesError) throw rolesError
 
     let authUser = null
     for (let page = 1; page <= 10 && !authUser; page += 1) {
@@ -64,11 +82,26 @@ module.exports = async function handler(req, res) {
       if ((pageData?.users || []).length < 200) break
     }
 
+    let rolesDeLaCuenta = []
+    if (authUser?.id) {
+      const { data: rolesPorUsuario, error: rolesUserError } = await serviceClient
+        .from('app_user_roles')
+        .select('id, user_id, organizacion_id')
+        .eq('user_id', authUser.id)
+      if (rolesUserError) throw rolesUserError
+      rolesDeLaCuenta = rolesPorUsuario || []
+    }
+
+    const filasRelacionadas = [...(rolesPorCorreo || []), ...rolesDeLaCuenta]
+    if (filasRelacionadas.some(fila => fila.organizacion_id && fila.organizacion_id !== adminRole.organizacion_id)) {
+      throw new Error(ERROR_OTRA_EMPRESA)
+    }
+
     if (authUser?.id) {
       const { error: updateAuthError } = await serviceClient.auth.admin.updateUserById(authUser.id, {
         password,
         email_confirm: true,
-        user_metadata: { ...authUser.user_metadata, nombre: body.nombre || '', rol: body.rol || 'operador' },
+        user_metadata: { ...authUser.user_metadata, nombre: body.nombre || '', rol },
       })
       if (updateAuthError) throw updateAuthError
     } else {
@@ -76,16 +109,12 @@ module.exports = async function handler(req, res) {
         email,
         password,
         email_confirm: true,
-        user_metadata: { nombre: body.nombre || '', rol: body.rol || 'operador' },
+        user_metadata: { nombre: body.nombre || '', rol },
       })
       if (createAuthError) throw createAuthError
     }
 
-    const { data: existingRole } = await serviceClient
-      .from('app_user_roles')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle()
+    const existingRole = (rolesPorCorreo || [])[0] || rolesDeLaCuenta[0] || null
 
     const roleMutation = existingRole?.id
       ? serviceClient.from('app_user_roles').update(rolePayload).eq('id', existingRole.id)
