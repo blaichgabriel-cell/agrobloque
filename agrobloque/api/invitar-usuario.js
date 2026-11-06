@@ -6,6 +6,7 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const ROLES_VALIDOS = ['admin', 'operador', 'lectura']
 const ERROR_OTRA_EMPRESA = 'Ese correo ya pertenece a otra empresa y no se puede modificar desde aqui.'
+const ERROR_CUENTA_SIN_EMPRESA = 'Ya existe una cuenta con ese correo que no esta asociada a ninguna empresa. No se puede modificar desde aqui: pidele a soporte que la vincule.'
 
 // `_` y `%` son comodines de ILIKE: se escapan para comparar el correo tal cual.
 const escapeLike = value => value.replace(/[\\%_]/g, '\\$&')
@@ -74,6 +75,10 @@ module.exports = async function handler(req, res) {
       .ilike('email', escapeLike(email))
     if (rolesError) throw rolesError
 
+    // Limite conocido: solo se revisan los primeros 2000 usuarios de auth (10 paginas de 200).
+    // Si la cuenta esta mas alla, authUser queda en null y createUser falla porque el correo ya
+    // existe, asi que tampoco se modifica nada. Subir el limite o buscar por correo cuando
+    // haya mas usuarios.
     let authUser = null
     for (let page = 1; page <= 10 && !authUser; page += 1) {
       const { data: pageData, error: listError } = await serviceClient.auth.admin.listUsers({ page, perPage: 200 })
@@ -97,6 +102,13 @@ module.exports = async function handler(req, res) {
       throw new Error(ERROR_OTRA_EMPRESA)
     }
 
+    // Una cuenta de acceso sin ninguna fila de rol (ni por correo ni por user_id) no se sabe de que
+    // empresa es: podria ser de otra a la que se le borro el rol. No se le cambia la contrasena.
+    if (authUser?.id && filasRelacionadas.length === 0) {
+      throw new Error(ERROR_CUENTA_SIN_EMPRESA)
+    }
+
+    let usuarioCreadoId = null
     if (authUser?.id) {
       const { error: updateAuthError } = await serviceClient.auth.admin.updateUserById(authUser.id, {
         password,
@@ -105,13 +117,14 @@ module.exports = async function handler(req, res) {
       })
       if (updateAuthError) throw updateAuthError
     } else {
-      const { error: createAuthError } = await serviceClient.auth.admin.createUser({
+      const { data: creado, error: createAuthError } = await serviceClient.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
         user_metadata: { nombre: body.nombre || '', rol },
       })
       if (createAuthError) throw createAuthError
+      usuarioCreadoId = creado?.user?.id || null
     }
 
     const existingRole = (rolesPorCorreo || [])[0] || rolesDeLaCuenta[0] || null
@@ -120,7 +133,12 @@ module.exports = async function handler(req, res) {
       ? serviceClient.from('app_user_roles').update(rolePayload).eq('id', existingRole.id)
       : serviceClient.from('app_user_roles').insert(rolePayload)
     const { error: roleError } = await roleMutation
-    if (roleError) throw roleError
+    if (roleError) {
+      // Si la cuenta se acaba de crear en esta llamada y el rol fallo, se deshace para no dejar
+      // una cuenta sin empresa que la regla anterior ya no deja volver a invitar.
+      if (usuarioCreadoId) await serviceClient.auth.admin.deleteUser(usuarioCreadoId).catch(() => {})
+      throw roleError
+    }
 
     res.status(200).json({ ok: true, message: 'Usuario habilitado. Ya puede ingresar con el correo y la contrasena definida.' })
   } catch (error) {
