@@ -83,7 +83,7 @@ function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
             <div className="ui-882dd8">{cultivo}</div>
             <div className="ui-1301e2">Bloque {cosecha.bloques?.codigo} · {cosecha.fecha}</div>
           </div>
-          <button className="ui-4f781a" aria-label="Cerrar" onClick={onClose}>
+          <button className="ui-4f781a ag-close-btn" aria-label="Cerrar" onClick={onClose}>
             <i className="ti ti-x ui-bf83cf" aria-hidden="true"></i>
           </button>
         </div>

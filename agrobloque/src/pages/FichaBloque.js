@@ -1618,7 +1618,7 @@ export default function FichaBloque() {
                 <div className="ui-882dd8">{incidenciaDetalle.tipo === 'fertiriego' ? 'Fertiriego' : incidenciaDetalle.tipo === 'foliar' ? 'Foliar' : 'Fumigacion'}</div>
                 <div className="ui-13b58a">{incidenciaDetalle.fecha}</div>
               </div>
-              <button className="ui-6de38e" aria-label="Cerrar" onClick={() => setIncidenciaDetalle(null)}>
+              <button className="ui-6de38e ag-close-btn" aria-label="Cerrar" onClick={() => setIncidenciaDetalle(null)}>
                 <i className="ti ti-x ui-b7c8fe" aria-hidden="true"></i>
               </button>
             </div>
@@ -1680,7 +1680,7 @@ export default function FichaBloque() {
             <header className="fert-dialog__header">
               <span className="fert-dialog__icon"><i className="ti ti-leaf" aria-hidden="true" /></span>
               <div><span>Aplicación puntual</span><h2>Nueva fertilización</h2><p>Registrá la mezcla aplicada y vinculala a uno o varios bloques.</p></div>
-              <button type="button" className="fert-dialog__close" aria-label="Cerrar" onClick={() => setShowNuevaFertilizacion(false)}><i className="ti ti-x" aria-hidden="true" /></button>
+              <button type="button" className="fert-dialog__close ag-close-btn" aria-label="Cerrar" onClick={() => setShowNuevaFertilizacion(false)}><i className="ti ti-x" aria-hidden="true" /></button>
             </header>
 
             <div className="fert-dialog__body">

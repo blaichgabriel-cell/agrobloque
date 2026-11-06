@@ -71,17 +71,17 @@ export default function Login({ mode = 'login', session = null }) {
       return
     }
     if (password.length < 8) {
-      setError('La contrasena debe tener al menos 8 caracteres.')
+      setError('La contraseña debe tener al menos 8 caracteres.')
       return
     }
     if (password !== passwordConfirm) {
-      setError('Las contrasenas no coinciden.')
+      setError('Las contraseñas no coinciden.')
       return
     }
     setLoading(true)
     const { error: updateError } = await supabase.auth.updateUser({ password })
     if (updateError) {
-      setError('No se pudo guardar la contrasena. Solicita un enlace nuevo e intenta otra vez.')
+      setError('No se pudo guardar la contraseña. Solicita un enlace nuevo e intenta otra vez.')
       setLoading(false)
       return
     }

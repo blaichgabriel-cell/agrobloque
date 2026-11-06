@@ -54,7 +54,7 @@ function ModalDetalle({ venta, onClose, onEdit, onDelete }) {
             <div className="ui-882dd8">{venta.producto || 'Producto'}</div>
             <div className="ui-1301e2">{venta.compradores?.nombre || 'Sin comprador'} - {venta.fecha}</div>
           </div>
-          <button className="ui-f730c6" onClick={onClose}>
+          <button className="ui-f730c6 ag-close-btn" aria-label="Cerrar" onClick={onClose}>
             <i className="ti ti-x ui-bf83cf" aria-hidden="true"></i>
           </button>
         </div>
@@ -102,7 +102,7 @@ function ModalDetalleGrupo({ grupo, onClose, onEdit, onDelete }) {
             <div className="ui-882dd8">{grupo.comprador}</div>
             <div className="ui-1301e2">{grupo.fecha} - {grupo.items.length} productos</div>
           </div>
-          <button className="ui-f730c6" onClick={onClose}>
+          <button className="ui-f730c6 ag-close-btn" aria-label="Cerrar" onClick={onClose}>
             <i className="ti ti-x ui-bf83cf" aria-hidden="true"></i>
           </button>
         </div>

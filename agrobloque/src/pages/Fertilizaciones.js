@@ -192,7 +192,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
             <div className="ui-5e0192">{esSemana ? 'Programación por bloques' : form.plan_id ? 'Aplicación del plan' : 'Fuera del plan'}</div>
             <h2 className="ui-944434">{esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar plan semanal' : 'Nuevo plan semanal') : form.edit_grupo ? 'Corregir aplicación' : form.plan_id ? 'Registrar aplicación del plan' : 'Aplicación puntual del día'}</h2>
           </div>
-          <button className="ui-358cf9" aria-label="Cerrar" onClick={onClose}>
+          <button className="ui-358cf9 ag-close-btn" aria-label="Cerrar" onClick={onClose}>
             <i className="ti ti-x ui-e5e6f8" />
           </button>
         </div>
@@ -909,7 +909,7 @@ export default function Fertilizaciones({ campoActivo }) {
       {detalle && (
         <Modal onClose={() => setDetalle(null)} label="Fertilizaciones" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:260, display:'grid', placeItems:'center', padding:16 }} onClick={() => setDetalle(null)}>
           <div className="ag-surface ui-3e70e0" onClick={e => e.stopPropagation()}>
-            <div className="ui-9f6525"><div><div className="ui-5e0192">{detalle.items.some(i => i.plan_id) ? 'FERTILIZACIÓN SEMANAL' : 'DETALLE DE APLICACIÓN'}</div><h2 className="ui-58c65c">{detalle.items.some(i => i.plan_id) ? rangoSemana(detalle.items[0]) : fmtFecha(detalle.fecha)}</h2></div><button className="ui-52b466" aria-label="Cerrar" onClick={() => setDetalle(null)}><i className="ti ti-x" /></button></div>
+            <div className="ui-9f6525"><div><div className="ui-5e0192">{detalle.items.some(i => i.plan_id) ? 'FERTILIZACIÓN SEMANAL' : 'DETALLE DE APLICACIÓN'}</div><h2 className="ui-58c65c">{detalle.items.some(i => i.plan_id) ? rangoSemana(detalle.items[0]) : fmtFecha(detalle.fecha)}</h2></div><button className="ui-52b466 ag-close-btn" aria-label="Cerrar" onClick={() => setDetalle(null)}><i className="ti ti-x" /></button></div>
             <div className="ui-091476"><div className="ui-702618"><small className="ui-ae975a">Bloques</small><div className="ui-c6f57e">{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div className="ui-702618"><small className="ui-ae975a">Preparación</small><div className="ui-c6f57e">{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
             <div className="ui-c4d2a4">{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
             {notasVisibles(detalle.notas) && <div className="ui-5961cf">{notasVisibles(detalle.notas)}</div>}

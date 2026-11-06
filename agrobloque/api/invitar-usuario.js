@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
     const password = String(body.password || '')
     const rol = body.rol || 'operador'
     if (!email || !email.includes('@')) throw new Error('Email invalido.')
-    if (password.length < 8) throw new Error('La contrasena debe tener al menos 8 caracteres.')
+    if (password.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.')
     if (!ROLES_VALIDOS.includes(rol)) throw new Error('Rol invalido.')
 
     const rolePayload = {
@@ -140,7 +140,7 @@ module.exports = async function handler(req, res) {
       throw roleError
     }
 
-    res.status(200).json({ ok: true, message: 'Usuario habilitado. Ya puede ingresar con el correo y la contrasena definida.' })
+    res.status(200).json({ ok: true, message: 'Usuario habilitado. Ya puede ingresar con el correo y la contraseña definida.' })
   } catch (error) {
     res.status(400).json({ error: error.message || 'No se pudo invitar usuario.' })
   }

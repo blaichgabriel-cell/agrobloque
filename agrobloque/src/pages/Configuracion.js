@@ -286,13 +286,13 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
   }
 
   const guardarContrasena = async () => {
-    if (!form.nueva || form.nueva.length < 6) { setError('La contrasena debe tener al menos 6 caracteres'); return }
-    if (form.nueva !== form.repetir) { setError('Las contrasenas no coinciden'); return }
+    if (!form.nueva || form.nueva.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return }
+    if (form.nueva !== form.repetir) { setError('Las contraseñas no coinciden'); return }
     setLoading(true); setError(''); setSuccess('')
     try {
       const { error } = await supabase.auth.updateUser({ password: form.nueva })
       if (error) throw error
-      setSuccess('Contrasena actualizada correctamente')
+      setSuccess('Contraseña actualizada correctamente')
       setForm({})
     } catch (e) { setError('Error: ' + e.message) }
     setLoading(false)
@@ -656,7 +656,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
             <div className="ag-config-modal-toolbar">
               <button
                 type="button"
-                className="ag-config-modal-close"
+                className="ag-config-modal-close ag-close-btn"
                 onClick={cerrar}
                 disabled={loading}
                 aria-label="Cerrar configuracion"
@@ -872,12 +872,12 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                 <button className="bl-btn bl-btn--primary" onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
               </div>
 
-              {/* Contrasena */}
+              {/* Contraseña */}
               <div className="ag-surface ui-e446b2">
-                <label className="ag-field-label ui-486335">Contrasena
-                <input className="ui-d51702 bl-input"  type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contrasena"/></label>
-                <input className="ui-d51702 bl-input"  type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contrasena"/>
-                <button className="bl-btn bl-btn--danger" onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contrasena'}</button>
+                <label className="ag-field-label ui-486335">Contraseña
+                <input className="ui-d51702 bl-input"  type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contraseña"/></label>
+                <input className="ui-d51702 bl-input"  type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contraseña"/>
+                <button className="bl-btn bl-btn--danger" onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contraseña'}</button>
               </div>
 
               <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>

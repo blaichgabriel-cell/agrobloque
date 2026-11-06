@@ -460,7 +460,7 @@ export default function Vivero() {
                 <div className="ui-02cbdf">{detalle.cultivo}</div>
                 <div className="ui-d239cf">{detalle.variedad || 'Sin variedad'}</div>
               </div>
-              <button aria-label="Cerrar" onClick={() => setDetalle(null)} className="bl-icon-btn"><i className="ti ti-x" /></button>
+              <button aria-label="Cerrar" onClick={() => setDetalle(null)} className="bl-icon-btn ag-close-btn"><i className="ti ti-x" /></button>
             </div>
 
             <div className="ui-d87c39">

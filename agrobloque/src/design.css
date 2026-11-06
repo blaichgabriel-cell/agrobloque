@@ -1539,12 +1539,32 @@ html,body { -webkit-tap-highlight-color:transparent; }
 [data-theme='dark'] [style*='color: rgb(2, 132, 199)'] { color:var(--dk-blue) !important; }
 [data-theme='dark'] [style*='solid rgb(240, 237, 232)'] { border-color:var(--dk-line) !important; }
 [data-theme='dark'] :is([style*='solid rgb(232, 236, 232)'],[style*='solid rgb(240, 242, 240)'],[style*='solid rgb(242, 241, 239)'],[style*='solid rgb(223, 229, 224)']) { border-color:var(--dk-line) !important; }
+[data-theme='dark'] [style*='solid rgb(246, 248, 247)'] { border-color:var(--dk-line) !important; }
+[data-theme='dark'] [style*='solid rgb(238, 238, 238)'],[data-theme='dark'] .ui-310b5d { border-color:var(--dk-line) !important; }
+[data-theme='dark'] [style*='color: rgb(17, 17, 17)'] { color:var(--text-primary) !important; }
+[data-theme='dark'] .ui-f31d5c { color:var(--text-secondary) !important; }
 [data-theme='dark'] [style*='background: rgb(237, 247, 241)'] { background:rgba(16,185,129,.12) !important; }
 [data-theme='dark'] [style*='solid rgb(214, 234, 222)'] { border-color:rgba(52,211,153,.25) !important; }
 [data-theme='dark'] [style*='color: rgb(37, 66, 52)'] { color:var(--text-secondary) !important; }
 [data-theme='dark'] [style*='color: rgb(102, 112, 105)'] { color:var(--text-tertiary) !important; }
 [data-theme='dark'] .ui-e8c73b { color:var(--text-secondary) !important; }
 [data-theme='dark'] .ui-3044b6 { color:var(--text-tertiary) !important; }
+/* Boton de cerrar (X) unificado: circulo de vidrio en toda la app; botones Cerrar y peligro en oscuro */
+button.ag-close-btn.ag-close-btn.ag-close-btn { width:40px; height:40px; flex:0 0 40px; display:inline-grid; place-items:center; padding:0; border:1px solid rgba(15,23,42,.1); border-radius:50%; background:rgba(255,255,255,.78); color:var(--text-secondary); box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 4px 12px -6px rgba(15,23,42,.2); cursor:pointer; transition:transform 160ms var(--bl-press),background-color 160ms ease,color 160ms ease; }
+button.ag-close-btn.ag-close-btn.ag-close-btn i { font-size:18px; line-height:1; }
+button.ag-close-btn.ag-close-btn.ag-close-btn:active { transform:scale(.93); }
+button.ag-close-btn.ag-close-btn.ag-close-btn:focus-visible { outline:2px solid rgba(16,185,129,.6); outline-offset:2px; }
+button.ag-close-btn.ag-close-btn.ag-close-btn:disabled { opacity:.5; cursor:not-allowed; }
+@media (hover:hover) and (pointer:fine) { button.ag-close-btn.ag-close-btn.ag-close-btn:hover { background:#fff; color:var(--text-primary); } }
+[data-theme='dark'] button.ag-close-btn.ag-close-btn.ag-close-btn { border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.07); color:var(--text-secondary); box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 4px 12px -6px rgba(0,0,0,.5); }
+@media (hover:hover) and (pointer:fine) { [data-theme='dark'] button.ag-close-btn.ag-close-btn.ag-close-btn:hover { background:rgba(255,255,255,.14); color:var(--text-primary); } }
+[data-theme='dark'] .bl-btn--ghost { border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.07); color:var(--text-primary); }
+@media (hover:hover) and (pointer:fine) { [data-theme='dark'] .bl-btn--ghost:hover { background:rgba(255,255,255,.13); } }
+[data-theme='dark'] .bl-btn--danger { border-color:rgba(251,113,133,.32); background:rgba(244,63,94,.14); color:var(--dk-red); }
+[data-theme='dark'] .bl-icon-btn { border-color:rgba(255,255,255,.12); background:rgba(255,255,255,.07); color:var(--text-primary); }
+/* Buscadores: el borde y el fondo los pone el contenedor; el input interior va sin borde (antes se veia un doble borde, como un parentesis) */
+.ag-block-search input:not([type='checkbox']):not([type='radio']),.inventory-search input:not([type='checkbox']):not([type='radio']) { min-height:0; border:0 !important; border-radius:0 !important; background:transparent !important; background-color:transparent !important; box-shadow:none !important; }
+[data-theme='dark'] .ag-block-search input:not([type='checkbox']):not([type='radio']),[data-theme='dark'] .inventory-search input:not([type='checkbox']):not([type='radio']) { border:0 !important; background:transparent !important; background-color:transparent !important; box-shadow:none !important; }
 /* Boton de camara del perfil: 20px visibles con zona tactil de 44px (la regla tactil lo estiraba) */
 @media (max-width:1099px) {
   .ag-app button.ui-3b8eb9 { min-width:20px !important; min-height:20px !important; }

@@ -243,7 +243,7 @@ export default function FacturasRecibidas({ role }) {
           <section role="dialog" aria-modal="true" aria-labelledby="factura-title" style={sheet}>
             <div className="ui-9bae07">
               <div><div className="ui-51b095">Revisar lectura</div><h2 className="ui-aad0a1" id="factura-title">Nueva factura</h2></div>
-              <button onClick={cerrar} style={iconButton} aria-label="Cerrar"><i className="ti ti-x" /></button>
+              <button className="ag-close-btn" onClick={cerrar} aria-label="Cerrar"><i className="ti ti-x" /></button>
             </div>
             <div style={fileSummary}><i className="ti ti-file-type-pdf" /><div className="ui-3f9f96"><strong className="ui-2fd49b">{archivo?.name}</strong><small>{estado}</small></div></div>
             {error && <div className="ui-d8f2f7" role="alert" style={{ ...errorBox }}>{error}</div>}
