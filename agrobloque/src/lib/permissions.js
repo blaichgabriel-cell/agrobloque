@@ -17,7 +17,7 @@ export const MODULES = [
   { key: 'reportes', label: 'Reportes', path: '/reportes' },
   { key: 'compradores', label: 'Compradores', path: '/compradores' },
   { key: 'auditoria', label: 'Auditoria', path: '/auditoria', adminOnly: true },
-  { key: 'configuracion', label: 'Configuracion', path: '/configuracion', adminOnly: true },
+  { key: 'configuracion', label: 'Configuración', path: '/configuracion', adminOnly: true },
 ]
 
 export const ACTIONS = [

@@ -23,7 +23,7 @@ const PERMISOS_MODULOS = [
   { key: 'reportes', label: 'Reportes' },
   { key: 'compradores', label: 'Compradores' },
   { key: 'auditoria', label: 'Auditoria' },
-  { key: 'configuracion', label: 'Configuracion' },
+  { key: 'configuracion', label: 'Configuración' },
 ].filter(m => !DISABLED_MODULES.includes(m.key))
 
 const crearContrasenaTemporal = () => {
@@ -565,11 +565,11 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:"#124e38", bg:'#eeeeee', action: () => abrir('abonos') },
     { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:"#124e38", bg:'#eeeeee', action: () => abrir('bloques') },
     { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
-    { icon:'ti-receipt-2', title:'Cuentas a pagar', sub:'Creditos con proveedores', color:"#08603f", bg:'#edf6ec', action: () => navigate('/cuentas-pagar') },
+    { icon:'ti-receipt-2', title:'Cuentas a pagar', sub:'Créditos con proveedores', color:"#08603f", bg:'#edf6ec', action: () => navigate('/cuentas-pagar') },
     { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:"#08603f", bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30', permisos: [] }) },
     { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:"#08603f", bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, password:'', password_confirm:'', mostrar_password:false }) },
     { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:"#124e38", bg:'#eeeeee', action: () => navigate('/auditoria') },
-    { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Ultimo: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
+    { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Último: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
     { icon:'ti-building-plus', title:'Nueva empresa', sub:'Dar de alta un nuevo cliente', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => abrir('nuevaEmpresa', { nombre:'', owner_email:'' }) },
     { icon:'ti-presentation', title:'Vista nuevo cliente', sub:'Probar el primer ingreso sin guardar datos', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => navigate('/primeros-pasos') },
   ].filter((item, index) => (esAdmin || index === 0) && (!item.platformOnly || isPlatformAdmin))
@@ -580,7 +580,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
 
       <div className="ui-327143">
         <div className="ui-476525">Sistema</div>
-        <div className="ag-page-title ui-83e514">Configuracion</div>
+        <div className="ag-page-title ui-83e514">Configuración</div>
         {error && !modal && <div className="ui-e136cb">{error}</div>}
         {success && !modal && <div className="ui-c90154">{success}</div>}
 
@@ -632,12 +632,12 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
           </div>
         ))}
         <div className="ag-surface ui-4000ee" onClick={() => forceLocalSignOut()}>
-          <div className="ui-fce2c6">Cerrar sesion</div>
+          <div className="ui-fce2c6">Cerrar sesión</div>
         </div>
       </div>
 
       {modal && (
-        <Modal busy={loading} onClose={cerrar} label="Configuracion" style={{
+        <Modal busy={loading} onClose={cerrar} label="Configuración" style={{
           position:'fixed',
           top:0,
           left:0,
@@ -659,7 +659,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                 className="ag-config-modal-close ag-close-btn"
                 onClick={cerrar}
                 disabled={loading}
-                aria-label="Cerrar configuracion"
+                aria-label="Cerrar configuración"
                 title="Cerrar"
               >
                 <i className="ti ti-x" aria-hidden="true"></i>
@@ -728,9 +728,9 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                   {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select></label>
                 <select className="bl-input" value={form.dias||'30'} onChange={e=>setForm(f=>({...f,dias:e.target.value}))}>
-                  <option value="7">Vence en 7 dias</option>
-                  <option value="30">Vence en 30 dias</option>
-                  <option value="90">Vence en 90 dias</option>
+                  <option value="7">Vence en 7 días</option>
+                  <option value="30">Vence en 30 días</option>
+                  <option value="90">Vence en 90 días</option>
                   <option value="">Sin vencimiento</option>
                 </select>
                 <PermisosSelector
@@ -854,7 +854,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                     <i className="ti ti-camera ui-6a3571" aria-hidden="true"></i>
                   </button>
                 </div>
-                <span className="ui-93a7e1">Toca la camara para cambiar la foto</span>
+                <span className="ui-93a7e1">Toca la cámara para cambiar la foto</span>
               </div>
 
               {/* Nombre */}
@@ -868,7 +868,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
               <div className="ag-surface ui-e446b2">
                 <label className="ag-field-label ui-486335">Email
                 <input className="ui-d51702 bl-input"  type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/></label>
-                <div className="ui-51eea9">Si cambias el email, recibiras un link de confirmacion</div>
+                <div className="ui-51eea9">Si cambias el email, recibiras un link de confirmación</div>
                 <button className="bl-btn bl-btn--primary" onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
               </div>
 

@@ -27,8 +27,8 @@ export default function Invitado() {
       setData(null)
     } else if (!data?.ok) {
       setError(data?.error === 'link_no_valido'
-        ? 'Este enlace no coincide con ningun invitado activo en este Supabase. Crea un link nuevo despues de ejecutar el SQL actualizado.'
-        : 'Este enlace de invitado no existe, vencio o fue desactivado.'
+        ? 'Este enlace no coincide con ningún invitado activo en este Supabase. Crea un link nuevo después de ejecutar el SQL actualizado.'
+        : 'Este enlace de invitado no existe, venció o fue desactivado.'
       )
       setData(null)
     } else {
@@ -93,7 +93,7 @@ export default function Invitado() {
         <section style={panel}>
           <div style={head}><h2 style={title}>Inventario</h2></div>
           {(data?.productos || []).length === 0 ? <SmallEmpty /> : data.productos.map(p => (
-            <Row key={p.id} title={p.nombre} sub={p.categoria || 'Sin categoria'} right={fmtNumber(p.stock_actual)} />
+            <Row key={p.id} title={p.nombre} sub={p.categoria || 'Sin categoría'} right={fmtNumber(p.stock_actual)} />
           ))}
         </section>
       </div>

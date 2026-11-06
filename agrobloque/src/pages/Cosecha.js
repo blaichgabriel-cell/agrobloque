@@ -104,7 +104,7 @@ function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
           <div style={item}><span style={label}>Campo</span><span style={value}>{cosecha.bloques?.campos?.nombre || '-'}</span></div>
           <div style={item}><span style={label}>Bloque</span><span style={value}>{cosecha.bloques?.codigo || '-'}</span></div>
           <div style={item}><span style={label}>Calidad</span><span style={value}>{calidadLabel(cosecha.calidad)}</span></div>
-          <div className="ui-310b5d" style={{ ...item }}><span style={label}>Uso</span><span style={value}>Produccion del bloque</span></div>
+          <div className="ui-310b5d" style={{ ...item }}><span style={label}>Uso</span><span style={value}>Producción del bloque</span></div>
         </div>
 
         {cosecha.notas && (
@@ -337,7 +337,7 @@ export default function Cosecha() {
             <div className="ui-59e9d0">
               {promedioKg > 0 ? `${fmtKg(promedioKg)} kg` : '—'}
             </div>
-            <div className="ui-13b58a">solo produccion cosechada</div>
+            <div className="ui-13b58a">solo producción cosechada</div>
           </div>
         </div>
       </div>
@@ -376,7 +376,7 @@ export default function Cosecha() {
                   </div>
                   <div className="ui-f6e3d7">
                     <div className="ui-6a7a21">{fmtKg(c.kg_total)} kg</div>
-                    <div className="ui-a8f171">Produccion</div>
+                    <div className="ui-a8f171">Producción</div>
                   </div>
                   <div className="ui-12274e">
                     <button className="table-action" aria-label="Editar" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} title="Editar">
@@ -404,7 +404,7 @@ export default function Cosecha() {
                 </div>
                 <div className="ui-f6e3d7">
                   <div className="ui-32fa66">{fmtKg(c.kg_total)} kg</div>
-                  <div className="ui-cd76a0">Produccion</div>
+                  <div className="ui-cd76a0">Producción</div>
                 </div>
               </div>
               <div className="ui-0726a3">
@@ -464,7 +464,7 @@ export default function Cosecha() {
 
             {form.bloque_id && (
               <div className="ui-154470">
-                Producto/cultivo: {cultivoSeleccionado || 'Sin plantacion activa registrada'}
+                Producto/cultivo: {cultivoSeleccionado || 'Sin plantación activa registrada'}
               </div>
             )}
               </>
@@ -513,7 +513,7 @@ export default function Cosecha() {
                         </select>
                         {fila.bloque_id && (
                           <div className="ui-96f18a">
-                            {cultivoFila || 'Sin plantacion activa registrada'}
+                            {cultivoFila || 'Sin plantación activa registrada'}
                           </div>
                         )}
                         <input style={inp} type="text" inputMode="decimal" value={fila.kg_total} onChange={e => actualizarFilaCosecha(idx, 'kg_total', e.target.value)} placeholder="Kg cosechados"/>
@@ -533,7 +533,7 @@ export default function Cosecha() {
                 {totalKgMultiple > 0 && (
                   <div className="ui-dbf2aa">
                     <span className="ui-aa481a">{fmtKg(totalKgMultiple)} kg en total</span>
-                    <span className="ui-398ec2">Produccion</span>
+                    <span className="ui-398ec2">Producción</span>
                   </div>
                 )}
               </>

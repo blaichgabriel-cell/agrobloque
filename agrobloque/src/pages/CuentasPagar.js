@@ -6,7 +6,7 @@ const tiposProveedor = ['Agropecuaria', 'Ferreteria', 'Transporte', 'Servicios',
 const categorias = ['Insumos', 'Fertilizantes', 'Agroquimicos', 'Semillas', 'Herramientas', 'Servicios', 'Combustible', 'Otros']
 const mediosPago = ['Efectivo', 'Transferencia', 'Cheque', 'Tarjeta', 'Otro']
 const tiposMovimiento = [
-  { value: 'compra_credito', label: 'Compra a credito', signo: 1 },
+  { value: 'compra_credito', label: 'Compra a crédito', signo: 1 },
   { value: 'pago', label: 'Pago realizado', signo: -1 },
   { value: 'ajuste_suma', label: 'Ajuste que suma deuda', signo: 1 },
   { value: 'ajuste_resta', label: 'Descuento o ajuste a favor', signo: -1 },
@@ -236,7 +236,7 @@ export default function CuentasPagar() {
       <div className="ui-89a869">
         <div className="ui-a9915a">
           <div>
-            <div className="ui-567f4b">Credito con proveedores</div>
+            <div className="ui-567f4b">Crédito con proveedores</div>
             <h1 className="ui-5f0bf1">Cuentas a pagar</h1>
           </div>
           <div className="ui-9a2d51">
@@ -251,7 +251,7 @@ export default function CuentasPagar() {
 
         <div className="ui-e9ea38">
           <Stat dark title="Deuda total" value={fmtGs(resumen.deudaTotal)} sub={`${resumen.conDeuda} proveedores con deuda`} />
-          <Stat title="Compras a credito" value={fmtGs(resumen.comprasTotal)} sub="total registrado" />
+          <Stat title="Compras a crédito" value={fmtGs(resumen.comprasTotal)} sub="total registrado" />
           <Stat title="Pagos realizados" value={fmtGs(resumen.pagosTotal)} sub="total abonado" />
           <Stat title="Proveedores" value={proveedores.length} sub="registrados" />
         </div>
@@ -345,8 +345,8 @@ export default function CuentasPagar() {
             {tiposProveedor.map(t => <option key={t}>{t}</option>)}
           </select>
           <input style={input} placeholder="Contacto" value={proveedorForm.contacto || ''} onChange={e => setProveedorForm(f => ({ ...f, contacto:e.target.value }))} />
-          <input style={input} placeholder="Telefono" value={proveedorForm.telefono || ''} onChange={e => setProveedorForm(f => ({ ...f, telefono:e.target.value }))} />
-          <input style={input} placeholder="Direccion" value={proveedorForm.direccion || ''} onChange={e => setProveedorForm(f => ({ ...f, direccion:e.target.value }))} />
+          <input style={input} placeholder="Teléfono" value={proveedorForm.telefono || ''} onChange={e => setProveedorForm(f => ({ ...f, telefono:e.target.value }))} />
+          <input style={input} placeholder="Dirección" value={proveedorForm.direccion || ''} onChange={e => setProveedorForm(f => ({ ...f, direccion:e.target.value }))} />
           <textarea className="ui-278063" style={{ ...input }} placeholder="Notas internas" value={proveedorForm.notas || ''} onChange={e => setProveedorForm(f => ({ ...f, notas:e.target.value }))} />
           <label className="ui-0f0b58">
             <input type="checkbox" checked={proveedorForm.activo !== false} onChange={e => setProveedorForm(f => ({ ...f, activo:e.target.checked }))} />

@@ -208,7 +208,7 @@ export default function FichaBloque() {
     if (!qrDataUrl) return
     const ventana = window.open('', '_blank', 'width=520,height=720')
     if (!ventana) {
-      setQrError('El navegador bloqueo la impresion. Habilita las ventanas emergentes y proba de nuevo.')
+      setQrError('El navegador bloqueó la impresión. Habilita las ventanas emergentes y probá de nuevo.')
       return
     }
     const escapar = (valor) => String(valor || '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]))
@@ -455,8 +455,8 @@ export default function FichaBloque() {
   const finalizarPlantacionActiva = () => {
     if (!plantacionActiva) return
     setConfirmar({
-      titulo: 'Finalizar plantacion?',
-      mensaje: 'La plantacion actual pasara al historial del bloque. No se borra ningun dato.',
+      titulo: 'Finalizar plantación?',
+      mensaje: 'La plantación actual pasara al historial del bloque. No se borra ningún dato.',
       fn: async () => {
         await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
         await registrarAuditoria({ accion:'Finalizo plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
@@ -470,8 +470,8 @@ export default function FichaBloque() {
   const eliminarPlantacionActiva = () => {
     if (!plantacionActiva) return
     setConfirmar({
-      titulo: 'Eliminar plantacion?',
-      mensaje: 'Se borrara definitivamente la plantacion activa y sus abonos, fotos y muertes registradas. No se puede deshacer.',
+      titulo: 'Eliminar plantación?',
+      mensaje: 'Se borrara definitivamente la plantación activa y sus abonos, fotos y muertes registradas. No se puede deshacer.',
       fn: async () => {
         await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionActiva.id)
         await supabase.from('fotos_bloque').delete().eq('plantacion_id', plantacionActiva.id)
@@ -850,7 +850,7 @@ export default function FichaBloque() {
       <div className="ag-block-page ui-c1c124">
         {confirmarElimFert && (
           <ModalConfirm
-            titulo="Eliminar fertilizacion?"
+            titulo="Eliminar fertilización?"
             mensaje="Se eliminara este registro. No se puede deshacer."
             onConfirm={() => eliminarFertilizacion(confirmarElimFert)}
             onCancel={() => setConfirmarElimFert(null)}
@@ -859,7 +859,7 @@ export default function FichaBloque() {
         <div className="ui-327143">
           <button className="ag-small-action ui-7347f9" onClick={() => setFertDetalle(null)}>
             <i className="ti ti-arrow-left ui-b45e7d" aria-hidden="true"></i>
-            <span className="ui-fe5017">Fertilizacion</span>
+            <span className="ui-fe5017">Fertilización</span>
           </button>
           <div className="ui-82e63f">
             <div className="ui-882dd8">{rangoFertilizacion(fertDetalle)}</div>
@@ -872,7 +872,7 @@ export default function FichaBloque() {
           {(fertDetalle.soluciones || []).map((sol, si) => (
             <div className="ag-surface ui-49272e" key={si}>
               <div className="ui-1f5c91">
-                Solucion {sol.nombre}
+                Solución {sol.nombre}
               </div>
               {(sol.productos || []).map((prod, pi) => (
                 <div className="ui-efee8d" key={pi}>
@@ -1027,7 +1027,7 @@ export default function FichaBloque() {
           {plantacionActiva && <div className="ag-block-summary"><span><small>Edad del cultivo</small><strong>{diasDesde(plantacionActiva.fecha_siembra) ?? '—'} <em>días</em></strong></span><span><small>Plantas del ciclo</small><strong>{cantidadPlantasActiva ? Number(cantidadPlantasActiva).toLocaleString('es-PY') : '—'}</strong></span><span><small>Cosecha del ciclo</small><strong>{fmtKg(totalKgCiclo)} <em>kg</em></strong></span></div>}
           {!plantacionActiva && (
             <button className="ag-small-action ui-2c5a32" onClick={abrirNuevaPlantacion}>
-              + Nueva plantacion
+              + Nueva plantación
             </button>
           )}
         </div>
@@ -1084,14 +1084,14 @@ export default function FichaBloque() {
               <>
                 <div className="ag-surface ui-49272e">
                   <div className="ui-546e10">
-                    <div className="ui-1d6b4b">Datos de la plantacion</div>
+                    <div className="ui-1d6b4b">Datos de la plantación</div>
                     <button className="ag-small-action ui-387856" onClick={abrirEditarPlantacion}>Editar</button>
                   </div>
                   {[
                     ['Cultivo', plantacionActiva.cultivos?.nombre || '-'],
                     ['Variedad', getVariedad(plantacionActiva) || '-'],
                     ['Fecha siembra', plantacionActiva.fecha_siembra || '-'],
-                    ['Dias en campo', diasDesde(plantacionActiva.fecha_siembra) !== null ? `${diasDesde(plantacionActiva.fecha_siembra)} dias` : '-'],
+                    ['Días en campo', diasDesde(plantacionActiva.fecha_siembra) !== null ? `${diasDesde(plantacionActiva.fecha_siembra)} días` : '-'],
                     ['Cantidad de plantas', cantidadPlantasActiva ? `${cantidadPlantasActiva.toLocaleString('es-PY')} plantas` : '-'],
                   ].map(([k,v]) => (
                     <div className="ui-a7a997" key={k}>
@@ -1134,7 +1134,7 @@ export default function FichaBloque() {
                 <div className="ui-9c6869">
                   <button className="ag-small-action ui-004512" onClick={abrirNuevaPlantacion}
                    >
-                    Nueva plantacion
+                    Nueva plantación
                   </button>
                   <button className="ag-small-action ui-d4abad" onClick={() => setShowMuerte(true)}
                    >
@@ -1144,19 +1144,19 @@ export default function FichaBloque() {
                 <div className="ui-caac2c">
                   <button className="ag-small-action ui-5b0f32" onClick={finalizarPlantacionActiva}
                    >
-                    Finalizar plantacion
+                    Finalizar plantación
                   </button>
                   <button className="ag-small-action ui-05757f" onClick={eliminarPlantacionActiva}
                    >
-                    Eliminar plantacion
+                    Eliminar plantación
                   </button>
                 </div>
               </>
             ) : (
               <div className="ag-surface ui-13bbf9">
-                Sin plantacion activa.<br/>
+                Sin plantación activa.<br/>
                 <button className="ag-small-action ui-a4d716" onClick={abrirNuevaPlantacion}>
-                  + Nueva plantacion
+                  + Nueva plantación
                 </button>
               </div>
             )}
@@ -1201,7 +1201,7 @@ export default function FichaBloque() {
                   </div>
                   {aplicacionesPlan.length > 0 && (
                     <div className="ui-002535">
-                      <div className="ui-2fff95">Ultimas aplicaciones</div>
+                      <div className="ui-2fff95">Últimas aplicaciones</div>
                       {aplicacionesPlan.slice(0, 5).map(app => (
                         <div className="ui-d1d4a9" key={app.id}>
                           <span className="ui-93e9c9">{app.fecha}{app.responsable ? `  -  ${app.responsable}` : ''}</span>
@@ -1216,7 +1216,7 @@ export default function FichaBloque() {
 
             <button className="ag-small-action ui-bcc504" onClick={abrirNuevaFertilizacion}
              >
-              + Nueva fertilizacion
+              + Nueva fertilización
             </button>
 
             {fertilizaciones.length === 0 ? (
@@ -1228,7 +1228,7 @@ export default function FichaBloque() {
                 {/* Fertilizacion actual */}
                 {fertilizaciones[0] && (
                   <>
-                    <div className="ui-4192ca">Fertilizacion actual</div>
+                    <div className="ui-4192ca">Fertilización actual</div>
                     <div className="ui-2e75cf" onClick={() => setFertDetalle(fertilizaciones[0])}
                      >
                       <div className="ui-5ad71a">
@@ -1253,7 +1253,7 @@ export default function FichaBloque() {
                 {/* Fertilizacion anterior */}
                 {fertilizaciones[1] && (
                   <>
-                    <div className="ui-4899be">Fertilizacion anterior</div>
+                    <div className="ui-4899be">Fertilización anterior</div>
                     <div className="ag-surface ui-fe238f" onClick={() => setFertDetalle(fertilizaciones[1])}
                      >
                       <div className="ui-5ad71a">
@@ -1282,7 +1282,7 @@ export default function FichaBloque() {
                         <div className="ui-da5cd6">
                           <div className="ui-076bb2">{rangoFertilizacion(fert)}</div>
                           <div className="ui-a8f171">
-                            {(fert.soluciones || []).length} solucion{(fert.soluciones || []).length !== 1 ? 'es' : ''}  -  {(fert.soluciones || []).reduce((s,sol) => s + (sol.productos||[]).length, 0)} productos
+                            {(fert.soluciones || []).length} solución{(fert.soluciones || []).length !== 1 ? 'es' : ''}  -  {(fert.soluciones || []).reduce((s,sol) => s + (sol.productos||[]).length, 0)} productos
                           </div>
                         </div>
                         <i className="ti ti-chevron-right ui-d63ae8" aria-hidden="true"></i>
@@ -1335,7 +1335,7 @@ export default function FichaBloque() {
               <div className="ag-surface ui-3451cf" key={i} onClick={() => setIncidenciaDetalle(inc)}>
                 <div className="ui-31d953">
                   <div className="ui-878e4e" style={{ background: inc.tipo==='fumigacion' ? '#fff3e8' : '#eaf4fb', color: inc.tipo==='fumigacion' ? '#e07b00' : '#2980b9' }}>
-                    {inc.tipo === 'fumigacion' ? 'Fumigacion' : inc.tipo === 'fertiriego' ? 'Fertiriego' : 'Foliar'}
+                    {inc.tipo === 'fumigacion' ? 'Fumigación' : inc.tipo === 'fertiriego' ? 'Fertiriego' : 'Foliar'}
                   </div>
                   <div className="ui-93a7e1">{inc.fecha}</div>
                 </div>
@@ -1420,7 +1420,7 @@ export default function FichaBloque() {
       {(showNuevaPlantacion || showEditarPlantacion) && (
         <div className="ui-66d878" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end' }}>
           <div className="ui-7dd37e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-c7b1b6">{showEditarPlantacion ? 'Editar plantacion' : 'Nueva plantacion'}</div>
+            <div className="ui-c7b1b6">{showEditarPlantacion ? 'Editar plantación' : 'Nueva plantación'}</div>
 
             <label className="ag-field-label ui-74cc19">Cultivo *
             <select style={inpStyle} value={form.cultivo_id} onChange={e => setForm(f => ({...f, cultivo_id:e.target.value}))}>
@@ -1500,7 +1500,7 @@ export default function FichaBloque() {
 
             <button className="ag-small-action ui-ae1eb0" style={{ background: saving ? '#888' : '#0F3923' }}
               onClick={showEditarPlantacion ? guardarEditarPlantacion : guardarNuevaPlantacion} disabled={saving}>
-              {saving ? 'Guardando...' : showEditarPlantacion ? 'Guardar cambios' : 'Guardar plantacion'}
+              {saving ? 'Guardando...' : showEditarPlantacion ? 'Guardar cambios' : 'Guardar plantación'}
             </button>
             <button className="ag-small-action ui-9d2a4a"
               onClick={() => { setShowNuevaPlantacion(false); setShowEditarPlantacion(false) }}>
@@ -1529,7 +1529,7 @@ export default function FichaBloque() {
               ))}
             </div>
 
-            <label className="ag-field-label ui-74cc19">Descripcion (opcional)
+            <label className="ag-field-label ui-74cc19">Descripción (opcional)
             <textarea className="ui-dc8f36" style={{ ...inpStyle }} value={formMuerte.descripcion} onChange={e => setFormMuerte(f => ({...f, descripcion:e.target.value}))} placeholder="Detalles adicionales..."/></label>
 
             <button className="ag-small-action ui-9002be" onClick={guardarMuerte} disabled={saving}>{saving ? 'Guardando...' : 'Registrar'}</button>
@@ -1544,7 +1544,7 @@ export default function FichaBloque() {
           onClick={e => e.target===e.currentTarget && setShowPlanSemanal(false)}>
           <div className="ui-fda65b" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div className="ui-99efa8">{formPlan.id ? 'Editar plan semanal' : 'Nuevo plan semanal'}</div>
-            <div className="ui-7d5827">Usalo solo en los bloques donde preparas fertilizacion para varios dias.</div>
+            <div className="ui-7d5827">Usalo solo en los bloques donde preparas fertilización para varios días.</div>
 
             <label className="ag-field-label ui-74cc19">Nombre
             <input style={inpStyle} value={formPlan.nombre} onChange={e => setFormPlan(f => ({ ...f, nombre:e.target.value }))} /></label>
@@ -1562,7 +1562,7 @@ export default function FichaBloque() {
             {formPlan.soluciones.map((sol, si) => (
               <div className="ag-surface ui-7fff2b" key={si}>
                 <div className="ui-b3c308">
-                  <div className="ui-515b34">Solucion {sol.nombre}</div>
+                  <div className="ui-515b34">Solución {sol.nombre}</div>
                   {formPlan.soluciones.length > 1 && <button className="ui-6ae6fb" onClick={() => eliminarSolucionPlan(si)}>Eliminar</button>}
                 </div>
                 {(sol.productos || []).map((prod, pi) => (
@@ -1578,7 +1578,7 @@ export default function FichaBloque() {
                 <button className="ag-small-action ui-0a1d4e" onClick={() => agregarProductoPlan(si)}>+ Producto</button>
               </div>
             ))}
-            <button className="ag-small-action ui-b987ad" onClick={agregarSolucionPlan}>+ Agregar solucion</button>
+            <button className="ag-small-action ui-b987ad" onClick={agregarSolucionPlan}>+ Agregar solución</button>
             <textarea className="ui-3d581a" style={{ ...inpStyle }} value={formPlan.notas} onChange={e => setFormPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas del plan"/>
             <button className="ag-small-action ui-08c1f7" onClick={guardarPlanSemanal} disabled={savingFert}>
               {savingFert ? 'Guardando...' : 'Guardar plan semanal'}
@@ -1601,7 +1601,7 @@ export default function FichaBloque() {
             <input style={inpStyle} value={formAplicacionPlan.responsable} onChange={e => setFormAplicacionPlan(f => ({ ...f, responsable:e.target.value }))} placeholder="Opcional" /></label>
             <textarea className="ui-3d581a" style={{ ...inpStyle }} value={formAplicacionPlan.notas} onChange={e => setFormAplicacionPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas"/>
             <button className="ag-small-action ui-08c1f7" onClick={guardarAplicacionPlan} disabled={savingFert}>
-              {savingFert ? 'Guardando...' : 'Guardar aplicacion'}
+              {savingFert ? 'Guardando...' : 'Guardar aplicación'}
             </button>
             <button className="ag-small-action ui-51b9ff" onClick={() => setShowAplicarPlan(false)}>Cancelar</button>
           </div>
@@ -1614,8 +1614,8 @@ export default function FichaBloque() {
           <div className="ui-ae773e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0' }}>
             <div className="ui-6c2eec">
               <div>
-                <div className="ui-476525">Detalle de fumigacion</div>
-                <div className="ui-882dd8">{incidenciaDetalle.tipo === 'fertiriego' ? 'Fertiriego' : incidenciaDetalle.tipo === 'foliar' ? 'Foliar' : 'Fumigacion'}</div>
+                <div className="ui-476525">Detalle de fumigación</div>
+                <div className="ui-882dd8">{incidenciaDetalle.tipo === 'fertiriego' ? 'Fertiriego' : incidenciaDetalle.tipo === 'foliar' ? 'Foliar' : 'Fumigación'}</div>
                 <div className="ui-13b58a">{incidenciaDetalle.fecha}</div>
               </div>
               <button className="ui-6de38e ag-close-btn" aria-label="Cerrar" onClick={() => setIncidenciaDetalle(null)}>
@@ -1657,7 +1657,7 @@ export default function FichaBloque() {
                   </div>
                   <div className="ui-eb34de">
                     {fp.descuento_stock ? `Stock: ${fmtKg(fp.descuento_stock)} ${fp.productos?.unidad || ''}` : ''}
-                    {fp.productos?.carencia_dias ? <div>Carencia: {fp.productos.carencia_dias} dias</div> : null}
+                    {fp.productos?.carencia_dias ? <div>Carencia: {fp.productos.carencia_dias} días</div> : null}
                   </div>
                 </div>
               ))}

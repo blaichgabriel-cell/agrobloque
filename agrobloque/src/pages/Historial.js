@@ -7,10 +7,10 @@ const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
 const hoy = () => new Date().toISOString().slice(0, 10)
 
 const tipos = {
-  plantacion: { label:'Plantacion', icon:'ti-plant', color:"#08603f", bg:'#edf6ec' },
+  plantacion: { label:'Plantación', icon:'ti-plant', color:"#08603f", bg:'#edf6ec' },
   cosecha: { label:'Cosecha', icon:'ti-cut', color:"#124e38", bg:'#eeeeee' },
-  fumigacion: { label:'Fumigacion', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
-  fertilizacion: { label:'Fertilizacion', icon:'ti-droplet', color:'#2980b9', bg:'#eaf4fb' },
+  fumigacion: { label:'Fumigación', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
+  fertilizacion: { label:'Fertilización', icon:'ti-droplet', color:'#2980b9', bg:'#eaf4fb' },
   vivero: { label:'Vivero', icon:'ti-seeding', color:"#08603f", bg:'#edf6ec' },
   costo: { label:'Costo', icon:'ti-coin', color:'#c84040', bg:'#fff0f0' },
   tarea: { label:'Tarea', icon:'ti-calendar', color:'#8a6d10', bg:'#fff7dc' },
@@ -83,7 +83,7 @@ export default function Historial({ campoActivo }) {
     ;(plantaciones || []).forEach(p => lista.push({
       tipo:'plantacion',
       fecha:p.fecha_siembra,
-      titulo:`Plantacion en bloque ${codigoBloque[p.bloque_id] || '-'}`,
+      titulo:`Plantación en bloque ${codigoBloque[p.bloque_id] || '-'}`,
       detalle:`${p.cultivos?.nombre || 'Cultivo'}${p.activa ? ' - activa' : ' - finalizada'}`,
       bloque: codigoBloque[p.bloque_id] || '',
       monto:'',
@@ -118,7 +118,7 @@ export default function Historial({ campoActivo }) {
     ;(fertilizaciones || []).forEach(f => lista.push({
       tipo:'fertilizacion',
       fecha:f.fecha,
-      titulo:`Fertilizacion bloque ${codigoBloque[f.bloque_id] || '-'}`,
+      titulo:`Fertilización bloque ${codigoBloque[f.bloque_id] || '-'}`,
       detalle:Array.isArray(f.soluciones) ? f.soluciones.map(s => `Sol. ${s.nombre}: ${(s.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).join(' + ')}`).join(' | ') : (f.notas || ''),
       bloque: codigoBloque[f.bloque_id] || '',
       monto:'',
@@ -189,7 +189,7 @@ export default function Historial({ campoActivo }) {
       <h1>Historial AgroBloque</h1>
       <div class="muted">${esc(campoSel?.nombre || '')} - ${esc(desde || 'inicio')} a ${esc(hasta || hoy())}</div>
       <table>
-        <tr><th>Fecha</th><th>Tipo</th><th>Titulo</th><th>Detalle</th><th>Bloque</th><th class="right">Monto</th></tr>
+        <tr><th>Fecha</th><th>Tipo</th><th>Título</th><th>Detalle</th><th>Bloque</th><th class="right">Monto</th></tr>
         ${visibles.map(e => `<tr><td>${esc(e.fecha)}</td><td>${esc(tipos[e.tipo]?.label || e.tipo)}</td><td>${esc(e.titulo)}</td><td>${esc(e.detalle)}</td><td>${esc(e.bloque)}</td><td class="right">${e.monto ? esc(fmtGs(e.monto)) : ''}</td></tr>`).join('')}
       </table>
     `)

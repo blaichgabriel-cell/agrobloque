@@ -263,7 +263,7 @@ export default function Asistencia() {
       if (resultado.error) throw resultado.error
       if (resultado.data) setNotasDia(prev => ({ ...prev, [fecha]: resultado.data }))
     } catch (e) {
-      setError(`Error al guardar trabajos del dia: ${e.message || 'sin detalle'}`)
+      setError(`Error al guardar trabajos del día: ${e.message || 'sin detalle'}`)
     }
     setSavingNota(false)
   }
@@ -522,7 +522,7 @@ export default function Asistencia() {
               type="text" inputMode="numeric" value={formEditarAdelanto.monto}
               onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setFormEditarAdelanto(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
               placeholder="Ej: 50.000"/></label>
-            <label className="ag-field-label ui-74cc19">Descripcion (opcional)
+            <label className="ag-field-label ui-74cc19">Descripción (opcional)
             <input className="ui-5e4c6e"
               type="text" value={formEditarAdelanto.descripcion} onChange={e => setFormEditarAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/></label>
             <button className="ag-small-action ui-17d991" onClick={guardarEdicionAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar cambios'}</button>

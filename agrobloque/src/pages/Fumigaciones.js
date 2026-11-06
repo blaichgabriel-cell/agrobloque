@@ -8,7 +8,7 @@ import { incluirSeleccionados, productoCorrespondeAplicacion } from '../lib/prod
 import { useNavigate } from 'react-router-dom'
 
 const TIPOS = {
-  fumigacion: { label:'Fumigacion', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
+  fumigacion: { label:'Fumigación', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
   fertiriego:  { label:'Fertiriego', icon:'ti-droplet', color:'#2980b9', bg:'#eaf4fb' },
   foliar:      { label:'Foliar',     icon:'ti-leaf',    color:"#124e38", bg:'#eeeeee' },
 }
@@ -103,7 +103,7 @@ function ModalConfirm({ onConfirm, onCancel }) {
     <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div className="ag-surface ui-211525">
         <div className="ui-3e43be">Eliminar registro</div>
-        <div className="ui-01159a">Esta accion no se puede deshacer.</div>
+        <div className="ui-01159a">Esta acción no se puede deshacer.</div>
         <div className="ui-9c6869">
           <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
           <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Eliminar</button>
@@ -360,7 +360,7 @@ export default function Fumigaciones() {
           .select()
           .single()
         if (error || !fum) {
-          avisarError(`No se pudo editar la fumigacion: ${error?.message || 'sin respuesta de Supabase'}`)
+          avisarError(`No se pudo editar la fumigación: ${error?.message || 'sin respuesta de Supabase'}`)
           return
         }
         await devolverStockFumigacion(form.id)
@@ -371,7 +371,7 @@ export default function Fumigaciones() {
       } else {
         const { data: fum, error } = await supabase.from('fumigaciones').insert(payload).select().single()
         if (error || !fum) {
-          avisarError(`No se pudo guardar la fumigacion: ${error?.message || 'sin respuesta de Supabase'}`)
+          avisarError(`No se pudo guardar la fumigación: ${error?.message || 'sin respuesta de Supabase'}`)
           return
         }
         await guardarRelacionesFumigacion(fum.id)
@@ -544,7 +544,7 @@ export default function Fumigaciones() {
                   </div>
                   {carencia && (
                     <div className="ui-d2a157">
-                      {carencia} dias carencia
+                      {carencia} días carencia
                     </div>
                   )}
                 </div>

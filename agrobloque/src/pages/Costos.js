@@ -173,7 +173,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
 
       <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         <div className="ui-006f11">
-          <div className="ui-280a4b">Total costos · {periodo === 'mes' ? 'este mes' : 'historico'}</div>
+          <div className="ui-280a4b">Total costos · {periodo === 'mes' ? 'este mes' : 'histórico'}</div>
           <div className="ui-e20fb2">Gs. {fmtGs(totalGeneral)}</div>
           <div className="ui-d773dd">{campoSel?.nombre}</div>
         </div>
@@ -255,7 +255,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
               type="text" inputMode="numeric" value={form.monto}
               onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setForm(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
               placeholder="Ej: 150.000"/>
-            <div className="ui-524895">Descripcion (opcional)</div>
+            <div className="ui-524895">Descripción (opcional)</div>
             <input className="ui-57fcbe"
               type="text" value={form.descripcion} onChange={e => setForm(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Compra de plantines"/>
             <div className="ui-524895">Fecha</div>

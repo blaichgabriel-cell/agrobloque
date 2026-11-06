@@ -213,7 +213,7 @@ export default function Contabilidad() {
       </table>
       <h2>Movimientos del mes</h2>
       <table>
-        <tr><th>Fecha</th><th>Tipo</th><th>Descripcion</th><th>Categoria</th><th>Contraparte</th><th>Comprobante</th><th class="right">Monto</th></tr>
+        <tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Categoría</th><th>Contraparte</th><th>Comprobante</th><th class="right">Monto</th></tr>
         ${movimientosFiltrados.map(m => `<tr><td>${m.fecha || ''}</td><td>${m.tipo || ''}</td><td>${m.descripcion || ''}</td><td>${m.categoria || ''}</td><td>${m.contraparte || ''}</td><td>${m.comprobante || ''}</td><td class="right">Gs. ${fmtGs(m.monto)}</td></tr>`).join('')}
       </table>
       <h2>Resumen anual</h2>
@@ -377,8 +377,8 @@ export default function Contabilidad() {
               const n = parseGs(v)
               setForm(f => ({ ...f, monto:n ? fmtGs(n) : '' }))
             }} placeholder="Ej: 150.000" />
-            <Field label="Descripcion *" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion:v }))} placeholder="Ej: compra de insumos / venta de tomate" />
-            <Select label="Categoria" value={form.categoria} onChange={v => setForm(f => ({ ...f, categoria:v }))} options={categorias} />
+            <Field label="Descripción *" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion:v }))} placeholder="Ej: compra de insumos / venta de tomate" />
+            <Select label="Categoría" value={form.categoria} onChange={v => setForm(f => ({ ...f, categoria:v }))} options={categorias} />
             <Field label={form.tipo === 'venta' ? 'Cliente' : 'Proveedor'} value={form.contraparte} onChange={v => setForm(f => ({ ...f, contraparte:v }))} placeholder="Nombre opcional" />
             <Select label="Medio de pago" value={form.medio_pago} onChange={v => setForm(f => ({ ...f, medio_pago:v }))} options={mediosPago} />
             <Field label="Comprobante" value={form.comprobante} onChange={v => setForm(f => ({ ...f, comprobante:v }))} placeholder="Factura, recibo, transferencia..." />
@@ -419,7 +419,7 @@ function Movimiento({ mov, onEdit, onDelete }) {
           </span>
         </div>
         <div className="ui-7aa842">
-          {mov.fecha} · {mov.categoria || 'Sin categoria'}{mov.contraparte ? ` · ${mov.contraparte}` : ''}
+          {mov.fecha} · {mov.categoria || 'Sin categoría'}{mov.contraparte ? ` · ${mov.contraparte}` : ''}
         </div>
       </div>
       <div className="ui-11f4c8">

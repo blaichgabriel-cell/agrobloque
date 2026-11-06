@@ -87,7 +87,7 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
           <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value }))}
             style={inputStyle} />
           <input value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo:e.target.value }))}
-            placeholder="Titulo opcional" style={inputStyle} />
+            placeholder="Título opcional" style={inputStyle} />
           <textarea className="ui-db2152" value={form.contenido} onChange={e => setForm(f => ({ ...f, contenido:e.target.value }))}
             placeholder="Escribir nota..." style={{ ...inputStyle }} />
           <button className="ui-c630d0" type="button" onClick={guardar} disabled={saving}

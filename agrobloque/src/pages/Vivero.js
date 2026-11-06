@@ -473,7 +473,7 @@ export default function Vivero() {
               <Info label="Comprado a" value={detalle.proveedor || '-'} />
               <Info label="Precio de compra" value={detalle.precio_compra ? `Gs. ${Number(detalle.precio_compra).toLocaleString('es-PY')}` : '-'} />
               <Info label="Bandejas" value={detalle.bandejas || 0} />
-              <Info label="Germinacion" value={`${pct(detalle.germinadas, detalle.cantidad_semillas)}%`} />
+              <Info label="Germinación" value={`${pct(detalle.germinadas, detalle.cantidad_semillas)}%`} />
               <Info label="Perdidas" value={detalle.perdidas || 0} last />
             </div>
 
@@ -597,7 +597,7 @@ export default function Vivero() {
               />
               Marcar lote como trasplantado
             </label>
-            <button onClick={guardarTrasplante} disabled={saving} className="bl-btn bl-btn--primary">{saving ? 'Trasplantando...' : 'Crear plantacion en mapa'}</button>
+            <button onClick={guardarTrasplante} disabled={saving} className="bl-btn bl-btn--primary">{saving ? 'Trasplantando...' : 'Crear plantación en mapa'}</button>
             <button onClick={() => setModalTrasplante(false)} className="bl-btn bl-btn--ghost">Cancelar</button>
           </div>
         </div>

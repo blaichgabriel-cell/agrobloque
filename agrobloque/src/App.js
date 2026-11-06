@@ -373,7 +373,7 @@ export default function App() {
       if (cancelled) return
 
       if (refreshError || userError || !userData?.user) {
-        await limpiarSesionRota('Tu sesion estaba vencida. Volve a iniciar sesion para cargar los datos.')
+        await limpiarSesionRota('Tu sesión estaba vencida. Volvé a iniciar sesión para cargar los datos.')
       } else {
         setSession(sesionActual)
         setDataError('')
@@ -444,7 +444,7 @@ export default function App() {
         } else if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch failed')) {
           setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
         } else if (esErrorSesion(error)) {
-          await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${error.message}`)
+          await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpió la sesión; inicia sesión de vuelta. Detalle: ${error.message}`)
         } else setDataError(textoErrorProfesional(error, { modulo:'Campos', accion:'leer' }))
         return
       }
@@ -465,7 +465,7 @@ export default function App() {
         } else if (bloquesError.message?.includes('Failed to fetch') || bloquesError.message?.includes('fetch failed')) {
           setDataError('No se pudo conectar con Supabase. Si cargaste una foto de perfil, hay que limpiar esa foto del perfil en Supabase una sola vez.')
         } else if (esErrorSesion(bloquesError)) {
-          await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpio la sesion; inicia sesion de vuelta. Detalle: ${bloquesError.message}`)
+          await limpiarSesionRota(`No se pudo conectar con Supabase. Se limpió la sesión; inicia sesión de vuelta. Detalle: ${bloquesError.message}`)
         } else setDataError(textoErrorProfesional(bloquesError, { modulo:'Bloques', accion:'leer' }))
         return
       }
@@ -507,7 +507,7 @@ export default function App() {
       {dataError && (
         <div className="ui-6454c8">
           <span>{dataError}</span>
-          <button className="ui-2052fc" onClick={() => forceLocalSignOut()}>Limpiar sesion</button>
+          <button className="ui-2052fc" onClick={() => forceLocalSignOut()}>Limpiar sesión</button>
         </div>
       )}
       <Login />
@@ -520,7 +520,7 @@ export default function App() {
       {dataError && (
         <div className="ui-6454c8">
           <span>{dataError}</span>
-          <button className="ui-2052fc" onClick={() => forceLocalSignOut()}>Limpiar sesion</button>
+          <button className="ui-2052fc" onClick={() => forceLocalSignOut()}>Limpiar sesión</button>
         </div>
       )}
       {roleUserId !== session.user.id ? (

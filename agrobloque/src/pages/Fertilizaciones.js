@@ -235,7 +235,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           {form.soluciones.map((sol, si) => (
             <div key={si} className="bl-card ui-acd88b">
               <div className="ui-4c2683">
-                <input value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solucion A" className="bl-input ui-df86fd" />
+                <input value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solución A" className="bl-input ui-df86fd" />
                 {form.soluciones.length > 1 && (
                   <button className="ag-small-action ui-9f7e00" onClick={() => eliminarSolucion(si)}>Eliminar</button>
                 )}
@@ -273,16 +273,16 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           ))}
         </div>
 
-        <button className="ag-small-action ui-b2096e" onClick={agregarSolucion}>+ Solucion</button>
+        <button className="ag-small-action ui-b2096e" onClick={agregarSolucion}>+ Solución</button>
 
         <label className="ui-410276">
           Notas
-          <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicacion por goteo, lote completo, observaciones..." className="bl-input ui-c1d38e" />
+          <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicación por goteo, lote completo, observaciones..." className="bl-input ui-c1d38e" />
         </label>
 
         <div className="ui-b691ec">
           <button className="ag-small-action ui-accd8b" onClick={onClose}>Cancelar</button>
-          <button onClick={onSave} disabled={saving} className="bl-btn-solid" style={{ opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios de la semana' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicacion'}</button>
+          <button onClick={onSave} disabled={saving} className="bl-btn-solid" style={{ opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios de la semana' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicación'}</button>
         </div>
       </div>
     </Modal>
@@ -670,7 +670,7 @@ export default function Fertilizaciones({ campoActivo }) {
     const { error: insertError } = await supabase.from('fertilizaciones').insert(payloads)
     setSaving(false)
     if (insertError) {
-      setError(`No se pudo guardar la fertilizacion: ${insertError.message}`)
+      setError(`No se pudo guardar la fertilización: ${insertError.message}`)
       return
     }
 
@@ -741,7 +741,7 @@ export default function Fertilizaciones({ campoActivo }) {
         notas:form.notas || null,
       }))
       const { error: seguimientoError } = seguimiento.length ? await supabase.from('fertilizacion_plan_aplicaciones').insert(seguimiento) : { error:null }
-      if (seguimientoError) setError(`La fertilizacion se guardo, pero fallo el seguimiento del plan: ${seguimientoError.message}`)
+      if (seguimientoError) setError(`La fertilización se guardo, pero fallo el seguimiento del plan: ${seguimientoError.message}`)
       const planIdsAplicados = [...new Set(seguimiento.map(item => item.plan_id).filter(Boolean))]
       if (planIdsAplicados.length) {
         await supabase.from('tareas').update({ completada:true, fecha_completada:form.fecha, updated_at:new Date().toISOString() }).eq('origen_tipo', 'fertilizacion_plan').in('origen_id', planIdsAplicados).eq('fecha_programada', form.fecha)
@@ -757,7 +757,7 @@ export default function Fertilizaciones({ campoActivo }) {
     })
 
     setModal(false)
-    setSuccess(form.edit_grupo ? (form.es_semanal ? 'Fertilización semanal actualizada en todos sus bloques.' : 'Fertilización corregida correctamente.') : form.plan_id ? 'Aplicacion del plan registrada correctamente.' : 'Fertilizacion guardada correctamente.')
+    setSuccess(form.edit_grupo ? (form.es_semanal ? 'Fertilización semanal actualizada en todos sus bloques.' : 'Fertilización corregida correctamente.') : form.plan_id ? 'Aplicación del plan registrada correctamente.' : 'Fertilización guardada correctamente.')
     cargarDatos()
   }
 
@@ -826,7 +826,7 @@ export default function Fertilizaciones({ campoActivo }) {
 
         {error && <div className="ui-173cc6">{error}</div>}
         {success && <div className="ui-fb7aa5">{success}</div>}
-        {!schemaPlanesDisponible && <div className="ui-9536bb">Los planes diarios y semanales se habilitaran despues de ejecutar el SQL preparado para Supabase.</div>}
+        {!schemaPlanesDisponible && <div className="ui-9536bb">Los planes diarios y semanales se habilitaran después de ejecutar el SQL preparado para Supabase.</div>}
 
         <div className="fert-mode-picker">
           <button type="button" onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible}><span className="fert-mode-icon"><i className="ti ti-calendar-week" /></span><span><strong>Plan semanal</strong><small>Programá la fórmula, los bloques y los días de una semana.</small></span><i className="ti ti-chevron-right" /></button>
@@ -842,12 +842,12 @@ export default function Fertilizaciones({ campoActivo }) {
           <div className="bl-card ui-9128d9">
             <div className="ui-5e0192">BLOQUES APLICADOS</div>
             <div className="ui-0fd91a">{fmtNum(totalBloquesAplicados)}</div>
-            <div className="ui-5e0192">con fertilizacion</div>
+            <div className="ui-5e0192">con fertilización</div>
           </div>
           <div className="bl-card ui-9128d9">
-            <div className="ui-5e0192">ULTIMA FECHA</div>
+            <div className="ui-5e0192">ÚLTIMA FECHA</div>
             <div className="ui-02cbdf">{ultimaFecha ? fmtFecha(ultimaFecha) : '-'}</div>
-            <div className="ui-5e0192">ultima aplicacion</div>
+            <div className="ui-5e0192">última aplicación</div>
           </div>
           <div className="bl-card ui-9128d9">
             <div className="ui-5e0192">BLOQUES ACTIVOS</div>
@@ -862,7 +862,7 @@ export default function Fertilizaciones({ campoActivo }) {
             {planesVigentes.length === 0 ? <div className="ui-10861c">Todavia no hay planes semanales guardados.</div> : planesVigentes.map((plan, index) => {
               const tanques = Number(plan.tanques_cantidad) || 1
               const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
-              const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los dias' : `Cada ${['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][Number(plan.dia_semana)] || 'semana'}`
+              const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los días' : `Cada ${['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][Number(plan.dia_semana)] || 'semana'}`
               return <div className="ui-8e6c1c" key={plan.id} style={{ gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong className="ui-0cf08e">{plan.nombre}</strong><div className="ui-8174dd">{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div className="ui-72210b">{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong className="ui-7b5575">{frecuencia}</strong><div className="ui-8174dd">{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div className="ui-19255d"><button className="ag-small-action ui-e6110d" onClick={() => aplicarPlanHoy(plan)} disabled={saving} style={{ ...btnNegro }}>Aplicar hoy</button><button className="ag-small-action ui-51b96d" onClick={() => registrarDesdePlan(plan)}>Repetir semana</button><button className="ag-small-action ui-51b96d" onClick={() => abrirEditarPlan(plan)}>Editar plan</button></div></div>
             })}
           </div>

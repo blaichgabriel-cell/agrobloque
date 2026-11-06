@@ -62,7 +62,7 @@ export default function Buscador() {
       })),
       ...(plantaciones || []).map(p => ({
         tipo: 'Plantacion',
-        titulo: p.cultivos?.nombre || 'Plantacion',
+        titulo: p.cultivos?.nombre || 'Plantación',
         sub: `Bloque ${p.bloques?.codigo || '-'} - ${p.activa ? 'Activa' : 'Historial'} - ${p.fecha_siembra || 'sin fecha'}`,
         icon: 'ti-plant',
         path: p.bloques?.id ? `/bloque/${p.bloques.id}` : '/mapa',

@@ -67,7 +67,7 @@ export default function Login({ mode = 'login', session = null }) {
     setError('')
     setMessage('')
     if (!session) {
-      setError('Este enlace no es valido o vencio. Solicita una nueva invitacion.')
+      setError('Este enlace no es válido o venció. Solicita una nueva invitación.')
       return
     }
     if (password.length < 8) {

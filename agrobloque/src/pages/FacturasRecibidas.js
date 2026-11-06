@@ -102,7 +102,7 @@ export default function FacturasRecibidas({ role }) {
     try {
       const { data: authData } = await supabase.auth.getUser()
       const userId = authData?.user?.id
-      if (!userId) throw new Error('La sesion vencio. Inicia sesion nuevamente.')
+      if (!userId) throw new Error('La sesión venció. Inicia sesión nuevamente.')
       const safeName = archivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')
       // Multiempresa: la carpeta raiz es la organizacion (organizacion_id/usuario_id/archivo.pdf).
       // Sin organizacion (base anterior) se mantiene la ruta vieja usuario_id/archivo.pdf.
@@ -219,7 +219,7 @@ export default function FacturasRecibidas({ role }) {
                   <Estado estado={factura.estado} />
                 </div>
                 <div className="ui-ec4b50">
-                  {factura.fecha_factura} · {factura.comprobante || 'Sin numero'}{factura.ruc ? ` · RUC ${factura.ruc}` : ''}
+                  {factura.fecha_factura} · {factura.comprobante || 'Sin número'}{factura.ruc ? ` · RUC ${factura.ruc}` : ''}
                 </div>
                 <div className="ui-f99029">{factura.archivo_nombre}</div>
               </div>
@@ -251,11 +251,11 @@ export default function FacturasRecibidas({ role }) {
               <Field label="Fecha de factura" type="date" value={form.fecha} onChange={value => setForm(f => ({ ...f, fecha:value }))} />
               <Field label="Proveedor" required value={form.proveedor} onChange={value => setForm(f => ({ ...f, proveedor:value }))} />
               <Field label="RUC" value={form.ruc} onChange={value => setForm(f => ({ ...f, ruc:value }))} />
-              <Field label="Numero de factura" value={form.comprobante} onChange={value => setForm(f => ({ ...f, comprobante:value }))} />
+              <Field label="Número de factura" value={form.comprobante} onChange={value => setForm(f => ({ ...f, comprobante:value }))} />
               <Field label="Total en guaranies" required inputMode="numeric" value={form.total} onChange={value => setForm(f => ({ ...f, total:fmtGs(parseGs(value)) }))} />
-              <label style={fieldWrap}><span style={label}>Categoria</span><select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria:e.target.value }))} style={input}>{categorias.map(item => <option key={item}>{item}</option>)}</select></label>
+              <label style={fieldWrap}><span style={label}>Categoría</span><select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria:e.target.value }))} style={input}>{categorias.map(item => <option key={item}>{item}</option>)}</select></label>
             </div>
-            <Field label="Descripcion" value={form.descripcion} onChange={value => setForm(f => ({ ...f, descripcion:value }))} />
+            <Field label="Descripción" value={form.descripcion} onChange={value => setForm(f => ({ ...f, descripcion:value }))} />
             <Field label="Notas (opcional)" value={form.notas} onChange={value => setForm(f => ({ ...f, notas:value }))} />
             <button className="ui-d6167d" onClick={guardarPendiente} disabled={saving} style={{ ...primaryButton, opacity:saving ? .65 : 1 }}>{saving ? 'Guardando…' : 'Guardar para revisar'}</button>
             <button onClick={cerrar} disabled={saving} style={secondaryButton}>Cancelar</button>

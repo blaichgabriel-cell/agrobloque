@@ -28,7 +28,7 @@ function ModalConfirm({ onConfirm, onCancel }) {
     <div className="ui-8bd58b">
       <div className="ui-585654">
         <div className="ui-cb8bcf">Eliminar venta</div>
-        <div className="ui-01159a">Esta accion no se puede deshacer.</div>
+        <div className="ui-01159a">Esta acción no se puede deshacer.</div>
         <div className="ui-9c6869">
           <button className="ui-077b36" onClick={onCancel}>Cancelar</button>
           <button className="ui-fbf0a5" onClick={onConfirm}>Eliminar</button>

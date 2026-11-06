@@ -49,7 +49,7 @@ export default function Auditoria() {
       <h1>Auditoria AgroBloque</h1>
       <div class="muted">${visibles.length} movimientos filtrados</div>
       <table>
-        <tr><th>Fecha</th><th>Usuario</th><th>Accion</th><th>Modulo</th><th>Detalle</th></tr>
+        <tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>Detalle</th></tr>
         ${visibles.map(log => `<tr><td>${esc(String(log.created_at || '').slice(0, 16).replace('T', ' '))}</td><td>${esc(log.usuario_email || '')}</td><td>${esc(log.accion || '')}</td><td>${esc(log.modulo || '')}</td><td>${esc(log.detalle || '')}</td></tr>`).join('')}
       </table>
     `)
@@ -78,7 +78,7 @@ export default function Auditoria() {
             <option value="">Todos los modulos</option>
             {modulos.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
-          <input className="ui-ea25ac" value={filtro.accion} onChange={e => setFiltro(f => ({ ...f, accion:e.target.value }))} placeholder="Accion"
+          <input className="ui-ea25ac" value={filtro.accion} onChange={e => setFiltro(f => ({ ...f, accion:e.target.value }))} placeholder="Acción"
             />
           <input className="ui-ea25ac" value={filtro.texto} onChange={e => setFiltro(f => ({ ...f, texto:e.target.value }))} placeholder="Buscar usuario, detalle o tabla"
             />

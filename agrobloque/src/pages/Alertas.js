@@ -63,7 +63,7 @@ export default function Alertas() {
       if (stock <= 0) {
         lista.push({ tipo:'alta', titulo:'Producto sin stock', detalle:p.nombre, path:'/inventario' })
       } else if (minimo > 0 && stock <= minimo) {
-        lista.push({ tipo:'media', titulo:'Producto con bajo stock', detalle:`${p.nombre} - stock ${stock} / minimo ${minimo}`, path:'/inventario' })
+        lista.push({ tipo:'media', titulo:'Producto con bajo stock', detalle:`${p.nombre} - stock ${stock} / mínimo ${minimo}`, path:'/inventario' })
       }
     })
 
@@ -93,8 +93,8 @@ export default function Alertas() {
       if (dias >= 7) {
         lista.push({
           tipo: dias >= 10 ? 'alta' : 'media',
-          titulo: 'Plan semanal sin aplicacion reciente',
-          detalle:`Bloque ${plan.bloques?.codigo || '-'} - ${plan.nombre || 'Plan semanal'} - ${dias} dias desde la ultima aplicacion`,
+          titulo: 'Plan semanal sin aplicación reciente',
+          detalle:`Bloque ${plan.bloques?.codigo || '-'} - ${plan.nombre || 'Plan semanal'} - ${dias} días desde la última aplicación`,
           path: plan.bloque_id ? `/bloque/${plan.bloque_id}` : '/mapa',
         })
       }
@@ -140,16 +140,16 @@ export default function Alertas() {
       if (dias >= 14 && (!ultimaFert || diasEntre(ultimaFert.fecha) >= 14)) {
         lista.push({
           tipo:'media',
-          titulo:'Bloque activo sin fertilizacion reciente',
-          detalle:`Bloque ${p.bloques?.codigo || '-'} - ${p.cultivos?.nombre || 'cultivo'} - ${ultimaFert ? `${diasEntre(ultimaFert.fecha)} dias desde ultima fertilizacion` : 'sin fertilizacion registrada'}`,
+          titulo:'Bloque activo sin fertilización reciente',
+          detalle:`Bloque ${p.bloques?.codigo || '-'} - ${p.cultivos?.nombre || 'cultivo'} - ${ultimaFert ? `${diasEntre(ultimaFert.fecha)} días desde última fertilización` : 'sin fertilización registrada'}`,
           path:'/fertilizaciones',
         })
       }
       if (dias >= 21 && (!ultima || diasEntre(ultima.fecha) >= 21)) {
         lista.push({
           tipo:'baja',
-          titulo:'Cultivo sin fumigacion reciente',
-          detalle:`Bloque ${p.bloques?.codigo || '-'} - ${p.cultivos?.nombre || 'cultivo'} - ${ultima ? `${diasEntre(ultima.fecha)} dias desde ultima` : 'sin registro'}`,
+          titulo:'Cultivo sin fumigación reciente',
+          detalle:`Bloque ${p.bloques?.codigo || '-'} - ${p.cultivos?.nombre || 'cultivo'} - ${ultima ? `${diasEntre(ultima.fecha)} días desde última` : 'sin registro'}`,
           path: p.bloques?.id ? `/bloque/${p.bloques.id}` : '/mapa',
         })
       }

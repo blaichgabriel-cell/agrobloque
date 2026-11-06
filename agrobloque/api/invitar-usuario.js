@@ -5,15 +5,15 @@ const anonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIs
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const ROLES_VALIDOS = ['admin', 'operador', 'lectura']
-const ERROR_OTRA_EMPRESA = 'Ese correo ya pertenece a otra empresa y no se puede modificar desde aqui.'
-const ERROR_CUENTA_SIN_EMPRESA = 'Ya existe una cuenta con ese correo que no esta asociada a ninguna empresa. No se puede modificar desde aqui: pidele a soporte que la vincule.'
+const ERROR_OTRA_EMPRESA = 'Ese correo ya pertenece a otra empresa y no se puede modificar desde aquí.'
+const ERROR_CUENTA_SIN_EMPRESA = 'Ya existe una cuenta con ese correo que no está asociada a ninguna empresa. No se puede modificar desde aquí: pídele a soporte que la vincule.'
 
 // `_` y `%` son comodines de ILIKE: se escapan para comparar el correo tal cual.
 const escapeLike = value => value.replace(/[\\%_]/g, '\\$&')
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Metodo no permitido.' })
+    res.status(405).json({ error: 'Método no permitido.' })
     return
   }
 
@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
   try {
     const authHeader = req.headers.authorization || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
-    if (!token) throw new Error('Sesion no enviada.')
+    if (!token) throw new Error('Sesión no enviada.')
 
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: `Bearer ${token}` } },
@@ -33,7 +33,7 @@ module.exports = async function handler(req, res) {
     const serviceClient = createClient(supabaseUrl, serviceKey)
 
     const { data: userData, error: userError } = await userClient.auth.getUser()
-    if (userError || !userData?.user?.email) throw new Error('Sesion invalida.')
+    if (userError || !userData?.user?.email) throw new Error('Sesión inválida.')
 
     const adminEmail = userData.user.email.toLowerCase()
     const { data: adminRole } = await serviceClient
@@ -51,9 +51,9 @@ module.exports = async function handler(req, res) {
     const email = String(body.email || '').trim().toLowerCase()
     const password = String(body.password || '')
     const rol = body.rol || 'operador'
-    if (!email || !email.includes('@')) throw new Error('Email invalido.')
+    if (!email || !email.includes('@')) throw new Error('Email inválido.')
     if (password.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.')
-    if (!ROLES_VALIDOS.includes(rol)) throw new Error('Rol invalido.')
+    if (!ROLES_VALIDOS.includes(rol)) throw new Error('Rol inválido.')
 
     const rolePayload = {
       email,
