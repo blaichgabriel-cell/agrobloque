@@ -1504,6 +1504,15 @@ html,body { -webkit-tap-highlight-color:transparent; }
 [data-theme='dark'] .fert-dialog__header,[data-theme='dark'] .fert-dialog__footer { background:rgba(18,35,27,.96); }
 [data-theme='dark'] .fert-control,[data-theme='dark'] .fert-block-option,[data-theme='dark'] .fert-dialog__close,[data-theme='dark'] .fert-icon-action,[data-theme='dark'] .fert-dialog__cancel,[data-theme='dark'] .fert-solution-card { background:rgba(255,255,255,.055); border-color:rgba(255,255,255,.1); color:var(--text-primary); }
 [data-theme='dark'] .fert-block-option[data-selected],[data-theme='dark'] .fert-dialog__save { background:#16734a; }
+/* Modo oscuro: fertilizacion puntual y lineas del historial -------------- */
+[data-theme='dark'] .fert-add-row,[data-theme='dark'] .fert-add-solution { border-color:rgba(52,211,153,.34); background:rgba(52,211,153,.08); color:var(--dk-green); }
+[data-theme='dark'] .fert-dialog__header span:not(.fert-dialog__icon),[data-theme='dark'] .fert-solution-card__badge { color:var(--dk-green); }
+[data-theme='dark'] .fert-solution-card__badge { background:rgba(52,211,153,.12); }
+[data-theme='dark'] .fert-product-row__remove { color:var(--dk-red); }
+[data-theme='dark'] .ui-1eefd4 { border-bottom-color:var(--dk-line) !important; }
+/* Botones de acceso rapido de la ficha del bloque (contraste en modo oscuro) */
+[data-theme='dark'] :is(.ui-cd464c,.ui-228318,.ui-f0ca92) { color:var(--dk-green) !important; }
+[data-theme='dark'] .ui-0ea43e { color:var(--dk-amber) !important; }
 
 @media (max-width:760px) {
   .cycle-history-data-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
