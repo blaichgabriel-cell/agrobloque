@@ -12,7 +12,6 @@ import { textoErrorProfesional } from './lib/errors'
 import { Toaster } from 'sonner'
 import TaskNotifications from './components/TaskNotifications'
 import SheetGestures from './components/SheetGestures'
-import ThemeToggle from './components/ThemeToggle'
 
 const Mapa = lazy(() => import('./pages/MapaProfesional'))
 const FichaBloque = lazy(() => import('./pages/FichaBloque'))
@@ -193,7 +192,7 @@ function ConnectionStatus() {
   return <div className="ag-offline"><i className="ti ti-wifi-off" /> Sin conexión. No cierres la aplicación hasta recuperar internet.</div>
 }
 
-function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZATION, theme, onThemeToggle }) {
+function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZATION }) {
   const tabs = filterTabsByRole(allTabs, role, isGuest)
   const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
   const [alertCount, setAlertCount] = useState(0)
@@ -218,7 +217,7 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone={toneFromPath(tab.path)} aria-hidden="true"><MenuIcon icon={tab.icon} size={17} color="currentColor" /></span><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
     })}</nav>
-    <div className="ag-sidebar-footer"><ThemeToggle theme={theme} onToggle={onThemeToggle} />{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
+    <div className="ag-sidebar-footer">{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
   </aside>
 }
 
@@ -231,7 +230,7 @@ const MODULE_BY_PATH = {
 const moduleFromPath = pathname => MODULE_BY_PATH['/' + (pathname.split('/')[1] || '')] || 'bloques'
 const toneFromPath = path => MODULE_BY_PATH[path] || 'neutral'
 
-function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organization, setOrganization, theme, onThemeToggle }) {
+function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organization, setOrganization, theme, themeMode, onThemeChange }) {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1100)
   const location = useLocation()
   const dashboardDesktop = isDesktop && location.pathname === '/'
@@ -255,7 +254,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
       <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
       <SheetGestures />
       <ConnectionStatus />
-      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} theme={theme} onThemeToggle={onThemeToggle} />}
+      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} />}
 
       <div data-app-scroll>
         <div className="ag-content-shell">
@@ -287,7 +286,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/reportes" element={<ProtectedRoute role={role} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
             <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="auditoria"><Auditoria/></ProtectedRoute>}/>
-            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role} organization={organization} onOrganizationUpdate={setOrganization} theme={theme} onThemeToggle={onThemeToggle}/></ProtectedRoute>}/>
+            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role} organization={organization} onOrganizationUpdate={setOrganization} theme={theme} themeMode={themeMode} onThemeChange={onThemeChange}/></ProtectedRoute>}/>
             <Route path="/primeros-pasos" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Onboarding preview organization={organization}/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
@@ -311,12 +310,13 @@ export default function App() {
   const [roleUserId, setRoleUserId] = useState(null)
   const [organization, setOrganization] = useState(DEFAULT_ORGANIZATION)
   const [fieldsState, setFieldsState] = useState('idle')
-  const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'light'
+  const [themeMode, setThemeMode] = useState(() => {
+    if (typeof window === 'undefined') return 'system'
     const stored = window.localStorage.getItem('agrobloque-theme')
-    if (stored === 'light' || stored === 'dark') return stored
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    return ['light', 'dark', 'system'].includes(stored) ? stored : 'system'
   })
+  const [systemTheme, setSystemTheme] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+  const theme = themeMode === 'system' ? systemTheme : themeMode
   const guestPath = Boolean(guestToken)
   const passwordSetupPath = authAction === 'set-password'
 
@@ -328,11 +328,19 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const actualizarTemaSistema = event => setSystemTheme(event.matches ? 'dark' : 'light')
+    media.addEventListener?.('change', actualizarTemaSistema)
+    return () => media.removeEventListener?.('change', actualizarTemaSistema)
+  }, [])
+
+  useEffect(() => {
     if (typeof document === 'undefined') return
     document.documentElement.dataset.theme = theme
     document.documentElement.style.colorScheme = theme
-    window.localStorage.setItem('agrobloque-theme', theme)
-  }, [theme])
+    window.localStorage.setItem('agrobloque-theme', themeMode)
+  }, [theme, themeMode])
 
   useEffect(() => {
     const company = String(organization?.nombre || '').trim()
@@ -532,7 +540,7 @@ export default function App() {
         </div>
       ) : fieldsState === 'empty' && role.rol === 'admin' && organization?.id ? (
         <Onboarding organization={organization} onComplete={({ organization:nextOrganization, campo }) => { setOrganization(nextOrganization); setCampoActivo(campo); setFieldsState('ready') }}/>
-      ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} organization={organization} setOrganization={setOrganization} theme={theme} onThemeToggle={() => setTheme(current => current === 'dark' ? 'light' : 'dark')} />}
+      ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} organization={organization} setOrganization={setOrganization} theme={theme} themeMode={themeMode} onThemeChange={setThemeMode} />}
     </BrowserRouter>
   )
 }

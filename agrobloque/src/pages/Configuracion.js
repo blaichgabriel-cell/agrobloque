@@ -138,7 +138,7 @@ const comprimirFotoPerfil = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
-export default function Configuracion({ role, organization = { nombre:'AgroBloque' }, onOrganizationUpdate, theme = 'light', onThemeToggle }) {
+export default function Configuracion({ role, organization = { nombre:'AgroBloque' }, onOrganizationUpdate, theme = 'light', themeMode = 'system', onThemeChange }) {
   const navigate = useNavigate()
   const fotoRef = useRef()
   const [modal, setModal] = useState(null)
@@ -614,11 +614,25 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
       </div>
 
       <div className="ui-1a3247">
-        <button type="button" className="ag-surface ag-theme-setting" onClick={onThemeToggle} role="switch" aria-checked={theme === 'dark'}>
-          <span className="ag-theme-setting__icon" aria-hidden="true"><i className={`ti ${theme === 'dark' ? 'ti-moon-stars' : 'ti-sun'}`} /></span>
-          <span className="ag-theme-setting__copy"><strong>Apariencia</strong><small>{theme === 'dark' ? 'Modo oscuro activado' : 'Modo claro activado'}</small></span>
-          <span className="ag-theme-toggle__track" aria-hidden="true"><span className="ag-theme-toggle__thumb" /></span>
-        </button>
+        <section className="ag-surface ag-appearance-setting" aria-labelledby="appearance-title">
+          <div className="ag-appearance-setting__header">
+            <span className="ag-theme-setting__icon" aria-hidden="true"><i className={`ti ${theme === 'dark' ? 'ti-moon-stars' : 'ti-sun'}`} /></span>
+            <span className="ag-theme-setting__copy"><strong id="appearance-title">Apariencia</strong><small>Elegí cómo querés ver AgroBloque en este dispositivo</small></span>
+          </div>
+          <div className="ag-theme-options" role="radiogroup" aria-label="Tema de la aplicación">
+            {[
+              ['light', 'ti-sun', 'Claro'],
+              ['dark', 'ti-moon-stars', 'Oscuro'],
+              ['system', 'ti-device-desktop', 'Del dispositivo'],
+            ].map(([value, icon, label]) => (
+              <button type="button" key={value} className={themeMode === value ? 'is-selected' : ''} role="radio" aria-checked={themeMode === value} onClick={() => onThemeChange?.(value)}>
+                <i className={`ti ${icon}`} aria-hidden="true" />
+                <span>{label}</span>
+                <i className={`ti ${themeMode === value ? 'ti-circle-check-filled' : 'ti-circle'}`} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </section>
         {menuItems.map((it, i) => (
           <div className="ag-surface ui-f40337" key={i} onClick={it.action}>
             <div className="ui-3044e7" style={{ background: it.bg || '#f2f1ef' }}>

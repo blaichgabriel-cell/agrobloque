@@ -10,6 +10,9 @@ const UNIDADES = ['kg', 'g', 'cc', 'ml', 'L', 'unidad']
 const hoy = () => new Date().toISOString().split('T')[0]
 const fmtNum = (n) => Number(n || 0).toLocaleString('es-PY')
 const fmtFecha = (fecha) => fecha ? new Date(`${fecha}T00:00:00`).toLocaleDateString('es-PY') : '-'
+const fmtFechaLista = (fecha) => fecha
+  ? new Date(`${fecha}T00:00:00`).toLocaleDateString('es-PY', { weekday:'long', day:'numeric', month:'long' })
+  : 'Sin fecha'
 const MARCA_FIN_SEMANA = /\s*\[\[semana_fin:(\d{4}-\d{2}-\d{2})\]\]\s*/
 const MARCA_ETAPA = /\s*\[\[etapa:([^\]]+)\]\]\s*/
 const etapaDeNotas = (notas = '') => String(notas || '').match(MARCA_ETAPA)?.[1] || ''
@@ -397,6 +400,14 @@ export default function Fertilizaciones({ campoActivo }) {
     })
     return Array.from(mapa.values()).sort((a, b) => `${b.fecha || ''}${b.created_at || ''}`.localeCompare(`${a.fecha || ''}${a.created_at || ''}`))
   }, [registros])
+
+  const gruposPorFecha = useMemo(() => grupos.reduce((acumulado, grupo) => {
+    const fecha = grupo.fecha || ''
+    if (!acumulado[fecha]) acumulado[fecha] = []
+    acumulado[fecha].push(grupo)
+    return acumulado
+  }, {}), [grupos])
+  const fechasDeGrupos = useMemo(() => Object.keys(gruposPorFecha).sort((a, b) => b.localeCompare(a)), [gruposPorFecha])
 
   const registrosActivos = useMemo(() => registros.filter(r => !r.anulada), [registros])
   const totalBloquesAplicados = useMemo(() => new Set(registrosActivos.map(r => r.bloque_id)).size, [registrosActivos])
@@ -868,30 +879,53 @@ export default function Fertilizaciones({ campoActivo }) {
           </div>
         )}
 
-        <div className="bl-card ui-3e3b3e">
-          <div className="ui-1e34de" style={{ display:isMobile ? 'none' : 'grid' }}>
-            <div>FECHA</div>
-            <div>BLOQUES</div>
-            <div>DETALLE</div>
+        <section className="fert-history" aria-label="Historial de fertilizaciones">
+          <div className="fert-history__heading">
+            <div><div className="ui-f8b0a0">APLICACIONES REALIZADAS</div><h2 className="ui-41629d">Historial de fertilizaciones</h2></div>
+            <span className="ui-e2090b">{grupos.length}</span>
           </div>
-          {loading ? <Skeleton rows={4} label="Cargando fertilizaciones" /> : grupos.length === 0 ? (
-            <div className="ui-c023a0">Sin fertilizaciones registradas.</div>
-          ) : grupos.map((g, idx) => (
-            <div className="ui-4a0a5b" key={g.key || `${g.fecha}-${idx}`} onClick={() => setDetalle(g)} style={{ gridTemplateColumns:isMobile ? '1fr' : '130px 1fr 1.4fr', borderBottom: idx === grupos.length - 1 ? 'none' : '1px solid #f0ede8', opacity:g.anulada ? .58 : 1, background:g.anulada ? '#faf8f5' : '#fff' }}>
-                <div className="ui-83e448">{g.items.some(i => i.plan_id) ? rangoSemana(g.items[0]) : fmtFecha(g.fecha)}<small className="fert-record-kind">{g.items.some(i => i.plan_id) ? 'PLAN SEMANAL' : 'PUNTUAL'}</small></div>
-              <div>
-                <div className="ui-83e448">{g.items.length} bloque{g.items.length === 1 ? '' : 's'}</div>
-                <div className="ui-a35c15">{g.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div>
+          {loading ? <Skeleton rows={4} label="Cargando fertilizaciones" /> : fechasDeGrupos.length === 0 ? (
+            <div className="bl-card ui-c023a0">Sin fertilizaciones registradas.</div>
+          ) : fechasDeGrupos.map(fecha => (
+            <div className="treatment-timeline" key={fecha || 'sin-fecha'}>
+              <div className="timeline-date">
+                <div className="timeline-date__line" />
+                <div className="timeline-date__label">{fmtFechaLista(fecha)}</div>
+                <div className="timeline-date__line" />
               </div>
-              <div>
-                <div className="ui-250da2">{resumenSoluciones(g.soluciones) || 'Sin productos detallados'}</div>
-                {g.tanque_litros && <div className="ui-dde727" style={{ color:g.anulada ? '#a33' : "#08603f" }}>{g.anulada ? 'ANULADA · ' : ''}{g.tanques_cantidad || 1} tanque{Number(g.tanques_cantidad || 1) === 1 ? '' : 's'} × {fmtNum(g.tanque_litros)} L = {fmtNum(Number(g.tanque_litros) * Number(g.tanques_cantidad || 1))} L · {g.estado || 'completa'}</div>}
-                {etapaDeNotas(g.notas) && <div className="phenology-pill"><i className="ti ti-seeding" />{etapaDeNotas(g.notas)}</div>}
-                {notasVisibles(g.notas) && <div className="ui-e578db">{notasVisibles(g.notas)}</div>}
-              </div>
+              {gruposPorFecha[fecha].map((g, idx) => {
+                const esPlan = g.items.some(i => i.plan_id)
+                return (
+                  <article className={`ag-surface timeline-entry fert-entry${g.anulada ? ' is-cancelled' : ''}`} key={g.key || `${g.fecha}-${idx}`} onClick={() => setDetalle(g)}>
+                    <div className="fert-entry__topline">
+                      <span className={`fert-entry__kind${esPlan ? '' : ' is-extra'}`}><i className={`ti ${esPlan ? 'ti-calendar-week' : 'ti-bolt'}`} />{esPlan ? 'Plan semanal' : 'Aplicación puntual'}</span>
+                      {esPlan && <span className="fert-entry__range">{rangoSemana(g.items[0])}</span>}
+                      {g.anulada && <span className="fert-entry__cancelled">Anulada</span>}
+                    </div>
+                    <div className="fert-entry__products">{resumenSoluciones(g.soluciones) || 'Sin productos detallados'}</div>
+                    <div className="fert-entry__blocks" aria-label={`${g.items.length} bloque${g.items.length === 1 ? '' : 's'} aplicado${g.items.length === 1 ? '' : 's'}`}>
+                      {g.items.map((item, itemIndex) => {
+                        const bloqueCompleto = bloques.find(b => b.id === item.bloque_id)
+                        const plantacionActiva = bloqueCompleto?.plantaciones?.find(p => p.activa)
+                        const cultivo = plantacionActiva?.cultivos?.nombre
+                        return <div className="fert-entry__block" key={item.id || `${item.bloque_id}-${itemIndex}`}><i className="ti ti-map-pin" /><span><strong>Bloque {item.bloques?.codigo || bloqueCompleto?.codigo || 'sin código'}</strong>{cultivo && <small>{cultivo}</small>}</span></div>
+                      })}
+                    </div>
+                    <div className="fert-entry__footer">
+                      <div>
+                        {g.tanque_litros && <span>{g.tanques_cantidad || 1} tanque{Number(g.tanques_cantidad || 1) === 1 ? '' : 's'} × {fmtNum(g.tanque_litros)} L = {fmtNum(Number(g.tanque_litros) * Number(g.tanques_cantidad || 1))} L</span>}
+                        <span className="fert-entry__status">{g.estado || 'completa'}</span>
+                      </div>
+                      <i className="ti ti-chevron-right" aria-hidden="true" />
+                    </div>
+                    {etapaDeNotas(g.notas) && <div className="phenology-pill"><i className="ti ti-seeding" />{etapaDeNotas(g.notas)}</div>}
+                    {notasVisibles(g.notas) && <div className="fert-entry__notes">{notasVisibles(g.notas)}</div>}
+                  </article>
+                )
+              })}
             </div>
           ))}
-        </div>
+        </section>
       </div>
 
       {modal && (
