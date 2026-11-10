@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Modal } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
-import { createProvisioningAuthClient, forceLocalSignOut, supabase } from '../lib/supabase'
+import { forceLocalSignOut, supabase } from '../lib/supabase'
 import { descargarJson } from '../lib/exporters'
 import { ACTIONS, DISABLED_MODULES } from '../lib/permissions'
 const PERMISOS_MODULOS = [
@@ -25,12 +25,6 @@ const PERMISOS_MODULOS = [
   { key: 'auditoria', label: 'Auditoria' },
   { key: 'configuracion', label: 'Configuración' },
 ].filter(m => !DISABLED_MODULES.includes(m.key))
-
-const crearContrasenaTemporal = () => {
-  const bytes = new Uint8Array(24)
-  window.crypto.getRandomValues(bytes)
-  return `Agb!${Array.from(bytes, value => value.toString(36)).join('')}`
-}
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
@@ -330,32 +324,21 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) { setError('Ingresá un email válido para el dueño'); return }
     setLoading(true); setError(''); setSuccess('')
     try {
-      const { data, error } = await supabase.rpc('provision_organization', {
-        p_nombre: nombre,
-        p_owner_email: ownerEmail,
+      // La cuenta del dueño se crea en el servidor (el registro público está apagado).
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData?.session?.access_token
+      if (!token) throw new Error('Tu sesión venció. Volvé a ingresar e intentá otra vez.')
+      const response = await fetch('/api/crear-empresa', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+        body: JSON.stringify({ nombre, owner_email: ownerEmail }),
       })
-      if (error) throw error
-      if (!data?.ok) throw new Error(data?.error || 'No se pudo crear la empresa')
-
-      const authClient = createProvisioningAuthClient()
-      const redirectTo = `${window.location.origin}/?auth_action=set-password`
-      const { data: signupData, error: signupError } = await authClient.auth.signUp({
-        email: ownerEmail,
-        password: crearContrasenaTemporal(),
-        options: {
-          emailRedirectTo: redirectTo,
-          data: { nombre, rol: 'admin', organizacion_id: data.organizacion_id },
-        },
-      })
-      const yaRegistrado = /already|registered|exists|existe|registrad/i.test(signupError?.message || '') || signupData?.user?.identities?.length === 0
-      if (signupError && !yaRegistrado) throw signupError
-      if (yaRegistrado) {
-        const { error: resetError } = await authClient.auth.resetPasswordForEmail(ownerEmail, { redirectTo })
-        if (resetError) throw resetError
-      }
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'No se pudo crear la empresa')
 
       setForm({ nombre:'', owner_email:'' })
-      setSuccess(`Empresa creada. Enviamos la invitación a ${ownerEmail}.`)
+      if (result.correo_enviado === false) setSuccess('Empresa creada, pero no se pudo enviar el correo. El dueño puede usar “Primera vez o ¿olvidaste tu contraseña?” en el login.')
+      else setSuccess(`Empresa creada. Enviamos la invitación a ${ownerEmail}.`)
     } catch (e) {
       setError('No se pudo crear la empresa: ' + (e.message || 'verificá la migración multiempresa'))
     }
