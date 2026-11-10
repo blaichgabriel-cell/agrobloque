@@ -88,12 +88,18 @@ export default function Costos({ campoActivo, isGuest = false }) {
     fumis?.forEach(f => f.fumigacion_productos?.forEach(fp => {
         totalAgro += (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
     }))
-    const { data: asist } = isGuest
-      ? { data: [] }
-      : await supabase.from('asistencia')
-        .select('monto, operarios(campo_id)').gte('fecha', desde)
     let totalJornales = 0
-    asist?.forEach(a => { if (a.operarios?.campo_id === campoSel.id) totalJornales += Number(a.monto) || 0 })
+    if (!isGuest) {
+      // La función devuelve solo la suma de jornales por campo, sin lo que cobra cada persona (la tabla
+      // asistencia es solo para administradores). Si la función aún no existe en la base, se lee la tabla.
+      const { data: jornales, error: jornalesError } = await supabase.rpc('jornales_por_campo', { p_desde: desde })
+      if (!jornalesError) {
+        totalJornales = Number(jornales?.find(j => j.campo_id === campoSel.id)?.total) || 0
+      } else {
+        const { data: asist } = await supabase.from('asistencia').select('monto, operarios(campo_id)').gte('fecha', desde)
+        asist?.forEach(a => { if (a.operarios?.campo_id === campoSel.id) totalJornales += Number(a.monto) || 0 })
+      }
+    }
     setCostosAuto({ agroquimicos: totalAgro, jornales: totalJornales })
     const { data: manuales } = await supabase.from('costos')
       .select('*, bloques(codigo)').eq('campo_id', campoSel.id).gte('fecha', desde).order('fecha', { ascending: false })
