@@ -12,6 +12,7 @@ import { textoErrorProfesional } from './lib/errors'
 import { Toaster } from 'sonner'
 import TaskNotifications from './components/TaskNotifications'
 import SheetGestures from './components/SheetGestures'
+import agroBloqueLogo from './assets/agrobloque-logo-oficial.png'
 import { RoleContext } from './lib/RoleContext'
 
 const Mapa = lazy(() => import('./pages/MapaProfesional'))
@@ -53,8 +54,7 @@ function StartupScreen() {
   return <div className="ag-startup" role="status" aria-live="polite" aria-label="Abriendo AgroBloque">
     <div className="ag-startup-glow" aria-hidden="true" />
     <div className="ag-startup-brand">
-      <span className="ag-startup-mark"><i className="ti ti-leaf" /></span>
-      <div><strong>AgroBloque</strong><small>Gestión agrícola</small></div>
+      <img className="ag-startup-logo" src={agroBloqueLogo} alt="AgroBloque" />
     </div>
     <div className="ag-startup-progress" aria-hidden="true"><span /></div>
     <p>Preparando tu campo…</p>
@@ -228,7 +228,7 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
     { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/rentabilidad', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
   ]
   return <aside className="ag-sidebar" aria-label="Navegación principal">
-    <div className="ag-brand"><span className={`ag-brand-mark ${organization.logo_url ? 'has-logo' : ''}`} style={!organization.logo_url ? { background:organization.color_primario || '#0F3923' } : undefined} aria-hidden="true">{organization.logo_url ? <img src={organization.logo_url} alt="" /> : <i className="ti ti-leaf" />}</span><div><strong title={organization.nombre}>{organization.nombre || 'AgroBloque'}</strong><small>Gestión agrícola</small></div></div>
+    <div className="ag-brand"><span className={`ag-brand-mark ${organization.logo_url ? 'has-logo' : 'has-official-logo'}`} aria-hidden="true"><img src={organization.logo_url || agroBloqueLogo} alt="" /></span><div><strong title={organization.nombre}>{organization.nombre || 'AgroBloque'}</strong><small>Gestión agrícola</small></div></div>
     <nav className="ag-sidebar-nav">{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone={toneFromPath(tab.path)} aria-hidden="true"><MenuIcon icon={tab.icon} size={17} color="currentColor" /></span><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
