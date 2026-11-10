@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { toast } from 'sonner'
 import { moonPhase, MOON_PHASES } from '../lib/moon'
+import { useCan } from '../lib/RoleContext'
 
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
@@ -31,6 +32,7 @@ function ModalConfirm({ onConfirm, onCancel }) {
 }
 
 export default function Agenda() {
+  const can = useCan('agenda')
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [tareas, setTareas] = useState([])
   const [campos, setCampos] = useState([])
@@ -153,7 +155,7 @@ export default function Agenda() {
             <div className="ui-476525">Planificación</div>
             <div className="ag-page-title ui-136b85">Agenda</div>
           </div>
-          <div className="agenda-header-actions"><button className="app-button app-button--secondary app-button--icon" aria-label="Activar notificaciones" onClick={activarNotificaciones}><i className="ti ti-bell" aria-hidden="true" /></button><button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus ui-d0538c" aria-hidden="true"></i></button></div>
+          <div className="agenda-header-actions"><button className="app-button app-button--secondary app-button--icon" aria-label="Activar notificaciones" onClick={activarNotificaciones}><i className="ti ti-bell" aria-hidden="true" /></button>{can.create && <button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus ui-d0538c" aria-hidden="true"></i></button>}</div>
         </div>
         <div className="SegmentedControl agenda-segments" role="tablist" aria-label="Filtrar tareas">
           {[['pendientes','Pendientes'],['hoy','Hoy'],['completadas','Completadas'],['todas','Todas']].map(([k,v]) => (
@@ -175,11 +177,11 @@ export default function Agenda() {
             hoy={hoy}
             onMes={delta => setMesVisible(actual => { const siguiente = new Date(actual); siguiente.setMonth(siguiente.getMonth() + delta); return siguiente })}
             onHoy={() => { const fecha = new Date(); fecha.setDate(1); setMesVisible(fecha) }}
-            onCreate={fecha => { setForm({ ...vacio, fecha_programada:fecha }); setModal(true) }}
+            onCreate={can.create ? (fecha => { setForm({ ...vacio, fecha_programada:fecha }); setModal(true) }) : undefined}
             onTask={editarTarea}
           />
         ) : tareasFiltradas.length === 0 ? (
-          <div className="empty-state"><span className="empty-state__icon"><i className="ti ti-calendar-check" aria-hidden="true" /></span><div><strong>No hay tareas {filtro === 'pendientes' ? 'pendientes' : 'en esta vista'}</strong><p>Agregá una tarea para organizar el próximo trabajo del campo.</p><button className="app-button app-button--secondary" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus" aria-hidden="true" />Crear tarea</button></div></div>
+          <div className="empty-state"><span className="empty-state__icon"><i className="ti ti-calendar-check" aria-hidden="true" /></span><div><strong>No hay tareas {filtro === 'pendientes' ? 'pendientes' : 'en esta vista'}</strong><p>Agregá una tarea para organizar el próximo trabajo del campo.</p>{can.create && <button className="app-button app-button--secondary" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus" aria-hidden="true" />Crear tarea</button>}</div></div>
         ) : (
           <div className="ag-record-grid ui-998b74" style={{ gridTemplateColumns: isDesktop ? 'repeat(2, minmax(360px, 1fr))' : '1fr', gap: isDesktop ? 12 : 0 }}>
             {tareasFiltradas.map(t => {
@@ -200,17 +202,17 @@ export default function Agenda() {
               <div className="ui-8a97f7">
                 <div className="agenda-task-time"><i className="ti ti-calendar-event" aria-hidden="true" />{t.fecha_programada}{t.hora_programada ? ` · ${String(t.hora_programada).slice(0, 5)}` : ''}</div>
                 <div className="ui-91294d">
-                  <button className="ag-small-action ui-2bc228" onClick={() => editarTarea(t)}>Editar</button>
-                  {!t.completada && !t.anulada && (
+                  {can.edit && <button className="ag-small-action ui-2bc228" onClick={() => editarTarea(t)}>Editar</button>}
+                  {can.edit && !t.completada && !t.anulada && (
                     <button className="ag-small-action ui-9f0a77" onClick={() => completarTarea(t.id)}>
                       ✓ Completar
                     </button>
                   )}
-                  {!t.anulada && <button className="ag-small-action ui-0a41d9" onClick={() => eliminarTarea(t.id)}>
+                  {!t.anulada && can.delete && <button className="ag-small-action ui-0a41d9" onClick={() => eliminarTarea(t.id)}>
                     Cancelar
                   </button>
                   }
-                  {(t.completada || t.anulada) && <button className="ag-small-action ui-aa2db8" onClick={() => reabrirTarea(t.id)}>Reabrir</button>}
+                  {can.edit && (t.completada || t.anulada) && <button className="ag-small-action ui-aa2db8" onClick={() => reabrirTarea(t.id)}>Reabrir</button>}
                 </div>
               </div>
             </div>
@@ -275,7 +277,7 @@ function AgendaCalendar({ tareas, mes, hoy, onMes, onHoy, onCreate, onTask }) {
       const items = tareasPorFecha[clave] || []
       const fuera = fecha.getMonth() !== mes.getMonth()
       return <div className={`lunar-day ${fuera ? 'is-outside' : ''} ${clave === hoy ? 'is-today' : ''}`} key={clave}>
-        <button className="lunar-day__date" onClick={() => onCreate(clave)} aria-label={`Crear tarea el ${fecha.toLocaleDateString('es-PY')}. ${fase.label}`}><strong>{fecha.getDate()}</strong><span title={fase.label} aria-label={fase.label}>{fase.icon}</span></button>
+        <button className="lunar-day__date" onClick={() => onCreate && onCreate(clave)} aria-label={`Crear tarea el ${fecha.toLocaleDateString('es-PY')}. ${fase.label}`}><strong>{fecha.getDate()}</strong><span title={fase.label} aria-label={fase.label}>{fase.icon}</span></button>
         <div className="lunar-day__tasks">{items.slice(0, 3).map(tarea => { const tipo = TIPOS[tarea.tipo] || TIPOS.otro; return <button key={tarea.id} onClick={() => onTask(tarea)} title={tarea.descripcion}><i style={{ background:tipo.color }} />{tarea.hora_programada ? `${String(tarea.hora_programada).slice(0,5)} ` : ''}{tarea.descripcion}</button> })}{items.length > 3 && <span>+{items.length - 3} más</span>}</div>
       </div>
     })}</div>

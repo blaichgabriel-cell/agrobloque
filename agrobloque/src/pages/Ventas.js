@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
+import { useCan } from '../lib/RoleContext'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const parsearKg = (v) => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? 0 : n }
@@ -39,6 +40,7 @@ function ModalConfirm({ onConfirm, onCancel }) {
 }
 
 function ModalDetalle({ venta, onClose, onEdit, onDelete }) {
+  const can = useCan('ventas')
   const total = Number(venta.total) || (Number(venta.kg_total) || 0) * (Number(venta.precio_kg) || 0)
   const saldo = Math.max(0, total - (Number(venta.monto_cobrado) || 0))
   const item = { display:'flex', justifyContent:'space-between', gap:16, padding:'11px 0', borderBottom:'1px solid #eeeeee' }
@@ -82,8 +84,8 @@ function ModalDetalle({ venta, onClose, onEdit, onDelete }) {
         {venta.notas && <div className="ui-a5941a">{venta.notas}</div>}
 
         <div className="ui-f56ef1">
-          <button className="ui-356937" onClick={onEdit}>Editar venta</button>
-          <button className="ui-690a60" onClick={onDelete}>Eliminar</button>
+          {can.edit && <button className="ui-356937" onClick={onEdit}>Editar venta</button>}
+          {can.delete && <button className="ui-690a60" onClick={onDelete}>Eliminar</button>}
         </div>
       </div>
     </div>
@@ -91,6 +93,7 @@ function ModalDetalle({ venta, onClose, onEdit, onDelete }) {
 }
 
 function ModalDetalleGrupo({ grupo, onClose, onEdit, onDelete }) {
+  const can = useCan('ventas')
   const saldo = Math.max(0, grupo.total - grupo.cobrado)
 
   return (
@@ -134,8 +137,8 @@ function ModalDetalleGrupo({ grupo, onClose, onEdit, onDelete }) {
                   </div>
                 </div>
                 <div className="ui-24f5cd">
-                  <button className="ui-389f8b" onClick={() => onEdit(venta)}>Editar</button>
-                  <button className="ui-132fe6" onClick={() => onDelete(venta.id)}>Eliminar</button>
+                  {can.edit && <button className="ui-389f8b" onClick={() => onEdit(venta)}>Editar</button>}
+                  {can.delete && <button className="ui-132fe6" onClick={() => onDelete(venta.id)}>Eliminar</button>}
                 </div>
               </div>
             )
@@ -149,6 +152,7 @@ function ModalDetalleGrupo({ grupo, onClose, onEdit, onDelete }) {
 }
 
 export default function Ventas() {
+  const can = useCan('ventas')
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [ventas, setVentas] = useState([])
   const [compradores, setCompradores] = useState([])
@@ -477,9 +481,9 @@ export default function Ventas() {
             <div className="ui-476525">Comercial</div>
             <div className="ui-136b85">Ventas</div>
           </div>
-          <button className="ui-11115c" onClick={abrirNueva}>
+          {can.create && <button className="ui-11115c" onClick={abrirNueva}>
             <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
-          </button>
+          </button>}
         </div>
         {error && <div className="ui-7d680a">{error}</div>}
         <div className="ui-998b74" style={{ gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr 1fr', gap: isDesktop ? 14 : 8 }}>
@@ -527,10 +531,10 @@ export default function Ventas() {
                   <div className="ui-18be75">{g.items.length}</div>
                   <div className="ui-c9e5e3">Gs. {fmtGs(g.total)}</div>
                   <div className="ui-12274e">
-                    <button className="ui-dbdafa" onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }} title={esGrupo ? 'Ver detalle' : 'Editar'}>
+                    {(esGrupo || can.edit) && <button className="ui-dbdafa" onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }} title={esGrupo ? 'Ver detalle' : 'Editar'}>
                       <i className={`${`ti ${esGrupo ? 'ti-eye' : 'ti-pencil'}`} ui-2592cc`} aria-hidden="true"></i>
-                    </button>
-                    {!esGrupo && <button className="ui-5cff60" onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} title="Eliminar">
+                    </button>}
+                    {!esGrupo && can.delete && <button className="ui-5cff60" onClick={(e) => { e.stopPropagation(); eliminar(v.id) }} title="Eliminar">
                       <i className="ti ti-trash ui-2592cc" aria-hidden="true"></i>
                     </button>}
                   </div>
@@ -567,8 +571,8 @@ export default function Ventas() {
                   <div className="ui-510ea6">
                     <span className="ui-dc716d">Tocar para ver detalle</span>
                     <div className="ui-91294d">
-                      <button className="ui-3624ce" onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }}>{esGrupo ? 'Ver' : 'Editar'}</button>
-                      {!esGrupo && <button className="ui-ee01f4" onClick={(e) => { e.stopPropagation(); eliminar(v.id) }}>Eliminar</button>}
+                      {(esGrupo || can.edit) && <button className="ui-3624ce" onClick={(e) => { e.stopPropagation(); esGrupo ? setDetalleGrupo(g) : abrirEditar(v) }}>{esGrupo ? 'Ver' : 'Editar'}</button>}
+                      {!esGrupo && can.delete && <button className="ui-ee01f4" onClick={(e) => { e.stopPropagation(); eliminar(v.id) }}>Eliminar</button>}
                     </div>
                   </div>
                 </div>

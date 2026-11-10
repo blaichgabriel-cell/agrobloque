@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { guestToken, supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
+import { useCan } from '../lib/RoleContext'
 import { ajustarStockSeguro } from '../lib/inventory'
 import { incluirSeleccionados, productoCorrespondeAplicacion } from '../lib/productCategories'
 import { useNavigate } from 'react-router-dom'
@@ -119,6 +120,7 @@ const formatFechaLabel = (fecha) => {
 }
 
 export default function Fumigaciones() {
+  const can = useCan('fumigaciones')
   const navigate = useNavigate()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [fumigaciones, setFumigaciones] = useState([])
@@ -440,7 +442,7 @@ export default function Fumigaciones() {
             <div className="ui-476525">Control fitosanitario</div>
             <div className="ag-page-title ui-136b85">Fumigaciones</div>
           </div>
-          {!isGuest && (
+          {!isGuest && can.create && (
             <button className="ui-56054f" aria-label="Agregar registro" onClick={abrirNuevo}>
               <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
             </button>
@@ -573,8 +575,8 @@ export default function Fumigaciones() {
                     ))}
                   </div>
                 )}
-                {!isGuest && <button className="ag-small-action ui-6988cd" onClick={() => abrirEditar(detalle)}>Editar registro</button>}
-                {!isGuest && <button className="ag-small-action ui-939a40" onClick={() => eliminar(detalle.id)}>Eliminar registro</button>}
+                {!isGuest && can.edit && <button className="ag-small-action ui-6988cd" onClick={() => abrirEditar(detalle)}>Editar registro</button>}
+                {!isGuest && can.delete && <button className="ag-small-action ui-939a40" onClick={() => eliminar(detalle.id)}>Eliminar registro</button>}
                 <button className="ag-small-action ui-3e2cc4" onClick={() => setDetalle(null)}>Cerrar</button>
               </>
             })()}

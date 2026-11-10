@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
+import { useCan } from '../lib/RoleContext'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
@@ -127,6 +128,7 @@ function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
 }
 
 export default function Cosecha() {
+  const can = useCan('cosecha')
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [cosechas, setCosechas] = useState([])
   const [campos, setCampos] = useState([])
@@ -321,9 +323,9 @@ export default function Cosecha() {
             <div className="ui-476525">Producción</div>
             <div className="ag-page-title ui-136b85">Cosecha</div>
           </div>
-          <button className="ui-56054f" aria-label="Agregar registro" onClick={abrirNuevaCosecha}>
+          {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={abrirNuevaCosecha}>
             <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
-          </button>
+          </button>}
         </div>
         {error && <div className="ui-d6d959">{error}</div>}
         <div className="ui-f66100" style={{ gap: isDesktop ? 14 : 8 }}>
@@ -379,12 +381,12 @@ export default function Cosecha() {
                     <div className="ui-a8f171">Producción</div>
                   </div>
                   <div className="ui-12274e">
-                    <button className="table-action" aria-label="Editar" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} title="Editar">
+                    {can.edit && <button className="table-action" aria-label="Editar" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }} title="Editar">
                       <i className="ti ti-pencil ui-2592cc" aria-hidden="true"></i>
-                    </button>
-                    <button className="table-action table-action--danger" aria-label="Eliminar" onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} title="Eliminar">
+                    </button>}
+                    {can.delete && <button className="table-action table-action--danger" aria-label="Eliminar" onClick={(e) => { e.stopPropagation(); eliminar(c.id) }} title="Eliminar">
                       <i className="ti ti-trash ui-2592cc" aria-hidden="true"></i>
-                    </button>
+                    </button>}
                   </div>
                 </div>
               )
@@ -419,8 +421,8 @@ export default function Cosecha() {
               <div className="ui-510ea6">
                 <span className="ui-5e0192">Tocar para ver detalle</span>
                 <div className="ui-91294d">
-                  <button className="ag-small-action ui-387856" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }}>Editar</button>
-                  <button className="ag-small-action ui-14c146" onClick={(e) => { e.stopPropagation(); eliminar(c.id) }}>Eliminar</button>
+                  {can.edit && <button className="ag-small-action ui-387856" onClick={(e) => { e.stopPropagation(); abrirEditarCosecha(c) }}>Editar</button>}
+                  {can.delete && <button className="ag-small-action ui-14c146" onClick={(e) => { e.stopPropagation(); eliminar(c.id) }}>Eliminar</button>}
                 </div>
               </div>
             </div>

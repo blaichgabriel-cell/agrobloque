@@ -5,6 +5,7 @@ import QRCode from 'qrcode'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
 import { formatLocaleInteger, parseLocaleInteger } from '../lib/numbers'
+import { useCan } from '../lib/RoleContext'
 
 const diasDesde = (fecha) => {
   if (!fecha) return null
@@ -52,6 +53,10 @@ function ModalConfirm({ titulo, mensaje, onConfirm, onCancel }) {
 }
 
 export default function FichaBloque() {
+  const can = useCan('mapa')
+  const canFert = useCan('plan_nutricional')
+  const canFum = useCan('fumigaciones')
+  const canCos = useCan('cosecha')
   const { id } = useParams()
   const navigate = useNavigate()
   const fileRef = useRef()
@@ -888,11 +893,11 @@ export default function FichaBloque() {
               <div className="ui-7b80c9">{notasFertilizacionVisibles(fertDetalle.notas)}</div>
             </div>
           )}
-          <button className="ag-small-action ui-a20b62" onClick={() => navigate(`/fertilizaciones?editar=${encodeURIComponent(fertDetalle.grupo_id || fertDetalle.id)}`)}
+          {canFert.edit && <button className="ag-small-action ui-a20b62" onClick={() => navigate(`/fertilizaciones?editar=${encodeURIComponent(fertDetalle.grupo_id || fertDetalle.id)}`)}
            >
             <i className="ti ti-pencil ui-52eaee" aria-hidden="true"></i>
             {fertDetalle.plan_id ? 'Editar semana completa' : 'Editar fertilización'}
-          </button>
+          </button>}
           <button className="ag-small-action ui-ee3408" onClick={() => setConfirmarElimFert(fertDetalle.id)}
            >
             Eliminar este registro
@@ -994,10 +999,10 @@ export default function FichaBloque() {
               </div>
             )) : <div className="ui-1685e1">No se registraron abonos de base en este ciclo.</div>}
           </div>
-          <button className="ag-small-action ui-a3fc3f" onClick={() => eliminarHistorial(historialDetalle.id)}
+          {can.delete && <button className="ag-small-action ui-a3fc3f" onClick={() => eliminarHistorial(historialDetalle.id)}
            >
             Eliminar este ciclo del historial
-          </button>
+          </button>}
         </div>
       </div>
     )
@@ -1025,7 +1030,7 @@ export default function FichaBloque() {
             )}
           </div>
           {plantacionActiva && <div className="ag-block-summary"><span><small>Edad del cultivo</small><strong>{diasDesde(plantacionActiva.fecha_siembra) ?? '—'} <em>días</em></strong></span><span><small>Plantas del ciclo</small><strong>{cantidadPlantasActiva ? Number(cantidadPlantasActiva).toLocaleString('es-PY') : '—'}</strong></span><span><small>Cosecha del ciclo</small><strong>{fmtKg(totalKgCiclo)} <em>kg</em></strong></span></div>}
-          {!plantacionActiva && (
+          {!plantacionActiva && can.create && (
             <button className="ag-small-action ui-2c5a32" onClick={abrirNuevaPlantacion}>
               + Nueva plantación
             </button>
@@ -1050,9 +1055,9 @@ export default function FichaBloque() {
             </button>
           </div>
           <div className="ui-1a4890">
-            <button className="ag-small-action ui-0ea43e" type="button" onClick={() => abrirCargaRapida('fumigaciones')}><i className="ti ti-spray" aria-hidden="true" /> Fumigación <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
-            <button className="ag-small-action ui-228318" type="button" onClick={() => abrirCargaRapida('fertilizacion')}><i className="ti ti-leaf" aria-hidden="true" /> Fertilización <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
-            <button className="ag-small-action ui-f0ca92" type="button" onClick={() => abrirCargaRapida('cosecha')}><i className="ti ti-cut" aria-hidden="true" /> Cosecha <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
+            {canFum.create && <button className="ag-small-action ui-0ea43e" type="button" onClick={() => abrirCargaRapida('fumigaciones')}><i className="ti ti-spray" aria-hidden="true" /> Fumigación <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
+            {canFert.create && <button className="ag-small-action ui-228318" type="button" onClick={() => abrirCargaRapida('fertilizacion')}><i className="ti ti-leaf" aria-hidden="true" /> Fertilización <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
+            {canCos.create && <button className="ag-small-action ui-f0ca92" type="button" onClick={() => abrirCargaRapida('cosecha')}><i className="ti ti-cut" aria-hidden="true" /> Cosecha <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
             <button className="ag-small-action ui-f0ca92" type="button" onClick={() => navigate(`/rentabilidad?bloque=${bloque.id}`)}><i className="ti ti-chart-line" aria-hidden="true" /> Rentabilidad <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
           </div>
         </div>
@@ -1085,7 +1090,7 @@ export default function FichaBloque() {
                 <div className="ag-surface ui-49272e">
                   <div className="ui-546e10">
                     <div className="ui-1d6b4b">Datos de la plantación</div>
-                    <button className="ag-small-action ui-387856" onClick={abrirEditarPlantacion}>Editar</button>
+                    {can.edit && <button className="ag-small-action ui-387856" onClick={abrirEditarPlantacion}>Editar</button>}
                   </div>
                   {[
                     ['Cultivo', plantacionActiva.cultivos?.nombre || '-'],
@@ -1132,32 +1137,32 @@ export default function FichaBloque() {
                 </div>
 
                 <div className="ui-9c6869">
-                  <button className="ag-small-action ui-004512" onClick={abrirNuevaPlantacion}
+                  {can.create && <button className="ag-small-action ui-004512" onClick={abrirNuevaPlantacion}
                    >
                     Nueva plantación
-                  </button>
-                  <button className="ag-small-action ui-d4abad" onClick={() => setShowMuerte(true)}
+                  </button>}
+                  {can.create && <button className="ag-small-action ui-d4abad" onClick={() => setShowMuerte(true)}
                    >
                     + Muerte de plantas
-                  </button>
+                  </button>}
                 </div>
                 <div className="ui-caac2c">
-                  <button className="ag-small-action ui-5b0f32" onClick={finalizarPlantacionActiva}
+                  {can.edit && <button className="ag-small-action ui-5b0f32" onClick={finalizarPlantacionActiva}
                    >
                     Finalizar plantación
-                  </button>
-                  <button className="ag-small-action ui-05757f" onClick={eliminarPlantacionActiva}
+                  </button>}
+                  {can.delete && <button className="ag-small-action ui-05757f" onClick={eliminarPlantacionActiva}
                    >
                     Eliminar plantación
-                  </button>
+                  </button>}
                 </div>
               </>
             ) : (
               <div className="ag-surface ui-13bbf9">
                 Sin plantación activa.<br/>
-                <button className="ag-small-action ui-a4d716" onClick={abrirNuevaPlantacion}>
+                {can.create && <button className="ag-small-action ui-a4d716" onClick={abrirNuevaPlantacion}>
                   + Nueva plantación
-                </button>
+                </button>}
               </div>
             )}
           </>
@@ -1175,10 +1180,10 @@ export default function FichaBloque() {
                     {planSemanal ? `${planSemanal.litros_preparados || '-'} L preparados  -  ${aplicacionesPlan.length} aplicaciones` : 'Solo para los bloques que usan receta semanal.'}
                   </div>
                 </div>
-                <button className="ag-small-action ui-0a1c50" onClick={abrirPlanSemanal}
+                {canFert.create && <button className="ag-small-action ui-0a1c50" onClick={abrirPlanSemanal}
                  >
                   {planSemanal ? 'Editar' : 'Crear'}
-                </button>
+                </button>}
               </div>
               {planSemanal && (
                 <>
@@ -1190,10 +1195,10 @@ export default function FichaBloque() {
                     ))}
                   </div>
                   <div className="ui-f56ef1">
-                    <button className="ag-small-action ui-3f7a77" onClick={abrirAplicarPlan}
+                    {canFert.create && <button className="ag-small-action ui-3f7a77" onClick={abrirAplicarPlan}
                      >
                       Aplicar hoy
-                    </button>
+                    </button>}
                     <button className="ag-small-action ui-98ffc9" onClick={desactivarPlanSemanal}
                      >
                       Desactivar
@@ -1214,10 +1219,10 @@ export default function FichaBloque() {
               )}
             </div>
 
-            <button className="ag-small-action ui-bcc504" onClick={abrirNuevaFertilizacion}
+            {canFert.create && <button className="ag-small-action ui-bcc504" onClick={abrirNuevaFertilizacion}
              >
               + Nueva fertilización
-            </button>
+            </button>}
 
             {fertilizaciones.length === 0 ? (
               <div className="ag-surface ui-eeb39f">
@@ -1368,11 +1373,11 @@ export default function FichaBloque() {
         {/* FOTOS */}
         {seccion === 'fotos' && (
           <>
-            <button className="ag-small-action ui-62f30d" onClick={() => fileRef.current?.click()}
+            {can.create && <button className="ag-small-action ui-62f30d" onClick={() => fileRef.current?.click()}
              >
               <i className="ti ti-camera ui-e705f9" aria-hidden="true"></i>
               Agregar foto
-            </button>
+            </button>}
             {fotos.length === 0 ? (
               <div className="ui-5baa7a">Sin fotos en este ciclo</div>
             ) : (
@@ -1382,9 +1387,9 @@ export default function FichaBloque() {
                     <img className="ui-caf585" src={f.url} alt="foto bloque"/>
                     <div className="ui-aa460d">
                       <span className="ui-e3758e">{f.fecha}</span>
-                      <button aria-label="Eliminar" className="ag-small-action ui-d088ca" onClick={() => eliminarFoto(f.id)}>
+                      {can.delete && <button aria-label="Eliminar" className="ag-small-action ui-d088ca" onClick={() => eliminarFoto(f.id)}>
                         <i className="ti ti-trash ui-9fe38b" aria-hidden="true"></i>
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 ))}

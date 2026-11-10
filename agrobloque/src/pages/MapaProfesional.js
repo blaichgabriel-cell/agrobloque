@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Modal, Notice } from '../components/UI'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
+import { useCan } from '../lib/RoleContext'
 
 const hoy = () => new Date().toISOString().slice(0, 10)
 const diasDesde = fecha => fecha ? Math.max(0, Math.floor((new Date(`${hoy()}T12:00:00`) - new Date(`${String(fecha).slice(0, 10)}T12:00:00`)) / 86400000)) : null
@@ -12,6 +13,7 @@ const fechaCorta = valor => valor ? new Date(`${String(valor).slice(0, 10)}T12:0
 const vacio = { letra:'A', numero:'', tipo:'invernadero' }
 
 export default function MapaProfesional({ campoActivo }) {
+  const can = useCan('mapa')
   const navigate = useNavigate()
   const [data, setData] = useState({ bloques:[], plantas:[], tareas:[], actividades:[] })
   const [loading, setLoading] = useState(true)
@@ -95,7 +97,7 @@ export default function MapaProfesional({ campoActivo }) {
   if (!campoActivo) return <div className="ab-map-page"><div className="ab-empty">Seleccioná un campo desde el inicio.</div></div>
 
   return <div className="ab-map-page">
-    <header className="ab-map-header"><div><span>CAMPO ACTIVO</span><h1>Bloques del campo</h1><p>{campoActivo.nombre} · Cultivos y seguimiento</p></div><button aria-label="Nuevo bloque" className="ab-new-block" onClick={() => { setError(''); setModal(true) }}><i className="ti ti-plus" />Nuevo bloque</button></header>
+    <header className="ab-map-header"><div><span>CAMPO ACTIVO</span><h1>Bloques del campo</h1><p>{campoActivo.nombre} · Cultivos y seguimiento</p></div>{can.create && <button aria-label="Nuevo bloque" className="ab-new-block" onClick={() => { setError(''); setModal(true) }}><i className="ti ti-plus" />Nuevo bloque</button>}</header>
     <Notice tone="error">{error}</Notice>
     <Notice>{success}</Notice>
     <section className="ab-map-kpis" aria-busy={loading}>

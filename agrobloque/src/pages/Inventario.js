@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { ajustarStockSeguro } from '../lib/inventory'
+import { useCan } from '../lib/RoleContext'
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
@@ -77,6 +78,7 @@ function ModalConfirm({ mensaje, onConfirm, onCancel }) {
 }
 
 export default function Inventario() {
+  const can = useCan('inventario')
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [productos, setProductos] = useState([])
   const [categorias, setCategorias] = useState([])
@@ -285,8 +287,8 @@ export default function Inventario() {
               <div><small>Depósito</small><h1 className="ag-page-title">Inventario</h1></div>
             </div>
             <div className="bl-head-actions">
-              <button className="bl-icon-btn" aria-label="Sincronizar abonos de base" title="Sincronizar abonos de base" onClick={sincronizarAbonosManual} disabled={sincronizandoAbonos}><i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} aria-hidden="true" /></button>
-              <button className="ag-primary" onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}><i className="ti ti-plus" aria-hidden="true" />Nuevo producto</button>
+              {can.create && <button className="bl-icon-btn" aria-label="Sincronizar abonos de base" title="Sincronizar abonos de base" onClick={sincronizarAbonosManual} disabled={sincronizandoAbonos}><i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} aria-hidden="true" /></button>}
+              {can.create && <button className="ag-primary" onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}><i className="ti ti-plus" aria-hidden="true" />Nuevo producto</button>}
             </div>
           </header>
           {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
@@ -334,10 +336,10 @@ export default function Inventario() {
                 </div>
                 <div className="ui-edab21">{catActInfo.label}</div>
               </div>
-              <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.defaultCategory, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
+              {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.defaultCategory, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
                >
                 <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
-              </button>
+              </button>}
             </div>
             <label className="inventory-search"><i className="ti ti-search" aria-hidden="true" /><input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder={`Buscar en ${catActInfo.label.toLowerCase()}…`} /></label>
           </div>
@@ -378,10 +380,10 @@ export default function Inventario() {
                 </div>
 
                 <div className="ui-f60339">
-                  <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, -1)}>−</button>
-                  <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, 1)}>+</button>
-                  <button className="ag-small-action ui-922ea3" onClick={() => { setForm({...p, categoria_nombre: getCatNombre(p)}); setModal('form') }}>Editar</button>
-                  <button className="ag-small-action ui-14c146" onClick={() => eliminar(p.id, p.nombre)}>Eliminar</button>
+                  {can.edit && <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, -1)}>−</button>}
+                  {can.edit && <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, 1)}>+</button>}
+                  {can.edit && <button className="ag-small-action ui-922ea3" onClick={() => { setForm({...p, categoria_nombre: getCatNombre(p)}); setModal('form') }}>Editar</button>}
+                  {can.delete && <button className="ag-small-action ui-14c146" onClick={() => eliminar(p.id, p.nombre)}>Eliminar</button>}
                 </div>
               </div>
               )

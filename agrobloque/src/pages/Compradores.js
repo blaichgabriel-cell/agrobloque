@@ -2,6 +2,7 @@ import { Modal } from '../components/UI'
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { useCan } from '../lib/RoleContext'
 
 const TIPOS = ['Mayorista','Mercado','Particular','Exportador','Otro']
 
@@ -21,6 +22,7 @@ function ModalConfirm({ nombre, onConfirm, onCancel }) {
 }
 
 export default function Compradores() {
+  const can = useCan('compradores')
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [compradores, setCompradores] = useState([])
   const [historial, setHistorial] = useState({})
@@ -95,9 +97,9 @@ export default function Compradores() {
             <div className="ui-476525">Ventas</div>
             <div className="ag-page-title ui-136b85">Compradores</div>
           </div>
-          <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' }); setModal(true) }}>
+          {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' }); setModal(true) }}>
             <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -168,8 +170,8 @@ export default function Compradores() {
                   })}
 
                   <div className="ui-c49781">
-                    <button className="ag-small-action ui-80b205" onClick={() => { setForm({...c}); setModal(true) }}>Editar</button>
-                    <button className="ag-small-action ui-ea5cb1" onClick={() => eliminar(c)}>Eliminar</button>
+                    {can.edit && <button className="ag-small-action ui-80b205" onClick={() => { setForm({...c}); setModal(true) }}>Editar</button>}
+                    {can.delete && <button className="ag-small-action ui-ea5cb1" onClick={() => eliminar(c)}>Eliminar</button>}
                   </div>
                 </div>
               )}

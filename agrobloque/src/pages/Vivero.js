@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { blurNumberInputOnWheel, formatLocaleInteger, parseLocaleInteger } from '../lib/numbers'
+import { useCan } from '../lib/RoleContext'
 
 const estados = ['sembrado', 'germinando', 'listo', 'trasplantado', 'descartado']
 const hoy = () => new Date().toISOString().split('T')[0]
@@ -79,6 +80,7 @@ const optimizarFoto = (archivo) => new Promise((resolve, reject) => {
 })
 
 export default function Vivero() {
+  const can = useCan('vivero')
   const navigate = useNavigate()
   const fotosRef = useRef(null)
   const [campos, setCampos] = useState([])
@@ -409,7 +411,7 @@ export default function Vivero() {
           <span className="bl-page-icon" aria-hidden="true"><ViveroIcon size={24} color="#fff" /></span>
           <div><small>Plantinero</small><h1 className="ag-page-title">Vivero</h1></div>
         </div>
-        <button className="ag-primary" aria-label="Agregar lote" onClick={abrirNuevo}><i className="ti ti-plus" aria-hidden="true" />Nuevo lote</button>
+        {can.create && <button className="ag-primary" aria-label="Agregar lote" onClick={abrirNuevo}><i className="ti ti-plus" aria-hidden="true" />Nuevo lote</button>}
       </header>
 
       {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
@@ -485,7 +487,7 @@ export default function Vivero() {
               <button className="ui-fa3e1c" onClick={() => navigate(`/bloque/${detalle.bloque_id}`)} style={{ ...primaryBtn }}>
                 Ver bloque trasplantado
               </button>
-            ) : detalle.estado !== 'trasplantado' && (
+            ) : detalle.estado !== 'trasplantado' && can.create && (
               <button className="ui-606a6c" onClick={() => abrirTrasplante(detalle)} style={{ ...primaryBtn }}>
                 Trasplantar a bloque
               </button>
@@ -493,7 +495,7 @@ export default function Vivero() {
 
             <div className="ui-b3c308">
               <div className="ui-9535b3">Tratamientos</div>
-              <button className="ag-small-action ui-8ab10c" onClick={() => { setTratForm(tratamientoInicial); setModalTratamiento(true) }}>+ Tratamiento</button>
+              {can.create && <button className="ag-small-action ui-8ab10c" onClick={() => { setTratForm(tratamientoInicial); setModalTratamiento(true) }}>+ Tratamiento</button>}
             </div>
             {tratamientos.length === 0 ? (
               <div className="ui-c0d22a">Sin tratamientos registrados.</div>
@@ -502,13 +504,13 @@ export default function Vivero() {
                 <div className="ui-843e0a">{t.tipo}</div>
                 <div className="ui-a8f171">{t.fecha}{t.producto ? ` · ${t.producto}` : ''}{t.dosis ? ` · ${t.dosis}` : ''}</div>
                 {t.notas && <div className="ui-e396da">{t.notas}</div>}
-                <div className="ui-e396ba"><button className="ag-small-action ui-794ba0" onClick={() => editarTratamiento(t)} style={{ ...secondaryBtn }}>Editar</button><button className="ag-small-action ui-794ba0" onClick={() => anularTratamiento(t)} style={{ ...dangerBtn }}>Anular</button></div>
+                <div className="ui-e396ba">{can.edit && <button className="ag-small-action ui-794ba0" onClick={() => editarTratamiento(t)} style={{ ...secondaryBtn }}>Editar</button>}{can.delete && <button className="ag-small-action ui-794ba0" onClick={() => anularTratamiento(t)} style={{ ...dangerBtn }}>Anular</button>}</div>
               </div>
             ))}
 
             <div className="ui-0a45a3">
-              <button onClick={() => abrirEditar(detalle)} className="bl-btn bl-btn--ghost">Editar lote</button>
-              <button onClick={() => eliminarLote(detalle.id)} className="bl-btn bl-btn--danger">Eliminar</button>
+              {can.edit && <button onClick={() => abrirEditar(detalle)} className="bl-btn bl-btn--ghost">Editar lote</button>}
+              {can.delete && <button onClick={() => eliminarLote(detalle.id)} className="bl-btn bl-btn--danger">Eliminar</button>}
             </div>
           </div>
         </div>

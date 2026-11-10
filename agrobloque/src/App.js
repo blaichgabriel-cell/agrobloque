@@ -12,6 +12,7 @@ import { textoErrorProfesional } from './lib/errors'
 import { Toaster } from 'sonner'
 import TaskNotifications from './components/TaskNotifications'
 import SheetGestures from './components/SheetGestures'
+import { RoleContext } from './lib/RoleContext'
 
 const Mapa = lazy(() => import('./pages/MapaProfesional'))
 const FichaBloque = lazy(() => import('./pages/FichaBloque'))
@@ -242,6 +243,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
   }, [])
 
   return (
+    <RoleContext.Provider value={role}>
     <div className={`ag-app ${isDesktop ? 'has-dock' : ''} ${dashboardDesktop ? 'is-dashboard' : ''}`} data-module={moduleFromPath(location.pathname)}>
       <Toaster
         position={isDesktop ? 'top-right' : 'bottom-center'}
@@ -298,6 +300,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
 
       {!isDesktop && <NavBar isGuest={isGuest} role={role} />}
     </div>
+    </RoleContext.Provider>
   )
 }
 

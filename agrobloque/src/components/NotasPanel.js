@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { guestToken, supabase } from '../lib/supabase'
+import { useCan } from '../lib/RoleContext'
 
 const hoy = () => {
   const d = new Date()
@@ -10,6 +11,7 @@ const hoy = () => {
 }
 
 export default function NotasPanel({ modulo, titulo = 'Notas' }) {
+  const can = useCan(modulo)
   const [notas, setNotas] = useState([])
   const [abierto, setAbierto] = useState(false)
   const [form, setForm] = useState({ fecha: hoy(), titulo: '', contenido: '' })
@@ -72,7 +74,7 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
           <div className="ui-6dc1df">{titulo}</div>
           <div className="ui-66d4fa">{notas.length} nota{notas.length === 1 ? '' : 's'}</div>
         </div>
-        {!isGuest && (
+        {!isGuest && can.create && (
           <button className="ui-b371e7" type="button" onClick={() => setAbierto(v => !v)}
            >
             {abierto ? 'Cerrar' : '+ Nota'}
@@ -108,7 +110,7 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
                   <div className="ui-93a7e1">{n.fecha}</div>
                   {n.titulo && <div className="ui-51b484">{n.titulo}</div>}
                 </div>
-                {!isGuest && (
+                {!isGuest && can.delete && (
                   <button className="ui-55ae91" type="button" onClick={() => eliminar(n.id)}
                    >
                     Eliminar

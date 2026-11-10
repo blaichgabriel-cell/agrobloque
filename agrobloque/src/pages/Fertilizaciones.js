@@ -2,6 +2,7 @@ import { Modal, FormHeading, Notice, Skeleton } from '../components/UI'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
+import { useCan } from '../lib/RoleContext'
 import { ajustarStockSeguro } from '../lib/inventory'
 import { esProductoFertilizacion, incluirSeleccionados } from '../lib/productCategories'
 import { useNavigate } from 'react-router-dom'
@@ -293,6 +294,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
 }
 
 export default function Fertilizaciones({ campoActivo }) {
+  const can = useCan('plan_nutricional')
   const navigate = useNavigate()
   const width = useViewportWidth()
   const isMobile = width < 1100
@@ -832,17 +834,17 @@ export default function Fertilizaciones({ campoActivo }) {
             <div className="ui-35a79d">Aplicaciones reales</div>
             <h1 className="ui-118f2f">Fertilizaciones</h1>
           </div>
-          <div className="fert-actions"><span>Elegí cómo querés registrar</span></div>
+          {can.create && <div className="fert-actions"><span>Elegí cómo querés registrar</span></div>}
         </div>
 
         {error && <div className="ui-173cc6">{error}</div>}
         {success && <div className="ui-fb7aa5">{success}</div>}
         {!schemaPlanesDisponible && <div className="ui-9536bb">Los planes diarios y semanales se habilitaran después de ejecutar el SQL preparado para Supabase.</div>}
 
-        <div className="fert-mode-picker">
+        {can.create && <div className="fert-mode-picker">
           <button type="button" onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible}><span className="fert-mode-icon"><i className="ti ti-calendar-week" /></span><span><strong>Plan semanal</strong><small>Programá la fórmula, los bloques y los días de una semana.</small></span><i className="ti ti-chevron-right" /></button>
           <button type="button" onClick={() => abrirModal('aplicacion')}><span className="fert-mode-icon is-extra"><i className="ti ti-bolt" /></span><span><strong>Aplicación puntual</strong><small>Registrá ahora un producto que surgió fuera del plan.</small></span><i className="ti ti-chevron-right" /></button>
-        </div>
+        </div>}
 
         <div className="ui-9e5e94" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))' }}>
           <div className="nutrition-card ui-9128d9" style={{ ...card }}>
@@ -874,7 +876,7 @@ export default function Fertilizaciones({ campoActivo }) {
               const tanques = Number(plan.tanques_cantidad) || 1
               const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
               const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los días' : `Cada ${['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][Number(plan.dia_semana)] || 'semana'}`
-              return <div className="ui-8e6c1c" key={plan.id} style={{ gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong className="ui-0cf08e">{plan.nombre}</strong><div className="ui-8174dd">{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div className="ui-72210b">{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong className="ui-7b5575">{frecuencia}</strong><div className="ui-8174dd">{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div className="ui-19255d"><button className="ag-small-action ui-e6110d" onClick={() => aplicarPlanHoy(plan)} disabled={saving} style={{ ...btnNegro }}>Aplicar hoy</button><button className="ag-small-action ui-51b96d" onClick={() => registrarDesdePlan(plan)}>Repetir semana</button><button className="ag-small-action ui-51b96d" onClick={() => abrirEditarPlan(plan)}>Editar plan</button></div></div>
+              return <div className="ui-8e6c1c" key={plan.id} style={{ gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong className="ui-0cf08e">{plan.nombre}</strong><div className="ui-8174dd">{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div className="ui-72210b">{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong className="ui-7b5575">{frecuencia}</strong><div className="ui-8174dd">{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div className="ui-19255d">{can.create && <button className="ag-small-action ui-e6110d" onClick={() => aplicarPlanHoy(plan)} disabled={saving} style={{ ...btnNegro }}>Aplicar hoy</button>}{can.create && <button className="ag-small-action ui-51b96d" onClick={() => registrarDesdePlan(plan)}>Repetir semana</button>}{can.edit && <button className="ag-small-action ui-51b96d" onClick={() => abrirEditarPlan(plan)}>Editar plan</button>}</div></div>
             })}
           </div>
         )}
@@ -947,7 +949,7 @@ export default function Fertilizaciones({ campoActivo }) {
             <div className="ui-091476"><div className="ui-702618"><small className="ui-ae975a">Bloques</small><div className="ui-c6f57e">{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div className="ui-702618"><small className="ui-ae975a">Preparación</small><div className="ui-c6f57e">{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
             <div className="ui-c4d2a4">{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
             {notasVisibles(detalle.notas) && <div className="ui-5961cf">{notasVisibles(detalle.notas)}</div>}
-            {!detalle.anulada && <><div className="ui-79954a"><button onClick={() => abrirEditarAplicacion(detalle)} className="bl-btn-solid">{detalle.items.some(i => i.plan_id) ? 'Editar semana completa' : 'Editar'}</button>{!detalle.items.some(i => i.plan_id) && <button onClick={() => repetirAplicacion(detalle)} className="bl-btn-solid ui-d6ff9b">Repetir hoy</button>}</div><div className="ui-b6cf07"><label className="ui-fd4239">Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" className="bl-input" /></label><button className="ag-small-action ui-b4a187" onClick={() => anularAplicacion(detalle)} disabled={saving}>Anular y devolver inventario</button></div></>}
+            {!detalle.anulada && <><div className="ui-79954a">{can.edit && <button onClick={() => abrirEditarAplicacion(detalle)} className="bl-btn-solid">{detalle.items.some(i => i.plan_id) ? 'Editar semana completa' : 'Editar'}</button>}{!detalle.items.some(i => i.plan_id) && can.create && <button onClick={() => repetirAplicacion(detalle)} className="bl-btn-solid ui-d6ff9b">Repetir hoy</button>}</div><div className="ui-b6cf07"><label className="ui-fd4239">Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" className="bl-input" /></label>{can.delete && <button className="ag-small-action ui-b4a187" onClick={() => anularAplicacion(detalle)} disabled={saving}>Anular y devolver inventario</button>}</div></>}
             {detalle.anulada && <div className="ui-1eb527">Esta aplicación está anulada.</div>}
           </div>
         </Modal>

@@ -90,13 +90,15 @@ Probar con los usuarios `admin`, `operador` y `lectura` de A. Los permisos por m
 | 3.1 | `lectura` abre el menú | No ve Asistencia, Cuentas a pagar ni Configuración. |
 | 3.2 | `lectura` abre una pantalla con datos | Ve los datos, **sin** botones de crear, editar ni borrar. |
 | 3.3 | `operador` crea y edita (fumigación, cosecha, venta) | Puede. |
-| 3.4 | `operador` intenta borrar o anular | No tiene el botón. Si logra enviarlo, aparece un aviso de error y el dato **no** cambia (`writeGuard.js`). |
+| 3.4 | `operador` abre Inventario, Cosecha, Ventas, Vivero, Agenda… | No ve los botones **Eliminar** ni **Anular** (necesita permiso de borrar); sí ve Nuevo y Editar. Si lograra enviar un borrado real por otra vía, la base lo rechaza. |
 | 3.5 | `operador` invitado desde la app abre `/configuracion` y `/asistencia` por URL | Lo redirige. *(Un operador sin permisos personalizados tendría Asistencia por defecto; la app se los quita al invitarlo. Si se crea un operador por otra vía, revisar su lista de permisos.)* |
 | 3.6 | Permisos personalizados: quitar a un `operador` el módulo Ventas y la acción "editar" de Cosecha | Ventas desaparece; en Cosecha no puede editar. |
 | 3.7 | Abrir por URL un módulo desactivado (`/cuentas-pagar`, `/reportes`, `/historial`, `/auditoria`) con cualquier rol | No se puede entrar. |
 | 3.8 | Usuario con `activo = false` | No puede entrar a la app. |
 | 3.9 | `admin` | Ve y hace todo, incluida Configuración. |
 | 3.10 | Cambiar el rol de un usuario y que vuelva a entrar | Ve los permisos nuevos. |
+| 3.11 | **En la base** (quien administra Supabase): con el usuario `operador`, comprobar `app_can_action('inventario','delete')` y que un `delete` sobre `productos` no borra nada | Devuelve `false` y el `delete` se rechaza. *Conocido: el "Eliminar" de Inventario es un borrado lógico (`activo = false`), que la base trata como una edición; hoy solo lo impide la pantalla. Pendiente de reforzar con una regla en la base.* |
+| 3.12 | Usuario `lectura` consultando la base directamente las tablas de Asistencia, adelantos y contabilidad | **Hoy puede leerlas**: las políticas de lectura son abiertas dentro de su empresa y solo la pantalla se las oculta. Pendiente de reforzar antes de vender. |
 
 **Puntos que vigilar** (en el código, algunas acciones no revisan el error de la base y dependen del aviso global): anular cosecha, anular o eliminar adelanto y eliminar venta. Con un usuario sin permiso de borrar, cada una debe mostrar un aviso y dejar el dato intacto; si dice "listo" y el dato sigue igual, es una falla.
 

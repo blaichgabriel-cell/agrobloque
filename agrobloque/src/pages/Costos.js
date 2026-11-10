@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { descargarCsv } from '../lib/exporters'
 import { registrarAuditoria } from '../lib/audit'
+import { useCan } from '../lib/RoleContext'
 
 const TIPOS_COSTO = [
   { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:"#124e38", bg:'#eeeeee' },
@@ -17,6 +18,7 @@ const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
 
 export default function Costos({ campoActivo, isGuest = false }) {
+  const can = useCan('costos')
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [campos, setCampos] = useState([])
   const [campoSel, setCampoSel] = useState(null)
@@ -150,7 +152,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
             <button className="ui-08ca22" onClick={exportarCostos}>
               <i className="ti ti-download ui-a780bf" aria-hidden="true"></i>
             </button>
-            {!isGuest && (
+            {!isGuest && can.create && (
               <button className="ui-11115c" onClick={abrirNuevo}>
                 <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
               </button>
@@ -221,12 +223,12 @@ export default function Costos({ campoActivo, isGuest = false }) {
                 <div className="ui-1d6b4b">Gs. {fmtGs(c.monto)}</div>
                 {!isGuest && (
                   <>
-                    <button className="ui-65faee" onClick={() => abrirEditar(c)}>
+                    {can.edit && <button className="ui-65faee" onClick={() => abrirEditar(c)}>
                       <i className="ti ti-pencil ui-93a7e1" aria-hidden="true"></i>
-                    </button>
-                    <button className="ui-ead866" onClick={() => eliminar(c.id)}>
+                    </button>}
+                    {can.delete && <button className="ui-ead866" onClick={() => eliminar(c.id)}>
                       <i className="ti ti-x ui-eafd27" aria-hidden="true"></i>
-                    </button>
+                    </button>}
                   </>
                 )}
               </div>
