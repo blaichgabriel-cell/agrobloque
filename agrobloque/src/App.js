@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { authAction, forceLocalSignOut, guestToken, supabase } from './lib/supabase'
 import { Skeleton } from './components/UI'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -158,25 +158,40 @@ function ProtectedRoute({ role, moduleKey, children }) {
   return children
 }
 
+const scrollPositions = new Map()
+
 function ScrollToTop() {
   const location = useLocation()
+  const navigationType = useNavigationType()
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const resetScroll = () => {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-      document.documentElement.scrollTop = 0
-      document.body.scrollTop = 0
-
-      const appScroll = document.querySelector('[data-app-scroll]')
-      if (appScroll) appScroll.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    const appScroll = document.querySelector('[data-app-scroll]')
+    const routeKey = `${location.pathname}${location.search}`
+    const savedPosition = navigationType === 'POP' ? scrollPositions.get(routeKey) : null
+    const target = Number.isFinite(savedPosition) ? savedPosition : 0
+    const applyScroll = () => {
+      window.scrollTo({ top: target, left: 0, behavior: 'auto' })
+      document.documentElement.scrollTop = target
+      document.body.scrollTop = target
+      if (appScroll) appScroll.scrollTo({ top: target, left: 0, behavior: 'auto' })
     }
 
-    resetScroll()
-    window.requestAnimationFrame(resetScroll)
-    const timer = window.setTimeout(resetScroll, 80)
-    return () => window.clearTimeout(timer)
-  }, [location.pathname, location.search])
+    applyScroll()
+    const frame = window.requestAnimationFrame(applyScroll)
+    const timers = (target > 0 ? [80, 180, 360, 700] : [80]).map(delay => window.setTimeout(applyScroll, delay))
+    const rememberPosition = () => scrollPositions.set(routeKey, appScroll?.scrollTop ?? window.scrollY ?? 0)
+    appScroll?.addEventListener('scroll', rememberPosition, { passive:true })
+    window.addEventListener('scroll', rememberPosition, { passive:true })
+
+    return () => {
+      rememberPosition()
+      appScroll?.removeEventListener('scroll', rememberPosition)
+      window.removeEventListener('scroll', rememberPosition)
+      window.cancelAnimationFrame(frame)
+      timers.forEach(timer => window.clearTimeout(timer))
+    }
+  }, [location.pathname, location.search, navigationType])
   return null
 }
 
