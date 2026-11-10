@@ -97,8 +97,8 @@ Probar con los usuarios `admin`, `operador` y `lectura` de A. Los permisos por m
 | 3.8 | Usuario con `activo = false` | No puede entrar a la app. |
 | 3.9 | `admin` | Ve y hace todo, incluida Configuración. |
 | 3.10 | Cambiar el rol de un usuario y que vuelva a entrar | Ve los permisos nuevos. |
-| 3.11 | **En la base** (quien administra Supabase): con el usuario `operador`, comprobar `app_can_action('inventario','delete')` y que un `delete` sobre `productos` no borra nada | Devuelve `false` y el `delete` se rechaza. *Conocido: el "Eliminar" de Inventario es un borrado lógico (`activo = false`), que la base trata como una edición; hoy solo lo impide la pantalla. Pendiente de reforzar con una regla en la base.* |
-| 3.12 | Usuario `lectura` consultando la base directamente las tablas de Asistencia, adelantos y contabilidad | **Hoy puede leerlas**: las políticas de lectura son abiertas dentro de su empresa y solo la pantalla se las oculta. Pendiente de reforzar antes de vender. |
+| 3.11 | **En la base** (quien administra Supabase): con el usuario `operador`, comprobar `app_can_action('inventario','delete')` y que un `delete` sobre `productos` no borra nada | Devuelve `false` y el `delete` se rechaza. Además, marcar `activo = false` (o `anulada = true`, `archivado = true`) sin permiso de borrar se rechaza con "No tienes permiso para eliminar o anular este registro" (triggers `proteger_borrado_logico`, aplicados el 2026-11-10). |
+| 3.12 | Usuario `lectura` consultando la base directamente las tablas de Asistencia, adelantos y contabilidad | Ve **0 filas**; solo un admin las lee (políticas `solo_admin_lee_*`, aplicadas el 2026-11-10). Costos sigue mostrando el total de jornales con `jornales_por_campo`. |
 
 **Puntos que vigilar** (en el código, algunas acciones no revisan el error de la base y dependen del aviso global): anular cosecha, anular o eliminar adelanto y eliminar venta. Con un usuario sin permiso de borrar, cada una debe mostrar un aviso y dejar el dato intacto; si dice "listo" y el dato sigue igual, es una falla.
 
