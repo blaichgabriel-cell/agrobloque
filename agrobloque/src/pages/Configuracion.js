@@ -321,7 +321,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     const nombre = String(form.nombre || '').trim()
     const ownerEmail = String(form.owner_email || '').trim().toLowerCase()
     if (nombre.length < 2) { setError('Ingresá el nombre de la empresa'); return }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) { setError('Ingresá un email válido para el dueño'); return }
+    if (!/^[^\s@.][^\s@]*@[^\s@]+\.[^\s@]+$/.test(ownerEmail) || /\.@|\.\./.test(ownerEmail)) { setError('Ingresá un email válido para el dueño (sin punto antes de la @)'); return }
     setLoading(true); setError(''); setSuccess('')
     try {
       // La cuenta del dueño se crea en el servidor (el registro público está apagado).
@@ -337,7 +337,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
       if (!response.ok) throw new Error(result.error || 'No se pudo crear la empresa')
 
       setForm({ nombre:'', owner_email:'' })
-      if (result.correo_enviado === false) setSuccess('Empresa creada, pero no se pudo enviar el correo. El dueño puede usar “Primera vez o ¿olvidaste tu contraseña?” en el login.')
+      if (result.correo_enviado === false) setSuccess(`Empresa creada, pero no se pudo enviar el correo (${result.correo_error === 'over_email_send_rate_limit' ? 'Supabase alcanzó su límite de correos por hora' : `motivo: ${result.correo_error || 'desconocido'}`}). Cuando se pueda, el dueño usa “Primera vez o ¿olvidaste tu contraseña?” en el login.`)
       else setSuccess(`Empresa creada. Enviamos la invitación a ${ownerEmail}.`)
     } catch (e) {
       setError('No se pudo crear la empresa: ' + (e.message || 'verificá la migración multiempresa'))

@@ -6,7 +6,15 @@ const anonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIs
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const APP_URL_POR_DEFECTO = 'https://agrobloque.vercel.app'
-const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// Mismo rigor que Supabase Auth al enviar correos: sin punto al inicio ni al final de la parte local,
+// sin puntos seguidos y con un dominio valido. Un correo como "nombre.@gmail.com" crea la cuenta pero
+// despues el correo de "crear contrasena" no puede enviarse.
+const emailValido = email => {
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+$/.test(email)) return false
+  const [local, dominio] = email.split('@')
+  if (local.startsWith('.') || local.endsWith('.') || local.includes('..')) return false
+  return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/i.test(local) && /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(dominio)
+}
 
 // El enlace del correo solo puede apuntar a la propia app: evita que alguien use esta API
 // para enviar correos con un enlace a otro sitio.
@@ -39,7 +47,7 @@ module.exports = async function handler(req, res) {
     const nombre = String(body.nombre || '').trim()
     const ownerEmail = String(body.owner_email || '').trim().toLowerCase()
     if (nombre.length < 2) throw new Error('Ingresa el nombre de la empresa.')
-    if (!EMAIL_VALIDO.test(ownerEmail)) throw new Error('Ingresa un email valido para el dueno.')
+    if (!emailValido(ownerEmail)) throw new Error('Ingresa un email valido para el dueno (sin punto antes de la @).')
 
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: `Bearer ${token}` } },
@@ -89,6 +97,7 @@ module.exports = async function handler(req, res) {
       organizacion_id: organizacionId,
       cuenta_existente: cuentaExistente,
       correo_enviado: !mailError,
+      correo_error: mailError ? (mailError.code || mailError.message || 'desconocido') : null,
       message: mailError
         ? 'Empresa creada, pero no se pudo enviar el correo. El dueno puede usar "Primera vez o olvidaste tu contrasena" en el login.'
         : 'Empresa creada. Enviamos la invitacion al dueno.',
