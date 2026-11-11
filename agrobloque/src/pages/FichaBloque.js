@@ -130,6 +130,7 @@ export default function FichaBloque() {
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [qrError, setQrError] = useState('')
   const [mensajeExito, setMensajeExito] = useState('')
+  const [showQuickActions, setShowQuickActions] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1008,19 +1009,31 @@ export default function FichaBloque() {
     )
   }
 
+  const sectionMeta = {
+    plantacion:['ti-seeding', 'Resumen del cultivo', 'Datos principales, rendimiento y gestión del ciclo actual.'],
+    fertilizacion:['ti-leaf', 'Nutrición del bloque', 'Plan semanal y aplicaciones realizadas en este cultivo.'],
+    cosechas:['ti-cut', 'Cosechas del ciclo', 'Producción registrada y rendimiento acumulado.'],
+    incidencias:['ti-spray', 'Control fitosanitario', 'Fumigaciones, tratamientos y pérdidas de plantas.'],
+    fotos:['ti-photo', 'Registro fotográfico', 'Evolución visual del cultivo durante el ciclo.'],
+    historial:['ti-history', 'Ciclos anteriores', 'Consulta los cultivos que ocuparon este bloque.'],
+  }
+  const [sectionIcon, sectionTitle, sectionDescription] = sectionMeta[seccion]
+
   return (
-    <div className="ag-page ui-c1c124">
+    <div className="ag-page block-detail-modern ui-c1c124">
       {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
       <input className="ui-cb4589" type="file" accept="image/*" ref={fileRef} onChange={subirFoto} />
 
       {/* Header */}
-      <div className="ag-block-header ui-606ba4">
-        <button className="ag-small-action ui-7347f9" onClick={() => navigate(-1)}>
+      <div className="ag-block-header block-detail-header ui-606ba4">
+        <button className="ag-small-action block-detail-back ui-7347f9" onClick={() => navigate(-1)}>
           <i className="ti ti-arrow-left ui-b45e7d" aria-hidden="true"></i>
-          <span className="ui-fe5017">Volver</span>
+          <span className="ui-fe5017">Volver a bloques</span>
         </button>
-        <div className="ag-block-hero">
-          <div>
+        <div className="ag-surface ag-block-hero block-detail-hero">
+          <div className="block-detail-identity">
+            <span className="block-detail-mark" aria-hidden="true"><i className="ti ti-box" /></span>
+            <div>
             <div className="ag-eyebrow">{bloque.campos?.nombre} · {bloque.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}</div>
             <h1>Bloque {bloque.codigo}</h1>
             {plantacionActiva && (
@@ -1028,8 +1041,10 @@ export default function FichaBloque() {
                 {plantacionActiva.cultivos?.nombre}{getVariedad(plantacionActiva) ? `  -  ${getVariedad(plantacionActiva)}` : ''}
               </div>
             )}
+            </div>
+            <span className={`block-detail-status ${plantacionActiva ? 'is-active' : 'is-empty'}`}><i />{plantacionActiva ? 'En producción' : 'Sin cultivo activo'}</span>
           </div>
-          {plantacionActiva && <div className="ag-block-summary"><span><small>Edad del cultivo</small><strong>{diasDesde(plantacionActiva.fecha_siembra) ?? '—'} <em>días</em></strong></span><span><small>Plantas del ciclo</small><strong>{cantidadPlantasActiva ? Number(cantidadPlantasActiva).toLocaleString('es-PY') : '—'}</strong></span><span><small>Cosecha del ciclo</small><strong>{fmtKg(totalKgCiclo)} <em>kg</em></strong></span></div>}
+          {plantacionActiva && <div className="ag-block-summary"><span><i className="ti ti-calendar-time" /><small>Edad del cultivo</small><strong>{diasDesde(plantacionActiva.fecha_siembra) ?? '—'} <em>días</em></strong></span><span><i className="ti ti-seeding" /><small>Plantas activas</small><strong>{cantidadPlantasActiva ? Number(cantidadPlantasActiva).toLocaleString('es-PY') : '—'}</strong></span><span><i className="ti ti-basket" /><small>Cosecha del ciclo</small><strong>{fmtKg(totalKgCiclo)} <em>kg</em></strong></span></div>}
           {!plantacionActiva && can.create && (
             <button className="ag-small-action ui-2c5a32" onClick={abrirNuevaPlantacion}>
               + Nueva plantación
@@ -1044,43 +1059,42 @@ export default function FichaBloque() {
           </div>
         )}
 
-        <div className="ag-block-quick ui-46ae6b">
+        <div className="ag-surface ag-block-quick block-detail-quick ui-46ae6b">
           <div className="ui-d4e113">
             <div>
-              <div className="ui-1d6b4b">Registrar en este bloque</div>
-              <div className="ui-a8f171">El bloque queda seleccionado automáticamente</div>
+              <div className="ui-1d6b4b">Acciones del bloque</div>
+              <div className="ui-a8f171">Registrá trabajo sin volver a seleccionar el bloque</div>
             </div>
-            <button className="ag-small-action ui-cd464c" type="button" onClick={() => setShowQr(true)}>
-              <i className="ti ti-qrcode ui-e5876b" aria-hidden="true"></i> Ver QR
-            </button>
+            <div className="block-detail-quick__buttons"><button className="ag-small-action block-detail-primary-action" type="button" aria-expanded={showQuickActions} onClick={() => setShowQuickActions(value => !value)}><i className={`ti ${showQuickActions ? 'ti-x' : 'ti-plus'}`} />{showQuickActions ? 'Cerrar' : 'Registrar trabajo'}</button><button className="ag-small-action ui-cd464c" type="button" onClick={() => setShowQr(true)}><i className="ti ti-qrcode ui-e5876b" aria-hidden="true"></i> QR</button></div>
           </div>
-          <div className="ui-1a4890">
+          {showQuickActions && <div className="block-detail-action-grid ui-1a4890">
             {canFum.create && <button className="ag-small-action ui-0ea43e" type="button" onClick={() => abrirCargaRapida('fumigaciones')}><i className="ti ti-spray" aria-hidden="true" /> Fumigación <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
             {canFert.create && <button className="ag-small-action ui-228318" type="button" onClick={() => abrirCargaRapida('fertilizacion')}><i className="ti ti-leaf" aria-hidden="true" /> Fertilización <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
             {canCos.create && <button className="ag-small-action ui-f0ca92" type="button" onClick={() => abrirCargaRapida('cosecha')}><i className="ti ti-cut" aria-hidden="true" /> Cosecha <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
             <button className="ag-small-action ui-f0ca92" type="button" onClick={() => navigate(`/rentabilidad?bloque=${bloque.id}`)}><i className="ti ti-chart-line" aria-hidden="true" /> Rentabilidad <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
-          </div>
+          </div>}
         </div>
 
         {/* Tabs */}
-        <div className="ag-block-tabs ui-c1894b" aria-label="Secciones del bloque">
+        <div className="ag-block-tabs block-detail-tabs ui-c1894b" aria-label="Secciones del bloque">
           {[
-            ['plantacion','Plantación'],
-            ['fertilizacion',`Fertilización (${fertilizaciones.length})`],
-            ['cosechas',`Cosechas (${cosechasCiclo.length})`],
-            ['incidencias',`Fumigaciones (${incidencias.length})`],
-            ['fotos',`Fotos (${fotos.length})`],
-            ['historial',`Historial (${historial.length})`],
-          ].map(([k,v]) => (
+            ['plantacion','ti-layout-dashboard','Resumen',null],
+            ['fertilizacion','ti-leaf','Fertilizaciones',fertilizaciones.length],
+            ['cosechas','ti-cut','Cosechas',cosechasCiclo.length],
+            ['incidencias','ti-spray','Fumigaciones',incidencias.length],
+            ['fotos','ti-photo','Fotos',fotos.length],
+            ['historial','ti-history','Historial',historial.length],
+          ].map(([k,icon,v,count]) => (
             <button className="ag-small-action ui-f9a370" key={k} aria-pressed={seccion === k} onClick={() => setSeccion(k)}
               style={{ background: seccion===k ? (k==='fertilizacion' ? '#1a5c2e' : '#0F3923') : 'rgba(15,23,42,.06)', color: seccion===k ? '#fff' : 'var(--text-secondary)' }}>
-              {v}
+              <i className={`ti ${icon}`} aria-hidden="true" />{v}{count !== null && <span>{count}</span>}
             </button>
           ))}
         </div>
       </div>
 
-      <div className={`${`ag-block-content ag-block-section-${seccion}`} ui-538f66`} key={seccion}>
+      <div className={`${`ag-block-content block-detail-content ag-block-section-${seccion}`} ui-538f66`} key={seccion}>
+        <div className="block-detail-section-head"><span><i className={`ti ${sectionIcon}`} /></span><div><h2>{sectionTitle}</h2><p>{sectionDescription}</p></div></div>
 
         {/* PLANTACION ACTUAL */}
         {seccion === 'plantacion' && (

@@ -1,21 +1,12 @@
 import React, { useState } from 'react'
 import { clearLocalAuth, supabase } from '../lib/supabase'
+import agroBloqueLogo from '../assets/agrobloque-logo-oficial.png'
 
 function AgroBloqueLogo({ compact = false, light = false }) {
-  const color = light ? '#ffffff' : '#103d2b'
   return (
     <div className={`login-brand ${compact ? 'login-brand-compact' : ''} ${light ? 'is-light' : ''}`}>
-      <svg width={compact ? 48 : 64} height={compact ? 48 : 64} viewBox="0 0 64 64" fill="none" aria-hidden="true">
-        <rect width="64" height="64" rx="18" fill={light ? 'rgba(255,255,255,.13)' : '#edf5eb'} />
-        <path d="M17 46 29.5 17h7L49 46h-8l-2.6-6.8H27.6L25 46h-8Z" fill={color} />
-        <path d="M30.2 33.2h5.6L33 25.5l-2.8 7.7Z" fill={light ? '#183f2e' : '#edf5eb'} />
-        <path d="M18 48c8.5-7 19-9.2 31-6.8" stroke="#76b947" strokeWidth="3.3" strokeLinecap="round" />
-        <path d="M21 51c8-5.1 17.3-6.6 27.8-4.2" stroke="#76b947" strokeWidth="2.4" strokeLinecap="round" opacity=".78" />
-      </svg>
-      <div>
-        <div className="login-brand-name">AgroBloque</div>
-        {!compact && <div className="login-brand-tag">Gestión agrícola simple y completa</div>}
-      </div>
+      <img className="login-brand-logo" src={agroBloqueLogo} alt="AgroBloque" />
+      {!compact && <div className="login-brand-tag">Gestión agrícola simple y completa</div>}
     </div>
   )
 }

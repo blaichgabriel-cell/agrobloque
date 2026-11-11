@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import agroBloqueLogo from '../assets/agrobloque-logo-oficial.png'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -101,7 +102,7 @@ export default function Onboarding({ organization, preview = false, onComplete }
 
   return (
     <main className="onboarding-shell">
-      <header className="onboarding-brand"><span><i className="ti ti-leaf" /></span><div><strong>AgroBloque</strong><small>Configuración inicial</small></div>{preview && <b>Demostración</b>}</header>
+      <header className="onboarding-brand"><img className="onboarding-brand-logo" src={agroBloqueLogo} alt="AgroBloque" /><div><small>Configuración inicial</small></div>{preview && <b>Demostración</b>}</header>
       <section className="onboarding-card">
         <div className="onboarding-progress" aria-label={`Paso ${step + 1} de 2`}><span className="active" /><span className={step === 1 ? 'active' : ''} /></div>
         {step === 0 ? <div className="onboarding-welcome">
