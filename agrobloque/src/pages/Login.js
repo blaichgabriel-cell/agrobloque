@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { clearLocalAuth, supabase } from '../lib/supabase'
-import agroBloqueLogo from '../assets/agrobloque-logo-oficial.png'
+import BrandLogo from '../components/BrandLogo'
 
 function AgroBloqueLogo({ compact = false, light = false }) {
   return (
     <div className={`login-brand ${compact ? 'login-brand-compact' : ''} ${light ? 'is-light' : ''}`}>
-      <img className="login-brand-logo" src={agroBloqueLogo} alt="AgroBloque" />
+      <BrandLogo className="login-brand-logo" tone={light ? 'light' : 'auto'} />
       {!compact && <div className="login-brand-tag">Gestión agrícola simple y completa</div>}
     </div>
   )

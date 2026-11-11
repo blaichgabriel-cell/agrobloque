@@ -12,7 +12,7 @@ import { textoErrorProfesional } from './lib/errors'
 import { Toaster } from 'sonner'
 import TaskNotifications from './components/TaskNotifications'
 import SheetGestures from './components/SheetGestures'
-import agroBloqueLogo from './assets/agrobloque-logo-oficial.png'
+import BrandLogo from './components/BrandLogo'
 import { RoleContext } from './lib/RoleContext'
 
 const Mapa = lazy(() => import('./pages/MapaProfesional'))
@@ -54,7 +54,7 @@ function StartupScreen() {
   return <div className="ag-startup" role="status" aria-live="polite" aria-label="Abriendo AgroBloque">
     <div className="ag-startup-glow" aria-hidden="true" />
     <div className="ag-startup-brand">
-      <img className="ag-startup-logo" src={agroBloqueLogo} alt="AgroBloque" />
+      <BrandLogo className="ag-startup-logo" />
     </div>
     <div className="ag-startup-progress" aria-hidden="true"><span /></div>
     <p>Preparando tu campo…</p>
@@ -166,30 +166,58 @@ function ScrollToTop() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const appScroll = document.querySelector('[data-app-scroll]')
+    // El contenedor de scroll se busca cada vez: en la primera pantalla tras abrir la app todavía no existe
+    // cuando se ejecuta este efecto.
+    const buscarContenedor = () => document.querySelector('[data-app-scroll]')
     const routeKey = `${location.pathname}${location.search}`
     const savedPosition = navigationType === 'POP' ? scrollPositions.get(routeKey) : null
     const target = Number.isFinite(savedPosition) ? savedPosition : 0
+    const readPosition = () => { const contenedor = buscarContenedor(); return contenedor ? contenedor.scrollTop : (window.scrollY || 0) }
     const applyScroll = () => {
+      const contenedor = buscarContenedor()
       window.scrollTo({ top: target, left: 0, behavior: 'auto' })
       document.documentElement.scrollTop = target
       document.body.scrollTop = target
-      if (appScroll) appScroll.scrollTo({ top: target, left: 0, behavior: 'auto' })
+      if (contenedor) contenedor.scrollTo({ top: target, left: 0, behavior: 'auto' })
     }
+
+    // Al volver a una pantalla (por ejemplo, de la ficha de un bloque a la lista de bloques) la lista aún
+    // se está cargando y es corta: el navegador recorta el scroll. Por eso la posición guardada se vuelve
+    // a aplicar hasta que el contenido sea lo bastante alto, o hasta que la persona mueva la pantalla.
+    let restaurando = target > 0
+    const dejarDeRestaurar = () => { restaurando = false }
+    const aplicarHastaAlcanzar = () => { if (restaurando && Math.abs(readPosition() - target) > 1) applyScroll() }
 
     applyScroll()
     const frame = window.requestAnimationFrame(applyScroll)
-    const timers = (target > 0 ? [80, 180, 360, 700] : [80]).map(delay => window.setTimeout(applyScroll, delay))
-    const rememberPosition = () => scrollPositions.set(routeKey, appScroll?.scrollTop ?? window.scrollY ?? 0)
-    appScroll?.addEventListener('scroll', rememberPosition, { passive:true })
-    window.addEventListener('scroll', rememberPosition, { passive:true })
+    const timers = [80].map(delay => window.setTimeout(applyScroll, delay))
+    const intervalo = target > 0 ? window.setInterval(aplicarHastaAlcanzar, 60) : null
+    const limite = target > 0 ? window.setTimeout(() => { restaurando = false; window.clearInterval(intervalo) }, 4000) : null
+
+    // Solo se guarda la posición mientras la ruta sigue siendo esta: así el recorte del scroll al cambiar
+    // a una pantalla más corta (o a la de carga) no pisa la posición buena.
+    // El evento scroll no sube por el árbol, pero sí se puede capturar en el documento: así se oye tanto el
+    // scroll de la página como el del contenedor principal, aunque este aparezca después. Los scrolls de
+    // tablas o diálogos internos se ignoran.
+    const rememberPosition = evento => {
+      if (restaurando) return
+      const origen = evento?.target
+      const esPrincipal = !origen || origen === document || (origen instanceof Element && origen.hasAttribute('data-app-scroll'))
+      if (!esPrincipal) return
+      if (`${window.location.pathname}${window.location.search}` !== routeKey) return
+      scrollPositions.set(routeKey, readPosition())
+    }
+    document.addEventListener('scroll', rememberPosition, { passive:true, capture:true })
+    const eventosDeUsuario = ['wheel', 'touchstart', 'pointerdown', 'keydown']
+    eventosDeUsuario.forEach(nombre => window.addEventListener(nombre, dejarDeRestaurar, { passive:true, capture:true }))
 
     return () => {
-      rememberPosition()
-      appScroll?.removeEventListener('scroll', rememberPosition)
-      window.removeEventListener('scroll', rememberPosition)
+      document.removeEventListener('scroll', rememberPosition, { capture:true })
+      eventosDeUsuario.forEach(nombre => window.removeEventListener(nombre, dejarDeRestaurar, { capture:true }))
       window.cancelAnimationFrame(frame)
       timers.forEach(timer => window.clearTimeout(timer))
+      if (intervalo) window.clearInterval(intervalo)
+      if (limite) window.clearTimeout(limite)
     }
   }, [location.pathname, location.search, navigationType])
   return null
@@ -228,7 +256,7 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
     { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/rentabilidad', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
   ]
   return <aside className="ag-sidebar" aria-label="Navegación principal">
-    <div className={`ag-brand ${organization.logo_url ? '' : 'uses-official-logo'}`}><span className={`ag-brand-mark ${organization.logo_url ? 'has-logo' : 'has-official-logo'}`} aria-hidden="true"><img src={organization.logo_url || agroBloqueLogo} alt="" /></span><div><strong title={organization.nombre}>{organization.nombre || 'AgroBloque'}</strong><small>Gestión agrícola</small></div></div>
+    <div className={`ag-brand ${organization.logo_url ? '' : 'uses-official-logo'}`}><span className={`ag-brand-mark ${organization.logo_url ? 'has-logo' : 'has-official-logo'}`} aria-hidden="true">{organization.logo_url ? <img src={organization.logo_url} alt="" /> : <BrandLogo alt="" />}</span><div><strong title={organization.nombre}>{organization.nombre || 'AgroBloque'}</strong><small>Gestión agrícola</small></div></div>
     <nav className="ag-sidebar-nav">{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone={toneFromPath(tab.path)} aria-hidden="true"><MenuIcon icon={tab.icon} size={17} color="currentColor" /></span><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>

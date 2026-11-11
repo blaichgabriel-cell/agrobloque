@@ -40,7 +40,7 @@ p { overflow-wrap:anywhere; }
 .ag-brand-mark { width:40px; height:40px; flex:0 0 40px; display:grid; place-items:center; border-radius:13px; background:var(--forest-800); color:#fff; box-shadow:0 6px 16px rgba(15,57,35,.2); }
 .ag-brand-mark i { font-size:21px; }
 .ag-brand.uses-official-logo { display:grid; grid-template-columns:1fr; gap:7px; padding:0 8px 16px; }
-.ag-brand.uses-official-logo .ag-brand-mark.has-official-logo { width:100%; height:86px; display:block; overflow:hidden; border:1px solid rgba(15,41,30,.08); border-radius:14px; background:#fff; box-shadow:0 7px 18px rgba(15,41,30,.07); }
+.ag-brand.uses-official-logo .ag-brand-mark.has-official-logo { width:100%; height:84px; display:block; overflow:visible; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .ag-brand.uses-official-logo .ag-brand-mark.has-official-logo img { width:100%; height:100%; display:block; object-fit:contain; object-position:center; }
 .ag-brand.uses-official-logo>div:last-child { display:flex; align-items:baseline; justify-content:center; gap:7px; min-width:0; }
 .ag-brand.uses-official-logo strong { max-width:145px; font-size:13px; }
@@ -196,7 +196,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search
 .ag-startup { position:relative; min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; background:var(--canvas); color:var(--ink); }
 .ag-startup-glow { position:absolute; width:min(68vw,760px); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,rgba(122,168,138,.2),transparent 68%); transform:translateY(-4%); }
 .ag-startup-brand { position:relative; display:flex; align-items:center; gap:15px; }
-.ag-startup-logo { display:block; width:190px; height:94px; object-fit:cover; border-radius:18px; box-shadow:0 12px 32px rgba(15,57,35,.12); }
+.ag-startup-logo { display:block; width:210px; height:auto; }
 .ag-startup-mark { width:58px; height:58px; display:grid; place-items:center; border-radius:17px; background:var(--forest-800); color:#fff; box-shadow:0 12px 32px rgba(15,57,35,.18); }
 .ag-startup-mark i { font-size:29px; }
 .ag-startup-brand strong { display:block; font-size:25px; line-height:1.05; letter-spacing:-.04em; }
@@ -688,8 +688,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search
 }
 .login-hero { position:relative; min-height:calc(100dvh - 80px); display:flex; flex-direction:column; justify-content:space-between; gap:32px; padding:12px 0; animation:bl-rise 700ms var(--bl-spring) both; }
 .login-brand { display:flex; align-items:center; gap:14px; }
-.login-brand-logo { display:block; width:240px; height:118px; object-fit:cover; border-radius:20px; background:#fff; box-shadow:0 14px 38px rgba(4,28,20,.18); }
-.login-brand-compact .login-brand-logo { width:154px; height:76px; border-radius:14px; box-shadow:0 8px 24px rgba(15,57,35,.12); }
+.login-brand-logo { display:block; width:clamp(190px,17vw,250px); height:auto; margin-left:-6px; filter:drop-shadow(0 10px 28px rgba(0,0,0,.38)); }
+.login-brand-compact .login-brand-logo { width:150px; margin-left:-6px; filter:none; }
 .login-brand.is-light { align-items:flex-start; flex-direction:column; gap:2px; }
 .login-brand.is-light .login-brand-tag { margin-left:8px; }
 .login-brand svg { flex:0 0 auto; filter:drop-shadow(0 8px 20px rgba(16,185,129,.35)); }
@@ -697,7 +697,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search
 .login-brand-tag { margin-top:6px; color:var(--text-tertiary); font-size:13px; }
 .login-brand.is-light .login-brand-name { color:#fff; }
 .login-brand.is-light .login-brand-tag { color:rgba(255,255,255,.72); }
-.onboarding-brand-logo { display:block; width:150px; height:74px; object-fit:cover; border-radius:14px; background:#fff; box-shadow:0 8px 22px rgba(15,57,35,.12); }
+.onboarding-brand-logo { display:block; width:150px; height:auto; }
 .login-copy { max-width:620px; margin:auto 0; }
 .login-copy h1 { margin:0 0 18px; color:#fff; font-family:var(--bl-font-display); font-size:clamp(42px,5vw,72px); font-weight:800; line-height:1; letter-spacing:-.045em; text-wrap:balance; }
 .login-copy h1 span { background:linear-gradient(100deg,#6EE7B7 0%,#67E8F9 60%,#C4B5FD 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
@@ -1976,3 +1976,8 @@ button.ag-close-btn.ag-close-btn.ag-close-btn:disabled { opacity:.5; cursor:not-
 @media (max-width:1099px) {
   .ag-app:has([data-ag-modal],.bl-overlay,.ag-work-dialog[open]) .ag-bottom-nav { visibility:hidden; pointer-events:none; }
 }
+
+/* LOGO con fondo transparente: versión de color sobre fondos claros y versión blanca en modo oscuro (src/components/BrandLogo.js). */
+img.bl-logo--sobre-oscuro { display:none !important; }
+[data-theme='dark'] img.bl-logo--sobre-claro { display:none !important; }
+[data-theme='dark'] img.bl-logo--sobre-oscuro { display:block !important; }
