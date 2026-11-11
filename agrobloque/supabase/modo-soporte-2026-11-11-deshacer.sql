@@ -109,15 +109,23 @@ security invoker
 set search_path = ''
 as $$
 declare
-  current_role text := private.current_app_role();
+  app_role_value text := private.current_app_role();
   module_actions jsonb := private.current_app_actions() -> module_key;
 begin
-  if current_role = 'admin' then return true; end if;
+  if app_role_value = 'admin' then return true; end if;
   if module_actions is null then
-    if current_role = 'operador' then return action_key in ('view', 'create', 'edit'); end if;
+    if app_role_value = 'operador' then return action_key in ('view', 'create', 'edit'); end if;
     return action_key = 'view';
   end if;
   return module_actions ? action_key;
+end;
+$$;
+
+do $$
+begin
+  if lower(pg_get_functiondef('public.app_can_action(text,text)'::regprocedure)) like '%current_role text%' then
+    raise exception 'Regresion detectada: app_can_action vuelve a declarar current_role text.';
+  end if;
 end;
 $$;
 
@@ -141,6 +149,7 @@ $$;
 drop function if exists public.soporte_contexto();
 drop function if exists public.plataforma_empresas();
 drop function if exists public.soporte_solicitar(uuid, text);
+drop function if exists public.soporte_cancelar(uuid);
 drop function if exists public.soporte_responder(uuid, boolean, integer);
 drop function if exists public.soporte_entrar(uuid);
 drop function if exists public.soporte_salir();

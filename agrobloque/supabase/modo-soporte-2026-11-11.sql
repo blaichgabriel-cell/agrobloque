@@ -12,7 +12,8 @@
 
 begin;
 
-create extension if not exists btree_gist;
+create schema if not exists extensions;
+create extension if not exists btree_gist with schema extensions;
 
 create table if not exists public.soporte_accesos (
   id uuid primary key default gen_random_uuid(),
@@ -21,19 +22,35 @@ create table if not exists public.soporte_accesos (
   aprobado_por uuid references auth.users(id) on delete restrict,
   motivo text not null check (char_length(trim(motivo)) between 5 and 1000),
   modo text not null default 'solo_lectura' check (modo = 'solo_lectura'),
-  estado text not null default 'pendiente' check (estado in ('pendiente', 'aprobado', 'rechazado', 'revocado')),
+  estado text not null default 'pendiente' check (estado in ('pendiente', 'aprobado', 'rechazado', 'revocado', 'cancelado')),
   solicitado_en timestamptz not null default now(),
   aprobado_en timestamptz,
   expira_en timestamptz,
   rechazado_en timestamptz,
+  cancelado_en timestamptz,
   revocado_en timestamptz,
   revocado_por uuid references auth.users(id) on delete restrict,
   constraint soporte_aprobacion_coherente check (
     (estado = 'pendiente' and aprobado_en is null and expira_en is null and rechazado_en is null and revocado_en is null)
     or (estado = 'aprobado' and aprobado_por is not null and aprobado_en is not null and expira_en > aprobado_en and rechazado_en is null)
-    or (estado = 'rechazado' and rechazado_en is not null and aprobado_en is null and expira_en is null)
+    or (estado = 'rechazado' and rechazado_en is not null and aprobado_en is null and expira_en is null and cancelado_en is null)
+    or (estado = 'cancelado' and cancelado_en is not null and aprobado_en is null and expira_en is null and rechazado_en is null)
     or (estado = 'revocado' and aprobado_por is not null and aprobado_en is not null and expira_en is not null and revocado_en is not null)
   )
+);
+
+-- Mantiene la migracion idempotente si una revision anterior creo la tabla.
+alter table public.soporte_accesos add column if not exists cancelado_en timestamptz;
+alter table public.soporte_accesos drop constraint if exists soporte_accesos_estado_check;
+alter table public.soporte_accesos add constraint soporte_accesos_estado_check
+  check (estado in ('pendiente', 'aprobado', 'rechazado', 'revocado', 'cancelado'));
+alter table public.soporte_accesos drop constraint if exists soporte_aprobacion_coherente;
+alter table public.soporte_accesos add constraint soporte_aprobacion_coherente check (
+  (estado = 'pendiente' and aprobado_en is null and expira_en is null and rechazado_en is null and revocado_en is null and cancelado_en is null)
+  or (estado = 'aprobado' and aprobado_por is not null and aprobado_en is not null and expira_en > aprobado_en and rechazado_en is null and cancelado_en is null)
+  or (estado = 'rechazado' and rechazado_en is not null and aprobado_en is null and expira_en is null and cancelado_en is null)
+  or (estado = 'cancelado' and cancelado_en is not null and aprobado_en is null and expira_en is null and rechazado_en is null)
+  or (estado = 'revocado' and aprobado_por is not null and aprobado_en is not null and expira_en is not null and revocado_en is not null and cancelado_en is null)
 );
 
 create unique index if not exists soporte_una_solicitud_pendiente_idx
@@ -71,11 +88,15 @@ create table if not exists public.soporte_auditoria (
   acceso_id uuid references public.soporte_accesos(id) on delete restrict,
   organizacion_id uuid not null references public.organizaciones(id) on delete restrict,
   actor_id uuid not null references auth.users(id) on delete restrict,
-  evento text not null check (evento in ('solicitada', 'aprobada', 'rechazada', 'inicio', 'fin', 'revocada')),
+  evento text not null check (evento in ('solicitada', 'aprobada', 'rechazada', 'cancelada', 'inicio', 'fin', 'revocada')),
   motivo text,
   detalle jsonb not null default '{}'::jsonb,
   ocurrido_en timestamptz not null default now()
 );
+
+alter table public.soporte_auditoria drop constraint if exists soporte_auditoria_evento_check;
+alter table public.soporte_auditoria add constraint soporte_auditoria_evento_check
+  check (evento in ('solicitada', 'aprobada', 'rechazada', 'cancelada', 'inicio', 'fin', 'revocada'));
 
 create index if not exists soporte_accesos_empresa_fecha_idx
   on public.soporte_accesos (organizacion_id, solicitado_en desc);
@@ -232,15 +253,15 @@ security invoker
 set search_path = ''
 as $$
 declare
-  current_role text := private.current_app_role();
+  app_role_value text := private.current_app_role();
   module_actions jsonb := private.current_app_actions() -> module_key;
 begin
   if (select private.support_mode_active()) then
     return action_key = 'view';
   end if;
-  if current_role = 'admin' then return true; end if;
+  if app_role_value = 'admin' then return true; end if;
   if module_actions is null then
-    if current_role = 'operador' then
+    if app_role_value = 'operador' then
       return action_key in ('view', 'create', 'edit');
     end if;
     return action_key = 'view';
@@ -508,14 +529,51 @@ begin
   if not public.is_platform_admin() then
     raise exception 'Sin permiso.' using errcode = '42501';
   end if;
+  if not exists (select 1 from public.organizaciones o where o.id = p_organizacion_id and o.activo) then
+    raise exception 'La empresa no existe o no esta activa.' using errcode = '22023';
+  end if;
   if p_organizacion_id = (select private.current_organization_id()) then
     raise exception 'No se solicita soporte para la empresa propia.' using errcode = '22023';
+  end if;
+  if exists (
+    select 1 from public.soporte_accesos a
+    where a.organizacion_id = p_organizacion_id
+      and a.solicitado_por = (select auth.uid())
+      and a.estado = 'pendiente'
+  ) then
+    raise exception 'Ya tienes una solicitud de soporte pendiente para esta empresa.' using errcode = 'P0001';
   end if;
   insert into public.soporte_accesos (organizacion_id, solicitado_por, motivo)
   values (p_organizacion_id, (select auth.uid()), trim(p_motivo))
   returning id into new_id;
   perform private.soporte_registrar(new_id, p_organizacion_id, 'solicitada', trim(p_motivo));
   return new_id;
+exception
+  when unique_violation then
+    raise exception 'Ya tienes una solicitud de soporte pendiente para esta empresa.' using errcode = 'P0001';
+end;
+$$;
+
+create or replace function public.soporte_cancelar(p_acceso_id uuid)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  access_row public.soporte_accesos%rowtype;
+begin
+  if not public.is_platform_admin() then raise exception 'Sin permiso.' using errcode = '42501'; end if;
+  select * into access_row from public.soporte_accesos where id = p_acceso_id for update;
+  if access_row.id is null or access_row.solicitado_por <> (select auth.uid()) then
+    raise exception 'La solicitud no pertenece al usuario actual.' using errcode = '42501';
+  end if;
+  if access_row.estado <> 'pendiente' then
+    raise exception 'Solo se puede cancelar una solicitud pendiente.' using errcode = '22023';
+  end if;
+  update public.soporte_accesos set estado = 'cancelado', cancelado_en = now() where id = p_acceso_id;
+  perform private.soporte_registrar(p_acceso_id, access_row.organizacion_id, 'cancelada', access_row.motivo);
 end;
 $$;
 
@@ -705,6 +763,7 @@ begin
     'public.soporte_contexto()'::regprocedure,
     'public.plataforma_empresas()'::regprocedure,
     'public.soporte_solicitar(uuid,text)'::regprocedure,
+    'public.soporte_cancelar(uuid)'::regprocedure,
     'public.soporte_responder(uuid,boolean,integer)'::regprocedure,
     'public.soporte_entrar(uuid)'::regprocedure,
     'public.soporte_salir()'::regprocedure,
@@ -716,6 +775,16 @@ begin
     execute format('revoke all on function %s from public, anon', fn);
     execute format('grant execute on function %s to authenticated', fn);
   end loop;
+end;
+$$;
+
+-- Prueba anti-regresion del error corregido el 2026-11-04. Debe abortar la migracion
+-- si alguien vuelve a declarar la variable reservada `current_role text`.
+do $$
+begin
+  if lower(pg_get_functiondef('public.app_can_action(text,text)'::regprocedure)) like '%current_role text%' then
+    raise exception 'Regresion detectada: app_can_action vuelve a declarar current_role text.';
+  end if;
 end;
 $$;
 
