@@ -1,0 +1,8 @@
+{
+  "name": "agrobloque-respaldos",
+  "private": true,
+  "description": "Scripts de respaldo y restauracion de la base de AgroBloque (ver docs/respaldos-y-restauracion.md)",
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}

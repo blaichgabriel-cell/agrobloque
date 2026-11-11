@@ -4,3 +4,9 @@ node_modules/
 .env.*.local
 build/
 .vercel/
+
+# Respaldos: nunca se suben (llevan datos reales y contrasenas cifradas de los usuarios)
+respaldo-*/
+volcado-*/
+Respaldos AgroBloque/
+*.dump
