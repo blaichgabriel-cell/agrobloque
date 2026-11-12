@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { leerFacturaPdf } from '../lib/facturaPdf'
+import { useCan } from '../lib/RoleContext'
 
 const hoy = () => new Date().toISOString().slice(0, 10)
 const fmtGs = value => Math.round(Number(value) || 0).toLocaleString('es-PY')
@@ -14,6 +15,7 @@ const inicial = {
 }
 
 export default function FacturasRecibidas({ role }) {
+  const can = useCan('contabilidad')
   const navigate = useNavigate()
   const inputRef = useRef(null)
   const [facturas, setFacturas] = useState([])
@@ -180,9 +182,9 @@ export default function FacturasRecibidas({ role }) {
             <h1 className="ui-fc3fb4" style={{ fontSize:isDesktop ? 25 : 21 }}>Facturas recibidas</h1>
           </div>
         </div>
-        <button onClick={() => inputRef.current?.click()} style={primaryButton}>
+        {can.create && <button onClick={() => inputRef.current?.click()} style={primaryButton}>
           <i className="ti ti-upload" aria-hidden="true" /> <span>{isDesktop ? 'Subir factura PDF' : 'Subir PDF'}</span>
-        </button>
+        </button>}
         <input ref={inputRef} type="file" accept="application/pdf,.pdf" onChange={elegirArchivo} hidden />
       </header>
 
@@ -227,7 +229,7 @@ export default function FacturasRecibidas({ role }) {
                 <strong className="ui-c1859e">{factura.moneda === 'USD' ? 'USD' : 'Gs.'} {fmtGs(factura.total)}</strong>
                 <div className="ui-91294d">
                   <button onClick={() => abrirPdf(factura)} style={miniButton} title="Ver PDF"><i className="ti ti-eye" /></button>
-                  {factura.estado === 'pendiente' && <>
+                  {factura.estado === 'pendiente' && can.edit && <>
                     <button className="ui-d1059a" onClick={() => rechazar(factura)} style={{ ...miniButton }} title="Rechazar"><i className="ti ti-x" /></button>
                     <button className="ui-52184b" onClick={() => aprobar(factura)} style={{ ...miniButton }} title="Aprobar"><i className="ti ti-check" /></button>
                   </>}

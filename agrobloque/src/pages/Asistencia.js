@@ -2,6 +2,7 @@ import { Modal } from '../components/UI'
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
+import { useCan } from '../lib/RoleContext'
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado']
@@ -37,6 +38,7 @@ const getCampoGuardado = () => {
 }
 
 export default function Asistencia() {
+  const can = useCan('asistencia')
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [campoActivo, setCampoActivo] = useState(null)
   const [campos, setCampos] = useState([])
@@ -357,7 +359,7 @@ export default function Asistencia() {
         <div className="ui-476525">Control semanal</div>
         <div className="ui-d73a43">
           <div className="ag-page-title ui-136b85">Asistencia y pagos</div>
-          <button className="ag-small-action ui-5a0a19" onClick={() => setModalPersonal(true)} disabled={!campoActivo}>+ Personal</button>
+          {can.create && <button className="ag-small-action ui-5a0a19" onClick={() => setModalPersonal(true)} disabled={!campoActivo}>+ Personal</button>}
         </div>
         {error && <div className="ui-d6d959">{error}</div>}
         <div className="ui-ed8328">
@@ -389,6 +391,7 @@ export default function Asistencia() {
                     type="text" inputMode="numeric"
                     value={getMonto(op.id, diasFechas[i])}
                     onChange={e => handleChange(op.id, diasFechas[i], i, e.target.value)}
+                    disabled={!can.edit}
                     placeholder="0"
                    
                   /></label>
@@ -399,7 +402,7 @@ export default function Asistencia() {
               <button className="ui-59fc42" onClick={() => setModalHistorial(op)}>
                 Adelantos pendientes: <span className="ui-e634e6" style={{ color: getTotalAdelantos(op.id) > 0 ? '#c84040' : 'var(--text-secondary)' }}>Gs. {fmtGs(getTotalAdelantos(op.id))}</span> →
               </button>
-              <button className="ag-small-action ui-d51170" onClick={() => setModalAdelanto(op)}>+ Adelanto</button>
+              {can.create && <button className="ag-small-action ui-d51170" onClick={() => setModalAdelanto(op)}>+ Adelanto</button>}
             </div>
           </div>
         ))}
@@ -415,9 +418,9 @@ export default function Asistencia() {
               <div className="ui-62e15c">Trabajos realizados</div>
               <div className="ui-a8f171">Bitacora diaria vinculada a la asistencia</div>
             </div>
-            <button className="ag-small-action ui-46b168" onClick={guardarNotaDia} disabled={savingNota}>
+            {can.edit && <button className="ag-small-action ui-46b168" onClick={guardarNotaDia} disabled={savingNota}>
               {savingNota ? 'Guardando...' : 'Guardar'}
-            </button>
+            </button>}
           </div>
           <div className="ui-3ea765">
             {DIAS.map((dia, i) => {
@@ -434,6 +437,7 @@ export default function Asistencia() {
           <textarea className="ui-5452f4"
             value={notasDia[fechaNotaActual]?.trabajos || ''}
             onChange={e => actualizarNotaDia(e.target.value)}
+            disabled={!can.edit}
             placeholder="Ej: limpieza de canteros, riego, cosecha parcial, preparación de sustrato..."
            
           />
@@ -487,11 +491,11 @@ export default function Asistencia() {
                 </div>
                 {esAdelantoPagado(a) && <div className="ui-e512bf">{getFechaPagoAdelanto(a) ? `Pagado: ${getFechaPagoAdelanto(a)}` : 'Pagado'}</div>}
                 {limpiarMarcaPagado(a.descripcion || '') && <div className="ui-9546b4">{limpiarMarcaPagado(a.descripcion || '')}</div>}
-                <div className="ui-27070b">
+                {can.edit && <div className="ui-27070b">
                   <button className="ag-small-action ui-0365b4" onClick={() => abrirEditarAdelanto(a)}>Editar</button>
                   <button className="ag-small-action ui-6e0c7e" onClick={() => marcarPagado(a)}>✓ Marcar pagado</button>
                   <button className="ag-small-action ui-14c146" onClick={() => eliminarAdelanto(a.id)}>Eliminar</button>
-                </div>
+                </div>}
               </div>
               ))}
               {getAdelantosPagadosOperario(modalHistorial.id).length > 0 && <div className="ui-ef7e2c">Historial de pagados</div>}

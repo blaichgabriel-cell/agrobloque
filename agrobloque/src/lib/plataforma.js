@@ -89,10 +89,11 @@ export async function listarEmpresas() {
   return { demo: false, empresas: Array.isArray(data) ? data : [] }
 }
 
-// Historial de soporte de los administradores generales. La base todavía no lo entrega en modo real.
 export async function historialPlataforma() {
-  if (!demo.activo) return []
-  return demo.historial.map(h => ({ ...h, empresa: h.empresa_nombre || accesoDemo(h.acceso_id)?.nombre || '' }))
+  if (demo.activo) return demo.historial.map(h => ({ ...h, empresa: h.empresa_nombre || accesoDemo(h.acceso_id)?.nombre || '' }))
+  const { data, error } = await supabase.rpc('plataforma_historial_soporte')
+  if (error) throw new Error(error.message || 'No se pudo cargar el historial de soporte.')
+  return Array.isArray(data) ? data : []
 }
 
 // Contexto de inmersión: si hay una empresa abierta en modo soporte (o en demostración).
@@ -117,6 +118,15 @@ export async function solicitarSoporte(organizacionId, motivo) {
   }
   const { data, error } = await supabase.rpc('soporte_solicitar', { p_organizacion_id: organizacionId, p_motivo: texto })
   if (error) throw new Error(error.message)
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData?.session?.access_token
+  if (token) {
+    fetch('/api/notificar-solicitud-soporte', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ acceso_id: data }),
+    }).catch(errorCorreo => console.warn('La solicitud se creó, pero no se pudo notificar por correo.', errorCorreo))
+  }
   return data
 }
 

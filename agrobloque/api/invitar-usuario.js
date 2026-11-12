@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js')
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://utdlehbifdfiliozxbif.supabase.co'
-const anonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZGxlaGJpZmRmaWxpb3p4YmlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODI0ODgsImV4cCI6MjA5NDQ1ODQ4OH0.VX99wvuZ258SDOcEG-ijFYo64RFAlWoKpsEU7C4R92U'
+const anonKey = process.env.REACT_APP_SUPABASE_ANON_KEY
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const ROLES_VALIDOS = ['admin', 'operador', 'lectura']
@@ -34,6 +34,11 @@ module.exports = async function handler(req, res) {
 
     const { data: userData, error: userError } = await userClient.auth.getUser()
     if (userError || !userData?.user?.email) throw new Error('Sesión inválida.')
+
+    const { data: soporteContexto, error: soporteError } = await userClient.rpc('soporte_contexto')
+    const funcionSoporteAusente = soporteError && (soporteError.code === 'PGRST202' || soporteError.code === '42883')
+    if (soporteError && !funcionSoporteAusente) throw new Error('No se pudo verificar el modo soporte. Inténtalo nuevamente.')
+    if (soporteContexto?.activo) throw new Error('No se pueden invitar ni modificar usuarios durante el modo soporte.')
 
     const adminEmail = userData.user.email.toLowerCase()
     const { data: adminRole } = await serviceClient
