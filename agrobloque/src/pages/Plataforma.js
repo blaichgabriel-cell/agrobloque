@@ -3,7 +3,7 @@ import { Modal, Notice } from '../components/UI'
 import { SoporteCliente, useAhora } from '../components/Soporte'
 import {
   apiClienteDemo, cancelarSolicitud, contextoSoporte, crearEmpresa, enModoDemo, entrarSoporte, fechaLarga,
-  horaCorta, listarEmpresas, salirSoporte, solicitarSoporte, suscribirPlataforma, textoHace, textoRestante,
+  horaCorta, listarEmpresas, reenviarInvitacion, salirSoporte, solicitarSoporte, suscribirPlataforma, textoHace, textoRestante,
 } from '../lib/plataforma'
 
 const numero = valor => Number(valor || 0).toLocaleString('es-PY')
@@ -31,7 +31,7 @@ function Kpi({ icono, valor, etiqueta, tono }) {
   return <div className="pl-kpi" data-tone={tono}><i className={`ti ${icono}`} aria-hidden="true" /><div><strong className="numeric-data">{valor}</strong><span>{etiqueta}</span></div></div>
 }
 
-function TarjetaEmpresa({ empresa, adentro, ocupado, onSolicitar, onCancelar, onEntrar, onSalir }) {
+function TarjetaEmpresa({ empresa, adentro, ocupado, onSolicitar, onCancelar, onEntrar, onSalir, onReenviar }) {
   const estado = estadoVisible(empresa.soporte)
   const info = ESTADOS[estado] || ESTADOS.sin_acceso
   const s = empresa.soporte || {}
@@ -59,6 +59,7 @@ function TarjetaEmpresa({ empresa, adentro, ocupado, onSolicitar, onCancelar, on
         : <button type="button" className="bl-btn-solid pl-entrar" disabled={ocupado} onClick={() => onEntrar(s.acceso_id)}><i className="ti ti-eye-shield" aria-hidden="true" />Entrar como soporte</button>)}
       {estado === 'pendiente' && <button type="button" className="bl-btn bl-btn--ghost" disabled={ocupado} onClick={() => onCancelar(s.acceso_id)}>Cancelar solicitud</button>}
       {!['aprobado', 'pendiente'].includes(estado) && <button type="button" className="bl-btn bl-btn--ghost" disabled={ocupado} onClick={() => onSolicitar(empresa)}><i className="ti ti-key" aria-hidden="true" />Solicitar acceso</button>}
+      {empresa.admin_email && <button type="button" className="bl-icon-btn" disabled={ocupado} aria-label={`Reenviar la invitación a ${empresa.admin_email}`} title="Reenviar invitación (crear contraseña)" onClick={() => onReenviar(empresa)}><i className="ti ti-mail-forward" aria-hidden="true" /></button>}
     </div>
   </article>
 }
@@ -124,6 +125,12 @@ export default function Plataforma() {
   }
   const salir = async () => { await ejecutar(salirSoporte, 'Saliste del modo soporte.'); if (!enModoDemo()) window.location.assign('/plataforma') }
 
+  const reenviarA = async (empresaOCorreo) => {
+    const correo = typeof empresaOCorreo === 'string' ? empresaOCorreo : empresaOCorreo.admin_email
+    const ok = await ejecutar(async () => { await reenviarInvitacion(correo); return true }, `Enviamos un enlace nuevo a ${correo}. Debe abrirlo una sola vez y crear su contraseña.`)
+    if (ok && creando) setCreando(false)
+  }
+
   const crear = async () => {
     const nombre = formEmpresa.nombre.trim(), correo = formEmpresa.correo.trim().toLowerCase()
     if (nombre.length < 2) { setError('Escribe el nombre de la empresa.'); return }
@@ -135,7 +142,7 @@ export default function Plataforma() {
   }
 
   const tarjeta = e => <TarjetaEmpresa key={e.id} empresa={e} ocupado={ocupado} adentro={contexto.activo && contexto.organizacion_id === e.id}
-    onSolicitar={emp => { setError(''); setMotivo(''); setSolicitando(emp) }} onCancelar={cancelar} onEntrar={entrar} onSalir={salir} />
+    onSolicitar={emp => { setError(''); setMotivo(''); setSolicitando(emp) }} onCancelar={cancelar} onEntrar={entrar} onSalir={salir} onReenviar={reenviarA} />
 
   return <div className="pl-page">
     <header className="pl-hero">
@@ -228,6 +235,7 @@ export default function Plataforma() {
           <li><i className="ti ti-mail" aria-hidden="true" />Un correo pertenece a una sola empresa.</li>
         </ul>
         <Notice tone="error">{error}</Notice>
+        {/pertenece/i.test(error) && correoValido(formEmpresa.correo.trim().toLowerCase()) && <button type="button" className="bl-btn bl-btn--ghost" disabled={ocupado} onClick={() => reenviarA(formEmpresa.correo.trim().toLowerCase())}><i className="ti ti-mail-forward" aria-hidden="true" />Reenviar el enlace a este correo</button>}
         <button type="button" className="bl-btn bl-btn--primary" disabled={ocupado} onClick={crear}>{ocupado ? 'Creando…' : 'Crear empresa y enviar invitación'}</button>
         <button type="button" className="bl-btn bl-btn--ghost" disabled={ocupado} onClick={() => setCreando(false)}>Cerrar</button>
       </div>

@@ -123,6 +123,15 @@ export async function crearEmpresa(nombre, ownerEmail) {
   return result
 }
 
+// Manda otra vez el correo para crear la contraseña (el mismo que usa «¿Olvidaste tu contraseña?»).
+export async function reenviarInvitacion(correo) {
+  const email = String(correo || '').trim().toLowerCase()
+  if (!email) throw new Error('Esta empresa no tiene un correo de administrador.')
+  if (demo.activo) return
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/?auth_action=set-password` })
+  if (error) throw new Error(/rate limit/i.test(error.message || '') ? 'Se alcanzó el límite de correos por hora. Espera un rato e inténtalo de nuevo.' : 'No se pudo enviar el correo. Verifica que el correo esté bien escrito.')
+}
+
 // ---------------------------------------------------------------------------------------------
 // Administrador de la empresa cliente: aprobar, rechazar y revocar
 // ---------------------------------------------------------------------------------------------

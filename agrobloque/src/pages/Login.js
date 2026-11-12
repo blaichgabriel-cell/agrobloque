@@ -2,6 +2,18 @@ import React, { useState } from 'react'
 import { clearLocalAuth, supabase } from '../lib/supabase'
 import BrandLogo from '../components/BrandLogo'
 
+// Traduce el motivo real por el que Supabase rechazó la contraseña nueva (antes solo se mostraba un aviso genérico).
+const motivoContrasena = e => {
+  const code = String(e?.code || '')
+  const msg = String(e?.message || '').toLowerCase()
+  if (code === 'same_password' || msg.includes('different from the old')) return { igual: true }
+  if (code === 'weak_password' || msg.includes('weak') || msg.includes('should contain')) return { texto: 'Esa contraseña es demasiado fácil de adivinar. Usa al menos 8 caracteres con letras y números.' }
+  if (code === 'over_request_rate_limit' || msg.includes('rate limit')) return { texto: 'Hiciste demasiados intentos seguidos. Espera unos minutos y vuelve a probar.' }
+  if (code === 'session_not_found' || code === 'refresh_token_not_found' || msg.includes('session') || msg.includes('jwt') || msg.includes('expired')) return { texto: 'Este enlace ya se usó o venció. Pide uno nuevo con «Primera vez o ¿olvidaste tu contraseña?» y ábrelo una sola vez.' }
+  if (msg.includes('fetch') || msg.includes('network')) return { texto: 'No se pudo conectar. Revisa tu internet e inténtalo de nuevo.' }
+  return { texto: `No se pudo guardar la contraseña (${e?.message || 'error desconocido'}). Si sigue fallando, pide un enlace nuevo.` }
+}
+
 function AgroBloqueLogo({ compact = false, light = false }) {
   return (
     <div className={`login-brand ${compact ? 'login-brand-compact' : ''} ${light ? 'is-light' : ''}`}>
@@ -72,9 +84,14 @@ export default function Login({ mode = 'login', session = null }) {
     setLoading(true)
     const { error: updateError } = await supabase.auth.updateUser({ password })
     if (updateError) {
-      setError('No se pudo guardar la contraseña. Solicita un enlace nuevo e intenta otra vez.')
-      setLoading(false)
-      return
+      console.error('No se pudo guardar la contraseña', updateError)
+      const motivo = motivoContrasena(updateError)
+      // Si la contraseña ya era esa, la cuenta está lista: se entra igual.
+      if (!motivo.igual) {
+        setError(motivo.texto)
+        setLoading(false)
+        return
+      }
     }
     window.location.replace('/')
   }
