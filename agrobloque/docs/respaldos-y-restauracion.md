@@ -54,6 +54,21 @@ Protecciones del restaurador: se niega a ejecutarse contra producción (`utdlehb
 - Supabase **impide borrar `storage.buckets` con SQL**. Para poder repetir la restauración, el bucket se carga en una tabla temporal y se inserta con `ON CONFLICT DO NOTHING`.
 - Las políticas del bucket de facturas (`storage.objects`) no entran en el volcado de `public`; `volcar.ps1` las exporta aparte (`4-politicas-storage.sql`).
 
+## Ensayar un SQL antes de producción
+Con el proyecto temporal restaurado, `scripts/respaldos/ensayar-sql.ps1` prueba un archivo SQL contra la copia sin riesgo. Se niega a correr contra producción.
+
+```powershell
+# 1) ENSAYO: ejecuta todo y lo deshace con rollback (no deja nada)
+powershell -ExecutionPolicy Bypass -File .ensayar-sql.ps1 -Archivo ....supabasemodo-soporte-2026-11-11.sql
+# 2) Aplicar de verdad en el temporal y correr las pruebas reales (pide escribir EJECUTAR)
+powershell -ExecutionPolicy Bypass -File .ensayar-sql.ps1 -Archivo ....supabasemodo-soporte-2026-11-11.sql -Real -ProbarDespues ....supabasepruebasmodo-soporte-real.sql
+# 3) Probar el deshacer, comprobando el estado justo antes del rollback
+powershell -ExecutionPolicy Bypass -File .ensayar-sql.ps1 -Archivo ....supabasemodo-soporte-2026-11-11-deshacer.sql -Comprobar ....supabasepruebasdeshacer-comprobaciones.sql
+```
+- Las pruebas de `supabase/pruebas/` no llevan correos ni claves: buscan a las personas por su rol y terminan siempre con rollback.
+- La cadena es la del **Session pooler** (no la conexión directa, que solo funciona por IPv6).
+- Para producción, este script no sirve: se aplica en el SQL Editor, con respaldo nuevo y aprobación expresa.
+
 ## Recuperar filas sueltas
 Para saber qué filas desaparecieron entre dos respaldos JSON:
 ```powershell
