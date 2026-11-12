@@ -11,7 +11,7 @@ const initialForm = organization => ({
   tipo: 'invernadero',
 })
 
-export default function Onboarding({ organization, preview = false, onComplete }) {
+export default function Onboarding({ organization, preview = false, onComplete, onExit }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(() => initialForm(organization))
@@ -116,6 +116,7 @@ export default function Onboarding({ organization, preview = false, onComplete }
           </div>
           <button className="onboarding-primary" onClick={() => setStep(1)}>Configurar mi espacio<i className="ti ti-arrow-right" /></button>
           {preview && <button className="onboarding-secondary" onClick={() => navigate('/configuracion')}>Salir de la demostración</button>}
+          {!preview && <button className="onboarding-secondary" onClick={onExit}>Cerrar sesión y usar otro correo</button>}
         </div> : <form className="onboarding-form" onSubmit={finish}>
           <div><span className="onboarding-eyebrow">DATOS INICIALES</span><h1>Empresa y primer campo</h1><p>Podrás cambiar estos datos y agregar más campos cuando quieras.</p></div>
           <div className="onboarding-fields">
@@ -128,6 +129,7 @@ export default function Onboarding({ organization, preview = false, onComplete }
           <div className="onboarding-note"><i className="ti ti-info-circle" /><span>Las secciones de producción, inventario, ventas, costos y personal comenzarán vacías.</span></div>
           {error && <div className="onboarding-error" role="alert"><i className="ti ti-alert-circle" />{error}</div>}
           <div className="onboarding-actions"><button type="button" className="onboarding-secondary" onClick={() => { setError(''); setStep(0) }}>Volver</button><button className="onboarding-primary" type="submit" disabled={saving}>{saving ? 'Preparando espacio…' : preview ? 'Ver resultado' : 'Crear mi espacio'}{!saving && <i className="ti ti-arrow-right" />}</button></div>
+          {!preview && <button type="button" className="onboarding-secondary" onClick={onExit} disabled={saving}>Cerrar sesión y usar otro correo</button>}
         </form>}
       </section>
       <footer className="onboarding-footer"><i className="ti ti-lock" />Espacio privado y protegido por empresa</footer>
