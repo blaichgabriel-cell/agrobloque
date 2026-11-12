@@ -600,7 +600,7 @@ export default function App() {
           <button onClick={() => forceLocalSignOut()}>Cerrar sesión</button>
         </div>
       ) : fieldsState === 'empty' && role.rol === 'admin' && organization?.id && !isPlatformAdmin ? (
-        <Onboarding organization={organization} onComplete={({ organization:nextOrganization, campo }) => { setOrganization(nextOrganization); setCampoActivo(campo); setFieldsState('ready') }}/>
+        <Onboarding organization={organization} onExit={() => forceLocalSignOut()} onComplete={({ organization:nextOrganization, campo }) => { setOrganization(nextOrganization); setCampoActivo(campo); setFieldsState('ready') }}/>
       ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} organization={organization} setOrganization={setOrganization} theme={theme} themeMode={themeMode} onThemeChange={setThemeMode} isPlatformAdmin={isPlatformAdmin} />}
     </BrowserRouter>
   )
