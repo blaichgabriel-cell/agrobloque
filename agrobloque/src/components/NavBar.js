@@ -28,14 +28,22 @@ const moreTabs = [
 ]
 
 
-export default function NavBar({ isGuest = false, role, isPlatformAdmin = false }) {
+// Modo Plataforma (administradores generales sin empresa abierta): solo las 4 vistas del panel.
+const plataformaTabs = [
+  { path: '/plataforma', icon: 'ti-building-community', label: 'Empresas' },
+  { path: '/plataforma/soporte', icon: 'ti-shield-check', label: 'Soporte' },
+  { path: '/plataforma/planes', icon: 'ti-credit-card', label: 'Planes' },
+  { path: '/plataforma/equipo', icon: 'ti-shield-lock', label: 'Equipo' },
+]
+
+export default function NavBar({ isGuest = false, role, modo = 'campo' }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [showMore, setShowMore] = useState(false)
   const [work, setWork] = useState(false)
   const tabs = filterTabsByRole(moreTabs, role, isGuest)
   const main = tabs.filter(tab => ['/mapa', '/inventario'].includes(tab.path))
-  const more = [...tabs.filter(tab => !['/mapa', '/inventario'].includes(tab.path)), ...(isPlatformAdmin ? [{ path: '/plataforma', icon: 'ti-building-community', label: 'Panel AgroBloque' }] : [])]
+  const more = tabs.filter(tab => !['/mapa', '/inventario'].includes(tab.path))
   const canWork = availableWork(role, isGuest).length > 0
   useEffect(() => { setShowMore(false) }, [location.pathname])
   useEffect(() => {
@@ -46,6 +54,9 @@ export default function NavBar({ isGuest = false, role, isPlatformAdmin = false 
   }, [showMore])
   const go = path => { setShowMore(false); navigate(path) }
   const button = tab => <button key={tab.path} aria-current={location.pathname === tab.path || (tab.path === '/mapa' && location.pathname.startsWith('/bloque/')) ? 'page' : undefined} onClick={() => go(tab.path)}><i className={'ti ' + tab.icon} aria-hidden="true" /><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span></button>
+  if (modo === 'plataforma') return <nav className="ag-bottom-nav ag-bottom-nav--plataforma sb-anim" aria-label="Navegación de la plataforma">
+    {plataformaTabs.map(tab => <button key={tab.path} aria-current={location.pathname === tab.path ? 'page' : undefined} onClick={() => navigate(tab.path)}><i className={'ti ' + tab.icon} aria-hidden="true" /><span>{tab.label}</span></button>)}
+  </nav>
   return <>
     {showMore && <button className="ag-more-backdrop" aria-label="Cerrar menú" onClick={() => setShowMore(false)} />}
     {showMore && <section id="ag-more-menu" className="ag-more-menu" aria-label="Más secciones"><h2>Tu espacio de trabajo</h2><div>{more.map(tab => <button key={tab.path} aria-current={location.pathname === tab.path ? 'page' : undefined} onClick={() => go(tab.path)}><i className={'ti ' + (tab.icon === 'vivero-icon' ? 'ti-seeding' : tab.icon)} aria-hidden="true" /><span>{tab.label}</span></button>)}</div></section>}

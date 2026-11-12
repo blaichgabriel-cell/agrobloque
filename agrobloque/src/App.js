@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { authAction, forceLocalSignOut, guestToken, supabase } from './lib/supabase'
 import { Skeleton } from './components/UI'
@@ -14,13 +14,17 @@ import TaskNotifications from './components/TaskNotifications'
 import SheetGestures from './components/SheetGestures'
 import BrandLogo from './components/BrandLogo'
 import { RoleContext } from './lib/RoleContext'
-import { SoporteBarras } from './components/Soporte'
+import { SoporteBarras, useContextoSoporte, useVolverAlPanel } from './components/Soporte'
+import DemoInmersion from './components/DemoInmersion'
 import { esAdministradorGeneral } from './lib/plataforma'
 
 const Mapa = lazy(() => import('./pages/MapaProfesional'))
 const FichaBloque = lazy(() => import('./pages/FichaBloque'))
 const Configuracion = lazy(() => import('./pages/Configuracion'))
 const Plataforma = lazy(() => import('./pages/Plataforma'))
+const PlataformaSoporte = lazy(() => import('./pages/PlataformaSoporte'))
+const PlataformaPlanes = lazy(() => import('./pages/PlataformaPlanes'))
+const PlataformaEquipo = lazy(() => import('./pages/PlataformaEquipo'))
 const Agenda = lazy(() => import('./pages/Agenda'))
 const Calendario = lazy(() => import('./pages/Calendario'))
 const Asistencia = lazy(() => import('./pages/Asistencia'))
@@ -239,12 +243,27 @@ function ConnectionStatus() {
   return <div className="ag-offline"><i className="ti ti-wifi-off" /> Sin conexión. No cierres la aplicación hasta recuperar internet.</div>
 }
 
-function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZATION, isPlatformAdmin = false }) {
+// Modo Plataforma: lo único que ve un administrador general mientras no ha entrado a ninguna empresa.
+const PLATAFORMA_ITEMS = [
+  { path:'/plataforma', end:true, icon:'ti-building-community', label:'Empresas y Campos' },
+  { path:'/plataforma/soporte', icon:'ti-shield-check', label:'Accesos de Soporte' },
+  { path:'/plataforma/planes', icon:'ti-credit-card', label:'Planes y Estado comercial' },
+  { path:'/plataforma/equipo', icon:'ti-shield-lock', label:'Equipo Super Admin' },
+]
+
+function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZATION, modo = 'campo', contexto = { activo:false }, campoNombre = '' }) {
   const tabs = filterTabsByRole(allTabs, role, isGuest)
+  const { volver, ocupado: saliendo } = useVolverAlPanel()
+  // El cambio de modo anima el menú; la primera carga y los re-render normales no.
+  const modoPrevio = useRef(modo)
+  const cambioDeModo = modoPrevio.current !== modo
+  useEffect(() => { modoPrevio.current = modo }, [modo])
+  const marca = modo === 'plataforma' ? { ...organization, nombre:'AgroBloque', logo_url:null } : (contexto.activo ? { ...organization, nombre:contexto.organizacion_nombre || organization.nombre, logo_url:null } : organization)
+  const campo = contexto.campo_nombre || campoNombre
   const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
   const [alertCount, setAlertCount] = useState(0)
   useEffect(() => {
-    if (!canAccessModule(role, 'alertas')) return
+    if (modo !== 'campo' || !canAccessModule(role, 'alertas')) return
     Promise.all([
       supabase.from('tareas').select('id', { count:'exact', head:true }).eq('completada', false).eq('anulada', false),
       supabase.from('productos').select('id,stock_actual,stock_minimo').eq('activo', true),
@@ -252,19 +271,19 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
       const stock = (productos.data || []).filter(p => Number(p.stock_actual) <= 0 || (Number(p.stock_minimo) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo))).length
       setAlertCount(Number(tareas.count || 0) + stock)
     }).catch(() => {})
-  }, [role?.email])
+  }, [role?.email, modo])
   const groups = [
     { title: 'CAMPO', paths: ['/', '/mapa', '/agenda', '/calendario', '/vivero'] },
     { title: 'OPERACIÓN', paths: ['/cosecha', '/fumigaciones', '/fertilizaciones', '/inventario', '/asistencia'] },
     { title: 'GESTIÓN', paths: ['/ventas', '/costos', '/rentabilidad', '/contabilidad', '/cuentas-pagar', '/reportes', '/compradores', '/alertas', '/historial', '/auditoria', '/configuracion'] },
   ]
   return <aside className="ag-sidebar" aria-label="Navegación principal">
-    <div className={`ag-brand ${organization.logo_url ? '' : 'uses-official-logo'}`}><span className={`ag-brand-mark ${organization.logo_url ? 'has-logo' : 'has-official-logo'}`} aria-hidden="true">{organization.logo_url ? <img src={organization.logo_url} alt="" /> : <BrandLogo alt="" />}</span><div><strong title={organization.nombre}>{organization.nombre || 'AgroBloque'}</strong><small>Gestión agrícola</small></div></div>
-    <nav className="ag-sidebar-nav">{isPlatformAdmin && <section className="ag-nav-group"><h2>PLATAFORMA</h2><NavLink to="/plataforma" className="ag-nav-link"><span className="ag-nav-icon" data-tone="finanzas" aria-hidden="true"><MenuIcon icon="ti-building-community" size={17} color="currentColor" /></span><span>Panel AgroBloque</span></NavLink></section>}{groups.map(group => {
+    <div className={`ag-brand ${marca.logo_url ? '' : 'uses-official-logo'}`}><span className={`ag-brand-mark ${marca.logo_url ? 'has-logo' : 'has-official-logo'}`} aria-hidden="true">{marca.logo_url ? <img src={marca.logo_url} alt="" /> : <BrandLogo alt="" />}</span><div><strong title={marca.nombre}>{marca.nombre || 'AgroBloque'}</strong><small>{modo === 'plataforma' ? 'Panel de plataforma' : 'Gestión agrícola'}</small></div></div>
+    <nav className={`ag-sidebar-nav ${cambioDeModo ? 'sb-anim' : ''}`} key={modo} data-modo={modo} aria-label={modo === 'plataforma' ? 'Navegación de la plataforma' : 'Navegación del campo'}>{modo === 'plataforma' ? <section className="ag-nav-group"><h2>PLATAFORMA · SUPER ADMIN</h2>{PLATAFORMA_ITEMS.map(item => <NavLink end={item.end} key={item.path} to={item.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone="finanzas" aria-hidden="true"><MenuIcon icon={item.icon} size={17} color="currentColor" /></span><span>{item.label}</span></NavLink>)}</section> : <>{contexto.activo && <div className="sb-soporte" role="status"><span className="sb-soporte__etiqueta"><i className="ti ti-shield-check" aria-hidden="true" />{contexto.propia ? 'MODO DEMOSTRACIÓN' : 'MODO SOPORTE'}</span><b title={contexto.organizacion_nombre}>{contexto.organizacion_nombre}</b>{campo && <span className="sb-soporte__campo"><i className="ti ti-map-2" aria-hidden="true" />{campo}</span>}<button type="button" onClick={volver} disabled={saliendo}><i className="ti ti-arrow-left" aria-hidden="true" />Volver al Panel AgroBloque</button></div>}{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone={toneFromPath(tab.path)} aria-hidden="true"><MenuIcon icon={tab.icon} size={17} color="currentColor" /></span><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
-    })}</nav>
-    <div className="ag-sidebar-footer">{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
+    })}</>}</nav>
+    <div className="ag-sidebar-footer">{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : modo === 'plataforma' ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Administrador general</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
   </aside>
 }
 
@@ -281,6 +300,11 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1100)
   const location = useLocation()
   const dashboardDesktop = isDesktop && location.pathname === '/'
+  // Mode A (plataforma): administrador general sin empresa abierta. Mode B (campo): dentro de una empresa, o un usuario normal.
+  const contexto = useContextoSoporte(isPlatformAdmin)
+  const modo = isPlatformAdmin && !contexto.activo ? 'plataforma' : 'campo'
+  const enPlataforma = location.pathname.startsWith('/plataforma')
+  const moduloActual = location.pathname.startsWith('/mapa') ? 'Bloques' : ((allTabs.find(tab => tab.path === '/' + (location.pathname.split('/')[1] || ''))?.label) || 'Esta sección')
 
   useEffect(() => {
     const handler = () => setIsDesktop(window.innerWidth >= 1100)
@@ -290,7 +314,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
 
   return (
     <RoleContext.Provider value={role}>
-    <div className={`ag-app ${isDesktop ? 'has-dock' : ''} ${dashboardDesktop ? 'is-dashboard' : ''}`} data-module={moduleFromPath(location.pathname)}>
+    <div className={`ag-app ${isDesktop ? 'has-dock' : ''} ${dashboardDesktop ? 'is-dashboard' : ''}`} data-module={moduleFromPath(location.pathname)} data-modo={modo}>
       <Toaster
         position={isDesktop ? 'top-right' : 'bottom-center'}
         richColors
@@ -299,20 +323,26 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
         mobileOffset={{ top:'calc(env(safe-area-inset-top, 0px) + 12px)', right:12, bottom:'calc(env(safe-area-inset-bottom, 0px) + 86px)', left:12 }}
         toastOptions={{ className:'ag-toast', duration:6000 }}
       />
-      <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
+      <TaskNotifications enabled={!isGuest && modo === 'campo' && canAccessModule(role, 'agenda')} />
       <SheetGestures />
       <ConnectionStatus />
-      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} isPlatformAdmin={isPlatformAdmin} />}
+      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} modo={modo} contexto={contexto} campoNombre={campoActivo?.nombre || ''} />}
 
       <div data-app-scroll>
-        {!isGuest && <SoporteBarras esAdminGeneral={isPlatformAdmin} />}
+        {!isGuest && <SoporteBarras esAdminGeneral={isPlatformAdmin} contexto={contexto} campoNombre={campoActivo?.nombre || ''} />}
         <div className="ag-content-shell">
           <div className="ag-route-stage" key={location.pathname}>
           <ErrorBoundary resetKey={location.pathname}>
           <Suspense fallback={<Skeleton rows={3} label="Cargando pantalla" />}>
-          <Routes>
-            <Route path="/" element={isPlatformAdmin && !campoActivo ? <Navigate to="/plataforma"/> : <Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} organization={organization}/>}/>
+          {isPlatformAdmin && contexto.cargando ? <Skeleton rows={3} label="Cargando tu espacio" />
+            : modo === 'plataforma' && !enPlataforma ? <Navigate to="/plataforma" replace />
+            : contexto.activo && contexto.demo && !enPlataforma ? <DemoInmersion contexto={contexto} modulo={moduloActual} />
+            : <Routes>
+            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} organization={organization}/>}/>
             <Route path="/plataforma" element={isPlatformAdmin ? <Plataforma/> : <Navigate to="/"/>}/>
+            <Route path="/plataforma/soporte" element={isPlatformAdmin ? <PlataformaSoporte/> : <Navigate to="/"/>}/>
+            <Route path="/plataforma/planes" element={isPlatformAdmin ? <PlataformaPlanes/> : <Navigate to="/"/>}/>
+            <Route path="/plataforma/equipo" element={isPlatformAdmin ? <PlataformaEquipo themeMode={themeMode} onThemeChange={onThemeChange}/> : <Navigate to="/"/>}/>
             <Route path="/buscar" element={<ProtectedRoute role={role} moduleKey="buscar"><Buscador/></ProtectedRoute>}/>
             <Route path="/alertas" element={<ProtectedRoute role={role} moduleKey="alertas"><Alertas/></ProtectedRoute>}/>
             <Route path="/historial" element={<ProtectedRoute role={role} moduleKey="historial"><Historial campoActivo={campoActivo}/></ProtectedRoute>}/>
@@ -339,14 +369,14 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role} organization={organization} onOrganizationUpdate={setOrganization} theme={theme} themeMode={themeMode} onThemeChange={onThemeChange}/></ProtectedRoute>}/>
             <Route path="/primeros-pasos" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Onboarding preview organization={organization}/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
-          </Routes>
+          </Routes>}
           </Suspense>
           </ErrorBoundary>
           </div>
         </div>
       </div>
 
-      {!isDesktop && <NavBar isGuest={isGuest} role={role} isPlatformAdmin={isPlatformAdmin} />}
+      {!isDesktop && <NavBar isGuest={isGuest} role={role} modo={modo} />}
     </div>
     </RoleContext.Provider>
   )

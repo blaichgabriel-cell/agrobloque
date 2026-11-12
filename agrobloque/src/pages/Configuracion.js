@@ -554,7 +554,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:"#08603f", bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, password:'', password_confirm:'', mostrar_password:false }) },
     { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:"#124e38", bg:'#eeeeee', action: () => navigate('/auditoria') },
     { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Último: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
-    { icon:'ti-building-plus', title:'Nueva empresa', sub:'Dar de alta un nuevo cliente', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => abrir('nuevaEmpresa', { nombre:'', owner_email:'' }) },
+    { icon:'ti-circle-plus', title:'Nueva empresa', sub:'Dar de alta un nuevo cliente', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => abrir('nuevaEmpresa', { nombre:'', owner_email:'' }) },
     { icon:'ti-presentation', title:'Vista nuevo cliente', sub:'Probar el primer ingreso sin guardar datos', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => navigate('/primeros-pasos') },
   ].filter((item, index) => (esAdmin || index === 0) && (!item.platformOnly || isPlatformAdmin))
 

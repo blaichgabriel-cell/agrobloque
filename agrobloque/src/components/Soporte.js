@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Notice } from './UI'
 import {
-  apiCliente, contextoSoporte, salirSoporte, suscribirPlataforma,
+  apiCliente, contextoSoporte, enModoDemo, salirSoporte, suscribirPlataforma,
   fechaHora, horaCorta, textoHace, textoRestante,
 } from '../lib/plataforma'
 
@@ -113,32 +114,64 @@ export function SoporteCliente({ api = apiCliente, demo = false }) {
   </section>
 }
 
-// Barras fijas arriba de la app: aviso para todos los usuarios de la empresa y barra del administrador general dentro del modo soporte.
-export function SoporteBarras({ esAdminGeneral = false }) {
-  const [banner, setBanner] = useState({ activo: false })
-  const [contexto, setContexto] = useState({ activo: false })
-  const [ocupado, setOcupado] = useState(false)
-  useAhora()
-
+// Contexto de inmersión: ¿el administrador general está dentro de una empresa (soporte o demostración)?
+// Con `habilitado` en falso (usuarios normales) devuelve siempre "no activo" sin consultar nada.
+export function useContextoSoporte(habilitado) {
+  const [estado, setEstado] = useState({ cargando: Boolean(habilitado), activo: false })
   const cargar = useCallback(async () => {
-    if (esAdminGeneral) setContexto(await contextoSoporte())
-    else setBanner(await apiCliente.banner())
-  }, [esAdminGeneral])
+    if (!habilitado) { setEstado({ cargando: false, activo: false }); return }
+    const c = await contextoSoporte()
+    setEstado({ cargando: false, ...c })
+  }, [habilitado])
   useEffect(() => {
     cargar()
-    const t = setInterval(cargar, 60000)
     const off = suscribirPlataforma(cargar)
-    return () => { clearInterval(t); off() }
+    const t = setInterval(cargar, 60000)
+    return () => { off(); clearInterval(t) }
   }, [cargar])
+  return estado
+}
 
-  const salir = async () => { setOcupado(true); try { await salirSoporte() } catch (e) { /* la barra se actualiza sola */ } await cargar(); setOcupado(false) }
-  const revocar = async () => { setOcupado(true); try { await apiCliente.revocar(banner.acceso_id) } catch (e) { /* se vuelve a consultar */ } await cargar(); setOcupado(false) }
+// Salir del modo soporte y volver al Panel AgroBloque (nivel global de plataforma).
+export function useVolverAlPanel() {
+  const navigate = useNavigate()
+  const [ocupado, setOcupado] = useState(false)
+  const volver = useCallback(async () => {
+    setOcupado(true)
+    try { await salirSoporte() } catch (e) { /* si ya no hay sesión de soporte, igual se vuelve */ }
+    setOcupado(false)
+    if (enModoDemo()) navigate('/plataforma')
+    else window.location.assign('/plataforma')
+  }, [navigate])
+  return { volver, ocupado }
+}
+
+// Cápsula flotante del administrador general dentro de una empresa, y aviso para los usuarios de una empresa con soporte activo.
+export function SoporteBarras({ esAdminGeneral = false, contexto = { activo: false }, campoNombre = '' }) {
+  const [banner, setBanner] = useState({ activo: false })
+  const [ocupado, setOcupado] = useState(false)
+  const { volver, ocupado: saliendo } = useVolverAlPanel()
+  useAhora()
+
+  const cargarBanner = useCallback(async () => { if (!esAdminGeneral) setBanner(await apiCliente.banner()) }, [esAdminGeneral])
+  useEffect(() => {
+    cargarBanner()
+    const t = setInterval(cargarBanner, 60000)
+    const off = suscribirPlataforma(cargarBanner)
+    return () => { clearInterval(t); off() }
+  }, [cargarBanner])
+
+  const revocar = async () => { setOcupado(true); try { await apiCliente.revocar(banner.acceso_id) } catch (e) { /* se vuelve a consultar */ } await cargarBanner(); setOcupado(false) }
 
   if (esAdminGeneral && contexto.activo) {
-    return <div className="sp-barra sp-barra--soporte" role="status">
-      <i className="ti ti-eye-shield" aria-hidden="true" />
-      <div><b>Modo soporte · Solo lectura</b><span>{contexto.organizacion_nombre} · quedan <b className="numeric-data">{textoRestante(contexto.expira_en)}</b></span></div>
-      <button type="button" onClick={salir} disabled={ocupado}><i className="ti ti-logout-2" aria-hidden="true" />Salir</button>
+    const campo = contexto.campo_nombre || campoNombre
+    return <div className="sp-capsula" role="status" aria-live="polite">
+      <span className="sp-capsula__punto" aria-hidden="true" />
+      <div className="sp-capsula__texto">
+        <b title={`${contexto.organizacion_nombre || ''}${campo ? ' · ' + campo : ''}`}>{contexto.propia ? 'Modo demostración:' : 'Modo Soporte Activo:'} {contexto.organizacion_nombre}{campo ? ` · ${campo}` : ''}</b>
+        <span>{contexto.propia ? 'Empresa propia de ejemplo' : <>Solo lectura{contexto.expira_en ? <> · quedan <b className="numeric-data">{textoRestante(contexto.expira_en)}</b></> : null}</>}</span>
+      </div>
+      <button type="button" className="sp-capsula__volver" onClick={volver} disabled={saliendo}><i className="ti ti-arrow-left" aria-hidden="true" /><span className="sp-largo">Volver al Panel AgroBloque</span><span className="sp-corto">Panel</span></button>
     </div>
   }
   if (!esAdminGeneral && banner.activo) {
