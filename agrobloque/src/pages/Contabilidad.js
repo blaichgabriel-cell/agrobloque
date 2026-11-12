@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { descargarCsv, imprimirHtml } from '../lib/exporters'
+import { useCan } from '../lib/RoleContext'
 
 const meses = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -33,6 +34,7 @@ const formInicial = {
 }
 
 export default function Contabilidad() {
+  const can = useCan('contabilidad')
   const navigate = useNavigate()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [movimientos, setMovimientos] = useState([])
@@ -238,9 +240,9 @@ export default function Contabilidad() {
             <span className="bl-page-icon" aria-hidden="true"><i className="ti ti-calculator" /></span>
             <div><small>Balance independiente</small><h1 className="ag-page-title">Contabilidad</h1></div>
           </div>
-          <button className="bl-btn-solid" aria-label="Nueva compra" onClick={() => abrirNuevo('compra')}>
+          {can.create && <button className="bl-btn-solid" aria-label="Nueva compra" onClick={() => abrirNuevo('compra')}>
             <i className="ti ti-plus" aria-hidden="true" />
-          </button>
+          </button>}
         </div>
 
         {error && <div style={errorBox}>{error}</div>}
@@ -250,13 +252,13 @@ export default function Contabilidad() {
             {[anhoActual() - 1, anhoActual(), anhoActual() + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           <div className="ui-91294d">
-            <button className="ui-c59ad0" onClick={() => navigate('/contabilidad/facturas')} style={{ ...smallAction }}>
+            {can.create && <button className="ui-c59ad0" onClick={() => navigate('/contabilidad/facturas')} style={{ ...smallAction }}>
               <i className="ti ti-file-invoice" aria-hidden="true" /> Facturas
-            </button>
+            </button>}
             <button onClick={exportarCsv} style={smallAction}>CSV</button>
             <button onClick={imprimirBalance} style={smallAction}>PDF</button>
-            <button onClick={() => abrirNuevo('compra')} style={smallAction}>Compra</button>
-            <button className="ui-c84552" onClick={() => abrirNuevo('venta')} style={{ ...smallAction }}>Venta</button>
+            {can.create && <button onClick={() => abrirNuevo('compra')} style={smallAction}>Compra</button>}
+            {can.create && <button className="ui-c84552" onClick={() => abrirNuevo('venta')} style={{ ...smallAction }}>Venta</button>}
           </div>
         </div>
 
@@ -353,7 +355,7 @@ export default function Contabilidad() {
           ) : movimientosFiltrados.length === 0 ? (
             <Empty text="Sin movimientos registrados." />
           ) : movimientosFiltrados.map(m => (
-            <Movimiento key={m.id} mov={m} onEdit={() => abrirEditar(m)} onDelete={() => eliminar(m.id)} />
+            <Movimiento key={m.id} mov={m} onEdit={can.edit ? () => abrirEditar(m) : null} onDelete={can.delete ? () => eliminar(m.id) : null} />
           ))}
         </section>
 
@@ -424,10 +426,10 @@ function Movimiento({ mov, onEdit, onDelete }) {
       </div>
       <div className="ui-11f4c8">
         <strong className="ui-3044b6" style={{ color: venta ? '#176a25' : '#c84040' }}>Gs. {fmtGs(mov.monto)}</strong>
-        <div className="ui-cfb7cc">
-          <button onClick={onEdit} style={miniBtn}><i className="ti ti-pencil" /></button>
-          <button className="ui-00b236" onClick={onDelete} style={{ ...miniBtn }}><i className="ti ti-trash" /></button>
-        </div>
+        {(onEdit || onDelete) && <div className="ui-cfb7cc">
+          {onEdit && <button onClick={onEdit} style={miniBtn}><i className="ti ti-pencil" /></button>}
+          {onDelete && <button className="ui-00b236" onClick={onDelete} style={{ ...miniBtn }}><i className="ti ti-trash" /></button>}
+        </div>}
       </div>
     </div>
   )

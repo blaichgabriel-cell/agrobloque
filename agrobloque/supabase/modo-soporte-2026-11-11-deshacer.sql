@@ -148,6 +148,7 @@ $$;
 
 drop function if exists public.soporte_contexto();
 drop function if exists public.plataforma_empresas();
+drop function if exists public.plataforma_historial_soporte();
 drop function if exists public.soporte_solicitar(uuid, text);
 drop function if exists public.soporte_cancelar(uuid);
 drop function if exists public.soporte_responder(uuid, boolean, integer);

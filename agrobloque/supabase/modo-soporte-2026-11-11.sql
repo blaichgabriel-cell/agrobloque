@@ -24,6 +24,7 @@ create table if not exists public.soporte_accesos (
   modo text not null default 'solo_lectura' check (modo = 'solo_lectura'),
   estado text not null default 'pendiente' check (estado in ('pendiente', 'aprobado', 'rechazado', 'revocado', 'cancelado')),
   solicitado_en timestamptz not null default now(),
+  correo_notificado_en timestamptz,
   aprobado_en timestamptz,
   expira_en timestamptz,
   rechazado_en timestamptz,
@@ -41,6 +42,7 @@ create table if not exists public.soporte_accesos (
 
 -- Mantiene la migracion idempotente si una revision anterior creo la tabla.
 alter table public.soporte_accesos add column if not exists cancelado_en timestamptz;
+alter table public.soporte_accesos add column if not exists correo_notificado_en timestamptz;
 alter table public.soporte_accesos drop constraint if exists soporte_accesos_estado_check;
 alter table public.soporte_accesos add constraint soporte_accesos_estado_check
   check (estado in ('pendiente', 'aprobado', 'rechazado', 'revocado', 'cancelado'));
@@ -497,6 +499,15 @@ begin
       'usuarios_activos', (select count(*) from public.app_user_roles r where r.organizacion_id = o.id and r.activo),
       'campos', (select count(*) from public.campos c where c.organizacion_id = o.id),
       'bloques', (select count(*) from public.bloques b where b.organizacion_id = o.id),
+      'campos_lista', coalesce((
+        select jsonb_agg(jsonb_build_object(
+          'id', c.id,
+          'nombre', c.nombre,
+          'bloques', (select count(*) from public.bloques b where b.organizacion_id = o.id and b.campo_id = c.id)
+        ) order by c.nombre)
+        from public.campos c
+        where c.organizacion_id = o.id
+      ), '[]'::jsonb),
       'ultima_actividad', (select max(a.created_at) from public.audit_log a where a.organizacion_id = o.id),
       'soporte', coalesce((
         select jsonb_build_object(
@@ -514,6 +525,44 @@ begin
   ) q;
   return result;
 end;
+$$;
+
+create or replace function public.plataforma_historial_soporte()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case when public.is_platform_admin() then
+    coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', h.id,
+        'acceso_id', h.acceso_id,
+        'evento', h.evento,
+        'motivo', h.motivo,
+        'ocurrido_en', h.ocurrido_en,
+        'detalle', h.detalle,
+        'empresa', h.empresa_nombre,
+        'empresa_nombre', h.empresa_nombre
+      ) order by h.ocurrido_en desc)
+      from (
+        select sa.id::text as id, sa.acceso_id, sa.evento, sa.motivo,
+          sa.ocurrido_en, sa.detalle, o.nombre as empresa_nombre
+        from public.soporte_auditoria sa
+        join public.soporte_accesos a on a.id = sa.acceso_id
+        join public.organizaciones o on o.id = sa.organizacion_id
+        where a.solicitado_por = (select auth.uid())
+        union all
+        select 'vencida-' || a.id::text, a.id, 'vencida', a.motivo, a.expira_en,
+          jsonb_build_object('expira_en', a.expira_en), o.nombre
+        from public.soporte_accesos a
+        join public.organizaciones o on o.id = a.organizacion_id
+        where a.solicitado_por = (select auth.uid())
+          and a.estado = 'aprobado' and a.revocado_en is null and a.expira_en <= now()
+      ) h
+    ), '[]'::jsonb)
+  else '[]'::jsonb end;
 $$;
 
 create or replace function public.soporte_solicitar(p_organizacion_id uuid, p_motivo text)
@@ -762,6 +811,7 @@ begin
   foreach fn in array array[
     'public.soporte_contexto()'::regprocedure,
     'public.plataforma_empresas()'::regprocedure,
+    'public.plataforma_historial_soporte()'::regprocedure,
     'public.soporte_solicitar(uuid,text)'::regprocedure,
     'public.soporte_cancelar(uuid)'::regprocedure,
     'public.soporte_responder(uuid,boolean,integer)'::regprocedure,

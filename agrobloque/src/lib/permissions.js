@@ -100,6 +100,7 @@ export const moduleForPath = (path = '/') => {
 export const canAccessModule = (role, moduleKey) => {
   if (DISABLED_MODULES.includes(moduleKey)) return false
   if (!role) return false
+  if (role.soporteSoloLectura && moduleKey === 'configuracion') return false
   // Contabilidad contiene informacion sensible: durante la prueba solo se
   // habilita para administradores y la cuenta propietaria.
   if (moduleKey === 'contabilidad' && role.rol !== 'admin') return false
@@ -113,6 +114,7 @@ export const canAccessModule = (role, moduleKey) => {
 
 export const canPerformAction = (role, moduleKey, action = 'view') => {
   if (!canAccessModule(role, moduleKey)) return false
+  if (role?.soporteSoloLectura) return action === 'view'
   if (!moduleKey || moduleKey === 'inicio') return true
   if (!role) return true
   if (role.rol === 'admin') return true
