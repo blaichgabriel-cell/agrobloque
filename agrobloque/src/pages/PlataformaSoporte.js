@@ -76,7 +76,9 @@ export default function PlataformaSoporte() {
   const [ocupado, setOcupado] = useState(false)
   useAhora()
 
-  const cargarHistorial = useCallback(async () => setHistorial(await historialPlataforma()), [])
+  const cargarHistorial = useCallback(async () => {
+    try { setHistorial(await historialPlataforma()) } catch (e) { setHistorial([]); setError(e.message || 'No se pudo cargar el historial de soporte.') }
+  }, [])
   useEffect(() => { cargarHistorial() }, [cargarHistorial, demo])
   useEffect(() => suscribirPlataforma(cargarHistorial), [cargarHistorial])
 
