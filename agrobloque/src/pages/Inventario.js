@@ -5,6 +5,7 @@ import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { ajustarStockSeguro } from '../lib/inventory'
 import { useCan } from '../lib/RoleContext'
+import { categoriaProducto } from '../lib/productCategories'
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
@@ -53,14 +54,10 @@ const PRODUCT_CATEGORIES = [
   { key:'Otro',          label:'Otros',            icon:'ti-package',   color:'#555',   bg:'#f2f1ef' },
 ]
 
-const INVENTORY_GROUPS = [
-  { key:'semillas', label:'Semillas y plantines', icon:'ti-seeding', color:'#3d7a35', bg:'#edf6e9', defaultCategory:'Semillas', matches:['semilla','plantin','plantín','bandeja'] },
-  { key:'nutricion', label:'Fertilizantes y nutrientes', icon:'ti-leaf', color:'#08795b', bg:'#e7f5ef', defaultCategory:'Fertilizante', matches:['fertilizante','foliar','hidrosoluble','abono de base','nutriente'] },
-  { key:'fitosanitarios', label:'Agroquímicos / fitosanitarios', icon:'ti-shield-check', color:'#a4650c', bg:'#fff3dc', defaultCategory:'Fungicida', matches:['fungicida','insecticida','herbicida','coadyuvante','agroquímico','fitosanitario'] },
-  { key:'insumos', label:'Insumos y herramientas', icon:'ti-tool', color:'#54616f', bg:'#eef1f4', defaultCategory:'Otro', matches:[] },
-]
-
-const INVENTORY_TONES = { semillas:'bloques', nutricion:'agua', fitosanitarios:'alerta', insumos:'neutral' }
+const INVENTORY_TONES = {
+  Semillas:'bloques', Plantines:'bloques', Fungicida:'alerta', Insecticida:'alerta', Herbicida:'alerta', Coadyuvante:'alerta',
+  Fertilizante:'agua', Foliar:'agua', Hidrosoluble:'agua', 'Abono de base':'agua', Herramientas:'neutral', Otro:'neutral',
+}
 
 function ModalConfirm({ mensaje, onConfirm, onCancel }) {
   return (
@@ -195,12 +192,10 @@ export default function Inventario() {
 
   const getCatNombre = (p) => p.categorias_producto?.nombre || 'Otro'
 
-  const getGrupoProducto = p => {
-    const nombre = getCatNombre(p).toLowerCase()
-    return INVENTORY_GROUPS.find(group => group.matches.some(match => nombre.includes(match)))?.key || 'insumos'
-  }
-
-  const getProductosCat = (catKey) => productos.filter(p => getGrupoProducto(p) === catKey)
+  const getProductosCat = (catKey) => productos.filter(p => {
+    const categoria = categoriaProducto(p)
+    return categoria === String(catKey).toLowerCase() || (catKey === 'Otro' && !PRODUCT_CATEGORIES.some(cat => categoria === cat.key.toLowerCase()))
+  })
 
 
 
@@ -270,7 +265,7 @@ export default function Inventario() {
   const getStockPct = (p) => p.stock_minimo > 0 ? Math.min(100, Math.round((p.stock_actual / (p.stock_minimo * 3)) * 100)) : p.stock_actual > 0 ? 100 : 0
 
   const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
-  const catActInfo = INVENTORY_GROUPS.find(c => c.key === categoriaActiva)
+  const catActInfo = PRODUCT_CATEGORIES.find(c => c.key === categoriaActiva)
   const productosCat = categoriaActiva ? getProductosCat(categoriaActiva).filter(p => `${p.nombre} ${p.principio_activo || ''}`.toLowerCase().includes(busqueda.toLowerCase())) : []
   const bajoStockTotal = productos.filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
 
@@ -295,7 +290,7 @@ export default function Inventario() {
           {bajoStockTotal > 0 && <div className="bl-stock-alert" role="status"><i className="ti ti-alert-triangle" aria-hidden="true" />{bajoStockTotal} producto{bajoStockTotal > 1 ? 's' : ''} con stock bajo o agotado</div>}
 
           <div className="inventory-groups">
-            {INVENTORY_GROUPS.map(cat => {
+            {PRODUCT_CATEGORIES.map(cat => {
               const prods = getProductosCat(cat.key)
               const agotados = prods.filter(p => Number(p.stock_actual) <= 0)
               const bajos = prods.filter(p => Number(p.stock_actual) > 0 && Number(p.stock_minimo) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo))
@@ -303,7 +298,7 @@ export default function Inventario() {
               const criticos = [...agotados, ...bajos].slice(0, 3)
               const share = n => prods.length ? `${n / prods.length * 100}%` : '0%'
               return (
-                <button className="ag-surface inventory-group-card" key={cat.key} data-tone={INVENTORY_TONES[cat.key]} onClick={() => { setBusqueda(''); setCategoriaActiva(cat.key) }} disabled={!prods.length}>
+                <button className="ag-surface inventory-group-card" key={cat.key} data-tone={INVENTORY_TONES[cat.key]} onClick={() => { setBusqueda(''); setCategoriaActiva(cat.key) }}>
                   <span className="inventory-group-head">
                     <span className="bl-page-icon" aria-hidden="true"><i className={`ti ${cat.icon}`} /></span>
                     <span><strong>{cat.label}</strong><small>{prods.length ? `${prods.length} producto${prods.length > 1 ? 's' : ''}` : 'Sin productos cargados'}</small></span>
@@ -336,7 +331,7 @@ export default function Inventario() {
                 </div>
                 <div className="ui-edab21">{catActInfo.label}</div>
               </div>
-              {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.defaultCategory, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
+              {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.key, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
                >
                 <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
               </button>}
