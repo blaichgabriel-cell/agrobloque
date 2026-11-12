@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Modal } from '../components/UI'
+import { SoporteCliente } from '../components/Soporte'
 import { useNavigate } from 'react-router-dom'
 import { forceLocalSignOut, supabase } from '../lib/supabase'
 import { descargarJson } from '../lib/exporters'
@@ -616,6 +617,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
             ))}
           </div>
         </section>
+        {esAdmin && !isPlatformAdmin && <SoporteCliente />}
         {menuItems.map((it, i) => (
           <div className="ag-surface ui-f40337" key={i} onClick={it.action}>
             <div className="ui-3044e7" style={{ background: it.bg || '#f2f1ef' }}>

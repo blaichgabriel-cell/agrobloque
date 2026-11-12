@@ -14,10 +14,13 @@ import TaskNotifications from './components/TaskNotifications'
 import SheetGestures from './components/SheetGestures'
 import BrandLogo from './components/BrandLogo'
 import { RoleContext } from './lib/RoleContext'
+import { SoporteBarras } from './components/Soporte'
+import { esAdministradorGeneral } from './lib/plataforma'
 
 const Mapa = lazy(() => import('./pages/MapaProfesional'))
 const FichaBloque = lazy(() => import('./pages/FichaBloque'))
 const Configuracion = lazy(() => import('./pages/Configuracion'))
+const Plataforma = lazy(() => import('./pages/Plataforma'))
 const Agenda = lazy(() => import('./pages/Agenda'))
 const Calendario = lazy(() => import('./pages/Calendario'))
 const Asistencia = lazy(() => import('./pages/Asistencia'))
@@ -236,7 +239,7 @@ function ConnectionStatus() {
   return <div className="ag-offline"><i className="ti ti-wifi-off" /> Sin conexión. No cierres la aplicación hasta recuperar internet.</div>
 }
 
-function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZATION }) {
+function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZATION, isPlatformAdmin = false }) {
   const tabs = filterTabsByRole(allTabs, role, isGuest)
   const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
   const [alertCount, setAlertCount] = useState(0)
@@ -257,7 +260,7 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
   ]
   return <aside className="ag-sidebar" aria-label="Navegación principal">
     <div className={`ag-brand ${organization.logo_url ? '' : 'uses-official-logo'}`}><span className={`ag-brand-mark ${organization.logo_url ? 'has-logo' : 'has-official-logo'}`} aria-hidden="true">{organization.logo_url ? <img src={organization.logo_url} alt="" /> : <BrandLogo alt="" />}</span><div><strong title={organization.nombre}>{organization.nombre || 'AgroBloque'}</strong><small>Gestión agrícola</small></div></div>
-    <nav className="ag-sidebar-nav">{groups.map(group => {
+    <nav className="ag-sidebar-nav">{isPlatformAdmin && <section className="ag-nav-group"><h2>PLATAFORMA</h2><NavLink to="/plataforma" className="ag-nav-link"><span className="ag-nav-icon" data-tone="finanzas" aria-hidden="true"><MenuIcon icon="ti-building-community" size={17} color="currentColor" /></span><span>Panel AgroBloque</span></NavLink></section>}{groups.map(group => {
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone={toneFromPath(tab.path)} aria-hidden="true"><MenuIcon icon={tab.icon} size={17} color="currentColor" /></span><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
     })}</nav>
@@ -269,12 +272,12 @@ const MODULE_BY_PATH = {
   '/': 'bloques', '/mapa': 'bloques', '/bloque': 'bloques', '/cosecha': 'bloques', '/calendario': 'bloques',
   '/vivero': 'agua', '/fertilizaciones': 'agua', '/plan-nutricional': 'agua',
   '/fumigaciones': 'alerta', '/alertas': 'alerta',
-  '/contabilidad': 'finanzas', '/cuentas-pagar': 'finanzas', '/costos': 'finanzas', '/rentabilidad': 'finanzas', '/ventas': 'finanzas', '/reportes': 'finanzas',
+  '/plataforma': 'finanzas', '/contabilidad': 'finanzas', '/cuentas-pagar': 'finanzas', '/costos': 'finanzas', '/rentabilidad': 'finanzas', '/ventas': 'finanzas', '/reportes': 'finanzas',
 }
 const moduleFromPath = pathname => MODULE_BY_PATH['/' + (pathname.split('/')[1] || '')] || 'bloques'
 const toneFromPath = path => MODULE_BY_PATH[path] || 'neutral'
 
-function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organization, setOrganization, theme, themeMode, onThemeChange }) {
+function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organization, setOrganization, theme, themeMode, onThemeChange, isPlatformAdmin = false }) {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1100)
   const location = useLocation()
   const dashboardDesktop = isDesktop && location.pathname === '/'
@@ -299,15 +302,17 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
       <TaskNotifications enabled={!isGuest && canAccessModule(role, 'agenda')} />
       <SheetGestures />
       <ConnectionStatus />
-      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} />}
+      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} isPlatformAdmin={isPlatformAdmin} />}
 
       <div data-app-scroll>
+        {!isGuest && <SoporteBarras esAdminGeneral={isPlatformAdmin} />}
         <div className="ag-content-shell">
           <div className="ag-route-stage" key={location.pathname}>
           <ErrorBoundary resetKey={location.pathname}>
           <Suspense fallback={<Skeleton rows={3} label="Cargando pantalla" />}>
           <Routes>
-            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} organization={organization}/>}/>
+            <Route path="/" element={isPlatformAdmin && !campoActivo ? <Navigate to="/plataforma"/> : <Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} organization={organization}/>}/>
+            <Route path="/plataforma" element={isPlatformAdmin ? <Plataforma/> : <Navigate to="/"/>}/>
             <Route path="/buscar" element={<ProtectedRoute role={role} moduleKey="buscar"><Buscador/></ProtectedRoute>}/>
             <Route path="/alertas" element={<ProtectedRoute role={role} moduleKey="alertas"><Alertas/></ProtectedRoute>}/>
             <Route path="/historial" element={<ProtectedRoute role={role} moduleKey="historial"><Historial campoActivo={campoActivo}/></ProtectedRoute>}/>
@@ -341,7 +346,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
         </div>
       </div>
 
-      {!isDesktop && <NavBar isGuest={isGuest} role={role} />}
+      {!isDesktop && <NavBar isGuest={isGuest} role={role} isPlatformAdmin={isPlatformAdmin} />}
     </div>
     </RoleContext.Provider>
   )
@@ -356,6 +361,7 @@ export default function App() {
   const [roleUserId, setRoleUserId] = useState(null)
   const [organization, setOrganization] = useState(DEFAULT_ORGANIZATION)
   const [fieldsState, setFieldsState] = useState('idle')
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'system'
     const stored = window.localStorage.getItem('agrobloque-theme')
@@ -478,6 +484,15 @@ export default function App() {
     return () => { cancelled = true }
   }, [session?.user?.id, guestPath])
 
+  // Los administradores generales (los socios) entran al Panel de plataforma en vez del asistente de primer campo.
+  useEffect(() => {
+    let cancelled = false
+    setIsPlatformAdmin(false)
+    if (!session?.user?.id || guestPath) return
+    esAdministradorGeneral().then(v => { if (!cancelled) setIsPlatformAdmin(v) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [session?.user?.id, guestPath])
+
   useEffect(() => {
     if (guestPath) return
     if (!session && !guestPath) {
@@ -584,9 +599,9 @@ export default function App() {
           <p>Tu cuenta todavía no tiene acceso habilitado. Pedí al administrador que configure tus permisos.</p>
           <button onClick={() => forceLocalSignOut()}>Cerrar sesión</button>
         </div>
-      ) : fieldsState === 'empty' && role.rol === 'admin' && organization?.id ? (
+      ) : fieldsState === 'empty' && role.rol === 'admin' && organization?.id && !isPlatformAdmin ? (
         <Onboarding organization={organization} onComplete={({ organization:nextOrganization, campo }) => { setOrganization(nextOrganization); setCampoActivo(campo); setFieldsState('ready') }}/>
-      ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} organization={organization} setOrganization={setOrganization} theme={theme} themeMode={themeMode} onThemeChange={setThemeMode} />}
+      ) : <AppLayout campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={role} organization={organization} setOrganization={setOrganization} theme={theme} themeMode={themeMode} onThemeChange={setThemeMode} isPlatformAdmin={isPlatformAdmin} />}
     </BrowserRouter>
   )
 }

@@ -28,14 +28,14 @@ const moreTabs = [
 ]
 
 
-export default function NavBar({ isGuest = false, role }) {
+export default function NavBar({ isGuest = false, role, isPlatformAdmin = false }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [showMore, setShowMore] = useState(false)
   const [work, setWork] = useState(false)
   const tabs = filterTabsByRole(moreTabs, role, isGuest)
   const main = tabs.filter(tab => ['/mapa', '/inventario'].includes(tab.path))
-  const more = tabs.filter(tab => !['/mapa', '/inventario'].includes(tab.path))
+  const more = [...tabs.filter(tab => !['/mapa', '/inventario'].includes(tab.path)), ...(isPlatformAdmin ? [{ path: '/plataforma', icon: 'ti-building-community', label: 'Panel AgroBloque' }] : [])]
   const canWork = availableWork(role, isGuest).length > 0
   useEffect(() => { setShowMore(false) }, [location.pathname])
   useEffect(() => {
