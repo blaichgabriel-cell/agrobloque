@@ -35,6 +35,11 @@ module.exports = async function handler(req, res) {
     const { data: userData, error: userError } = await userClient.auth.getUser()
     if (userError || !userData?.user?.email) throw new Error('Sesión inválida.')
 
+    const { data: soporteContexto, error: soporteError } = await userClient.rpc('soporte_contexto')
+    const funcionSoporteAusente = soporteError && (soporteError.code === 'PGRST202' || soporteError.code === '42883')
+    if (soporteError && !funcionSoporteAusente) throw new Error('No se pudo verificar el modo soporte. Inténtalo nuevamente.')
+    if (soporteContexto?.activo) throw new Error('No se pueden invitar ni modificar usuarios durante el modo soporte.')
+
     const adminEmail = userData.user.email.toLowerCase()
     const { data: adminRole } = await serviceClient
       .from('app_user_roles')

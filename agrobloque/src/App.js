@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { authAction, forceLocalSignOut, guestToken, supabase } from './lib/supabase'
 import { Skeleton } from './components/UI'
@@ -283,7 +283,7 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
       const items = group.paths.map(path => tabs.find(tab => tab.path === path)).filter(Boolean)
       return items.length > 0 && <section className="ag-nav-group" key={group.title}><h2>{group.title}</h2>{items.map(tab => <NavLink end={tab.path === '/'} key={tab.path} to={tab.path} className="ag-nav-link"><span className="ag-nav-icon" data-tone={toneFromPath(tab.path)} aria-hidden="true"><MenuIcon icon={tab.icon} size={17} color="currentColor" /></span><span>{tab.path === '/mapa' ? 'Bloques' : tab.label}</span>{tab.path === '/alertas' && alertCount > 0 && <b className="ag-nav-badge">{alertCount > 99 ? '99+' : alertCount}</b>}</NavLink>)}</section>
     })}</>}</nav>
-    <div className="ag-sidebar-footer">{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : modo === 'plataforma' ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Administrador general</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
+    <div className="ag-sidebar-footer">{isGuest ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Invitado · Solo lectura</small></div></div> : modo === 'plataforma' ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Administrador general</small></div></div> : role?.soporteSoloLectura ? <div className="ag-profile"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>Soporte · Solo lectura</small></div></div> : <NavLink to="/configuracion" className="ag-profile ag-profile-link"><span className="ag-avatar">{nombre.charAt(0).toUpperCase()}</span><div><strong>{nombre}</strong><small>{role?.label || 'Usuario'} · Ver perfil</small></div><i className="ti ti-chevron-right" /></NavLink>}<button className="ag-signout" onClick={() => forceLocalSignOut()}>Cerrar sesión</button></div>
   </aside>
 }
 
@@ -303,6 +303,13 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
   // Mode A (plataforma): administrador general sin empresa abierta. Mode B (campo): dentro de una empresa, o un usuario normal.
   const contexto = useContextoSoporte(isPlatformAdmin)
   const modo = isPlatformAdmin && !contexto.activo ? 'plataforma' : 'campo'
+  const effectiveRole = useMemo(() => contexto.activo && !contexto.propia ? {
+    ...role,
+    rol: 'admin',
+    label: 'Soporte · Solo lectura',
+    canWrite: false,
+    soporteSoloLectura: true,
+  } : role, [role, contexto.activo, contexto.propia])
   const enPlataforma = location.pathname.startsWith('/plataforma')
   const moduloActual = location.pathname.startsWith('/mapa') ? 'Bloques' : ((allTabs.find(tab => tab.path === '/' + (location.pathname.split('/')[1] || ''))?.label) || 'Esta sección')
 
@@ -313,7 +320,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
   }, [])
 
   return (
-    <RoleContext.Provider value={role}>
+    <RoleContext.Provider value={effectiveRole}>
     <div className={`ag-app ${isDesktop ? 'has-dock' : ''} ${dashboardDesktop ? 'is-dashboard' : ''}`} data-module={moduleFromPath(location.pathname)} data-modo={modo}>
       <Toaster
         position={isDesktop ? 'top-right' : 'bottom-center'}
@@ -323,10 +330,10 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
         mobileOffset={{ top:'calc(env(safe-area-inset-top, 0px) + 12px)', right:12, bottom:'calc(env(safe-area-inset-bottom, 0px) + 86px)', left:12 }}
         toastOptions={{ className:'ag-toast', duration:6000 }}
       />
-      <TaskNotifications enabled={!isGuest && modo === 'campo' && canAccessModule(role, 'agenda')} />
+      <TaskNotifications enabled={!isGuest && modo === 'campo' && canAccessModule(effectiveRole, 'agenda')} />
       <SheetGestures />
       <ConnectionStatus />
-      {isDesktop && <DesktopSidebar isGuest={isGuest} role={role} organization={organization} modo={modo} contexto={contexto} campoNombre={campoActivo?.nombre || ''} />}
+      {isDesktop && <DesktopSidebar isGuest={isGuest} role={effectiveRole} organization={organization} modo={modo} contexto={contexto} campoNombre={campoActivo?.nombre || ''} />}
 
       <div data-app-scroll>
         {!isGuest && <SoporteBarras esAdminGeneral={isPlatformAdmin} contexto={contexto} campoNombre={campoActivo?.nombre || ''} />}
@@ -338,36 +345,36 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             : modo === 'plataforma' && !enPlataforma ? <Navigate to="/plataforma" replace />
             : contexto.activo && contexto.demo && !enPlataforma ? <DemoInmersion contexto={contexto} modulo={moduloActual} />
             : <Routes>
-            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={role} organization={organization}/>}/>
+            <Route path="/" element={<Dashboard campoActivo={campoActivo} setCampoActivo={setCampoActivo} isGuest={isGuest} role={effectiveRole} organization={organization}/>}/>
             <Route path="/plataforma" element={isPlatformAdmin ? <Plataforma/> : <Navigate to="/"/>}/>
             <Route path="/plataforma/soporte" element={isPlatformAdmin ? <PlataformaSoporte/> : <Navigate to="/"/>}/>
             <Route path="/plataforma/planes" element={isPlatformAdmin ? <PlataformaPlanes/> : <Navigate to="/"/>}/>
             <Route path="/plataforma/equipo" element={isPlatformAdmin ? <PlataformaEquipo themeMode={themeMode} onThemeChange={onThemeChange}/> : <Navigate to="/"/>}/>
-            <Route path="/buscar" element={<ProtectedRoute role={role} moduleKey="buscar"><Buscador/></ProtectedRoute>}/>
-            <Route path="/alertas" element={<ProtectedRoute role={role} moduleKey="alertas"><Alertas/></ProtectedRoute>}/>
-            <Route path="/historial" element={<ProtectedRoute role={role} moduleKey="historial"><Historial campoActivo={campoActivo}/></ProtectedRoute>}/>
-            <Route path="/mapa" element={<ProtectedRoute role={role} moduleKey="mapa"><Mapa campoActivo={campoActivo}/></ProtectedRoute>}/>
-            <Route path="/bloque/:id" element={<ProtectedRoute role={role} moduleKey="mapa"><FichaBloque/></ProtectedRoute>}/>
-            <Route path="/agenda" element={<ProtectedRoute role={role} moduleKey="agenda"><Agenda/></ProtectedRoute>}/>
-            <Route path="/calendario" element={<ProtectedRoute role={role} moduleKey="agenda"><Calendario/></ProtectedRoute>}/>
-            <Route path="/vivero" element={<ProtectedRoute role={role} moduleKey="vivero"><Vivero/></ProtectedRoute>}/>
-            <Route path="/asistencia" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="asistencia"><Asistencia/></ProtectedRoute>}/>
-            <Route path="/cosecha" element={<ProtectedRoute role={role} moduleKey="cosecha"><Cosecha/></ProtectedRoute>}/>
-            <Route path="/ventas" element={<ProtectedRoute role={role} moduleKey="ventas"><Ventas/></ProtectedRoute>}/>
-            <Route path="/inventario" element={<ProtectedRoute role={role} moduleKey="inventario"><Inventario/></ProtectedRoute>}/>
-            <Route path="/fumigaciones" element={<ProtectedRoute role={role} moduleKey="fumigaciones"><Fumigaciones/></ProtectedRoute>}/>
-            <Route path="/fertilizaciones" element={<ProtectedRoute role={role} moduleKey="plan_nutricional"><Fertilizaciones campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
+            <Route path="/buscar" element={<ProtectedRoute role={effectiveRole} moduleKey="buscar"><Buscador/></ProtectedRoute>}/>
+            <Route path="/alertas" element={<ProtectedRoute role={effectiveRole} moduleKey="alertas"><Alertas/></ProtectedRoute>}/>
+            <Route path="/historial" element={<ProtectedRoute role={effectiveRole} moduleKey="historial"><Historial campoActivo={campoActivo}/></ProtectedRoute>}/>
+            <Route path="/mapa" element={<ProtectedRoute role={effectiveRole} moduleKey="mapa"><Mapa campoActivo={campoActivo}/></ProtectedRoute>}/>
+            <Route path="/bloque/:id" element={<ProtectedRoute role={effectiveRole} moduleKey="mapa"><FichaBloque/></ProtectedRoute>}/>
+            <Route path="/agenda" element={<ProtectedRoute role={effectiveRole} moduleKey="agenda"><Agenda/></ProtectedRoute>}/>
+            <Route path="/calendario" element={<ProtectedRoute role={effectiveRole} moduleKey="agenda"><Calendario/></ProtectedRoute>}/>
+            <Route path="/vivero" element={<ProtectedRoute role={effectiveRole} moduleKey="vivero"><Vivero/></ProtectedRoute>}/>
+            <Route path="/asistencia" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={effectiveRole} moduleKey="asistencia"><Asistencia/></ProtectedRoute>}/>
+            <Route path="/cosecha" element={<ProtectedRoute role={effectiveRole} moduleKey="cosecha"><Cosecha/></ProtectedRoute>}/>
+            <Route path="/ventas" element={<ProtectedRoute role={effectiveRole} moduleKey="ventas"><Ventas/></ProtectedRoute>}/>
+            <Route path="/inventario" element={<ProtectedRoute role={effectiveRole} moduleKey="inventario"><Inventario/></ProtectedRoute>}/>
+            <Route path="/fumigaciones" element={<ProtectedRoute role={effectiveRole} moduleKey="fumigaciones"><Fumigaciones/></ProtectedRoute>}/>
+            <Route path="/fertilizaciones" element={<ProtectedRoute role={effectiveRole} moduleKey="plan_nutricional"><Fertilizaciones campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/plan-nutricional" element={<Navigate to="/fertilizaciones"/>}/>
-            <Route path="/costos" element={<ProtectedRoute role={role} moduleKey="costos"><Costos campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
-            <Route path="/rentabilidad" element={<ProtectedRoute role={role} moduleKey="costos"><Rentabilidad campoActivo={campoActivo}/></ProtectedRoute>}/>
-            <Route path="/contabilidad" element={<ProtectedRoute role={role} moduleKey="contabilidad"><Contabilidad/></ProtectedRoute>}/>
-            <Route path="/contabilidad/facturas" element={<ProtectedRoute role={role} moduleKey="contabilidad"><FacturasRecibidas role={role}/></ProtectedRoute>}/>
-            <Route path="/cuentas-pagar" element={<ProtectedRoute role={role} moduleKey="cuentas_pagar"><CuentasPagar/></ProtectedRoute>}/>
-            <Route path="/reportes" element={<ProtectedRoute role={role} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
-            <Route path="/compradores" element={<ProtectedRoute role={role} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
-            <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="auditoria"><Auditoria/></ProtectedRoute>}/>
-            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Configuracion role={role} organization={organization} onOrganizationUpdate={setOrganization} theme={theme} themeMode={themeMode} onThemeChange={onThemeChange}/></ProtectedRoute>}/>
-            <Route path="/primeros-pasos" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={role} moduleKey="configuracion"><Onboarding preview organization={organization}/></ProtectedRoute>}/>
+            <Route path="/costos" element={<ProtectedRoute role={effectiveRole} moduleKey="costos"><Costos campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
+            <Route path="/rentabilidad" element={<ProtectedRoute role={effectiveRole} moduleKey="costos"><Rentabilidad campoActivo={campoActivo}/></ProtectedRoute>}/>
+            <Route path="/contabilidad" element={<ProtectedRoute role={effectiveRole} moduleKey="contabilidad"><Contabilidad/></ProtectedRoute>}/>
+            <Route path="/contabilidad/facturas" element={<ProtectedRoute role={effectiveRole} moduleKey="contabilidad"><FacturasRecibidas role={effectiveRole}/></ProtectedRoute>}/>
+            <Route path="/cuentas-pagar" element={<ProtectedRoute role={effectiveRole} moduleKey="cuentas_pagar"><CuentasPagar/></ProtectedRoute>}/>
+            <Route path="/reportes" element={<ProtectedRoute role={effectiveRole} moduleKey="reportes"><Reportes campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
+            <Route path="/compradores" element={<ProtectedRoute role={effectiveRole} moduleKey="compradores"><Compradores/></ProtectedRoute>}/>
+            <Route path="/auditoria" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={effectiveRole} moduleKey="auditoria"><Auditoria/></ProtectedRoute>}/>
+            <Route path="/configuracion" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={effectiveRole} moduleKey="configuracion"><Configuracion role={effectiveRole} organization={organization} onOrganizationUpdate={setOrganization} theme={theme} themeMode={themeMode} onThemeChange={onThemeChange}/></ProtectedRoute>}/>
+            <Route path="/primeros-pasos" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={effectiveRole} moduleKey="configuracion"><Onboarding preview organization={organization}/></ProtectedRoute>}/>
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>}
           </Suspense>
@@ -376,7 +383,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
         </div>
       </div>
 
-      {!isDesktop && <NavBar isGuest={isGuest} role={role} modo={modo} />}
+      {!isDesktop && <NavBar isGuest={isGuest} role={effectiveRole} modo={modo} />}
     </div>
     </RoleContext.Provider>
   )

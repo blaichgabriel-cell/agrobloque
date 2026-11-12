@@ -14,6 +14,9 @@ importers:
       '@tabler/icons-webfont':
         specifier: ^3.11.0
         version: 3.46.0(chokidar@3.6.0)(supports-color@8.1.1)
+      nodemailer:
+        specifier: ^7.0.10
+        version: 7.0.13
       pdfjs-dist:
         specifier: 3.11.174
         version: 3.11.174(encoding@0.1.13)(supports-color@8.1.1)
@@ -4117,6 +4120,10 @@ packages:
   node-releases@2.0.54:
     resolution: {integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==}
     engines: {node: '>=18'}
+
+  nodemailer@7.0.13:
+    resolution: {integrity: sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==}
+    engines: {node: '>=6.0.0'}
 
   nopt@5.0.0:
     resolution: {integrity: sha512-Tbj67rffqceeLpcRXrT7vKAN8CwfPeIBgM7E6iBkmKLV7bEMwpGgYLGv0jACUsECaa/vuxP0IjEont6umdMgtQ==}
@@ -11211,6 +11218,8 @@ snapshots:
   node-int64@0.4.0: {}
 
   node-releases@2.0.54: {}
+
+  nodemailer@7.0.13: {}
 
   nopt@5.0.0:
     dependencies:
