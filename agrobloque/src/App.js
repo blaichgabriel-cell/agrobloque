@@ -398,6 +398,7 @@ export default function App() {
   const [roleUserId, setRoleUserId] = useState(null)
   const [organization, setOrganization] = useState(DEFAULT_ORGANIZATION)
   const [fieldsState, setFieldsState] = useState('idle')
+  const [fieldsRefresh, setFieldsRefresh] = useState(0)
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'system'
@@ -408,6 +409,12 @@ export default function App() {
   const theme = themeMode === 'system' ? systemTheme : themeMode
   const guestPath = Boolean(guestToken)
   const passwordSetupPath = authAction === 'set-password'
+
+  useEffect(() => {
+    const actualizarCampos = () => setFieldsRefresh(valor => valor + 1)
+    window.addEventListener('agrobloque:campos-actualizados', actualizarCampos)
+    return () => window.removeEventListener('agrobloque:campos-actualizados', actualizarCampos)
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -578,7 +585,8 @@ export default function App() {
       const bloquesPorCampo = contarBloquesPorCampo(bloques || [])
 
       setCampoActivo(actual => {
-        if (actual && data.some(c => c.id === actual.id)) return actual
+        const actualizado = actual ? data.find(c => c.id === actual.id) : null
+        if (actualizado) return actualizado
         const guardado = getStoredCampoId()
         return elegirCampoConDatos(data, bloquesPorCampo, guardado)
       })
@@ -587,7 +595,7 @@ export default function App() {
 
     cargarCampoActivo()
     return () => { cancelled = true }
-  }, [session, guestPath])
+  }, [session, guestPath, fieldsRefresh])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !campoActivo?.id) return

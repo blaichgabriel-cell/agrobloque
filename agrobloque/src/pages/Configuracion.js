@@ -363,6 +363,28 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
 
   // --- OTROS
 
+  const guardarCampo = async () => {
+    const nombre = String(form.nombre || '').trim()
+    if (nombre.length < 2) { setError('El nombre del campo debe tener al menos 2 caracteres.'); return }
+    const repetido = campos.some(c => c.id !== form.id && normalizarNombre(c.nombre) === normalizarNombre(nombre))
+    if (repetido) { setError('Ya existe un campo con ese nombre.'); return }
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const consulta = form.id
+        ? supabase.from('campos').update({ nombre }).eq('id', form.id)
+        : supabase.from('campos').insert({ nombre })
+      const { error: campoError } = await consulta
+      if (campoError) throw campoError
+      await fetchAll()
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('agrobloque:campos-actualizados'))
+      abrir('campos')
+      setSuccess(form.id ? 'Campo actualizado correctamente.' : 'Campo creado correctamente. Ya podés agregarle bloques.')
+    } catch (e) {
+      setError('No se pudo guardar el campo: ' + (e.message || 'intentá nuevamente.'))
+    }
+    setLoading(false)
+  }
+
   const guardarCultivo = async () => {
     if (!form.nombre) return; setLoading(true); setError('')
     try {
@@ -884,9 +906,39 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
 
             {/* -- CAMPOS -- */}
             {modal === 'campos' && <>
-              <div className="ui-c7b1b6">Campos</div>
-              {campos.map(c => (<div key={c.id} style={listItem}><div className="ui-0aae41">{c.nombre}</div></div>))}
-              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
+              <div className="config-fields-head">
+                <span className="config-fields-head__icon" aria-hidden="true"><i className="ti ti-map-pin" /></span>
+                <div><div className="ui-c7b1b6">Campos</div><p>Organizá los espacios productivos de tu empresa. Cada campo puede tener sus propios bloques.</p></div>
+              </div>
+              <div className="config-fields-summary"><strong>{campos.length}</strong><span>campo{campos.length === 1 ? '' : 's'} registrado{campos.length === 1 ? '' : 's'}</span></div>
+              {campos.length === 0 ? <div className="config-fields-empty"><i className="ti ti-map-plus" aria-hidden="true" /><strong>Todavía no hay campos</strong><span>Creá el primero para empezar a organizar tus bloques.</span></div> : <div className="config-fields-list">
+                {campos.map(c => {
+                  const cantidadBloques = bloques.filter(b => b.campo_id === c.id).length
+                  return <article className="config-field-row" key={c.id}>
+                    <span className="config-field-row__icon" aria-hidden="true"><i className="ti ti-map-2" /></span>
+                    <span className="config-field-row__copy"><strong>{c.nombre}</strong><small>{cantidadBloques} bloque{cantidadBloques === 1 ? '' : 's'}</small></span>
+                    <button type="button" className="ag-small-action" onClick={() => abrir('editarCampo', { id:c.id, nombre:c.nombre })}><i className="ti ti-pencil" aria-hidden="true" />Editar</button>
+                  </article>
+                })}
+              </div>}
+              <div className="config-fields-actions">
+                <button className="bl-btn bl-btn--primary" onClick={() => abrir('editarCampo', { nombre:'' })}><i className="ti ti-plus" aria-hidden="true" />Crear campo</button>
+                <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
+              </div>
+            </>}
+
+            {modal === 'editarCampo' && <>
+              <div className="config-field-form-head">
+                <span aria-hidden="true"><i className={`ti ${form.id ? 'ti-edit' : 'ti-map-plus'}`} /></span>
+                <div><div className="ui-c7b1b6">{form.id ? 'Editar campo' : 'Nuevo campo'}</div><p>{form.id ? 'Cambiá el nombre sin afectar sus bloques ni registros.' : 'Después de crearlo podrás entrar en Bloques y cargar su distribución.'}</p></div>
+              </div>
+              <label className="ag-field-label config-field-name">Nombre del campo
+                <input className="bl-input" autoFocus maxLength="100" value={form.nombre || ''} onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} onKeyDown={e => { if (e.key === 'Enter' && !loading) guardarCampo() }} placeholder="Ej: Campo Norte" />
+              </label>
+              <div className="config-fields-actions">
+                <button className="bl-btn bl-btn--primary" onClick={guardarCampo} disabled={loading || String(form.nombre || '').trim().length < 2}>{loading ? 'Guardando…' : form.id ? 'Guardar cambios' : 'Crear campo'}</button>
+                <button className="bl-btn bl-btn--ghost" onClick={() => abrir('campos')} disabled={loading}>Volver</button>
+              </div>
             </>}
 
             {/* -- CULTIVOS -- */}
