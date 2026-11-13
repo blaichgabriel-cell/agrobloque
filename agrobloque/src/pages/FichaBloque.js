@@ -124,6 +124,7 @@ export default function FichaBloque() {
   const [nuevoCultivoNombre, setNuevoCultivoNombre] = useState('')
   const [cultivoRapidoError, setCultivoRapidoError] = useState('')
   const [cultivosLoading, setCultivosLoading] = useState(false)
+  const [plantacionFormError, setPlantacionFormError] = useState('')
   const [nuevoAbonoNombre, setNuevoAbonoNombre] = useState('')
   const [abonoRapidoError, setAbonoRapidoError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -328,6 +329,7 @@ export default function FichaBloque() {
     setCultivoRapidoError(cultivosError ? `No se pudo cargar el catálogo de cultivos: ${cultivosError.message}` : '')
     setAbonoRapidoError(abonosError ? `No se pudo cargar el catálogo de abonos: ${abonosError.message}` : '')
     setCultivosLoading(false)
+    setPlantacionFormError('')
     setShowNuevaPlantacion(true)
   }
 
@@ -362,14 +364,14 @@ export default function FichaBloque() {
 
   const agregarCultivoRapido = async (nombreSugerido = '') => {
     const nombre = String(nombreSugerido || nuevoCultivoNombre).trim()
-    if (!nombre) return
+    if (!nombre) return null
 
     const existente = cultivos.find(c => (c.nombre || '').trim().toLowerCase() === nombre.toLowerCase())
     if (existente) {
       setForm(f => ({ ...f, cultivo_id: existente.id }))
       setNuevoCultivoNombre('')
       setCultivoRapidoError('')
-      return
+      return existente.id
     }
 
     const { data, error } = await supabase
@@ -380,7 +382,7 @@ export default function FichaBloque() {
 
     if (error) {
       setCultivoRapidoError(`No se pudo agregar el cultivo: ${error.message}`)
-      return
+      return null
     }
 
     const lista = [...cultivos, data].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
@@ -388,6 +390,7 @@ export default function FichaBloque() {
     setForm(f => ({ ...f, cultivo_id: data.id }))
     setNuevoCultivoNombre('')
     setCultivoRapidoError('')
+    return data.id
   }
 
   const toggleAbono = (abonoId) => {
@@ -412,29 +415,58 @@ export default function FichaBloque() {
   }
 
   const guardarNuevaPlantacion = async () => {
-    if (!form.cultivo_id || !form.fecha_siembra) return
-    setSaving(true)
-    if (plantacionActiva) await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
-    const nueva = await guardarPlantacionCompatible({
-      bloque_id: id, cultivo_id: form.cultivo_id,
-      notas: form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null,
-      fecha_siembra: form.fecha_siembra,
-      cantidad_plantas: form.cantidad_plantas ? parseLocaleInteger(form.cantidad_plantas, null) : null,
-      activa: true
-    })
-    if (nueva && form.abonos_ids.length > 0) {
-      await supabase.from('plantacion_abonos').insert(
-        form.abonos_ids.map(ab => ({
-          plantacion_id: nueva.id, abono_id: ab,
-          cantidad: form.abonos_cantidades[ab] || null,
-          unidad: form.abonos_cantidades[`${ab}_unidad`] || 'kg',
-          alcance: form.abonos_cantidades[`${ab}_alcance`] || 'total'
-        }))
-      )
+    setPlantacionFormError('')
+    let cultivoId = form.cultivo_id
+    if (!cultivoId && nuevoCultivoNombre.trim()) cultivoId = await agregarCultivoRapido()
+    if (!cultivoId) {
+      setPlantacionFormError('Seleccioná un cultivo o escribí uno nuevo antes de guardar.')
+      return
     }
-    setSaving(false); setShowNuevaPlantacion(false)
-    await registrarAuditoria({ accion:'Registro plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:nueva?.id || '', detalle:`Bloque ${bloque?.codigo || ''}` })
-    fetchData()
+    if (!form.fecha_siembra) {
+      setPlantacionFormError('Completá la fecha de siembra antes de guardar.')
+      return
+    }
+    setSaving(true)
+    let nueva = null
+    try {
+      let abonosIds = [...form.abonos_ids]
+      if (nuevoAbonoNombre.trim()) {
+        const abonoPendienteId = await agregarAbonoRapido()
+        if (!abonoPendienteId) throw new Error('No se pudo agregar el abono escrito.')
+        if (!abonosIds.includes(abonoPendienteId)) abonosIds.push(abonoPendienteId)
+      }
+      if (plantacionActiva) {
+        const { error } = await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
+        if (error) throw error
+      }
+      nueva = await guardarPlantacionCompatible({
+        bloque_id: id, cultivo_id: cultivoId,
+        notas: form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null,
+        fecha_siembra: form.fecha_siembra,
+        cantidad_plantas: form.cantidad_plantas ? parseLocaleInteger(form.cantidad_plantas, null) : null,
+        activa: true
+      })
+      if (nueva && abonosIds.length > 0) {
+        const { error } = await supabase.from('plantacion_abonos').insert(
+          abonosIds.map(ab => ({
+            plantacion_id: nueva.id, abono_id: ab,
+            cantidad: form.abonos_cantidades[ab] || null,
+            unidad: form.abonos_cantidades[`${ab}_unidad`] || 'kg',
+            alcance: form.abonos_cantidades[`${ab}_alcance`] || 'total'
+          }))
+        )
+        if (error) throw error
+      }
+      setShowNuevaPlantacion(false)
+      await registrarAuditoria({ accion:'Registro plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:nueva?.id || '', detalle:`Bloque ${bloque?.codigo || ''}` })
+      await fetchData()
+    } catch (error) {
+      if (nueva?.id) await supabase.from('plantaciones').update({ activa: false }).eq('id', nueva.id)
+      if (plantacionActiva) await supabase.from('plantaciones').update({ activa: true }).eq('id', plantacionActiva.id)
+      setPlantacionFormError(`No se pudo guardar la plantación: ${error.message || 'intentá nuevamente.'}`)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const guardarEditarPlantacion = async () => {
@@ -551,25 +583,26 @@ export default function FichaBloque() {
 
   const agregarAbonoRapido = async () => {
     const nombre = nuevoAbonoNombre.trim()
-    if (!nombre) return
+    if (!nombre) return null
 
     const existente = abonos.find(a => (a.nombre || '').trim().toLowerCase() === nombre.toLowerCase())
     if (existente) {
       setForm(f => ({ ...f, abonos_ids: f.abonos_ids.includes(existente.id) ? f.abonos_ids : [...f.abonos_ids, existente.id] }))
       setNuevoAbonoNombre('')
       setAbonoRapidoError('')
-      return
+      return existente.id
     }
 
     const { data, error } = await supabase.from('abonos').insert({ nombre }).select('*').single()
     if (error) {
       setAbonoRapidoError(`No se pudo agregar el abono: ${error.message}`)
-      return
+      return null
     }
     setAbonos(lista => [...lista, data].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')))
     setForm(f => ({ ...f, abonos_ids: [...f.abonos_ids, data.id] }))
     setNuevoAbonoNombre('')
     setAbonoRapidoError('')
+    return data.id
   }
 
   const abrirNuevaFertilizacion = () => {
@@ -1488,13 +1521,14 @@ export default function FichaBloque() {
             <label className="ag-field-label ui-74cc19">Cantidad de plantas
             <input style={inpStyle} type="text" inputMode="numeric" value={form.cantidad_plantas} onChange={e => setForm(f => ({...f, cantidad_plantas:e.target.value.replace(/[^0-9.,\s]/g, '')}))} onBlur={() => setForm(f => ({...f, cantidad_plantas:formatLocaleInteger(f.cantidad_plantas)}))} placeholder="Ej: 41.497" autoComplete="off"/></label>
 
-            <div className="ui-9546b4">Abonos de base</div>
+            <div className="ui-9546b4">Abonos de base (podés agregar varios)</div>
             <div className="ui-711010">
-              <input className="ui-d8b4c5" style={{ ...inpStyle }} type="text" value={nuevoAbonoNombre} onChange={e => setNuevoAbonoNombre(e.target.value)} placeholder="Escribir abono directamente" />
-              <button className="ag-small-action ui-2082ce" type="button" onClick={agregarAbonoRapido} disabled={!nuevoAbonoNombre.trim()}>Agregar</button>
+              <input className="ui-d8b4c5" style={{ ...inpStyle }} type="text" value={nuevoAbonoNombre} onChange={e => setNuevoAbonoNombre(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarAbonoRapido() } }} placeholder="Escribí un abono y agregalo" />
+              <button className="ag-small-action ui-2082ce" type="button" onClick={() => agregarAbonoRapido()} disabled={!nuevoAbonoNombre.trim()}>Agregar</button>
             </div>
-            <div className="ui-59f8a7">No hace falta cargarlo previamente en inventario.</div>
+            <div className="ui-59f8a7">Agregá uno, completá su cantidad y repetí para sumar todos los que uses. No hace falta cargarlos previamente en inventario.</div>
             {abonoRapidoError && <div className="ui-9614e6">{abonoRapidoError}</div>}
+            {form.abonos_ids.length > 0 && <div style={{ fontSize:12, fontWeight:700, color:'#315344', margin:'8px 0 6px' }}>Abonos agregados: {form.abonos_ids.length}</div>}
             {abonos.map(a => (
               <div className="ui-d51702" key={a.id}>
                 <div className="ui-bfa195" onClick={() => toggleAbono(a.id)}
@@ -1527,6 +1561,8 @@ export default function FichaBloque() {
                 )}
               </div>
             ))}
+
+            {plantacionFormError && <div className="ui-9614e6" role="alert">{plantacionFormError}</div>}
 
             <button className="ag-small-action ui-ae1eb0" style={{ background: saving ? '#888' : '#0F3923' }}
               onClick={showEditarPlantacion ? guardarEditarPlantacion : guardarNuevaPlantacion} disabled={saving}>
