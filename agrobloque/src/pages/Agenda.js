@@ -5,6 +5,7 @@ import NotasPanel from '../components/NotasPanel'
 import { toast } from 'sonner'
 import { moonPhase, MOON_PHASES } from '../lib/moon'
 import { useCan } from '../lib/RoleContext'
+import { useCurrentTime } from '../lib/useCurrentTime'
 
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
@@ -33,6 +34,7 @@ function ModalConfirm({ onConfirm, onCancel }) {
 
 export default function Agenda() {
   const can = useCan('agenda')
+  const ahora = useCurrentTime()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [tareas, setTareas] = useState([])
   const [campos, setCampos] = useState([])
@@ -48,7 +50,7 @@ export default function Agenda() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(true)
-  const hoy = new Date().toISOString().split('T')[0]
+  const hoy = fechaLocal(ahora)
 
   useEffect(() => { fetchTareas(); fetchCampos() }, [])
   useEffect(() => {
@@ -281,6 +283,6 @@ function AgendaCalendar({ tareas, mes, hoy, onMes, onHoy, onCreate, onTask }) {
         <div className="lunar-day__tasks">{items.slice(0, 3).map(tarea => { const tipo = TIPOS[tarea.tipo] || TIPOS.otro; return <button key={tarea.id} onClick={() => onTask(tarea)} title={tarea.descripcion}><i style={{ background:tipo.color }} />{tarea.hora_programada ? `${String(tarea.hora_programada).slice(0,5)} ` : ''}{tarea.descripcion}</button> })}{items.length > 3 && <span>+{items.length - 3} más</span>}</div>
       </div>
     })}</div>
-    <div className="lunar-calendar__legend"><span>Cálculo astronómico aproximado; no constituye una recomendación agronómica.</span><span>{MOON_PHASES.filter((_, i) => i % 2 === 0).map(fase => `${fase.icon} ${fase.label}`).join(' · ')}</span></div>
+    <div className="lunar-calendar__legend"><span>Referencia astronómica calculada y actualizada automáticamente; no constituye una recomendación agronómica.</span><span>{MOON_PHASES.filter((_, i) => i % 2 === 0).map(fase => `${fase.icon} ${fase.label}`).join(' · ')}</span></div>
   </section>
 }

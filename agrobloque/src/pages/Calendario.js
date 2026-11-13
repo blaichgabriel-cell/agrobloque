@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { moonPhase, MOON_PHASES } from '../lib/moon'
 import { Skeleton } from '../components/UI'
+import { useCurrentTime } from '../lib/useCurrentTime'
 
 const fechaLocal = fecha => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
 const TIPOS = {
@@ -11,11 +12,13 @@ const TIPOS = {
 
 export default function Calendario() {
   const navigate = useNavigate()
+  const ahora = useCurrentTime()
   const [tareas, setTareas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [mes, setMes] = useState(() => { const fecha = new Date(); fecha.setDate(1); return fecha })
-  const hoy = fechaLocal(new Date())
+  const hoy = fechaLocal(ahora)
+  const faseHoy = moonPhase(ahora)
 
   useEffect(() => {
     let activo = true
@@ -37,7 +40,7 @@ export default function Calendario() {
   }, {})
   const moverMes = delta => setMes(actual => { const siguiente = new Date(actual); siguiente.setMonth(siguiente.getMonth() + delta); return siguiente })
   return <div className="ag-page calendar-page">
-    <div className="calendar-page__hero"><div><small>PLANIFICACIÓN AGRÍCOLA</small><h1 className="ag-page-title">Calendario</h1><p>Agenda del campo con referencia astronómica de las fases lunares.</p></div><div className="calendar-moon-today"><span>{moonPhase(new Date()).icon}</span><div><small>FASE DE HOY</small><strong>{moonPhase(new Date()).label}</strong></div></div></div>
+    <div className="calendar-page__hero"><div><small>PLANIFICACIÓN AGRÍCOLA</small><h1 className="ag-page-title">Calendario</h1><p>Agenda del campo con referencia astronómica de las fases lunares.</p></div><div className="calendar-moon-today"><span>{faseHoy.icon}</span><div><small>FASE DE HOY · ACTUALIZACIÓN AUTOMÁTICA</small><strong>{faseHoy.label} · {Math.round(faseHoy.fraction * 100)}% iluminada</strong></div></div></div>
     <div className="calendar-page__body">
       {loading ? <Skeleton rows={5} label="Cargando calendario" /> : error ? <div className="calendar-soft-state"><i className="ti ti-cloud-off" /><div><strong>No pudimos actualizar el calendario</strong><span>Revisá la conexión e intentá nuevamente.</span></div></div> : <section className="lunar-calendar">
         <div className="lunar-calendar__header"><div><small>AGENDA DEL CAMPO</small><h2>{mes.toLocaleDateString('es-PY', { month:'long', year:'numeric' })}</h2></div><div><button onClick={() => moverMes(-1)} aria-label="Mes anterior"><i className="ti ti-chevron-left" /></button><button onClick={() => { const fecha = new Date(); fecha.setDate(1); setMes(fecha) }}>Hoy</button><button onClick={() => moverMes(1)} aria-label="Mes siguiente"><i className="ti ti-chevron-right" /></button></div></div>
@@ -49,7 +52,7 @@ export default function Calendario() {
             <div className="lunar-day__tasks">{items.slice(0,3).map(tarea => <button key={tarea.id} className={tarea.completada ? 'is-complete' : ''} onClick={() => navigate(`/agenda?fecha=${clave}`)} title={tarea.descripcion}><i style={{ background:TIPOS[tarea.tipo] || TIPOS.otro }} />{tarea.hora_programada ? `${String(tarea.hora_programada).slice(0,5)} ` : ''}{tarea.descripcion}</button>)}{items.length > 3 && <span>+{items.length - 3} más</span>}</div>
           </div>
         })}</div>
-        <div className="lunar-calendar__legend"><span>Cálculo astronómico aproximado; no constituye una recomendación agronómica.</span><span>{MOON_PHASES.filter((_, indice) => indice % 2 === 0).map(fase => `${fase.icon} ${fase.label}`).join(' · ')}</span></div>
+        <div className="lunar-calendar__legend"><span>Referencia astronómica calculada y actualizada automáticamente; no constituye una recomendación agronómica.</span><span>{MOON_PHASES.filter((_, indice) => indice % 2 === 0).map(fase => `${fase.icon} ${fase.label}`).join(' · ')}</span></div>
       </section>}
     </div>
   </div>
