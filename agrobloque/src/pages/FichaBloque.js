@@ -123,6 +123,7 @@ export default function FichaBloque() {
   const [formMuerte, setFormMuerte] = useState({ cantidad:'', causa:'Enfermedad', descripcion:'' })
   const [nuevoCultivoNombre, setNuevoCultivoNombre] = useState('')
   const [cultivoRapidoError, setCultivoRapidoError] = useState('')
+  const [cultivosLoading, setCultivosLoading] = useState(false)
   const [nuevoAbonoNombre, setNuevoAbonoNombre] = useState('')
   const [abonoRapidoError, setAbonoRapidoError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -315,7 +316,8 @@ export default function FichaBloque() {
   }
 
   const abrirNuevaPlantacion = async () => {
-    const [{ data: cultivosData }, { data: abonosData }] = await Promise.all([
+    setCultivosLoading(true)
+    const [{ data: cultivosData, error: cultivosError }, { data: abonosData, error: abonosError }] = await Promise.all([
       supabase.from('cultivos').select('*').order('nombre'),
       supabase.from('abonos').select('*').order('nombre')
     ])
@@ -323,7 +325,9 @@ export default function FichaBloque() {
     setAbonos(abonosData || [])
     setForm({ cultivo_id:'', variedad_texto:'', fecha_siembra:'', cantidad_plantas:'', abonos_ids:[], abonos_cantidades:{} })
     setNuevoCultivoNombre('')
-    setCultivoRapidoError('')
+    setCultivoRapidoError(cultivosError ? `No se pudo cargar el catálogo de cultivos: ${cultivosError.message}` : '')
+    setAbonoRapidoError(abonosError ? `No se pudo cargar el catálogo de abonos: ${abonosError.message}` : '')
+    setCultivosLoading(false)
     setShowNuevaPlantacion(true)
   }
 
@@ -356,8 +360,8 @@ export default function FichaBloque() {
     setShowEditarPlantacion(true)
   }
 
-  const agregarCultivoRapido = async () => {
-    const nombre = nuevoCultivoNombre.trim()
+  const agregarCultivoRapido = async (nombreSugerido = '') => {
+    const nombre = String(nombreSugerido || nuevoCultivoNombre).trim()
     if (!nombre) return
 
     const existente = cultivos.find(c => (c.nombre || '').trim().toLowerCase() === nombre.toLowerCase())
@@ -1442,22 +1446,29 @@ export default function FichaBloque() {
             <div className="ui-c7b1b6">{showEditarPlantacion ? 'Editar plantación' : 'Nueva plantación'}</div>
 
             <label className="ag-field-label ui-74cc19">Cultivo *
-            <select style={inpStyle} value={form.cultivo_id} onChange={e => setForm(f => ({...f, cultivo_id:e.target.value}))}>
-              <option value="">Selecciona cultivo...</option>
+            <select style={inpStyle} value={form.cultivo_id} disabled={cultivosLoading} onChange={e => setForm(f => ({...f, cultivo_id:e.target.value}))}>
+              <option value="">{cultivosLoading ? 'Cargando cultivos...' : cultivos.length ? 'Selecciona cultivo...' : 'Todavía no hay cultivos'}</option>
               {cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select></label>
+            {!cultivosLoading && cultivos.length === 0 && !cultivoRapidoError && (
+              <div style={{ background:'#f2f8f4', border:'1px solid #d9e9df', borderRadius:'var(--ag-radius)', padding:'11px 12px', margin:'-2px 0 10px', color:'#315344', fontSize:12, lineHeight:1.45 }}>
+                Esta empresa todavía no tiene cultivos. Creá el primero abajo; quedará guardado y seleccionado automáticamente.
+              </div>
+            )}
+            <div className="ui-74cc19" style={{ marginBottom:6 }}>Agregar un cultivo al catálogo</div>
             <div className="ui-16e267">
               <input className="ui-e7ec54"
                 style={{ ...inpStyle }}
                 type="text"
                 value={nuevoCultivoNombre}
                 onChange={e => setNuevoCultivoNombre(e.target.value)}
-                placeholder="Si no aparece, escribilo aca..."
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarCultivoRapido() } }}
+                placeholder="Ej: Tomate, locote, pepino..."
               />
               <button className="ag-small-action ui-c1563e"
                 type="button"
-                onClick={agregarCultivoRapido}
-               
+                onClick={() => agregarCultivoRapido()}
+                disabled={!nuevoCultivoNombre.trim()}
               >
                 Agregar
               </button>
