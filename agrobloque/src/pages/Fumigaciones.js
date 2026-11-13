@@ -5,13 +5,24 @@ import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
 import { ajustarStockSeguro } from '../lib/inventory'
-import { incluirSeleccionados, productoCorrespondeAplicacion } from '../lib/productCategories'
+import { categoriaProducto, incluirSeleccionados } from '../lib/productCategories'
 import { useNavigate } from 'react-router-dom'
 
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
   fertiriego:  { label:'Fertiriego', icon:'ti-droplet', color:'#2980b9', bg:'#eaf4fb' },
   foliar:      { label:'Foliar',     icon:'ti-leaf',    color:"#124e38", bg:'#eeeeee' },
+}
+
+const CATEGORIAS_POR_TIPO = {
+  fumigacion: ['Insecticida', 'Fungicida', 'Herbicida', 'Coadyuvante'],
+  fertiriego: ['Fertilizante', 'Hidrosoluble'],
+  foliar: ['Foliar'],
+}
+
+const categoriaCanonica = (producto, tipo) => {
+  const actual = categoriaProducto(producto)
+  return (CATEGORIAS_POR_TIPO[tipo] || []).find(categoria => categoria.toLowerCase() === actual) || ''
 }
 
 const fechaLocal = () => {
@@ -140,7 +151,7 @@ export default function Fumigaciones() {
     operarios_nombres:[],
     tanques_cantidad:'',
     tanque_litros:'',
-    productos_form:[{ producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
+    productos_form:[{ categoria_nombre:'', producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
     notas:'',
   })
   const [form, setForm] = useState(formVacio())
@@ -172,7 +183,7 @@ export default function Fumigaciones() {
   const fetchFumigaciones = async () => {
     setLoading(true)
     const { data, error } = await supabase.from('fumigaciones')
-      .select('*, campos(nombre), fumigacion_bloques(bloque_id, cultivo_snapshot, plantacion_id_snapshot, bloques(codigo, plantaciones(id, activa, cultivos(nombre)))), fumigacion_productos(*, productos(nombre, unidad, carencia_dias))')
+      .select('*, campos(nombre), fumigacion_bloques(bloque_id, cultivo_snapshot, plantacion_id_snapshot, bloques(codigo, plantaciones(id, activa, cultivos(nombre)))), fumigacion_productos(*, productos(nombre, unidad, carencia_dias, categorias_producto(nombre)))')
       .order('fecha', { ascending:false })
     if (error) setFormError('No se pudieron cargar las fumigaciones. Intentá nuevamente.')
     else setFumigaciones((data || []).filter(f => !f.anulada))
@@ -223,9 +234,10 @@ export default function Fumigaciones() {
     setModal(true)
   }
 
-  const parseProductoForm = (fp) => {
+  const parseProductoForm = (fp, tipo) => {
     const match = String(fp.dosis || '').match(/^\s*([\d.,]+)\s*([a-zA-Z]+)?/)
     return {
+      categoria_nombre: categoriaCanonica(fp.productos, tipo),
       producto_id: fp.producto_id || '',
       producto_nombre: fp.producto_nombre || fp.productos?.nombre || '',
       cantidad: fp.cantidad ?? match?.[1] ?? '',
@@ -246,8 +258,8 @@ export default function Fumigaciones() {
       tanques_cantidad: fumigacion.tanques_cantidad || '',
       tanque_litros: fumigacion.tanque_litros || '',
       productos_form: (fumigacion.fumigacion_productos || []).length
-        ? fumigacion.fumigacion_productos.map(parseProductoForm)
-        : [{ producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
+        ? fumigacion.fumigacion_productos.map(fp => parseProductoForm(fp, fumigacion.tipo || 'fumigacion'))
+        : [{ categoria_nombre:'', producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
       notas: fumigacion.notas || '',
     })
     setDetalle(null)
@@ -606,7 +618,7 @@ export default function Fumigaciones() {
             <div className="ui-74cc19">Tipo</div>
             <div className="ui-62b09f">
               {Object.entries(TIPOS).map(([k,v]) => (
-                <button className="ag-small-action ui-371bfd" key={k} onClick={() => setForm(f=>f.tipo === k ? f : ({...f,tipo:k,productos_form:f.productos_form.map(p => ({ ...p, producto_id:'', producto_nombre:p.producto_id ? '' : p.producto_nombre }))}))} style={{ background: form.tipo===k ? '#0F3923' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
+                <button className="ag-small-action ui-371bfd" key={k} onClick={() => setForm(f=>f.tipo === k ? f : ({...f,tipo:k,productos_form:f.productos_form.map(p => ({ ...p, categoria_nombre:'', producto_id:'', producto_nombre:p.producto_id ? '' : p.producto_nombre }))}))} style={{ background: form.tipo===k ? '#0F3923' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
               ))}
             </div>
             <label className="ag-field-label ui-74cc19">Fecha *
@@ -662,7 +674,7 @@ export default function Fumigaciones() {
               </div>
             )}
             <FormHeading number="03" detail="Cantidad, unidad y efecto sobre el stock">Productos utilizados</FormHeading>
-            <div className="ui-74cc19">Productos <span className="ui-d6202d">(filtrados según el tipo de aplicación)</span></div>
+            <div className="ui-74cc19">Productos <span className="ui-d6202d">(primero elegí la categoría)</span></div>
             {form.productos_form.map((pf,i)=>{
               const prod = productos.find(p=>p.id===pf.producto_id)
               const descuento = prod ? calcularDescuentoStock(pf, prod, form.tanques_cantidad) : 0
@@ -670,12 +682,18 @@ export default function Fumigaciones() {
                 <div className="ui-d51702" key={i}>
                   <div className="ag-product-row ui-820f1c">
                     <div className="ui-d40836">
-                      <select className="ui-ed7c13" value={pf.producto_id} onChange={e=>{const prodSel=productos.find(p=>p.id===e.target.value); const np=[...form.productos_form];np[i].producto_id=e.target.value;np[i].producto_nombre=prodSel?.nombre || np[i].producto_nombre || '';np[i].unidad_uso=unidadUsoDefault(prodSel?.unidad);setForm(f=>({...f,productos_form:np}))}}>
-                        <option value="">Sin inventario</option>
-                        {incluirSeleccionados(productos, p => productoCorrespondeAplicacion(p, form.tipo), [pf.producto_id]).map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
-                      </select>
-                      {productos.filter(p => productoCorrespondeAplicacion(p, form.tipo)).length === 0 && !pf.producto_id && <div className="ui-6d5651">No hay productos clasificados para esta aplicación. Clasificalos primero en Inventario.</div>}
-                      {!pf.producto_id && <input className="ui-6f9704" value={pf.producto_nombre || ''} onChange={e=>{const np=[...form.productos_form];np[i].producto_nombre=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Escribir producto" />}
+                      <label className="ag-field-label">Categoría
+                      <select className="ui-ed7c13" value={pf.categoria_nombre || ''} onChange={e=>{const np=[...form.productos_form];np[i].categoria_nombre=e.target.value;np[i].producto_id='';np[i].producto_nombre='';setForm(f=>({...f,productos_form:np}))}}>
+                        <option value="">Elegir categoría</option>
+                        {(CATEGORIAS_POR_TIPO[form.tipo] || []).map(categoria=><option key={categoria} value={categoria}>{categoria}</option>)}
+                      </select></label>
+                      <label className="ag-field-label">Producto
+                      <select className="ui-ed7c13" value={pf.producto_id} disabled={!pf.categoria_nombre} onChange={e=>{const prodSel=productos.find(p=>p.id===e.target.value); const np=[...form.productos_form];np[i].producto_id=e.target.value;np[i].producto_nombre=prodSel?.nombre || '';np[i].unidad_uso=unidadUsoDefault(prodSel?.unidad);setForm(f=>({...f,productos_form:np}))}}>
+                        <option value="">{pf.categoria_nombre ? 'Sin inventario / escribir otro' : 'Primero elegí la categoría'}</option>
+                        {incluirSeleccionados(productos, p => categoriaProducto(p) === String(pf.categoria_nombre || '').toLowerCase(), [pf.producto_id]).map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
+                      </select></label>
+                      {pf.categoria_nombre && productos.filter(p => categoriaProducto(p) === pf.categoria_nombre.toLowerCase()).length === 0 && !pf.producto_id && <div className="ui-6d5651">No hay productos en esta categoría. Podés escribir uno o cargarlo primero en Inventario.</div>}
+                      {pf.categoria_nombre && !pf.producto_id && <input className="ui-6f9704" value={pf.producto_nombre || ''} onChange={e=>{const np=[...form.productos_form];np[i].producto_nombre=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder={`Escribir ${pf.categoria_nombre.toLowerCase()}`} />}
                     </div>
                     <input className="ui-ed7c13" value={pf.cantidad} onChange={e=>{const np=[...form.productos_form];np[i].cantidad=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Cant." inputMode="decimal"/>
                     <select className="ui-e2752f" value={pf.unidad_uso} onChange={e=>{const np=[...form.productos_form];np[i].unidad_uso=e.target.value;setForm(f=>({...f,productos_form:np}))}}>
@@ -690,7 +708,7 @@ export default function Fumigaciones() {
                 </div>
               )
             })}
-            <button className="ag-small-action ui-a0449e" onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{producto_id:'',producto_nombre:'',cantidad:'',unidad_uso:'g'}]}))}>+ Agregar producto</button>
+            <button className="ag-small-action ui-a0449e" onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{categoria_nombre:'',producto_id:'',producto_nombre:'',cantidad:'',unidad_uso:'g'}]}))}>+ Agregar producto</button>
             <label className="ag-field-label ui-74cc19">Notas
             <textarea className="ui-641669" value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/></label>
             <button className="ag-form-submit ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar registro'}</button>
