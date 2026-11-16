@@ -2404,3 +2404,7 @@ img.bl-logo--sobre-oscuro { display:none !important; }
 [data-theme='dark'] .pl-temas button { border-color:var(--dk-line); background:var(--dk-soft); color:var(--text-primary); }
 [data-theme='dark'] .pl-temas button.activo { border-color:transparent; background:var(--grad-finanzas); color:#FFFFFF; }
 @media (max-width:420px) { .pl-temas button span { display:none; } }
+
+/* Panel de plataforma: estado de preparacion de la empresa y primer ingreso del dueno */
+.pl-empresa__estado { display:flex; flex-wrap:wrap; gap:6px; margin-top:-4px; }
+.pl-empresa__estado .sp-chip { white-space:normal; }

@@ -196,6 +196,15 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
   }
 
   const abrir = (tipo, datos = {}) => { setForm(datos); setModal(tipo); setError(''); setSuccess('') }
+  // Supabase no lanza una excepción cuando la base rechaza un cambio: devuelve { error }. Hay que revisarlo.
+  const ejecutar = async consulta => { const { error: falla } = await consulta; if (falla) throw falla }
+  const explicarFalla = (e, accion) => {
+    const texto = `${e?.code || ''} ${e?.message || ''}`
+    if (/23503|foreign key/i.test(texto)) return `No se puede ${accion}: está en uso en otros registros.`
+    if (/23505|duplicate key/i.test(texto)) return `No se puede ${accion}: ya existe uno con ese nombre.`
+    if (/42501|permission|row-level security|solo lectura/i.test(texto)) return `No se puede ${accion}: tu usuario no tiene permiso.`
+    return `No se pudo ${accion}: ${e?.message || 'intentá nuevamente.'}`
+  }
   const cerrar = () => { setModal(null); setForm({}); setError(''); setSuccess('') }
 
   const asegurarCategoriaProducto = async () => {
@@ -386,22 +395,26 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
   }
 
   const guardarCultivo = async () => {
-    if (!form.nombre) return; setLoading(true); setError('')
+    const nombre = String(form.nombre || '').trim()
+    if (!nombre) { setError('Escribí el nombre del cultivo.'); return }
+    setLoading(true); setError('')
     try {
-      if (form.id) await supabase.from('cultivos').update({ nombre: form.nombre }).eq('id', form.id)
-      else await supabase.from('cultivos').insert({ nombre: form.nombre })
-      await fetchAll(); abrir('cultivos')
-    } catch (e) { setError('Error: ' + e.message) }
+      if (form.id) await ejecutar(supabase.from('cultivos').update({ nombre }).eq('id', form.id))
+      else await ejecutar(supabase.from('cultivos').insert({ nombre }))
+      await fetchAll(); abrir('cultivos'); setSuccess('Cultivo guardado.')
+    } catch (e) { setError(explicarFalla(e, 'guardar el cultivo')) }
     setLoading(false)
   }
 
   const guardarOperario = async () => {
-    if (!form.nombre) return; setLoading(true); setError('')
+    const nombre = String(form.nombre || '').trim()
+    if (!nombre) { setError('Escribí el nombre del operario.'); return }
+    setLoading(true); setError('')
     try {
-      if (form.id) await supabase.from('operarios').update({ nombre: form.nombre }).eq('id', form.id)
-      else await supabase.from('operarios').insert({ nombre: form.nombre, campo_id: form.campo_id })
-      await fetchAll(); abrir('operarios')
-    } catch (e) { setError('Error: ' + e.message) }
+      if (form.id) await ejecutar(supabase.from('operarios').update({ nombre }).eq('id', form.id))
+      else await ejecutar(supabase.from('operarios').insert({ nombre, campo_id: form.campo_id }))
+      await fetchAll(); abrir('operarios'); setSuccess('Operario guardado.')
+    } catch (e) { setError(explicarFalla(e, 'guardar el operario')) }
     setLoading(false)
   }
 
@@ -410,26 +423,37 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     try {
       const nombre = form.nombre.trim()
       const anterior = form.id ? abonos.find(a => a.id === form.id)?.nombre : ''
-      if (form.id) await supabase.from('abonos').update({ nombre }).eq('id', form.id)
-      else await supabase.from('abonos').insert({ nombre })
+      if (!nombre) { setError('Escribí el nombre del abono.'); setLoading(false); return }
+      if (form.id) await ejecutar(supabase.from('abonos').update({ nombre }).eq('id', form.id))
+      else await ejecutar(supabase.from('abonos').insert({ nombre }))
       await sincronizarProductoAbono(nombre, anterior)
-      await fetchAll(); abrir('abonos')
-    } catch (e) { setError('Error: ' + e.message) }
+      await fetchAll(); abrir('abonos'); setSuccess('Abono guardado.')
+    } catch (e) { setError(explicarFalla(e, 'guardar el abono')) }
     setLoading(false)
   }
 
   const guardarBloque = async () => {
     if (!form.id) return; setLoading(true); setError('')
     try {
-      await supabase.from('bloques').update({ tipo: form.tipo }).eq('id', form.id)
-      await fetchAll(); abrir('bloques')
-    } catch (e) { setError('Error: ' + e.message) }
+      await ejecutar(supabase.from('bloques').update({ tipo: form.tipo }).eq('id', form.id))
+      await fetchAll(); abrir('bloques'); setSuccess('Bloque actualizado.')
+    } catch (e) { setError(explicarFalla(e, 'actualizar el bloque')) }
     setLoading(false)
   }
 
   const eliminar = async (tabla, id, volver) => {
-    await supabase.from(tabla).delete().eq('id', id)
-    await fetchAll(); abrir(volver)
+    const esOperario = tabla === 'operarios'
+    const pregunta = esOperario
+      ? '¿Desactivar este operario? Deja de aparecer en Asistencia, pero se conserva todo su historial de asistencia y adelantos.'
+      : '¿Eliminar este registro? No se puede deshacer.'
+    if (typeof window !== 'undefined' && !window.confirm(pregunta)) return
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      if (esOperario) await ejecutar(supabase.from('operarios').update({ activo: false }).eq('id', id))
+      else await ejecutar(supabase.from(tabla).delete().eq('id', id))
+      await fetchAll(); abrir(volver); setSuccess(esOperario ? 'Operario desactivado. Su historial se conserva.' : 'Registro eliminado.')
+    } catch (e) { setError(explicarFalla(e, esOperario ? 'desactivar el operario' : 'eliminar el registro')) }
+    setLoading(false)
   }
 
   const descargarBackup = async () => {
@@ -971,12 +995,12 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
               {campos.map(campo => (
                 <div key={campo.id}>
                   <div className="ui-269365">{campo.nombre}</div>
-                  {operarios.filter(o => o.campo_id === campo.id).map(o => (
+                  {operarios.filter(o => o.campo_id === campo.id && o.activo !== false).map(o => (
                     <div key={o.id} style={listItem}>
                       <div className="ui-0aae41">{o.nombre}</div>
                       <div className="ui-91294d">
                         <button className="ag-small-action ui-387856" onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
-                        <button className="ag-small-action ui-14c146" onClick={() => eliminar('operarios',o.id,'operarios')}>Eliminar</button>
+                        <button className="ag-small-action ui-14c146" onClick={() => eliminar('operarios',o.id,'operarios')}>Desactivar</button>
                       </div>
                     </div>
                   ))}

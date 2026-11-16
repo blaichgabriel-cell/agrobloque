@@ -3,6 +3,9 @@ import BrandLogo from '../components/BrandLogo'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+// Mientras la base no tenga la función nueva, el onboarding usa el camino anterior paso a paso.
+const funcionAusente = e => Boolean(e) && (e.code === 'PGRST202' || /could not find the function/i.test(e.message || ''))
+
 const initialForm = organization => ({
   empresa: organization?.nombre && organization.nombre !== 'AgroBloque' ? organization.nombre : '',
   telefono: organization?.telefono || '',
@@ -38,6 +41,30 @@ export default function Onboarding({ organization, preview = false, onComplete, 
     setSaving(true)
     setError('')
     try {
+      // Camino principal: una sola operación en la base. Deja empresa, categorías de inventario, campo y
+      // bloques listos, o no deja nada (si algo falla no quedan datos a medias). Repetirla no duplica.
+      const { data:listo, error:rpcError } = await supabase.rpc('completar_onboarding_empresa', {
+        p_empresa:empresa,
+        p_telefono:form.telefono.trim() || null,
+        p_campo:campo,
+        p_bloques:totalBloques,
+        p_tipo:form.tipo,
+      })
+      if (!rpcError && listo?.ok) {
+        setResult({
+          empresa:listo.organizacion?.nombre || empresa,
+          campo:listo.campo?.nombre || campo,
+          bloques:Number(listo.bloques || 0),
+          categorias:Number(listo.categorias || 0),
+          warning:listo.ya_preparada ? 'Tu espacio ya estaba preparado: no se duplicó nada.' : '',
+          organization:listo.organizacion,
+          campoRecord:listo.campo,
+        })
+        setStep(2)
+        return
+      }
+      if (rpcError && !funcionAusente(rpcError)) throw rpcError
+
       const organizationPayload = {
         nombre:empresa,
         telefono:form.telefono.trim() || null,
@@ -94,6 +121,7 @@ export default function Onboarding({ organization, preview = false, onComplete, 
           <span><i className="ti ti-building-community" /><b>{result.empresa}</b><small>Empresa</small></span>
           <span><i className="ti ti-map-pin" /><b>{result.campo}</b><small>Primer campo</small></span>
           <span><i className="ti ti-layout-grid" /><b>{result.bloques}</b><small>Bloques iniciales</small></span>
+          {result.categorias > 0 && <span><i className="ti ti-tags" /><b>{result.categorias}</b><small>Categorías de inventario</small></span>}
         </div>
         <button className="onboarding-primary" onClick={() => preview ? navigate('/configuracion') : onComplete?.({ organization:result.organization, campo:result.campoRecord })}>{preview ? 'Volver a configuración' : 'Entrar a mi espacio'}<i className="ti ti-arrow-right" /></button>
       </section>

@@ -22,6 +22,14 @@ export const ESTADOS = {
   cancelado: { icono: 'ti-ban', texto: 'Solicitud cancelada', tono: 'neutral' },
 }
 
+// Preparación de la empresa (columna preparada_en de la base). Las empresas anteriores a ese registro
+// que ya tienen campos se consideran listas. Sin el dato (base sin la migración) no se muestra nada.
+const estadoPreparacion = empresa => {
+  if (!empresa || !('preparada_en' in empresa)) return null
+  if (empresa.preparada_en || Number(empresa.campos || 0) > 0) return { texto: 'Lista para usar', icono: 'ti-circle-check', tono: 'activo' }
+  return { texto: 'Pendiente de configurar', icono: 'ti-tool', tono: 'pendiente' }
+}
+
 function Kpi({ icono, valor, etiqueta, tono }) {
   return <div className="pl-kpi" data-tone={tono}><i className={`ti ${icono}`} aria-hidden="true" /><div><strong className="numeric-data">{valor}</strong><span>{etiqueta}</span></div></div>
 }
@@ -35,6 +43,8 @@ function TarjetaEmpresa({ empresa, ocupado, onSolicitar, onCancelar, onEntrar, o
   const s = empresa.soporte || {}
   const puedeEntrar = estado === 'aprobado' || estado === 'propia'
   const idLista = `pl-campos-${empresa.id}`
+  const prep = estadoPreparacion(empresa)
+  const conIngreso = 'ultimo_ingreso_dueno' in empresa
 
   return <article className="pl-empresa bl-card" data-estado={estado}>
     <header className="pl-empresa__head">
@@ -42,6 +52,11 @@ function TarjetaEmpresa({ empresa, ocupado, onSolicitar, onCancelar, onEntrar, o
       <div className="pl-empresa__id"><h3 title={empresa.nombre}>{empresa.nombre}</h3><small title={empresa.admin_email}>{empresa.admin_email || 'Sin administrador'}</small></div>
       <span className={`sp-chip sp-chip--${info.tono}`}><i className={`ti ${info.icono}`} aria-hidden="true" />{info.texto}</span>
     </header>
+
+    {(prep || conIngreso) && <div className="pl-empresa__estado">
+      {prep && <span className={`sp-chip sp-chip--${prep.tono}`}><i className={`ti ${prep.icono}`} aria-hidden="true" />{prep.texto}</span>}
+      {conIngreso && <span className={`sp-chip sp-chip--${empresa.ultimo_ingreso_dueno ? 'neutral' : 'pendiente'}`}><i className={`ti ${empresa.ultimo_ingreso_dueno ? 'ti-user-check' : 'ti-user-question'}`} aria-hidden="true" />{empresa.ultimo_ingreso_dueno ? `Dueño ingresó ${textoHace(empresa.ultimo_ingreso_dueno).toLowerCase()}` : 'El dueño todavía no ingresó'}</span>}
+    </div>}
 
     <dl className="pl-stats">
       <div><dt>Usuarios</dt><dd className="numeric-data">{numero(empresa.usuarios_activos)}</dd></div>
@@ -128,8 +143,12 @@ export default function Plataforma() {
   }
   const reenviarA = async empresaOCorreo => {
     const correo = typeof empresaOCorreo === 'string' ? empresaOCorreo : empresaOCorreo.admin_email
-    const ok = await ejecutar(async () => { await reenviarInvitacion(correo); return true }, `Enviamos un enlace nuevo a ${correo}. Debe abrirlo una sola vez y crear su contraseña.`)
-    if (ok && creando) setCreando(false)
+    const r = await ejecutar(() => reenviarInvitacion(correo))
+    if (!r) return
+    setAviso(r.cuenta_creada
+      ? `La cuenta de ${correo} se había perdido: la volvimos a crear y enviamos el enlace. Debe abrirlo una sola vez y crear su contraseña.`
+      : `Enviamos un enlace nuevo a ${correo}. Debe abrirlo una sola vez y crear su contraseña.`)
+    if (creando) setCreando(false)
   }
   const crear = async () => {
     const nombre = formEmpresa.nombre.trim(), correo = formEmpresa.correo.trim().toLowerCase()

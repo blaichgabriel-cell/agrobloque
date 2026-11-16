@@ -23,23 +23,27 @@ const demo = {
       id: 'demo-1', nombre: 'Agrícola Los Aromos', admin_email: 'admin@losaromos.example', creada_en: dias(-120), usuarios_activos: 6, campos: 2, bloques: 34, ultima_actividad: minutos(-25),
       campos_lista: [{ id: 'c1', nombre: 'Campo Norte', bloques: 22 }, { id: 'c2', nombre: 'Invernadero Central', bloques: 12 }],
       plan: { nombre: 'Profesional', estado: 'activa', limite_bloques: 60, limite_usuarios: 12, limite_campos: 4, vence_en: dias(210) },
+      preparada_en: dias(-119), ultimo_ingreso_dueno: minutos(-30),
       soporte: { estado: 'sin_acceso' },
     },
     {
       id: 'demo-2', nombre: 'Hortalizas Santa Rita', admin_email: 'gerencia@santarita.example', creada_en: dias(-45), usuarios_activos: 3, campos: 1, bloques: 18, ultima_actividad: minutos(-60 * 5),
       campos_lista: [{ id: 'c3', nombre: 'Lote Principal', bloques: 18 }],
       plan: { nombre: 'Demo', estado: 'demo', limite_bloques: 20, limite_usuarios: 4, limite_campos: 1, vence_en: dias(9) },
+      preparada_en: dias(-44), ultimo_ingreso_dueno: minutos(-60 * 5),
       soporte: { estado: 'pendiente', acceso_id: 'demo-a1', motivo: 'Ayuda con la carga de las cosechas de la semana.', solicitado_en: minutos(-18) },
     },
     {
       id: 'demo-3', nombre: 'Cooperativa Río Verde', admin_email: 'coordinacion@rioverde.example', creada_en: dias(-200), usuarios_activos: 11, campos: 3, bloques: 52, ultima_actividad: minutos(-4),
       campos_lista: [{ id: 'c4', nombre: 'Campo Norte', bloques: 30 }, { id: 'c5', nombre: 'Invernadero Central', bloques: 14 }, { id: 'c6', nombre: 'Vivero Sur', bloques: 8 }],
       plan: { nombre: 'Profesional', estado: 'activa', limite_bloques: 80, limite_usuarios: 20, limite_campos: 5, vence_en: dias(160) },
+      preparada_en: dias(-199), ultimo_ingreso_dueno: minutos(-4),
       soporte: { estado: 'aprobado', acceso_id: 'demo-a2', expira_en: minutos(95), motivo: 'Revisión de costos del trimestre.' },
     },
     {
-      id: 'demo-4', nombre: 'Finca La Esperanza', admin_email: 'dueno@laesperanza.example', creada_en: dias(-12), usuarios_activos: 2, campos: 1, bloques: 9, ultima_actividad: minutos(-60 * 30),
-      campos_lista: [{ id: 'c7', nombre: 'Finca única', bloques: 9 }],
+      id: 'demo-4', nombre: 'Finca La Esperanza', admin_email: 'dueno@laesperanza.example', creada_en: dias(-12), usuarios_activos: 1, campos: 0, bloques: 0, ultima_actividad: null,
+      campos_lista: [],
+      preparada_en: null, ultimo_ingreso_dueno: null,
       plan: { nombre: 'Básico', estado: 'vencida', limite_bloques: 30, limite_usuarios: 5, limite_campos: 1, vence_en: dias(-3) },
       soporte: { estado: 'vencida', acceso_id: 'demo-a3', expira_en: minutos(-60 * 3) },
     },
@@ -47,6 +51,7 @@ const demo = {
       id: 'demo-5', nombre: 'Finca Demo (propia)', admin_email: 'demo@agrobloque.example', creada_en: dias(-300), usuarios_activos: 2, campos: 2, bloques: 10, ultima_actividad: minutos(-60 * 2),
       campos_lista: [{ id: 'c8', nombre: 'Invernadero Central', bloques: 6 }, { id: 'c9', nombre: 'Campo Norte', bloques: 4 }],
       plan: { nombre: 'Profesional', estado: 'activa', limite_bloques: 80, limite_usuarios: 20, limite_campos: 5, vence_en: dias(365) },
+      preparada_en: dias(-299), ultimo_ingreso_dueno: minutos(-60 * 2),
       soporte: { estado: 'propia' },
     },
   ],
@@ -187,9 +192,24 @@ export async function crearEmpresa(nombre, ownerEmail) {
 export async function reenviarInvitacion(correo) {
   const email = String(correo || '').trim().toLowerCase()
   if (!email) throw new Error('Esta empresa no tiene un correo de administrador.')
-  if (demo.activo) return
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/?auth_action=set-password` })
-  if (error) throw new Error(/rate limit/i.test(error.message || '') ? 'Se alcanzó el límite de correos por hora. Espera un rato e inténtalo de nuevo.' : 'No se pudo enviar el correo. Verifica que el correo esté bien escrito.')
+  if (demo.activo) return { cuenta_creada: false }
+  // El servidor también repara la cuenta si se borró: la vuelve a crear y la reconecta con su empresa.
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData?.session?.access_token
+  if (!token) throw new Error('Tu sesión venció. Volvé a ingresar e intentá otra vez.')
+  const response = await fetch('/api/reenviar-invitacion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email }),
+  }).catch(() => null)
+  const resultado = response ? await response.json().catch(() => ({})) : {}
+  if (!response || !response.ok) throw new Error(resultado.error || 'No se pudo reenviar la invitación. Intentá de nuevo en unos minutos.')
+  if (resultado.correo_enviado === false) {
+    throw new Error(/rate|limit|60 seconds|security purposes/i.test(resultado.correo_error || '')
+      ? 'Se alcanzó el límite de correos. Espera un minuto (o una hora si se enviaron muchos) e inténtalo de nuevo.'
+      : `${resultado.cuenta_creada ? 'La cuenta se volvió a crear, pero ' : ''}no se pudo enviar el correo (${resultado.correo_error}).`)
+  }
+  return resultado
 }
 
 // ---------------------------------------------------------------------------------------------
