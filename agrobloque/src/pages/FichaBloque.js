@@ -66,6 +66,7 @@ export default function FichaBloque() {
   const [plantacionActiva, setPlantacionActiva] = useState(null)
   const [historial, setHistorial] = useState([])
   const [cosechasCiclo, setCosechasCiclo] = useState([])
+  const [costosCiclo, setCostosCiclo] = useState({ loading:true, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, error:'' })
   const [cosechaError, setCosechaError] = useState('')
   const [cosechaSuccess, setCosechaSuccess] = useState('')
   const [incidencias, setIncidencias] = useState([])
@@ -233,6 +234,7 @@ export default function FichaBloque() {
   }
 
   const fetchData = async () => {
+    setCostosCiclo(actual => ({ ...actual, loading:true, error:'' }))
     const { data: b } = await supabase.from('bloques').select('*, sectores(nombre), campos(nombre)').eq('id', id).single()
     setBloque(b)
     if (b?.campo_id) {
@@ -283,6 +285,33 @@ export default function FichaBloque() {
           .select('*').eq('bloque_id', id).eq('plantacion_id', activa.id)
           .order('fecha', { ascending: false })
         setMuertes(mts || [])
+
+        const [consumosResultado, costosResultado] = await Promise.all([
+          supabase.from('consumos_valorizados')
+            .select('costo_total, origen_tipo, anulado')
+            .eq('plantacion_id', activa.id),
+          supabase.from('costos')
+            .select('monto, fecha, plantacion_id, anulada')
+            .eq('bloque_id', id)
+            .gte('fecha', activa.fecha_siembra || '2000-01-01'),
+        ])
+        const consumos = (consumosResultado.data || []).filter(item => !item.anulado)
+        const manuales = (costosResultado.data || []).filter(item => !item.anulada && (!item.plantacion_id || item.plantacion_id === activa.id))
+        const fumigaciones = consumos.filter(item => item.origen_tipo === 'consumo_fumigacion').reduce((suma, item) => suma + Number(item.costo_total || 0), 0)
+        const fertilizaciones = consumos.filter(item => item.origen_tipo === 'consumo_fertilizacion').reduce((suma, item) => suma + Number(item.costo_total || 0), 0)
+        const insumos = consumos.reduce((suma, item) => suma + Number(item.costo_total || 0), 0)
+        const manualesTotal = manuales.reduce((suma, item) => suma + Number(item.monto || 0), 0)
+        setCostosCiclo({
+          loading:false,
+          total:insumos + manualesTotal,
+          insumos,
+          fumigaciones,
+          fertilizaciones,
+          manuales:manualesTotal,
+          error:consumosResultado.error || costosResultado.error ? 'No se pudieron consultar todos los costos del ciclo.' : '',
+        })
+      } else {
+        setCostosCiclo({ loading:false, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, error:'' })
       }
     }
 
@@ -1129,7 +1158,7 @@ export default function FichaBloque() {
             </div>
             <span className={`block-detail-status ${plantacionActiva ? 'is-active' : 'is-empty'}`}><i />{plantacionActiva ? 'En producción' : 'Sin cultivo activo'}</span>
           </div>
-          {plantacionActiva && <div className="ag-block-summary"><span><i className="ti ti-calendar-time" /><small>Edad del cultivo</small><strong>{diasDesde(plantacionActiva.fecha_siembra) ?? '—'} <em>días</em></strong></span><span><i className="ti ti-seeding" /><small>Plantas activas</small><strong>{cantidadPlantasActiva ? Number(cantidadPlantasActiva).toLocaleString('es-PY') : '—'}</strong></span><span><i className="ti ti-basket" /><small>Cosecha del ciclo</small><strong>{fmtKg(totalKgCiclo)} <em>kg</em></strong></span></div>}
+          {plantacionActiva && <div className="ag-block-summary"><span><i className="ti ti-calendar-time" /><small>Edad del cultivo</small><strong>{diasDesde(plantacionActiva.fecha_siembra) ?? '—'} <em>días</em></strong></span><span><i className="ti ti-seeding" /><small>Plantas activas</small><strong>{cantidadPlantasActiva ? Number(cantidadPlantasActiva).toLocaleString('es-PY') : '—'}</strong></span><span><i className="ti ti-basket" /><small>Cosecha del ciclo</small><strong>{fmtKg(totalKgCiclo)} <em>kg</em></strong></span><span><i className="ti ti-coin" /><small>Costo acumulado</small><strong>{costosCiclo.loading ? '…' : `Gs. ${fmtGs(costosCiclo.total)}`}</strong></span></div>}
           {!plantacionActiva && can.create && (
             <button className="ag-small-action ui-2c5a32" onClick={abrirNuevaPlantacion}>
               + Nueva plantación
@@ -1216,6 +1245,20 @@ export default function FichaBloque() {
                     </div>
                   )}
                 </div>
+
+                <section className="ag-surface block-cost-card" aria-label="Costos acumulados del ciclo">
+                  <div className="block-cost-card__head">
+                    <div><small>GASTOS DEL CICLO ACTUAL</small><h3>Costo acumulado</h3><p>Desde la siembra del {fechaCorta(plantacionActiva.fecha_siembra)}.</p></div>
+                    <strong>{costosCiclo.loading ? 'Calculando…' : `Gs. ${fmtGs(costosCiclo.total)}`}</strong>
+                  </div>
+                  {costosCiclo.error && <div className="ag-feedback ag-feedback-error" role="alert">{costosCiclo.error}</div>}
+                  {!costosCiclo.loading && <div className="block-cost-card__breakdown">
+                    <span><i className="ti ti-spray" /><small>Fumigaciones</small><strong>Gs. {fmtGs(costosCiclo.fumigaciones)}</strong></span>
+                    <span><i className="ti ti-leaf" /><small>Fertilizaciones</small><strong>Gs. {fmtGs(costosCiclo.fertilizaciones)}</strong></span>
+                    <span><i className="ti ti-receipt" /><small>Gastos directos</small><strong>Gs. {fmtGs(costosCiclo.manuales)}</strong></span>
+                  </div>}
+                  <div className="block-cost-card__foot"><span>Incluye insumos consumidos y gastos asignados a este bloque. No reparte jornales generales del campo.</span><button type="button" onClick={() => navigate(`/rentabilidad?bloque=${bloque.id}`)}>Ver rentabilidad <i className="ti ti-arrow-up-right" /></button></div>
+                </section>
 
                 <div className="ui-e4712c">
                   <div className="ui-253181">
