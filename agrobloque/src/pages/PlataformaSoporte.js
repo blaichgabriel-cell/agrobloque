@@ -34,7 +34,12 @@ function Simulador({ empresas }) {
 
   const simular = async () => {
     setOcupado(true); setError(''); setAviso('')
-    try { await solicitarSoporte(empresaId, MOTIVO_PRUEBA); setAviso('Solicitud enviada. Mira cómo le llega al administrador del cliente.') }
+    try {
+      const resultado = await solicitarSoporte(empresaId, MOTIVO_PRUEBA)
+      setAviso(resultado.correo_enviado
+        ? 'Solicitud enviada. Mira cómo le llega al administrador del cliente.'
+        : `Solicitud creada, pero no se pudo enviar el correo (${resultado.motivo_correo}).`)
+    }
     catch (e) { setError(e.message) }
     setOcupado(false)
   }

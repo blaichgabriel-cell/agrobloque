@@ -130,8 +130,15 @@ export default function Plataforma() {
   }
 
   const enviarSolicitud = async () => {
-    const ok = await ejecutar(async () => { await solicitarSoporte(solicitando.id, motivo); return true }, `Solicitud enviada a ${solicitando.nombre}. Te avisaremos cuando su administrador responda.`)
-    if (ok) { setSolicitando(null); setMotivo(''); if (!enModoDemo()) recargar() }
+    const empresa = solicitando.nombre
+    const resultado = await ejecutar(() => solicitarSoporte(solicitando.id, motivo))
+    if (resultado) {
+      // La solicitud ya quedó creada; si el correo no salió, se dice claro para avisarle al cliente por otro medio.
+      setAviso(resultado.correo_enviado
+        ? `Solicitud enviada a ${empresa}. Te avisaremos cuando su administrador responda.`
+        : `La solicitud a ${empresa} quedó creada, pero no se pudo enviar el correo (${resultado.motivo_correo}). Avísale a su administrador por otro medio para que la apruebe.`)
+      setSolicitando(null); setMotivo(''); if (!enModoDemo()) recargar()
+    }
   }
   const cancelar = async id => { await ejecutar(() => cancelarSolicitud(id), 'Solicitud cancelada.'); if (!enModoDemo()) recargar() }
   const entrar = async (empresa, campo) => {

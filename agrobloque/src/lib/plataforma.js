@@ -119,20 +119,34 @@ export async function solicitarSoporte(organizacionId, motivo) {
     const e = empresaDemo(organizacionId)
     e.soporte = { estado: 'pendiente', acceso_id: `demo-a${++contadorDemo}`, motivo: texto, solicitado_en: minutos(0) }
     registrarDemo('solicitada', e.soporte.acceso_id)
-    avisar(); return e.soporte.acceso_id
+    avisar(); return { acceso_id: e.soporte.acceso_id, correo_enviado: true }
   }
   const { data, error } = await supabase.rpc('soporte_solicitar', { p_organizacion_id: organizacionId, p_motivo: texto })
   if (error) throw new Error(error.message)
-  const { data: sessionData } = await supabase.auth.getSession()
-  const token = sessionData?.session?.access_token
-  if (token) {
-    fetch('/api/notificar-solicitud-soporte', {
+  // La solicitud ya existe. El correo es un aviso aparte: si falla no se deshace nada, pero se le dice a quien la pidió.
+  const correo = await avisarSolicitudPorCorreo(data)
+  return { acceso_id: data, correo_enviado: correo.enviado, motivo_correo: correo.motivo }
+}
+
+// Pide al servidor que le escriba al administrador de la empresa. Devuelve { enviado, motivo }; nunca lanza.
+async function avisarSolicitudPorCorreo(accesoId) {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+    if (!token) return { enviado: false, motivo: 'No hay sesión para enviar el correo.' }
+    const respuesta = await fetch('/api/notificar-solicitud-soporte', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ acceso_id: data }),
-    }).catch(errorCorreo => console.warn('La solicitud se creó, pero no se pudo notificar por correo.', errorCorreo))
+      body: JSON.stringify({ acceso_id: accesoId }),
+    })
+    const cuerpo = await respuesta.json().catch(() => ({}))
+    if (!respuesta.ok) return { enviado: false, motivo: cuerpo.error || `El servidor respondió ${respuesta.status}.` }
+    if (cuerpo.correo_enviado === false) return { enviado: false, motivo: cuerpo.motivo || 'El servidor no envió el correo.' }
+    return { enviado: true }
+  } catch (falla) {
+    console.warn('La solicitud se creó, pero no se pudo notificar por correo.', falla)
+    return { enviado: false, motivo: 'No se pudo conectar con el servidor de correo.' }
   }
-  return data
 }
 
 export async function cancelarSolicitud(accesoId) {
