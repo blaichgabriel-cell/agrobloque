@@ -21,11 +21,11 @@ function ModalConfirm({ onConfirm, onCancel }) {
   return (
     <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
       <div className="ag-surface ui-211525">
-        <div className="ui-3e43be">¿Cancelar tarea?</div>
-        <div className="ui-01159a">La tarea se conservará en el historial.</div>
+        <div className="ui-3e43be">¿Eliminar tarea?</div>
+        <div className="ui-01159a">La tarea desaparecerá de la agenda. No se puede deshacer.</div>
         <div className="ui-9c6869">
           <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
-          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Cancelar tarea</button>
+          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Eliminar tarea</button>
         </div>
       </div>
     </Modal>
@@ -67,7 +67,7 @@ export default function Agenda() {
     setLoading(true)
     const { data, error } = await supabase.from('tareas').select('*, campos(nombre), bloques(codigo)').order('fecha_programada')
     if (error) setError('No se pudo cargar la agenda.')
-    else setTareas(data || [])
+    else setTareas((data || []).filter(tarea => !tarea.anulada && !String(tarea.descripcion || '').startsWith('[Cancelada]')))
     setLoading(false)
   }
 
@@ -123,12 +123,40 @@ export default function Agenda() {
 
   const eliminarTarea = (id) => {
     setConfirmar({ fn: async () => {
-      const { error } = await supabase.from('tareas').update({ anulada:true, anulada_at:new Date().toISOString() }).eq('id', id)
-      if (error && `${error.message || ''}`.toLowerCase().includes('anulada')) {
-        const tarea = tareas.find(t => t.id === id)
-        await supabase.from('tareas').update({ completada:true, fecha_completada:hoy, descripcion:`[Cancelada] ${tarea?.descripcion || ''}` }).eq('id', id)
+      setError('')
+      setSuccess('')
+      const tarea = tareas.find(t => t.id === id)
+      try {
+        const ahora = new Date().toISOString()
+        const resultado = await supabase.from('tareas').update({
+          anulada:true,
+          anulada_at:ahora,
+          anulada_motivo:'Eliminada por el usuario desde Agenda',
+          updated_at:ahora,
+        }).eq('id', id).select('id').maybeSingle()
+
+        if (resultado.error && `${resultado.error.message || ''}`.toLowerCase().includes('anulada')) {
+          const compatible = await supabase.from('tareas')
+            .update({ completada:true, fecha_completada:hoy, descripcion:`[Cancelada] ${tarea?.descripcion || ''}` })
+            .eq('id', id)
+            .select('id')
+            .maybeSingle()
+          if (compatible.error) throw compatible.error
+          if (!compatible.data) throw new Error('La tarea no se eliminó. Revisá tus permisos.')
+        } else {
+          if (resultado.error) throw resultado.error
+          if (!resultado.data) throw new Error('La tarea no se eliminó. Revisá tus permisos.')
+        }
+
+        setTareas(actuales => actuales.filter(item => item.id !== id))
+        setConfirmar(null)
+        setSuccess('Tarea eliminada correctamente.')
+        toast.success('Tarea eliminada')
+        await fetchTareas()
+      } catch (error) {
+        setConfirmar(null)
+        setError(`No se pudo eliminar la tarea: ${error.message || 'error desconocido'}`)
       }
-      setConfirmar(null); fetchTareas()
     }})
   }
 
@@ -211,7 +239,7 @@ export default function Agenda() {
                     </button>
                   )}
                   {!t.anulada && can.delete && <button className="ag-small-action ui-0a41d9" onClick={() => eliminarTarea(t.id)}>
-                    Cancelar
+                    Eliminar
                   </button>
                   }
                   {can.edit && (t.completada || t.anulada) && <button className="ag-small-action ui-aa2db8" onClick={() => reabrirTarea(t.id)}>Reabrir</button>}

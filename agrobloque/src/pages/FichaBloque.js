@@ -65,6 +65,8 @@ export default function FichaBloque() {
   const [plantacionActiva, setPlantacionActiva] = useState(null)
   const [historial, setHistorial] = useState([])
   const [cosechasCiclo, setCosechasCiclo] = useState([])
+  const [cosechaError, setCosechaError] = useState('')
+  const [cosechaSuccess, setCosechaSuccess] = useState('')
   const [incidencias, setIncidencias] = useState([])
   const [fotos, setFotos] = useState([])
   const [muertes, setMuertes] = useState([])
@@ -257,7 +259,7 @@ export default function FichaBloque() {
           .eq('bloque_id', id)
           .gte('fecha', activa.fecha_siembra || '2000-01-01')
           .order('fecha', { ascending: false })
-        setCosechasCiclo(cos || [])
+        setCosechasCiclo((cos || []).filter(cosecha => !cosecha.anulada))
 
         const { data: fumBloques } = await supabase.from('fumigacion_bloques')
           .select('fumigaciones(id, fecha, notas, tipo, operario, tanques_cantidad, tanque_litros, campos(nombre), fumigacion_bloques(bloque_id, bloques(codigo)), fumigacion_productos(*, productos(nombre, unidad, carencia_dias)))')
@@ -812,6 +814,48 @@ export default function FichaBloque() {
     fetchData()
   }
 
+  const eliminarCosecha = (cosecha) => {
+    setCosechaError('')
+    setCosechaSuccess('')
+    setConfirmar({
+      titulo:'Eliminar cosecha?',
+      mensaje:`Se quitara la cosecha de ${fmtKg(cosecha.kg_total)} kg del ${cosecha.fecha}. No se puede deshacer.`,
+      fn: async () => {
+        try {
+          const { data, error } = await supabase
+            .from('cosechas')
+            .update({
+              anulada:true,
+              anulada_at:new Date().toISOString(),
+              anulada_motivo:'Anulada por el usuario desde el bloque',
+              updated_at:new Date().toISOString(),
+            })
+            .eq('id', cosecha.id)
+            .select('id')
+            .maybeSingle()
+
+          if (error) throw error
+          if (!data) throw new Error('El registro no se elimino. Revisa tus permisos para editar cosechas.')
+
+          setCosechasCiclo(actuales => actuales.filter(item => item.id !== cosecha.id))
+          await registrarAuditoria({
+            accion:'Anulo cosecha',
+            modulo:'Cosecha',
+            tabla:'cosechas',
+            registroId:cosecha.id,
+            detalle:`Bloque ${bloque?.codigo || ''} - ${fmtKg(cosecha.kg_total)} kg`,
+          })
+          setConfirmar(null)
+          setCosechaSuccess('Cosecha eliminada correctamente.')
+          await fetchData()
+        } catch (error) {
+          setConfirmar(null)
+          setCosechaError(`No se pudo eliminar la cosecha: ${error.message || 'error desconocido'}`)
+        }
+      },
+    })
+  }
+
   //
 
   const getVariedad = (p) => {
@@ -1354,6 +1398,8 @@ export default function FichaBloque() {
         {/* COSECHAS */}
         {seccion === 'cosechas' && (
           <>
+            {cosechaError && <div role="alert" className="ag-surface ui-99ac05">{cosechaError}</div>}
+            {cosechaSuccess && <div role="status" className="ag-surface ui-315e0e">{cosechaSuccess}</div>}
             {cosechasCiclo.length === 0 ? (
               <div className="ui-5baa7a">Sin cosechas registradas en este ciclo</div>
             ) : (
@@ -1373,6 +1419,17 @@ export default function FichaBloque() {
                       <div className="ui-fcf19b">
                         {c.calidad === 'primera' ? '1ra' : c.calidad === 'segunda' ? '2da' : 'Mixta'}
                       </div>
+                      {canCos.delete && (
+                        <button
+                          type="button"
+                          className="ag-small-action ui-d088ca"
+                          aria-label={`Eliminar cosecha de ${fmtKg(c.kg_total)} kg del ${c.fecha}`}
+                          onClick={() => eliminarCosecha(c)}
+                        >
+                          <i className="ti ti-trash" aria-hidden="true" />
+                          Eliminar
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
