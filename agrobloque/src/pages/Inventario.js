@@ -98,7 +98,7 @@ export default function Inventario() {
   const [categoriaActiva, setCategoriaActiva] = useState(null)
   const [modal, setModal] = useState(null)
   const [confirmar, setConfirmar] = useState(null)
-  const [form, setForm] = useState({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' })
+  const [form, setForm] = useState({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', carencia_dias:'', notas:'' })
   const [compra, setCompra] = useState({ producto_id:'', fecha:hoy(), cantidad:'', unidad:'kg', precio_total:'', notas:'' })
   const [saving, setSaving] = useState(false)
   const [sincronizandoAbonos, setSincronizandoAbonos] = useState(false)
@@ -261,6 +261,12 @@ export default function Inventario() {
 
   const guardar = async () => {
     if (!form.nombre) return
+    const cantidadInicial = Number(String(form.stock_actual || '').replace(',', '.')) || 0
+    const precioInicial = Number(String(form.precio_total || '').replace(/\./g, '')) || 0
+    if (!form.id && cantidadInicial > 0 && precioInicial <= 0) {
+      setError('Ingresá el precio total pagado por la compra inicial.')
+      return
+    }
     setSaving(true); setError('')
     try {
       // Buscar o crear categoría
@@ -277,24 +283,46 @@ export default function Inventario() {
       const payload = {
         nombre: form.nombre, categoria_id,
         principio_activo: form.principio_activo || null, unidad: form.unidad,
-        stock_actual: Number(form.stock_actual) || 0,
+        stock_actual: form.id ? cantidadInicial : 0,
         stock_minimo: Number(form.stock_minimo) || 0,
         carencia_dias: Number(form.carencia_dias) || 0,
         notas: form.notas || null
       }
       const anterior = form.id ? productos.find(p => p.id === form.id)?.nombre : ''
-      if (form.id) await supabase.from('productos').update(payload).eq('id', form.id)
-      else await supabase.from('productos').insert(payload)
+      let productoId = form.id || ''
+      if (form.id) {
+        const { error:productoError } = await supabase.from('productos').update(payload).eq('id', form.id)
+        if (productoError) throw productoError
+      } else {
+        const { data:productoNuevo, error:productoError } = await supabase.from('productos').insert(payload).select('id').single()
+        if (productoError || !productoNuevo) throw productoError || new Error('No se pudo crear el producto.')
+        productoId = productoNuevo.id
+        if (cantidadInicial > 0) {
+          const { error:compraError } = await supabase.rpc('registrar_compra_inventario', {
+            p_producto_id:productoId,
+            p_fecha:form.fecha_compra || hoy(),
+            p_cantidad:cantidadInicial,
+            p_unidad:normalizarUnidad(form.unidad),
+            p_cantidad_stock:cantidadInicial,
+            p_precio_total:precioInicial,
+            p_notas:form.notas || null,
+          })
+          if (compraError) {
+            await supabase.from('productos').update({ activo:false }).eq('id', productoId)
+            throw new Error(`No se pudo registrar la compra inicial: ${compraError.message}`)
+          }
+        }
+      }
       await sincronizarAbonoBase(form.nombre, form.categoria_nombre, anterior)
       await registrarAuditoria({
         accion: form.id ? 'Edito producto' : 'Registro producto',
         modulo: 'Inventario',
         tabla: 'productos',
-        registroId: form.id || '',
-        detalle: `${payload.nombre} - stock ${payload.stock_actual}`,
+        registroId: productoId,
+        detalle: `${payload.nombre} - stock ${form.id ? payload.stock_actual : cantidadInicial}`,
       })
-      await fetchProductos(); setSaving(false); setModal(null)
-      setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' })
+      await Promise.all([fetchProductos(), fetchMovimientos(), fetchCompras()]); setSaving(false); setModal(null)
+      setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', carencia_dias:'', notas:'' })
     } catch (e) { setError('Error: ' + e.message); setSaving(false) }
   }
 
@@ -342,7 +370,7 @@ export default function Inventario() {
             </div>
             <div className="bl-head-actions">
               {can.create && <button className="bl-icon-btn" aria-label="Sincronizar abonos de base" title="Sincronizar abonos de base" onClick={sincronizarAbonosManual} disabled={sincronizandoAbonos}><i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} aria-hidden="true" /></button>}
-              {can.create && <button className="ag-primary" onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}><i className="ti ti-plus" aria-hidden="true" />Nuevo producto</button>}
+              {can.create && <button className="ag-primary" onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}><i className="ti ti-plus" aria-hidden="true" />Nuevo producto</button>}
             </div>
           </header>
           {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
@@ -390,7 +418,7 @@ export default function Inventario() {
                 </div>
                 <div className="ui-edab21">{catActInfo.label}</div>
               </div>
-              {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.key, principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
+              {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.key, principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
                >
                 <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
               </button>}
@@ -489,7 +517,7 @@ export default function Inventario() {
             {[
               ['Nombre *', 'nombre', 'text', 'Ej: Acetamix'],
               ['Principio activo', 'principio_activo', 'text', 'Ej: Acetamiprid'],
-              ['Stock actual', 'stock_actual', 'number', '0'],
+              [form.id ? 'Stock actual' : 'Cantidad comprada', 'stock_actual', 'number', '0'],
               ['Stock mínimo (alerta)', 'stock_minimo', 'number', '0'],
               ['Días de carencia', 'carencia_dias', 'number', 'Ej: 7'],
               ['Notas', 'notas', 'text', 'Opcional'],
@@ -509,6 +537,16 @@ export default function Inventario() {
                 </button>
               ))}
             </div>
+
+            {!form.id && Number(String(form.stock_actual || '').replace(',', '.')) > 0 && <>
+              <div className="ui-50089c">Esta compra inicial cargará el stock y dejará registrado su costo.</div>
+              <label className="ag-field-label ui-74cc19">Fecha de compra
+                <input style={inpStyle} type="date" value={form.fecha_compra || hoy()} onChange={e => setForm(f => ({...f, fecha_compra:e.target.value}))}/>
+              </label>
+              <label className="ag-field-label ui-74cc19">Precio total pagado (Gs.) *
+                <input style={inpStyle} inputMode="numeric" value={form.precio_total || ''} onChange={e => { const n=e.target.value.replace(/[^0-9]/g,''); setForm(f => ({...f,precio_total:n?Number(n).toLocaleString('es-PY'):''})) }} placeholder="Ej: 50.000"/>
+              </label>
+            </>}
 
             <button className="ag-small-action ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
             <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(null)}>Cancelar</button>
