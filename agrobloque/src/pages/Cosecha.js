@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
+import { useAccionNueva } from '../lib/useAccionNueva'
+import ChipsTactiles, { useEsTelefono } from '../components/ChipsTactiles'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
@@ -129,6 +131,7 @@ function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
 
 export default function Cosecha() {
   const can = useCan('cosecha')
+  const esTelefono = useEsTelefono()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [cosechas, setCosechas] = useState([])
   const [campos, setCampos] = useState([])
@@ -194,6 +197,7 @@ export default function Cosecha() {
     setModoMultiple(false)
     setModal(true)
   }
+  useAccionNueva(abrirNuevaCosecha, { permitido: can.create, listo: !loading })
 
   const abrirEditarCosecha = (cosecha) => {
     const campoId = campos.find(c => c.nombre === cosecha.bloques?.campos?.nombre)?.id || campoFiltro || ''
@@ -458,11 +462,12 @@ export default function Cosecha() {
 
             {(!modoMultiple || form.id) && (
               <>
-            <div className="ui-74cc19">Bloque *</div>
-            <select style={inp} value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
+            <div className="ui-74cc19" id="cosecha-bloque">Bloque *</div>
+            {esTelefono ? <ChipsTactiles etiqueta="Bloque" opciones={bloques.map(b => ({ valor:b.id, etiqueta:b.codigo }))} valor={form.bloque_id} onCambiar={id => setForm(f => ({...f, bloque_id:id}))} vacio="Este campo no tiene bloques." />
+            : <select style={inp} aria-labelledby="cosecha-bloque" value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
               <option value="">Seleccioná bloque...</option>
               {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
-            </select>
+            </select>}
 
             {form.bloque_id && (
               <div className="ui-154470">

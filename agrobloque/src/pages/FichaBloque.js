@@ -1678,7 +1678,7 @@ export default function FichaBloque() {
               </div>
               <div>
                 <label className="ag-field-label ui-74cc19">Litros preparados
-                <input style={inpStyle} value={formPlan.litros_preparados} onChange={e => setFormPlan(f => ({ ...f, litros_preparados:e.target.value }))} placeholder="Ej: 200" /></label>
+                <input style={inpStyle} value={formPlan.litros_preparados} onChange={e => setFormPlan(f => ({ ...f, litros_preparados:e.target.value.replace(',', '.') }))} placeholder="Ej: 200" inputMode="decimal" /></label>
               </div>
             </div>
 
@@ -1691,7 +1691,7 @@ export default function FichaBloque() {
                 {(sol.productos || []).map((prod, pi) => (
                   <div className="ag-product-row ui-964def" key={pi}>
                     <input className="ui-e7ec54" style={{ ...inpStyle }} value={prod.nombre} onChange={e => actualizarProductoPlan(si, pi, 'nombre', e.target.value)} placeholder="Producto"/>
-                    <input className="ui-e7ec54" style={{ ...inpStyle }} value={prod.cantidad} onChange={e => actualizarProductoPlan(si, pi, 'cantidad', e.target.value)} placeholder="Cant."/>
+                    <input className="ui-e7ec54" style={{ ...inpStyle }} value={prod.cantidad} onChange={e => actualizarProductoPlan(si, pi, 'cantidad', e.target.value.replace(',', '.'))} placeholder="Cant." inputMode="decimal"/>
                     <select className="ui-e7ec54" style={{ ...inpStyle }} value={prod.unidad} onChange={e => actualizarProductoPlan(si, pi, 'unidad', e.target.value)}>
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
@@ -1719,7 +1719,7 @@ export default function FichaBloque() {
             <label className="ag-field-label ui-74cc19">Fecha
             <input type="date" style={inpStyle} value={formAplicacionPlan.fecha} onChange={e => setFormAplicacionPlan(f => ({ ...f, fecha:e.target.value }))} /></label>
             <label className="ag-field-label ui-74cc19">Litros aplicados
-            <input style={inpStyle} value={formAplicacionPlan.litros_aplicados} onChange={e => setFormAplicacionPlan(f => ({ ...f, litros_aplicados:e.target.value }))} placeholder="Ej: 40" /></label>
+            <input style={inpStyle} value={formAplicacionPlan.litros_aplicados} onChange={e => setFormAplicacionPlan(f => ({ ...f, litros_aplicados:e.target.value.replace(',', '.') }))} placeholder="Ej: 40" inputMode="decimal" /></label>
             <label className="ag-field-label ui-74cc19">Responsable
             <input style={inpStyle} value={formAplicacionPlan.responsable} onChange={e => setFormAplicacionPlan(f => ({ ...f, responsable:e.target.value }))} placeholder="Opcional" /></label>
             <textarea className="ui-3d581a" style={{ ...inpStyle }} value={formAplicacionPlan.notas} onChange={e => setFormAplicacionPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas"/>

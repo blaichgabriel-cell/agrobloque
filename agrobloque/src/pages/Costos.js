@@ -229,10 +229,10 @@ export default function Costos({ campoActivo, isGuest = false }) {
                 <div className="ui-1d6b4b">Gs. {fmtGs(c.monto)}</div>
                 {!isGuest && (
                   <>
-                    {can.edit && <button className="ui-65faee" onClick={() => abrirEditar(c)}>
+                    {can.edit && <button className="ui-65faee" aria-label="Editar costo" onClick={() => abrirEditar(c)}>
                       <i className="ti ti-pencil ui-93a7e1" aria-hidden="true"></i>
                     </button>}
-                    {can.delete && <button className="ui-ead866" onClick={() => eliminar(c.id)}>
+                    {can.delete && <button className="ui-ead866" aria-label="Eliminar costo" onClick={() => eliminar(c.id)}>
                       <i className="ti ti-x ui-eafd27" aria-hidden="true"></i>
                     </button>}
                   </>

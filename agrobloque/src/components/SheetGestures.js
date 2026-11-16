@@ -31,11 +31,40 @@ const markSheet = (node) => {
   if (sheet.getBoundingClientRect().bottom >= window.innerHeight - 2 && getComputedStyle(sheet).position !== 'fixed') sheet.dataset.sheet = ''
 }
 
+// En el teléfono, el botón de guardar de cada formulario queda pegado al borde inferior de la hoja
+// (o la fila Guardar/Cancelar, si van juntos): nunca queda escondido bajo el contenido ni el teclado.
+const GUARDAR = /^(guardar|registrar|crear|actualizar|confirmar|agregar|guardando|registrando)\b/i
+const pinSave = () => {
+  if (!window.matchMedia('(max-width:767px)').matches) return
+  document.querySelectorAll(SHEET).forEach(sheet => {
+    if (sheet.matches('.ag-more-menu,.ag-quick-sheet')) return
+    const botones = Array.from(sheet.querySelectorAll('button')).filter(b => b.getClientRects().length)
+    const guardar = botones.filter(b => GUARDAR.test((b.textContent || '').trim())).pop()
+    if (!guardar || guardar.closest('[data-sheet-save]')) return
+    const fila = guardar.parentElement
+    const objetivo = fila && fila !== sheet && fila.getBoundingClientRect().height < 130 ? fila : guardar
+    objetivo.setAttribute('data-sheet-save', '')
+  })
+}
+// Alto del teclado en iOS (visualViewport): el botón fijo sube por encima de él.
+const trackKeyboard = () => {
+  const vv = window.visualViewport
+  if (!vv) return
+  const alto = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+  document.documentElement.style.setProperty('--teclado', `${Math.round(alto)}px`)
+}
+
 export default function SheetGestures() {
   useEffect(() => {
     let drag = null
-    const observer = new MutationObserver((records) => records.forEach(r => r.addedNodes.forEach(markSheet)))
+    let pendiente = 0
+    const observer = new MutationObserver((records) => {
+      records.forEach(r => r.addedNodes.forEach(markSheet))
+      window.cancelAnimationFrame(pendiente)
+      pendiente = window.requestAnimationFrame(pinSave)
+    })
     observer.observe(document.body, { childList: true, subtree: true })
+    window.visualViewport?.addEventListener('resize', trackKeyboard)
 
     const point = (e) => (e.touches ? e.touches[0] : e)
 
@@ -95,6 +124,8 @@ export default function SheetGestures() {
     document.addEventListener('mouseup', end)
     return () => {
       observer.disconnect()
+      window.cancelAnimationFrame(pendiente)
+      window.visualViewport?.removeEventListener('resize', trackKeyboard)
       document.removeEventListener('touchstart', start)
       document.removeEventListener('touchmove', move)
       document.removeEventListener('touchend', end)

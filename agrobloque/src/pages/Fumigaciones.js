@@ -7,6 +7,7 @@ import { useCan } from '../lib/RoleContext'
 import { ajustarStockSeguro } from '../lib/inventory'
 import { categoriaProducto, incluirSeleccionados } from '../lib/productCategories'
 import { useNavigate } from 'react-router-dom'
+import { useAccionNueva } from '../lib/useAccionNueva'
 
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
@@ -242,6 +243,7 @@ export default function Fumigaciones() {
     setForm(formVacio())
     setModal(true)
   }
+  useAccionNueva(abrirNuevo, { permitido: !isGuest && can.create, listo: !loading })
 
   const parseProductoForm = (fp, tipo) => {
     const match = String(fp.dosis || '').match(/^\s*([\d.,]+)\s*([a-zA-Z]+)?/)
@@ -705,11 +707,11 @@ export default function Fumigaciones() {
             <div className="ui-180a1c">
               <div>
                 <label className="ag-field-label ui-74cc19">Cantidad de tanques
-                <input className="ui-2720fa" type="number" min="0" value={form.tanques_cantidad} onChange={e=>setForm(f=>({...f,tanques_cantidad:e.target.value}))} placeholder="Ej: 3"/></label>
+                <input className="ui-2720fa" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanques_cantidad} onChange={e=>setForm(f=>({...f,tanques_cantidad:e.target.value.replace(/[^0-9]/g, '')}))} placeholder="Ej: 3"/></label>
               </div>
               <div>
                 <label className="ag-field-label ui-74cc19">Litros por tanque
-                <input className="ui-2720fa" type="number" min="0" value={form.tanque_litros} onChange={e=>setForm(f=>({...f,tanque_litros:e.target.value}))} placeholder="Ej: 20"/></label>
+                <input className="ui-2720fa" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros} onChange={e=>setForm(f=>({...f,tanque_litros:e.target.value.replace(/[^0-9]/g, '')}))} placeholder="Ej: 20"/></label>
               </div>
             </div>
             {form.tanques_cantidad && form.tanque_litros && (

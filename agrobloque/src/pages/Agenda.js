@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { moonPhase, MOON_PHASES } from '../lib/moon'
 import { useCan } from '../lib/RoleContext'
 import { useCurrentTime } from '../lib/useCurrentTime'
+import { useAccionNueva } from '../lib/useAccionNueva'
 
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray', color:'#e07b00', bg:'#fff3e8' },
@@ -51,6 +52,7 @@ export default function Agenda() {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(true)
   const hoy = fechaLocal(ahora)
+  useAccionNueva(() => { setForm(vacio); setModal(true) }, { permitido: can.create, listo: !loading })
 
   useEffect(() => { fetchTareas(); fetchCampos() }, [])
   useEffect(() => {

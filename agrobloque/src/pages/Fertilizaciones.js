@@ -6,6 +6,7 @@ import { useCan } from '../lib/RoleContext'
 import { ajustarStockSeguro } from '../lib/inventory'
 import { esProductoFertilizacion, incluirSeleccionados } from '../lib/productCategories'
 import { useNavigate } from 'react-router-dom'
+import { useAccionNueva } from '../lib/useAccionNueva'
 
 const UNIDADES = ['kg', 'g', 'cc', 'ml', 'L', 'unidad']
 const hoy = () => new Date().toISOString().split('T')[0]
@@ -211,8 +212,8 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
             <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(e.target.value, 6) } : {}) }))} className="bl-input" />
           </label>
           {esSemana && <label className="ui-e22579">Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} className="bl-input" /></label>}
-          <label className="ui-e22579">Litros por tanque<input type="number" min="1" step="1" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value }))} className="bl-input" /></label>
-          <label className="ui-e22579">Cantidad de tanques<input type="number" min="1" step="1" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value }))} className="bl-input" /></label>
+          <label className="ui-e22579">Litros por tanque<input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value.replace(/[^0-9]/g, '') }))} className="bl-input" /></label>
+          <label className="ui-e22579">Cantidad de tanques<input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value.replace(/[^0-9]/g, '') }))} className="bl-input" /></label>
           {form.plan_id && <label className="ui-e22579">Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} className="bl-input"><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
           <label className="ui-e22579" style={{ gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Etapa fenológica<input value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" className="bl-input" /></label>
           <div className="ui-7f9aff"><span className="ui-93a7e1">VOLUMEN TOTAL</span><strong className="ui-b45e7d">{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>
@@ -259,7 +260,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                       <option value="por_tanque">Por tanque</option>
                       <option value="por_planta">Por planta</option>
                     </select>
-                    <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)} placeholder={p.modo === 'por_planta' ? 'Dosis/planta' : 'Cantidad'} type="number" min="0" step="0.01" className="bl-input" />
+                    <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value.replace(',', '.'))} placeholder={p.modo === 'por_planta' ? 'Dosis/planta' : 'Cantidad'} type="text" inputMode="decimal" className="bl-input" />
                     <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} className="bl-input">
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
@@ -442,6 +443,7 @@ export default function Fertilizaciones({ campoActivo }) {
     })
     setModal(true)
   }
+  useAccionNueva(() => abrirModal('aplicacion'), { permitido: can.create, listo: !loading })
 
   const abrirEditarAplicacion = (grupo) => {
     const idsPlanes = [...new Set(grupo.items.map(item => item.plan_id).filter(Boolean))]

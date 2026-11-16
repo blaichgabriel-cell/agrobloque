@@ -5,6 +5,7 @@ import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { blurNumberInputOnWheel, formatLocaleInteger, parseLocaleInteger } from '../lib/numbers'
 import { useCan } from '../lib/RoleContext'
+import { useAccionNueva } from '../lib/useAccionNueva'
 
 const estados = ['sembrado', 'germinando', 'listo', 'trasplantado', 'descartado']
 const hoy = () => new Date().toISOString().split('T')[0]
@@ -158,6 +159,7 @@ export default function Vivero() {
     setForm({ ...formInicial, campo_id: campos[0]?.id || '' })
     setModal(true)
   }
+  useAccionNueva(abrirNuevo, { permitido: can.create, listo: campos.length > 0 })
 
   const abrirEditar = (lote) => {
     setForm({

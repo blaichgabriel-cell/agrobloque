@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Overview'
 import Onboarding from './pages/Onboarding'
 import NavBar from './components/NavBar'
+import { MobileHeader } from './components/MobileChrome'
 import { canAccessModule, filterTabsByRole, normalizeRole } from './lib/permissions'
 import { textoErrorProfesional } from './lib/errors'
 import { Toaster } from 'sonner'
@@ -336,6 +337,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
       {isDesktop && <DesktopSidebar isGuest={isGuest} role={effectiveRole} organization={organization} modo={modo} contexto={contexto} campoNombre={campoActivo?.nombre || ''} />}
 
       <div data-app-scroll>
+        {!isDesktop && !isGuest && modo === 'campo' && <MobileHeader campoActivo={campoActivo} setCampoActivo={setCampoActivo} role={effectiveRole} organization={organization} contexto={contexto} />}
         {!isGuest && <SoporteBarras esAdminGeneral={isPlatformAdmin} contexto={contexto} campoNombre={campoActivo?.nombre || ''} />}
         <div className="ag-content-shell">
           <div className="ag-route-stage" key={location.pathname}>
@@ -383,7 +385,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
         </div>
       </div>
 
-      {!isDesktop && <NavBar isGuest={isGuest} role={effectiveRole} modo={modo} />}
+      {!isDesktop && <NavBar isGuest={isGuest} role={effectiveRole} modo={modo} isPlatformAdmin={isPlatformAdmin} contexto={contexto} />}
     </div>
     </RoleContext.Provider>
   )

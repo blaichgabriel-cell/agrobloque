@@ -304,7 +304,7 @@ export default function Contabilidad() {
           </div>
 
           <div className="ui-df74e8">
-            <table style={tabla}>
+            <table className="ag-tabla-tarjetas" style={tabla}>
               <thead>
                 <tr>
                   <th style={th}>Mes</th>
@@ -315,20 +315,20 @@ export default function Contabilidad() {
               </thead>
               <tbody>
                 {resumen.porMes.map(m => (
-                  <tr className="ui-b202c6" key={m.nombre} onClick={() => setMesSeleccionado(m.idx)} style={{ background: mesSeleccionado === m.idx ? '#f0f7ef' : 'transparent' }}>
+                  <tr className="ui-b202c6" key={m.nombre} onClick={() => setMesSeleccionado(m.idx)} aria-selected={mesSeleccionado === m.idx} style={{ background: mesSeleccionado === m.idx ? '#f0f7ef' : 'transparent' }}>
                     <td style={td}>{m.nombre}</td>
-                    <td style={tdRight}>Gs. {fmtGs(m.compras)}</td>
-                    <td style={tdRight}>Gs. {fmtGs(m.ventas)}</td>
-                    <td className="ui-83e448" style={{ ...tdRight, color: m.balance >= 0 ? '#176a25' : '#c84040' }}>Gs. {fmtGs(m.balance)}</td>
+                    <td data-label="Compras" style={tdRight}>Gs. {fmtGs(m.compras)}</td>
+                    <td data-label="Ventas" style={tdRight}>Gs. {fmtGs(m.ventas)}</td>
+                    <td data-label="Balance" className="ui-83e448" style={{ ...tdRight, color: m.balance >= 0 ? '#176a25' : '#c84040' }}>Gs. {fmtGs(m.balance)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td style={tf}>Total</td>
-                  <td style={tfRight}>Gs. {fmtGs(resumen.compras)}</td>
-                  <td style={tfRight}>Gs. {fmtGs(resumen.ventas)}</td>
-                  <td style={{ ...tfRight, color: resumen.balance >= 0 ? '#176a25' : '#c84040' }}>Gs. {fmtGs(resumen.balance)}</td>
+                  <td style={tf}>Total {anho}</td>
+                  <td data-label="Compras" style={tfRight}>Gs. {fmtGs(resumen.compras)}</td>
+                  <td data-label="Ventas" style={tfRight}>Gs. {fmtGs(resumen.ventas)}</td>
+                  <td data-label="Balance" style={{ ...tfRight, color: resumen.balance >= 0 ? '#176a25' : '#c84040' }}>Gs. {fmtGs(resumen.balance)}</td>
                 </tr>
               </tfoot>
             </table>

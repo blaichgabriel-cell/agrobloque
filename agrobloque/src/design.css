@@ -2408,3 +2408,208 @@ img.bl-logo--sobre-oscuro { display:none !important; }
 /* Panel de plataforma: estado de preparacion de la empresa y primer ingreso del dueno */
 .pl-empresa__estado { display:flex; flex-wrap:wrap; gap:6px; margin-top:-4px; }
 .pl-empresa__estado .sp-chip { white-space:normal; }
+
+/* ============================================================
+   MÓVIL NATIVO (2026-11-16): encabezado compacto, barra de pestañas
+   con acción rápida, hoja «Módulos» y hoja «¿Qué vas a registrar?»
+   ============================================================ */
+
+/* El encabezado y la barra solo existen sin menú lateral (< 1100 px, ver AppLayout). */
+.ag-mhead { display:none; }
+@media (max-width:1099px) {
+  /* Encabezado de cristal pegado arriba: el contenido pasa por debajo. */
+  .ag-mhead { position:sticky; top:0; z-index:58; display:block; padding-top:env(safe-area-inset-top,0px); background:rgba(255,255,255,.72); -webkit-backdrop-filter:blur(28px) saturate(200%); backdrop-filter:blur(28px) saturate(200%); box-shadow:0 1px 0 rgba(15,23,42,.06),0 10px 24px -22px rgba(15,23,42,.5); }
+  .ag-mhead__fila { height:56px; display:flex; align-items:center; gap:8px; padding:0 max(10px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px)); }
+  .ag-mhead__campo { position:relative; min-width:0; flex:1; height:48px; display:flex; align-items:center; gap:10px; padding:0 8px 0 0; border-radius:14px; -webkit-user-select:none; user-select:none; }
+  .ag-mhead__campo select { position:absolute; inset:0; width:100%; height:100%; opacity:0; border:0; appearance:none; -webkit-appearance:none; cursor:pointer; }
+  .ag-mhead__campo select:disabled { cursor:default; }
+  .ag-mhead__campo:has(select:focus-visible) { outline:2px solid var(--bl-emerald-500); outline-offset:2px; }
+  .ag-mhead__pin { flex:0 0 36px; width:36px; height:36px; display:grid; place-items:center; border-radius:11px; background:var(--grad-bloques); color:#FFFFFF; font-size:18px; box-shadow:0 6px 14px -8px rgba(16,185,129,.9); }
+  .ag-mhead__textos { min-width:0; display:flex; flex-direction:column; line-height:1.15; }
+  .ag-mhead__textos small { overflow:hidden; color:var(--text-secondary); font-size:11.5px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+  .ag-mhead__textos b { overflow:hidden; color:var(--text-primary); font-family:var(--bl-font-display); font-size:16px; font-weight:800; letter-spacing:-.01em; text-overflow:ellipsis; white-space:nowrap; }
+  .ag-mhead__soporte { color:var(--bl-coral-500); font-weight:800; }
+  .ag-mhead__chevron { flex:0 0 auto; color:var(--text-tertiary); font-size:16px; }
+  .ag-mhead__acciones { flex:0 0 auto; display:flex; gap:6px; }
+  .ag-mhead__boton { position:relative; width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid rgba(15,23,42,.07); border-radius:14px; background:rgba(255,255,255,.7); color:var(--text-primary); font-size:21px; transition:transform 120ms var(--bl-press),background-color 120ms ease; }
+  .ag-mhead__badge { position:absolute; top:4px; right:3px; min-width:18px; height:18px; display:grid; place-items:center; padding:0 5px; border:2px solid #FFFFFF; border-radius:9px; background:var(--bl-coral-500); color:#FFFFFF; font-family:var(--bl-font-mono); font-size:10px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1; }
+  /* Selector de operación (Cosecha / Fumigaciones / Fertilizaciones) bajo la fila principal. */
+  .ag-mhead__segmentos { display:grid; grid-template-columns:repeat(var(--seg,3),minmax(0,1fr)); gap:2px; margin:0 max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px)); padding:3px; border-radius:13px; background:rgba(15,23,42,.06); }
+  .ag-mhead__segmentos button { min-width:0 !important; min-height:38px !important; padding:0 4px; border:0; border-radius:10px; background:transparent; color:var(--text-secondary); font-size:13px; font-weight:650; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:background-color 160ms ease,color 160ms ease; }
+  .ag-mhead__segmentos button[aria-current='page'] { background:#FFFFFF; color:var(--text-primary); font-weight:800; box-shadow:0 1px 3px rgba(15,23,42,.12),0 0 0 .5px rgba(15,23,42,.05); }
+  /* En el teléfono el encabezado reemplaza la barra superior propia del Inicio. */
+  .ag-overview>.ag-topbar { display:none !important; }
+  /* La cápsula de soporte deja de ir fija para no taparse con el encabezado; el aviso sigue en el encabezado. */
+  .ag-app .sp-barra { position:relative; top:0; }
+
+  /* Barra de pestañas: anclada al borde inferior, cristal, cinco anclas y el «+» elevado al centro. */
+  .ag-app .ag-bottom-nav.ag-tabbar { left:0 !important; right:0 !important; bottom:0 !important; display:flex; align-items:flex-end; padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px)); border:0; border-top:1px solid rgba(255,255,255,.95); border-radius:0; background:rgba(255,255,255,.85); -webkit-backdrop-filter:blur(28px) saturate(200%); backdrop-filter:blur(28px) saturate(200%); box-shadow:0 -1px 0 rgba(15,23,42,.06),0 -12px 30px -24px rgba(15,23,42,.5); }
+  .ag-app .ag-tabbar button { position:relative; min-width:0 !important; min-height:50px !important; flex:1 1 0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:0; border:0; border-radius:12px; background:transparent !important; box-shadow:none !important; color:var(--text-tertiary); font-size:10.5px; font-weight:600; letter-spacing:0; -webkit-user-select:none; user-select:none; transition:transform 120ms var(--bl-press),color 160ms ease; }
+  .ag-app .ag-tabbar button i { font-size:24px; line-height:1; }
+  .ag-app .ag-tabbar button[aria-current='page'] { color:var(--bl-emerald-600); font-weight:750; }
+  .ag-app .ag-tabbar button[aria-current='page']::before { content:''; position:absolute; top:-6px; left:50%; width:22px; height:3px; margin-left:-11px; border-radius:0 0 3px 3px; background:var(--grad-bloques); }
+  .ag-app .ag-tabbar .ag-nav-create { color:var(--text-secondary); }
+  .ag-app .ag-tabbar .ag-nav-create i { width:54px; height:54px; display:grid; place-items:center; margin-top:-26px; border:3px solid rgba(255,255,255,.95); border-radius:19px; background:var(--grad-bloques); color:#FFFFFF; font-size:28px; box-shadow:0 12px 24px -10px rgba(5,150,105,.85),0 0 0 1px rgba(15,23,42,.05); transition:transform 140ms var(--bl-press); }
+  .ag-app [data-app-scroll] { padding-bottom:calc(84px + env(safe-area-inset-bottom,0px)) !important; }
+
+  /* Hoja «¿Qué vas a registrar?»: sube desde el borde y ocupa el ancho del teléfono. */
+  .ag-work-dialog.ag-quick-sheet { width:100%; max-width:100%; max-height:min(86dvh,100dvh - 40px); margin:auto 0 0; padding:10px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px)); border-radius:26px 26px 0 0; }
+  .ag-work-dialog.ag-quick-sheet[open] { animation:ag-sheet-up 340ms cubic-bezier(.32,.72,0,1) both; }
+}
+.ag-quick-sheet__head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.ag-quick-sheet__head h2 { margin:0; font-family:var(--bl-font-display); font-size:20px; font-weight:800; letter-spacing:-.02em; color:var(--text-primary); }
+.ag-quick-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.ag-quick-grid button { min-width:0; min-height:112px; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-end; gap:3px; padding:14px; border:1px solid rgba(15,23,42,.07); border-radius:20px; background:rgba(255,255,255,.78); color:var(--text-primary); text-align:left; box-shadow:inset 0 1px 0 #FFFFFF,0 8px 20px -16px rgba(15,23,42,.45); -webkit-user-select:none; user-select:none; transition:transform 120ms var(--bl-press),box-shadow 160ms ease; }
+.ag-quick-grid__icon { width:42px; height:42px; display:grid; place-items:center; margin-bottom:auto; border-radius:13px; background:var(--tone-grad); color:#FFFFFF; font-size:21px; box-shadow:0 8px 16px -10px var(--tone-glow); }
+.ag-quick-grid strong { max-width:100%; font-size:15px; font-weight:750; line-height:1.2; overflow-wrap:anywhere; }
+.ag-quick-grid small { max-width:100%; color:var(--text-secondary); font-size:12px; line-height:1.3; }
+@media (max-width:340px) { .ag-quick-grid { grid-template-columns:1fr; } .ag-quick-grid button { min-height:72px; display:grid; grid-template-columns:42px minmax(0,1fr); grid-template-rows:auto auto; column-gap:12px; align-items:center; } .ag-quick-grid__icon { grid-row:1/3; margin:0; } }
+
+/* Hoja «Módulos»: grupos con accesos en rejilla, como la pantalla de inicio del teléfono. */
+@media (max-width:1099px) {
+  .ag-more-menu.ag-modulos { padding-top:10px; }
+  .ag-modulos h2 { margin:6px 0 12px; }
+  .ag-more-menu.ag-modulos>div.ag-modulos__grupo { display:block; margin-top:14px; }
+  .ag-modulos__grupo h3 { margin:0 0 8px 2px; color:var(--text-secondary); font-size:13px; font-weight:700; }
+  .ag-more-menu.ag-modulos .ag-modulos__grupo>div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .ag-more-menu.ag-modulos .ag-modulos__grupo button { min-width:0; min-height:84px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; padding:10px 4px; border:1px solid rgba(15,23,42,.06); border-radius:18px; background:rgba(255,255,255,.72); color:var(--text-primary); font-size:12.5px; font-weight:650; text-align:center; transition:transform 120ms var(--bl-press); }
+  .ag-more-menu.ag-modulos .ag-modulos__grupo button span:last-child { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ag-more-menu.ag-modulos .ag-modulos__grupo button[aria-current='page'] { border-color:rgba(16,185,129,.45); background:rgba(16,185,129,.1); }
+  .ag-modulos__icono { width:40px; height:40px; flex:0 0 40px; display:grid; place-items:center; border-radius:12px; background:var(--tone-grad); color:#FFFFFF; font-size:20px; box-shadow:0 8px 16px -10px var(--tone-glow); }
+  .ag-more-menu.ag-modulos .ag-modulos__panel { width:100%; min-height:64px; display:flex; align-items:center; gap:12px; padding:10px 12px; border:0; border-radius:18px; background:var(--grad-hero); color:#FFFFFF; text-align:left; }
+  .ag-modulos__panel span:nth-child(2) { min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; }
+  .ag-modulos__panel strong { font-size:15px; }
+  .ag-modulos__panel small { color:rgba(255,255,255,.78); font-size:12px; }
+  .ag-modulos__panel .ag-modulos__icono { background:rgba(255,255,255,.12); box-shadow:none; }
+}
+
+/* Modo oscuro del armazón móvil. */
+@media (max-width:1099px) {
+  [data-theme='dark'] .ag-mhead { background:rgba(10,20,16,.78); box-shadow:0 1px 0 rgba(255,255,255,.06); }
+  [data-theme='dark'] .ag-mhead__boton { border-color:var(--dk-line); background:var(--dk-soft); color:var(--text-primary); }
+  [data-theme='dark'] .ag-mhead__badge { border-color:#0A1410; }
+  [data-theme='dark'] .ag-mhead__segmentos { background:rgba(255,255,255,.07); }
+  [data-theme='dark'] .ag-mhead__segmentos button[aria-current='page'] { background:rgba(255,255,255,.14); color:var(--text-primary); box-shadow:none; }
+  [data-theme='dark'] .ag-app .ag-bottom-nav.ag-tabbar { border-top-color:rgba(255,255,255,.08) !important; background:rgba(10,20,16,.86) !important; }
+  [data-theme='dark'] .ag-app .ag-tabbar button[aria-current='page'] { color:#34D399; }
+  [data-theme='dark'] .ag-app .ag-tabbar .ag-nav-create i { border-color:#0A1410; }
+  [data-theme='dark'] .ag-more-menu.ag-modulos .ag-modulos__grupo button { border-color:var(--dk-line); background:var(--dk-soft); color:var(--text-primary); }
+  [data-theme='dark'] .ag-more-menu.ag-modulos .ag-modulos__grupo button[aria-current='page'] { background:rgba(52,211,153,.14); }
+}
+[data-theme='dark'] .ag-quick-grid button { border-color:var(--dk-line); background:var(--dk-soft); color:var(--text-primary); box-shadow:none; }
+
+/* Presión: respuesta inmediata al apoyar el dedo (scale .97), nunca al soltar. */
+@media (pointer:coarse) {
+  .ag-mhead__boton:active,.ag-quick-grid button:active,.ag-more-menu.ag-modulos button:active { transform:scale(.96); }
+  .ag-app .ag-tabbar button:active { transform:scale(.92); }
+  .ag-app .ag-tabbar .ag-nav-create:active i { transform:scale(.92); }
+}
+@media (hover:hover) and (pointer:fine) {
+  .ag-quick-grid button:hover { box-shadow:inset 0 1px 0 #FFFFFF,0 14px 28px -16px rgba(15,23,42,.5); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .ag-work-dialog.ag-quick-sheet[open] { animation:none; }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .ag-mhead,.ag-app .ag-bottom-nav.ag-tabbar { background:var(--surface-canvas) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+}
+
+/* --- Auditoría móvil 390/360 px (2026-11-16): correcciones de desbordes encontradas --- */
+
+/* `.ui-3044b6` es una clase generada que usan importes Y nombres: solo los importes (llevan color en línea)
+   van en una línea; los nombres largos (productos, mensajes vacíos) se quiebran. */
+.ag-app .ui-3044b6 { white-space:normal; overflow-wrap:anywhere; }
+.ag-app .ui-3044b6[style*='color'] { white-space:nowrap; overflow-wrap:normal; }
+
+@media (max-width:1099px) {
+  /* Rejillas puestas en línea con `1fr`: sin `minmax(0,…)` una palabra o cifra larga ensancha la columna
+     más allá de la pantalla. Se corrige el patrón una sola vez para todas las pantallas. */
+  .ag-app [style*='grid-template-columns: 1fr;'] { grid-template-columns:minmax(0,1fr) !important; }
+  .ag-app [style*='grid-template-columns: 1fr auto;'] { grid-template-columns:minmax(0,1fr) auto !important; }
+  .ag-app [style*='grid-template-columns: 1fr 1fr;'] { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+
+  /* Contabilidad: las acciones (Facturas, CSV, PDF, Compra, Venta) pasan a dos filas en vez de salirse. */
+  .ag-app .ui-91294d.ui-91294d.ui-91294d { flex-wrap:wrap; justify-content:flex-end; row-gap:8px; }
+  .ag-app .ui-91294d>button { flex:1 1 auto; justify-content:center; }
+
+  /* Inicio: el selector de campo del encabezado móvil reemplaza al del bloque principal. */
+  .ag-overview .ag-hero-actions { display:none; }
+  /* Cifras de los KPIs del Inicio: no se parten («125.608,3 kg»); la letra se ajusta al ancho de la tarjeta. */
+  .ag-overview .hero-kpi-card { container-type:inline-size; }
+  .ag-overview .hero-kpi-card strong.numeric-data { white-space:nowrap; font-size:clamp(15px,12.5cqw,26px); font-variant-numeric:tabular-nums; }
+
+  /* Foto de perfil en Configuración: el botón de la cámara es chico a la vista; su zona táctil llega a 44 px. */
+  .ag-app .ui-3b8eb9 { position:relative; }
+  .ag-app .ui-3b8eb9::after { content:''; position:absolute; inset:-12px; }
+}
+
+/* Tablas → tarjetas en el teléfono: cada fila es una tarjeta; la primera celda es el título y las demás
+   se leen como «Etiqueta ...... valor» (data-label). Para tablas con pocas columnas numéricas. */
+@media (max-width:767px) {
+  .ag-app table.ag-tabla-tarjetas,.ag-app table.ag-tabla-tarjetas tbody,.ag-app table.ag-tabla-tarjetas tfoot { display:block; width:100% !important; min-width:0 !important; }
+  .ag-app table.ag-tabla-tarjetas thead { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .ag-app table.ag-tabla-tarjetas tbody { display:grid; gap:8px; }
+  .ag-app table.ag-tabla-tarjetas tr { display:grid; grid-template-columns:minmax(0,1fr); gap:2px; padding:12px 14px; border:1px solid rgba(15,23,42,.07); border-radius:16px; background:rgba(255,255,255,.7) !important; }
+  .ag-app table.ag-tabla-tarjetas tr[aria-selected='true'] { border-color:rgba(16,185,129,.5); background:rgba(16,185,129,.08) !important; }
+  .ag-app table.ag-tabla-tarjetas td { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:3px 0 !important; border:0 !important; text-align:right !important; font-variant-numeric:tabular-nums; }
+  .ag-app table.ag-tabla-tarjetas td:first-child { padding-bottom:6px !important; color:var(--text-primary); font-family:var(--bl-font-display); font-size:15px; font-weight:800; text-align:left !important; }
+  .ag-app table.ag-tabla-tarjetas td[data-label]::before { content:attr(data-label); flex:0 0 auto; color:var(--text-secondary); font-family:var(--bl-font-ui); font-size:13px; font-weight:600; }
+  .ag-app table.ag-tabla-tarjetas tfoot { margin-top:10px; }
+  .ag-app table.ag-tabla-tarjetas tfoot tr { background:var(--grad-hero) !important; border-color:transparent; }
+  .ag-app table.ag-tabla-tarjetas tfoot td,.ag-app table.ag-tabla-tarjetas tfoot td::before { color:#FFFFFF !important; }
+  .ag-app table.ag-tabla-tarjetas tfoot td[style*='color'] { color:#6EE7B7 !important; }
+  .ag-app table.ag-tabla-tarjetas tfoot td[style*='rgb(200, 64, 64)'] { color:#FDA4AF !important; }
+  .ag-app :where(div):has(>table.ag-tabla-tarjetas) { overflow-x:visible; }
+}
+[data-theme='dark'] .ag-app table.ag-tabla-tarjetas tr { border-color:var(--dk-line); background:var(--dk-soft) !important; }
+
+/* Formularios en hoja (teléfono): el botón o la fila de guardar queda fija abajo y sube sobre el teclado. */
+@media (max-width:767px) {
+  .ag-app [data-sheet-save] { --barra:#FFFFFF; position:sticky; bottom:var(--teclado,0px); z-index:6; box-shadow:0 0 0 18px var(--barra),0 -26px 20px 4px var(--barra); }
+  .ag-app div[data-sheet-save] { margin-top:12px; padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px)); border-radius:0; background:var(--barra); }
+  [data-theme='dark'] .ag-app [data-sheet-save] { --barra:#0E1A15; }
+  
+  /* Costos manuales: tarjeta de 3 niveles (ícono + descripción / importe) con editar y eliminar de 44 px. */
+  .ag-app .ui-9760f1.ui-9760f1.ui-9760f1 { display:grid; grid-template-columns:36px minmax(0,1fr) auto auto; grid-template-rows:auto auto; column-gap:10px; row-gap:2px; align-items:center; }
+  .ag-app .ui-9760f1>.ui-94c3f8 { grid-row:1/3; }
+  .ag-app .ui-9760f1>.ui-da5cd6 { grid-column:2; grid-row:1; min-width:0; overflow-wrap:anywhere; }
+  .ag-app .ui-9760f1>.ui-1d6b4b { grid-column:2; grid-row:2; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .ag-app .ui-9760f1>button { grid-row:1/3; width:44px; height:44px; }
+}
+
+/* KPIs de módulo en el teléfono: carrusel con imán en una sola fila (se ven dos tarjetas y asoma la
+   tercera) en vez de una rejilla que ocupa media pantalla antes del contenido. El Inicio queda en 2x2. */
+@media (max-width:767px) {
+  .ag-app :is(.ab-map-kpis,.bl-kpi-row,.accounting-kpis,.ui-9e5e94,.ui-998b74[style*='1fr 1fr']) { display:flex !important; flex-wrap:nowrap !important; gap:10px !important; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scroll-snap-type:x mandatory; scrollbar-width:none; padding:2px 2px 10px !important; }
+  .ag-app :is(.ab-map-kpis,.bl-kpi-row,.accounting-kpis,.ui-9e5e94,.ui-998b74[style*='1fr 1fr'])::-webkit-scrollbar { display:none; }
+  .ag-app :is(.ab-map-kpis,.bl-kpi-row,.accounting-kpis,.ui-9e5e94,.ui-998b74[style*='1fr 1fr'])>* { flex:0 0 min(44%,176px) !important; min-width:0 !important; max-width:none !important; margin:0 !important; scroll-snap-align:start; grid-column:auto !important; }
+}
+@media (max-width:767px) and (prefers-reduced-motion:no-preference) {
+  .ag-app :is(.ab-map-kpis,.bl-kpi-row,.accounting-kpis,.ui-9e5e94,.ui-998b74[style*='1fr 1fr']) { scroll-behavior:smooth; }
+}
+
+/* Chips táctiles (elección de bloque en el teléfono): 48 px de alto, código en JetBrains Mono. */
+.ag-chips { display:grid; grid-template-columns:repeat(auto-fill,minmax(68px,1fr)); gap:8px; margin:6px 0 14px; }
+.ag-chip { min-width:0 !important; min-height:48px !important; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:4px 6px; border:1px solid rgba(15,23,42,.1); border-radius:14px; background:rgba(255,255,255,.8); color:var(--text-primary); -webkit-user-select:none; user-select:none; transition:transform 120ms var(--bl-press),background-color 140ms ease,border-color 140ms ease; }
+.ag-chip__codigo { font-family:var(--bl-font-mono); font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+.ag-chip small { max-width:100%; overflow:hidden; color:var(--text-secondary); font-size:10.5px; text-overflow:ellipsis; white-space:nowrap; }
+.ag-chip[aria-checked='true'] { border-color:transparent; background:var(--grad-bloques); color:#FFFFFF; box-shadow:0 8px 16px -10px rgba(5,150,105,.9); }
+.ag-chip[aria-checked='true'] small { color:rgba(255,255,255,.85); }
+.ag-chip:focus-visible { outline:2px solid var(--bl-emerald-500); outline-offset:2px; }
+.ag-chips__vacio { margin:6px 0 14px; color:var(--text-secondary); font-size:14px; }
+@media (pointer:coarse) { .ag-chip:active { transform:scale(.95); } }
+[data-theme='dark'] .ag-chip { border-color:var(--dk-line); background:var(--dk-soft); }
+
+/* Selectores nativos en el teléfono: el sistema abre su propio selector; la caja mide 48 px para el pulgar. */
+@media (max-width:767px) {
+  .ag-app select { min-height:48px !important; }
+}
+
+/* Contabilidad: íconos de los KPIs (heredaban 10 px y gris de una regla general de .kpi-card). */
+.ag-app .fin-card .fin-card-icon .ti { font-size:19px !important; color:#FFFFFF !important; }
+@media (max-width:767px) {
+  /* Año arriba a todo el ancho y las acciones debajo, en vez de un selector estirado al costado. */
+  .ag-app .ui-860439.ui-860439.ui-860439 { grid-template-columns:minmax(0,1fr); }
+  .ag-app .ui-860439>select { width:100%; align-self:start; }
+  .ag-app .ui-91294d.ui-91294d.ui-91294d { justify-content:stretch; }
+}
