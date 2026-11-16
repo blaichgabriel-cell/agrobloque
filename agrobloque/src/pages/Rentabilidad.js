@@ -137,10 +137,16 @@ export default function Rentabilidad({ campoActivo }) {
     const mesesGrafico = meses(6).map(mes => ({
       ...mes,
       ingresos:datos.ventas.filter(v => mesClave(v.fecha) === mes.key).reduce((s, v) => s + Number(v.total || (Number(v.kg_total || 0) * Number(v.precio_kg || 0))), 0),
+      cobrado:datos.ventas.filter(v => mesClave(v.fecha) === mes.key).reduce((s, v) => s + Number(v.monto_cobrado || (v.estado_cobro === 'pagado' ? v.total : 0)), 0),
       costos:datos.costos.filter(c => mesClave(c.fecha) === mes.key).reduce((s, c) => s + Number(c.monto || 0), 0)
         + datos.fertilizaciones.filter(f => !f.anulada && mesClave(f.fecha) === mes.key).reduce((s, f) => s + costoFertilizacion(f, productos), 0)
         + datos.fumigaciones.filter(f => !f.anulada && mesClave(f.fecha) === mes.key).reduce((s, f) => s + (f.fumigacion_productos || []).reduce((t, item) => t + Number(item.descuento_stock ?? item.dosis ?? 0) * Number(item.productos?.precio_unitario || 0), 0), 0),
-    })).map(mes => ({ ...mes, ingresos:Number.isFinite(mes.ingresos) ? mes.ingresos : 0, costos:Number.isFinite(mes.costos) ? mes.costos : 0 }))
+    })).map(mes => {
+      const ingresos = Number.isFinite(mes.ingresos) ? mes.ingresos : 0
+      const cobrado = Number.isFinite(mes.cobrado) ? mes.cobrado : 0
+      const costos = Number.isFinite(mes.costos) ? mes.costos : 0
+      return { ...mes, ingresos, cobrado, costos, resultado:ingresos - costos }
+    })
     const sinAsignar = datos.costos.filter(c => !c.bloque_id).reduce((s, c) => s + Number(c.monto || 0), 0)
     return { filas, meses:mesesGrafico, sinAsignar }
   }, [datos])
@@ -168,13 +174,17 @@ export default function Rentabilidad({ campoActivo }) {
 
 function FinancialChart({ data }) {
   const [mesSeleccionado, setMesSeleccionado] = useState(Math.max(0, data.length - 1))
-  const maximoIngresos = Math.max(1, ...data.map(item => item.ingresos))
+  const [seriesVisibles, setSeriesVisibles] = useState({ ingresos:true, cobrado:true, costos:true, resultado:true })
+  const maximoIngresos = Math.max(1, ...data.flatMap(item => [item.ingresos, item.cobrado, item.resultado]))
+  const minimoIngresos = Math.min(0, ...data.map(item => item.resultado))
   const maximoCostos = Math.max(1, ...data.map(item => item.costos))
   const xPunto = index => 76 + index * 92
-  const yPunto = (valor, maximo) => 166 - (valor / maximo) * 116
-  const puntos = (campo, maximo) => data.map((item, index) => `${xPunto(index)},${yPunto(item[campo], maximo)}`).join(' ')
+  const yIzquierda = valor => 166 - ((valor - minimoIngresos) / (maximoIngresos - minimoIngresos || 1)) * 116
+  const yCostos = valor => 166 - (valor / maximoCostos) * 116
+  const puntos = (campo, escala) => data.map((item, index) => `${xPunto(index)},${escala(item[campo])}`).join(' ')
   const totalIngresos = data.reduce((s, item) => s + item.ingresos, 0)
   const totalCostos = data.reduce((s, item) => s + item.costos, 0)
+  const totalCobrado = data.reduce((s, item) => s + item.cobrado, 0)
   const hayDatos = totalIngresos > 0 || totalCostos > 0
   const seleccionado = data[mesSeleccionado] || data[data.length - 1] || { label:'-', ingresos:0, costos:0 }
   const resultadoSeleccionado = seleccionado.ingresos - seleccionado.costos
@@ -186,18 +196,24 @@ function FinancialChart({ data }) {
     return fmtGs(numero)
   }
   const niveles = [1, .66, .33, 0]
+  const alternarSerie = serie => setSeriesVisibles(actual => ({ ...actual, [serie]:!actual[serie] }))
   return <section className="profitability-chart-card">
-    <div className="profitability-chart-head"><div><small>ÚLTIMOS 6 MESES</small><h2>Ingresos y costos</h2></div><div className="profitability-chart-summary"><span><i className="income" />Ingresos <strong>{fmtGs(totalIngresos)}</strong></span><span><i className="cost" />Costos <strong>{fmtGs(totalCostos)}</strong></span><span className={totalIngresos - totalCostos >= 0 ? 'positive' : 'negative'}>Resultado <strong>{fmtGs(totalIngresos - totalCostos)}</strong></span></div></div>
-    <div className="profitability-month-focus" aria-live="polite"><div><small>MES SELECCIONADO</small><strong>{seleccionado.label}</strong></div><span><small>Ingresos</small><strong>Gs. {fmtGs(seleccionado.ingresos)}</strong></span><span><small>Costos</small><strong>Gs. {fmtGs(seleccionado.costos)}</strong></span><span className={resultadoSeleccionado >= 0 ? 'positive' : 'negative'}><small>{resultadoSeleccionado >= 0 ? 'Ganancia' : 'Pérdida'}</small><strong>Gs. {fmtGs(Math.abs(resultadoSeleccionado))}</strong></span></div>
-    <div className="profitability-scale-note"><span><i className="income" />Ingresos · escala izquierda</span><span><i className="cost" />Costos · escala derecha</span></div>
+    <div className="profitability-chart-head"><div><small>ÚLTIMOS 6 MESES</small><h2>Ingresos y costos</h2></div><div className="profitability-chart-summary"><span><i className="income" />Ventas <strong>{fmtGs(totalIngresos)}</strong></span><span><i className="collected" />Cobrado <strong>{fmtGs(totalCobrado)}</strong></span><span><i className="cost" />Costos <strong>{fmtGs(totalCostos)}</strong></span><span className={totalIngresos - totalCostos >= 0 ? 'positive' : 'negative'}>Resultado <strong>{fmtGs(totalIngresos - totalCostos)}</strong></span></div></div>
+    <div className="profitability-month-focus" aria-live="polite"><div><small>MES SELECCIONADO</small><strong>{seleccionado.label}</strong></div><span><small>Ventas generadas</small><strong>Gs. {fmtGs(seleccionado.ingresos)}</strong></span><span><small>Dinero cobrado</small><strong>Gs. {fmtGs(seleccionado.cobrado)}</strong></span><span><small>Costos</small><strong>Gs. {fmtGs(seleccionado.costos)}</strong></span><span className={resultadoSeleccionado >= 0 ? 'positive' : 'negative'}><small>{resultadoSeleccionado >= 0 ? 'Ganancia' : 'Pérdida'}</small><strong>Gs. {fmtGs(Math.abs(resultadoSeleccionado))}</strong></span></div>
+    <div className="profitability-series-picker" aria-label="Líneas visibles">{[
+      ['ingresos','income','Ventas generadas'],['cobrado','collected','Dinero cobrado'],['costos','cost','Costos'],['resultado','result','Resultado'],
+    ].map(([serie,clase,etiqueta]) => <button type="button" className={seriesVisibles[serie] ? 'is-active' : ''} aria-pressed={seriesVisibles[serie]} key={serie} onClick={() => alternarSerie(serie)}><i className={clase} />{etiqueta}</button>)}</div>
+    <div className="profitability-scale-note"><span>Ventas, cobros y resultado · escala izquierda</span><span>Costos · escala derecha</span></div>
     <div className={`profitability-chart-wrap ${hayDatos ? '' : 'is-empty'}`}><svg viewBox="0 0 620 210" role="img" aria-label="Ingresos y costos mensuales con escalas separadas">
-      {niveles.map((nivel, index) => { const y=50 + index * 38.66; return <g key={nivel}><line x1="70" x2="550" y1={y} y2={y} className="profit-grid-line" /><text x="62" y={y+4} textAnchor="end" className="profit-axis income">{abreviarGs(maximoIngresos*nivel)}</text><text x="558" y={y+4} textAnchor="start" className="profit-axis cost">{abreviarGs(maximoCostos*nivel)}</text></g> })}
+      {niveles.map((nivel, index) => { const y=50 + index * 38.66; const valorIzquierda=minimoIngresos+(maximoIngresos-minimoIngresos)*nivel; return <g key={nivel}><line x1="70" x2="550" y1={y} y2={y} className="profit-grid-line" /><text x="62" y={y+4} textAnchor="end" className="profit-axis income">{abreviarGs(valorIzquierda)}</text><text x="558" y={y+4} textAnchor="start" className="profit-axis cost">{abreviarGs(maximoCostos*nivel)}</text></g> })}
       <line x1={xPunto(mesSeleccionado)} x2={xPunto(mesSeleccionado)} y1="43" y2="171" className="profit-selection-line" />
-      <polyline points={puntos('ingresos', maximoIngresos)} className="profit-line income" />
-      <polyline points={puntos('costos', maximoCostos)} className="profit-line cost" />
-      {data.map((item, index) => <g className={`profit-month-point ${index === mesSeleccionado ? 'is-selected' : ''}`} key={item.key} role="button" tabIndex="0" aria-label={`${item.label}: ingresos ${fmtGs(item.ingresos)}, costos ${fmtGs(item.costos)}`} onClick={() => setMesSeleccionado(index)} onKeyDown={evento => { if (evento.key === 'Enter' || evento.key === ' ') { evento.preventDefault(); setMesSeleccionado(index) } }}><circle cx={xPunto(index)} cy={yPunto(item.ingresos, maximoIngresos)} r={index === mesSeleccionado ? 6 : 4} className="profit-dot income" /><circle cx={xPunto(index)} cy={yPunto(item.costos, maximoCostos)} r={index === mesSeleccionado ? 6 : 4} className="profit-dot cost" /><text x={xPunto(index)} y="198" textAnchor="middle">{item.label}</text><rect x={xPunto(index)-30} y="36" width="60" height="166" fill="transparent" /></g>)}
+      {seriesVisibles.ingresos && <polyline points={puntos('ingresos', yIzquierda)} className="profit-line income" />}
+      {seriesVisibles.cobrado && <polyline points={puntos('cobrado', yIzquierda)} className="profit-line collected" />}
+      {seriesVisibles.costos && <polyline points={puntos('costos', yCostos)} className="profit-line cost" />}
+      {seriesVisibles.resultado && <polyline points={puntos('resultado', yIzquierda)} className="profit-line result" />}
+      {data.map((item, index) => <g className={`profit-month-point ${index === mesSeleccionado ? 'is-selected' : ''}`} key={item.key} role="button" tabIndex="0" aria-label={`${item.label}: ventas ${fmtGs(item.ingresos)}, cobrado ${fmtGs(item.cobrado)}, costos ${fmtGs(item.costos)}, resultado ${fmtGs(item.resultado)}`} onClick={() => setMesSeleccionado(index)} onKeyDown={evento => { if (evento.key === 'Enter' || evento.key === ' ') { evento.preventDefault(); setMesSeleccionado(index) } }}>{seriesVisibles.ingresos && <circle cx={xPunto(index)} cy={yIzquierda(item.ingresos)} r={index === mesSeleccionado ? 6 : 4} className="profit-dot income" />}{seriesVisibles.cobrado && <circle cx={xPunto(index)} cy={yIzquierda(item.cobrado)} r={index === mesSeleccionado ? 6 : 4} className="profit-dot collected" />}{seriesVisibles.costos && <circle cx={xPunto(index)} cy={yCostos(item.costos)} r={index === mesSeleccionado ? 6 : 4} className="profit-dot cost" />}{seriesVisibles.resultado && <circle cx={xPunto(index)} cy={yIzquierda(item.resultado)} r={index === mesSeleccionado ? 6 : 4} className="profit-dot result" />}<text x={xPunto(index)} y="198" textAnchor="middle">{item.label}</text><rect x={xPunto(index)-30} y="36" width="60" height="166" fill="transparent" /></g>)}
     </svg>{!hayDatos && <div className="profitability-chart-empty"><i className="ti ti-chart-line" /><strong>El gráfico está listo</strong><span>Aparecerá cuando registres una venta o un costo.</span></div>}</div>
-    <div className="profitability-month-table" role="table" aria-label="Resumen mensual de rentabilidad"><div className="profitability-month-table__head" role="row"><span>Mes</span><span>Ingresos</span><span>Costos</span><span>Resultado</span></div>{data.map((item,index) => { const resultado=item.ingresos-item.costos; return <button type="button" role="row" className={index === mesSeleccionado ? 'is-selected' : ''} key={item.key} onClick={() => setMesSeleccionado(index)}><strong>{item.label}</strong><span>Gs. {fmtGs(item.ingresos)}</span><span>Gs. {fmtGs(item.costos)}</span><span className={resultado >= 0 ? 'positive' : 'negative'}>Gs. {fmtGs(resultado)}</span></button> })}</div>
+    <div className="profitability-month-table" role="table" aria-label="Resumen mensual de rentabilidad"><div className="profitability-month-table__head" role="row"><span>Mes</span><span>Ventas</span><span>Cobrado</span><span>Costos</span><span>Resultado</span></div>{data.map((item,index) => <button type="button" role="row" className={index === mesSeleccionado ? 'is-selected' : ''} key={item.key} onClick={() => setMesSeleccionado(index)}><strong>{item.label}</strong><span>Gs. {fmtGs(item.ingresos)}</span><span>Gs. {fmtGs(item.cobrado)}</span><span>Gs. {fmtGs(item.costos)}</span><span className={item.resultado >= 0 ? 'positive' : 'negative'}>Gs. {fmtGs(item.resultado)}</span></button>)}</div>
   </section>
 }
 
