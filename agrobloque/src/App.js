@@ -400,6 +400,7 @@ export default function App() {
   const [fieldsState, setFieldsState] = useState('idle')
   const [fieldsRefresh, setFieldsRefresh] = useState(0)
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+  const [platformReady, setPlatformReady] = useState(false)
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'system'
     const stored = window.localStorage.getItem('agrobloque-theme')
@@ -532,8 +533,12 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     setIsPlatformAdmin(false)
+    setPlatformReady(false)
     if (!session?.user?.id || guestPath) return
-    esAdministradorGeneral().then(v => { if (!cancelled) setIsPlatformAdmin(v) }).catch(() => {})
+    esAdministradorGeneral()
+      .then(v => { if (!cancelled) setIsPlatformAdmin(v) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setPlatformReady(true) })
     return () => { cancelled = true }
   }, [session?.user?.id, guestPath])
 
@@ -637,9 +642,11 @@ export default function App() {
           <button className="ui-2052fc" onClick={() => forceLocalSignOut()}>Limpiar sesión</button>
         </div>
       )}
-      {roleUserId !== session.user.id ? (
+      {roleUserId !== session.user.id || !platformReady ? (
         <Skeleton rows={3} label="Cargando tu espacio de trabajo" />
-      ) : !role.permisos.length ? (
+      // Un administrador general en modo soporte no tiene fila de rol en la empresa autorizada (la base solo le deja ver
+      // las filas de esa empresa): su rol efectivo lo arma AppLayout, así que no se le bloquea aquí.
+      ) : !role.permisos.length && !isPlatformAdmin ? (
         <div className="ui-6aff1e">
           <p>Tu cuenta todavía no tiene acceso habilitado. Pedí al administrador que configure tus permisos.</p>
           <button onClick={() => forceLocalSignOut()}>Cerrar sesión</button>
