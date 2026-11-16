@@ -138,7 +138,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
   }
 
   const totalManuales = costosManuales.reduce((s, c) => s + Number(c.monto), 0)
-  const totalGeneral = costosAuto.jornales + totalManuales
+  const totalGeneral = costosAuto.agroquimicos + costosAuto.jornales + totalManuales
 
   const exportarCostos = () => {
     const rows = costosManuales.map(c => ({
@@ -195,7 +195,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
         <div className="ui-8551ef" style={{ boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
           <div className="ui-b98565">Calculados automaticamente</div>
           {[
-            { icon:'ti-spray', color:'#e07b00', bg:'#fff3e8', label:'Insumos consumidos', sub:'Valor usado en las plantaciones; no se suma otra vez como gasto', val: costosAuto.agroquimicos },
+            { icon:'ti-spray', color:'#e07b00', bg:'#fff3e8', label:'Insumos consumidos', sub:'Valor usado en las plantaciones; incluido en el total', val: costosAuto.agroquimicos },
             ...(!isGuest ? [{ icon:'ti-users', color:"#124e38", bg:'#eeeeee', label:'Jornales', sub:'Desde asistencia registrada', val: costosAuto.jornales }] : []),
           ].map((item, i) => (
             <div className="ui-0ff2a8" key={i} style={{ borderBottom: i===0 ? '1px solid #f2f1ef' : 'none' }}>
