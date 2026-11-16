@@ -148,6 +148,7 @@ export default function Fumigaciones() {
     fecha:'',
     campo_id:'',
     bloques_ids:[],
+    bloques_tanques:{},
     operario:'',
     operarios_nombres:[],
     tanques_cantidad:'',
@@ -183,7 +184,7 @@ export default function Fumigaciones() {
 
     const abrirDesdeBloque = async () => {
       await fetchBloques(campoId)
-      setForm({ ...formVacio(), fecha:fechaLocal(), campo_id:campoId, bloques_ids:[bloqueId] })
+      setForm({ ...formVacio(), fecha:fechaLocal(), campo_id:campoId, bloques_ids:[bloqueId], bloques_tanques:{ [bloqueId]:'1' } })
       setDetalle(null)
       setModal(true)
     }
@@ -221,7 +222,19 @@ export default function Fumigaciones() {
     setProductos(data || [])
   }
 
-  const toggleBloque = (id) => setForm(f => ({ ...f, bloques_ids: f.bloques_ids.includes(id) ? [] : [id] }))
+  const toggleBloque = (id) => setForm(f => {
+    const seleccionado = f.bloques_ids.includes(id)
+    const bloques_ids = seleccionado ? f.bloques_ids.filter(bloqueId => bloqueId !== id) : [...f.bloques_ids, id]
+    const bloques_tanques = { ...(f.bloques_tanques || {}) }
+    if (seleccionado) delete bloques_tanques[id]
+    else bloques_tanques[id] = bloques_tanques[id] || f.tanques_cantidad || '1'
+    return { ...f, bloques_ids, bloques_tanques }
+  })
+
+  const actualizarTanquesBloque = (bloqueId, valor) => setForm(f => ({
+    ...f,
+    bloques_tanques:{ ...(f.bloques_tanques || {}), [bloqueId]:valor.replace(/[^0-9]/g, '') },
+  }))
 
   const toggleOperario = (nombre) => {
     setForm(f => {
@@ -264,6 +277,7 @@ export default function Fumigaciones() {
       fecha: fumigacion.fecha || '',
       campo_id: fumigacion.campo_id || '',
       bloques_ids: (fumigacion.fumigacion_bloques || []).map(fb => fb.bloque_id).filter(Boolean),
+      bloques_tanques: Object.fromEntries((fumigacion.fumigacion_bloques || []).map(fb => [fb.bloque_id, String(fumigacion.tanques_cantidad || 1)])),
       operario: fumigacion.operario || '',
       operarios_nombres: normalizarOperarios(fumigacion.operario || ''),
       tanques_cantidad: fumigacion.tanques_cantidad || '',
@@ -285,6 +299,7 @@ export default function Fumigaciones() {
       fecha: fechaLocal(),
       campo_id: fumigacion.campo_id || '',
       bloques_ids: [],
+      bloques_tanques: {},
       operario: fumigacion.operario || '',
       operarios_nombres: normalizarOperarios(fumigacion.operario || ''),
       tanques_cantidad: fumigacion.tanques_cantidad || '',
@@ -340,9 +355,9 @@ export default function Fumigaciones() {
     }
   }
 
-  const guardarRelacionesFumigacion = async (fumigacionId) => {
-    if (form.bloques_ids.length > 0) {
-      const { error: bloquesError } = await supabase.from('fumigacion_bloques').insert(form.bloques_ids.map(b => {
+  const guardarRelacionesFumigacion = async (fumigacionId, bloquesIds = form.bloques_ids, tanquesCantidad = form.tanques_cantidad) => {
+    if (bloquesIds.length > 0) {
+      const { error: bloquesError } = await supabase.from('fumigacion_bloques').insert(bloquesIds.map(b => {
         const bloque = bloques.find(x => x.id === b)
         return {
           fumigacion_id: fumigacionId,
@@ -359,7 +374,7 @@ export default function Fumigaciones() {
 
     const { error: productosError } = await supabase.from('fumigacion_productos').insert(prods.map(p => {
       const prod = productos.find(x => x.id === p.producto_id)
-      const descuento = calcularDescuentoStock(p, prod, form.tanques_cantidad)
+      const descuento = calcularDescuentoStock(p, prod, tanquesCantidad)
       return {
         fumigacion_id: fumigacionId,
         producto_id: p.producto_id || null,
@@ -380,9 +395,9 @@ export default function Fumigaciones() {
         .single()
       const prod = prodActual || productos.find(x => x.id === p.producto_id)
       if (!prod) continue
-      const descuento = calcularDescuentoStock(p, prod, form.tanques_cantidad)
+      const descuento = calcularDescuentoStock(p, prod, tanquesCantidad)
       if (!descuento || descuento <= 0) continue
-      const bloqueId = form.bloques_ids[0]
+      const bloqueId = bloquesIds[0]
       const bloque = bloques.find(x => x.id === bloqueId)
       await ajustarStockSeguro({ productoId:p.producto_id, delta:-descuento, tipo:'consumo_fumigacion', modulo:'Fumigaciones', referenciaId:fumigacionId, detalle:form.tipo || 'fumigacion', stockActual:prod.stock_actual, plantacionId:getPlantacionActivaId(bloque), bloqueId, fecha:form.fecha })
     }
@@ -391,6 +406,8 @@ export default function Fumigaciones() {
   const guardar = async () => {
     setFormError('')
     if (!form.fecha || form.bloques_ids.length === 0) return
+    const bloquesSinTanques = form.bloques_ids.filter(id => Number(form.bloques_tanques?.[id] || (form.bloques_ids.length === 1 ? form.tanques_cantidad : 0)) <= 0)
+    if (bloquesSinTanques.length) return setFormError('Indicá la cantidad de tanques utilizada en cada bloque.')
     const usaProductosLibres = form.productos_form.some(p => !p.producto_id && p.producto_nombre?.trim())
     if (usaProductosLibres) {
       const { error: soporteError } = await supabase.from('fumigacion_productos').select('producto_nombre').limit(1)
@@ -418,6 +435,8 @@ export default function Fumigaciones() {
       }
 
       if (form.id) {
+        const tanquesEdicion = Number(form.bloques_tanques?.[form.bloques_ids[0]] || form.tanques_cantidad) || null
+        payload.tanques_cantidad = tanquesEdicion
         const { data: fum, error } = await supabase
           .from('fumigaciones')
           .update(payload)
@@ -431,16 +450,19 @@ export default function Fumigaciones() {
         await devolverStockFumigacion(form.id)
         await supabase.from('fumigacion_bloques').delete().eq('fumigacion_id', form.id)
         await supabase.from('fumigacion_productos').delete().eq('fumigacion_id', form.id)
-        await guardarRelacionesFumigacion(fum.id)
+        await guardarRelacionesFumigacion(fum.id, form.bloques_ids, tanquesEdicion)
         await registrarAuditoria({ accion:'Edito fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
       } else {
-        const { data: fum, error } = await supabase.from('fumigaciones').insert(payload).select().single()
-        if (error || !fum) {
-          avisarError(`No se pudo guardar la fumigación: ${error?.message || 'sin respuesta de Supabase'}`)
-          return
+        for (const bloqueId of form.bloques_ids) {
+          const tanquesBloque = Number(form.bloques_tanques?.[bloqueId] || form.tanques_cantidad) || 0
+          const { data: fum, error } = await supabase.from('fumigaciones').insert({ ...payload, tanques_cantidad:tanquesBloque }).select().single()
+          if (error || !fum) {
+            avisarError(`No se pudo guardar la fumigación: ${error?.message || 'sin respuesta de Supabase'}`)
+            return
+          }
+          await guardarRelacionesFumigacion(fum.id, [bloqueId], tanquesBloque)
+          await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
         }
-        await guardarRelacionesFumigacion(fum.id)
-        await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
       }
 
       await fetchFumigaciones()
@@ -697,12 +719,12 @@ export default function Fumigaciones() {
             <label className="ag-field-label ui-74cc19">Fecha *
             <input className="ui-8dcd88" type="date" value={form.fecha} onChange={e=>setForm(f=>({...f,fecha:e.target.value}))}/></label>
             <label className="ag-field-label ui-74cc19">Campo
-            <select className="ui-2c08cb" value={form.campo_id} onChange={e=>{setForm(f=>({...f,campo_id:e.target.value,bloques_ids:[]}));fetchBloques(e.target.value)}}>
+            <select className="ui-2c08cb" value={form.campo_id} onChange={e=>{setForm(f=>({...f,campo_id:e.target.value,bloques_ids:[],bloques_tanques:{}}));fetchBloques(e.target.value)}}>
               <option value="">Selecciona campo...</option>
               {campos.map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select></label>
             {bloques.length > 0 && <>
-              <div className="ui-74cc19">Bloque tratado *</div>
+              <div className="ui-74cc19">Bloques tratados *</div>
               <div className="ui-1e850e">
                 {bloques.map(b=>{
                   const cultivo = getCultivoBloque(b)
@@ -715,6 +737,22 @@ export default function Fumigaciones() {
                   )
                 })}
               </div>
+              {form.bloques_ids.length > 0 && (
+                <div className="ui-afd779">
+                  <strong>Tanques por bloque</strong>
+                  <div className="ui-180a1c">
+                    {form.bloques_ids.map(bloqueId => {
+                      const bloque = bloques.find(b => b.id === bloqueId)
+                      return (
+                        <label className="ag-field-label ui-74cc19" key={bloqueId}>
+                          Bloque {bloque?.codigo || ''}
+                          <input className="ui-2720fa" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.bloques_tanques?.[bloqueId] || ''} onChange={e=>actualizarTanquesBloque(bloqueId, e.target.value)} placeholder="Ej: 4" />
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </>}
             {operarios.length > 0 && <>
               <div className="ui-74cc19">Operarios</div>
@@ -733,24 +771,21 @@ export default function Fumigaciones() {
             <FormHeading number="02" detail="Volumen preparado para esta aplicación">Preparación</FormHeading>
             <div className="ui-180a1c">
               <div>
-                <label className="ag-field-label ui-74cc19">Cantidad de tanques
-                <input className="ui-2720fa" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanques_cantidad} onChange={e=>setForm(f=>({...f,tanques_cantidad:e.target.value.replace(/[^0-9]/g, '')}))} placeholder="Ej: 3"/></label>
-              </div>
-              <div>
                 <label className="ag-field-label ui-74cc19">Litros por tanque
                 <input className="ui-2720fa" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros} onChange={e=>setForm(f=>({...f,tanque_litros:e.target.value.replace(/[^0-9]/g, '')}))} placeholder="Ej: 20"/></label>
               </div>
             </div>
-            {form.tanques_cantidad && form.tanque_litros && (
+            {form.bloques_ids.length > 0 && form.tanque_litros && (
               <div className="ui-afd779">
-                Total preparado: {fmtCantidad((Number(form.tanques_cantidad) || 0) * (Number(form.tanque_litros) || 0))} L
+                Total: {fmtCantidad(form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0))} tanques · {fmtCantidad(form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0) * (Number(form.tanque_litros) || 0))} L preparados
               </div>
             )}
             <FormHeading number="03" detail="Cantidad, unidad y efecto sobre el stock">Productos utilizados</FormHeading>
             <div className="ui-74cc19">Productos <span className="ui-d6202d">(primero elegí la categoría)</span></div>
             {form.productos_form.map((pf,i)=>{
               const prod = productos.find(p=>p.id===pf.producto_id)
-              const descuento = prod ? calcularDescuentoStock(pf, prod, form.tanques_cantidad) : 0
+              const totalTanques = form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0)
+              const descuento = prod ? calcularDescuentoStock(pf, prod, totalTanques) : 0
               return (
                 <div className="ui-d51702" key={i}>
                   <div className="ag-product-row ui-820f1c">
