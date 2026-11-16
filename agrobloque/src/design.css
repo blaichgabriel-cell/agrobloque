@@ -2613,3 +2613,14 @@ img.bl-logo--sobre-oscuro { display:none !important; }
   .ag-app .ui-860439>select { width:100%; align-self:start; }
   .ag-app .ui-91294d.ui-91294d.ui-91294d { justify-content:stretch; }
 }
+
+/* X para salir de los formularios y hojas (CerrarX): pegada arriba a la derecha, no mueve el contenido. */
+.ag-modal-x { position:sticky; top:6px; z-index:30; height:0; display:flex; justify-content:flex-end; overflow:visible; pointer-events:none; }
+.ag-modal-x__boton { pointer-events:auto; min-width:44px !important; width:44px; min-height:44px !important; height:44px; display:grid; place-items:center; margin:-6px -6px 0 0; padding:0; border:1px solid rgba(15,23,42,.1); border-radius:50%; background:rgba(255,255,255,.94); color:var(--text-primary); font-size:20px; box-shadow:0 4px 12px -6px rgba(15,23,42,.35); transition:transform 120ms var(--bl-press); }
+.ag-modal-x__boton:active { transform:scale(.92); }
+.ag-modal-x__boton:disabled { opacity:.45; }
+.ag-modal-x__boton:focus-visible { outline:2px solid var(--bl-emerald-500); outline-offset:2px; }
+[data-theme='dark'] .ag-modal-x__boton { border-color:var(--dk-line); background:rgba(26,42,35,.96); color:var(--text-primary); }
+
+/* El encabezado que sigue a la X deja espacio a su derecha: ni el título ni las etiquetas quedan debajo. */
+.ag-modal-x+* { box-sizing:border-box; padding-right:50px !important; }

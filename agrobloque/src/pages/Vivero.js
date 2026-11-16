@@ -6,6 +6,7 @@ import { registrarAuditoria } from '../lib/audit'
 import { blurNumberInputOnWheel, formatLocaleInteger, parseLocaleInteger } from '../lib/numbers'
 import { useCan } from '../lib/RoleContext'
 import { useAccionNueva } from '../lib/useAccionNueva'
+import { CerrarX } from '../components/UI'
 
 const estados = ['sembrado', 'germinando', 'listo', 'trasplantado', 'descartado']
 const hoy = () => new Date().toISOString().split('T')[0]
@@ -521,6 +522,7 @@ export default function Vivero() {
       {modal && (
         <div className="bl-overlay">
           <div className="bl-sheet">
+            <CerrarX onClose={() => setModal(false)} disabled={saving} />
             <div className="ui-9c155f">{form.id ? 'Editar lote' : 'Nuevo lote de vivero'}</div>
             <p className="nursery-form-intro">Guardá el origen, costo y evidencia visual del lote desde el primer día.</p>
             <Select label="Campo" value={form.campo_id} onChange={v => setForm(f => ({ ...f, campo_id:v }))} options={campos.map(c => [c.id, c.nombre])} />
@@ -562,6 +564,7 @@ export default function Vivero() {
       {modalTratamiento && (
         <div className="bl-overlay">
           <div className="bl-sheet">
+            <CerrarX onClose={() => setModalTratamiento(false)} disabled={saving} />
             <div className="ui-9c155f">{tratForm.id ? 'Editar tratamiento' : 'Nuevo tratamiento'}</div>
             <Field label="Fecha *" type="date" value={tratForm.fecha} onChange={v => setTratForm(f => ({ ...f, fecha:v }))} />
             <Field label="Tipo *" value={tratForm.tipo} onChange={v => setTratForm(f => ({ ...f, tipo:v }))} placeholder="Ej: fungicida, fertilizante, enraizante" />
@@ -578,6 +581,7 @@ export default function Vivero() {
       {modalTrasplante && detalle && (
         <div className="bl-overlay">
           <div className="bl-sheet">
+            <CerrarX onClose={() => setModalTrasplante(false)} disabled={saving} />
             <div className="ui-d26ea9">Trasplantar a bloque</div>
             <div className="ui-67972d">
               {detalle.cultivo}{detalle.variedad ? ` - ${detalle.variedad}` : ''} · {detalle.campos?.nombre || 'Sin campo'}
