@@ -832,7 +832,7 @@ export default function Fertilizaciones({ campoActivo }) {
             <div className="ui-35a79d">Aplicaciones reales</div>
             <h1 className="ui-118f2f">Fertilizaciones</h1>
           </div>
-          {can.create && <button type="button" className="bl-btn-solid" onClick={() => abrirModal('aplicacion')}><i className="ti ti-plus" /> Registrar fertilización</button>}
+          {can.create && <button type="button" className="bl-btn-solid" onClick={() => abrirModal('aplicacion')}><i className="ti ti-check" /> Registrar aplicación realizada</button>}
         </div>
 
         {error && <div className="ui-173cc6">{error}</div>}
@@ -840,8 +840,8 @@ export default function Fertilizaciones({ campoActivo }) {
         {!schemaPlanesDisponible && <div className="ui-9536bb">Los planes diarios y semanales se habilitaran después de ejecutar el SQL preparado para Supabase.</div>}
 
         {can.create && schemaPlanesDisponible && <details className="bl-card" style={{ marginBottom:18 }}>
-          <summary style={{ cursor:'pointer', padding:16, fontWeight:700 }}><i className="ti ti-calendar-week" /> Planificación avanzada</summary>
-          <div style={{ padding:'0 16px 16px' }}><p style={{ margin:'0 0 12px', color:'#667069' }}>Para preparar una fórmula semanal, repetirla y crear sus tareas.</p><button type="button" className="ag-small-action" onClick={() => abrirModal('plan')}>Crear plan semanal</button></div>
+          <summary style={{ cursor:'pointer', padding:16, fontWeight:700 }}><i className="ti ti-calendar-week" /> Preparar un plan para más adelante</summary>
+          <div style={{ padding:'0 16px 16px' }}><p style={{ margin:'0 0 12px', color:'#667069' }}>El plan queda anotado y crea recordatorios. No descuenta inventario ni figura como realizado hasta que pulses “Aplicar hoy”.</p><button type="button" className="ag-small-action" onClick={() => abrirModal('plan')}>Preparar plan semanal</button></div>
         </details>}
 
         <div className="ui-9e5e94" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))' }}>
