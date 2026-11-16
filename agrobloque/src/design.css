@@ -1374,11 +1374,33 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .ag-app .profitability-chart-summary strong { color:var(--text-primary); font-family:var(--bl-font-mono); font-size:14px; font-variant-numeric:tabular-nums; }
 .ag-app .profitability-chart-summary span i.income { background:var(--bl-emerald-500); }
 .ag-app .profitability-chart-summary span i.cost { background:var(--bl-amber-600); }
+.ag-app .profitability-month-focus { display:grid; grid-template-columns:1.1fr repeat(3,minmax(0,1fr)); gap:8px; margin-top:18px; }
+.ag-app .profitability-month-focus>div,.ag-app .profitability-month-focus>span { display:flex; flex-direction:column; justify-content:center; min-width:0; padding:11px 13px; border:1px solid rgba(15,23,42,.07); border-radius:13px; background:var(--surface-muted); }
+.ag-app .profitability-month-focus small { color:var(--text-tertiary); font-size:9px; font-weight:750; letter-spacing:.05em; }
+.ag-app .profitability-month-focus strong { margin-top:3px; overflow:hidden; color:var(--text-primary); font-family:var(--bl-font-mono); font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.ag-app .profitability-scale-note { display:flex; justify-content:flex-end; gap:16px; margin:12px 0 -3px; color:var(--text-tertiary); font-size:10px; }
+.ag-app .profitability-scale-note span { display:inline-flex; align-items:center; gap:6px; }
+.ag-app .profitability-scale-note i { width:8px; height:8px; border-radius:50%; }
+.ag-app .profitability-scale-note i.income { background:var(--bl-emerald-500); }
+.ag-app .profitability-scale-note i.cost { background:var(--bl-amber-600); }
 .ag-app .profit-line.income { stroke:var(--bl-emerald-500); filter:drop-shadow(0 4px 6px rgba(16,185,129,.35)); }
 .ag-app .profit-line.cost { stroke:var(--bl-amber-600); filter:drop-shadow(0 4px 6px rgba(217,119,6,.3)); }
 .ag-app .profit-dot.income { fill:var(--bl-emerald-500); }
 .ag-app .profit-dot.cost { fill:var(--bl-amber-600); }
 .ag-app .profit-grid-line { stroke:rgba(15,23,42,.07); }
+.ag-app .profit-axis { font-size:8px !important; font-family:var(--bl-font-mono); }
+.ag-app .profit-axis.income { fill:var(--bl-emerald-600); }
+.ag-app .profit-axis.cost { fill:var(--bl-amber-600); }
+.ag-app .profit-selection-line { stroke:rgba(99,102,241,.24); stroke-width:18; stroke-linecap:round; }
+.ag-app .profit-month-point { cursor:pointer; outline:none; }
+.ag-app .profit-month-point:focus .profit-dot,.ag-app .profit-month-point.is-selected .profit-dot { stroke-width:3; filter:drop-shadow(0 2px 5px rgba(15,23,42,.3)); }
+.ag-app .profitability-month-table { margin-top:14px; overflow:hidden; border:1px solid rgba(15,23,42,.08); border-radius:14px; }
+.ag-app .profitability-month-table__head,.ag-app .profitability-month-table>button { display:grid; grid-template-columns:.7fr repeat(3,1fr); gap:10px; align-items:center; min-height:39px; padding:0 13px; text-align:right; }
+.ag-app .profitability-month-table__head { background:var(--surface-muted); color:var(--text-tertiary); font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.ag-app .profitability-month-table__head span:first-child,.ag-app .profitability-month-table>button strong { text-align:left; }
+.ag-app .profitability-month-table>button { width:100%; border:0; border-top:1px solid rgba(15,23,42,.06); background:transparent; color:var(--text-secondary); font-family:var(--bl-font-mono); font-size:11px; cursor:pointer; }
+.ag-app .profitability-month-table>button.is-selected { background:rgba(99,102,241,.07); }
+.ag-app .profitability-month-table>button strong { color:var(--text-primary); }
 .ag-app .profitability-chart-wrap text { fill:var(--text-tertiary); font-size:11px; }
 .ag-app .positive,.ag-app .profitability-chart-summary .positive strong { color:var(--bl-emerald-600) !important; }
 .ag-app .negative,.ag-app .profitability-chart-summary .negative strong { color:#BE123C !important; }
@@ -1465,6 +1487,14 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .ag-app .lunar-calendar__header h2::first-letter { text-transform:uppercase; }
 @media (max-width:760px) {
   .ag-app .profitability-field { align-self:flex-start; }
+  .ag-app .profitability-month-focus { grid-template-columns:1fr 1fr; }
+  .ag-app .profitability-scale-note { justify-content:flex-start; flex-wrap:wrap; }
+  .ag-app .profitability-chart-wrap { margin-left:-9px; margin-right:-9px; }
+  .ag-app .profitability-month-table__head { display:none; }
+  .ag-app .profitability-month-table { display:grid; gap:7px; padding:7px; border:0; background:var(--surface-muted); }
+  .ag-app .profitability-month-table>button { grid-template-columns:1fr 1fr; gap:5px 10px; min-height:62px; padding:9px 10px; border:1px solid rgba(15,23,42,.07); border-radius:10px; background:var(--surface-primary); text-align:right; }
+  .ag-app .profitability-month-table>button span:nth-of-type(1)::before { content:'Ingresos '; color:var(--text-tertiary); }
+  .ag-app .profitability-month-table>button span:nth-of-type(2)::before { content:'Costos '; color:var(--text-tertiary); }
   .ag-app .plantation-profit-metrics { gap:6px; }
   .ag-app .plantation-profit-metrics>div { display:grid; grid-template-columns:1fr auto; align-items:baseline; gap:1px 10px; padding:10px 12px; }
   .ag-app .plantation-profit-metrics>div>strong { grid-column:2; grid-row:1; margin:0; text-align:right; }
