@@ -1223,6 +1223,28 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .fm-entry-meta { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; margin-bottom:4px; }
 .fm-entry-meta>span { white-space:nowrap; }
 
+/* Fumigaciones: el formulario se apila y respeta teclado/área segura en móvil. */
+@media (max-width:767px) {
+  .ag-app .phytosanitary-page+.ag-modal-overlay .ui-0cdbc3.ui-0cdbc3,
+  .ag-app .phytosanitary-page~.ag-modal-overlay .ui-0cdbc3.ui-0cdbc3,
+  .ag-app>.ag-modal-overlay .ui-0cdbc3.ui-0cdbc3 {
+    padding:20px 16px calc(24px + env(safe-area-inset-bottom,0px));
+    overscroll-behavior:contain;
+  }
+  .ag-app>.ag-modal-overlay .ui-820f1c.ui-820f1c {
+    grid-template-columns:minmax(0,1fr) minmax(76px,.36fr);
+    gap:8px;
+  }
+  .ag-app>.ag-modal-overlay .ui-d40836.ui-d40836 { grid-column:1/-1; }
+  .ag-app>.ag-modal-overlay :is(input,select,textarea).ui-ed7c13,
+  .ag-app>.ag-modal-overlay input.ui-6f9704,
+  .ag-app>.ag-modal-overlay input.ui-2720fa,
+  .ag-app>.ag-modal-overlay textarea.ui-641669,
+  .ag-app>.ag-modal-overlay select.ui-2c08cb,
+  .ag-app>.ag-modal-overlay input.ui-8dcd88,
+  .ag-app>.ag-modal-overlay select.ui-e2752f { font-size:16px; }
+}
+
 .fert-actions { display:flex; gap:8px; }
 .fert-actions>button { min-width:0; white-space:nowrap; }
 @media (max-width:480px) {

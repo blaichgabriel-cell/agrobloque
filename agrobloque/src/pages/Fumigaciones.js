@@ -133,7 +133,7 @@ const formatFechaLabel = (fecha) => {
 export default function Fumigaciones() {
   const can = useCan('fumigaciones')
   const navigate = useNavigate()
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1100)
   const [fumigaciones, setFumigaciones] = useState([])
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
@@ -163,6 +163,15 @@ export default function Fumigaciones() {
   const isGuest = Boolean(guestToken)
 
   useEffect(() => { fetchFumigaciones(); fetchCampos(); fetchProductos() }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const media = window.matchMedia('(min-width: 1100px)')
+    const actualizarVista = event => setIsDesktop(event.matches)
+    setIsDesktop(media.matches)
+    media.addEventListener?.('change', actualizarVista)
+    return () => media.removeEventListener?.('change', actualizarVista)
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -267,10 +276,11 @@ export default function Fumigaciones() {
   }
 
   const devolverStockFumigacion = async (id) => {
-    const { data: productosUsados } = await supabase
+    const { data: productosUsados, error: productosError } = await supabase
       .from('fumigacion_productos')
       .select('producto_id, descuento_stock, productos(stock_actual)')
       .eq('fumigacion_id', id)
+    if (productosError) throw productosError
 
     const devoluciones = (productosUsados || []).reduce((acc, item) => {
       const descuento = Number(item.descuento_stock) || 0
@@ -286,8 +296,21 @@ export default function Fumigaciones() {
       return acc
     }, {})
 
-    for (const item of Object.values(devoluciones)) {
-      await ajustarStockSeguro({ productoId:item.producto_id, delta:item.devolver, tipo:'devolucion_fumigacion', modulo:'Fumigaciones', referenciaId:id, detalle:'Edicion o anulacion de aplicacion', stockActual:item.stock_actual })
+    const aplicadas = []
+    try {
+      for (const item of Object.values(devoluciones)) {
+        await ajustarStockSeguro({ productoId:item.producto_id, delta:item.devolver, tipo:'devolucion_fumigacion', modulo:'Fumigaciones', referenciaId:id, detalle:'Edicion o anulacion de aplicacion', stockActual:item.stock_actual })
+        aplicadas.push(item)
+      }
+    } catch (error) {
+      for (const item of aplicadas.reverse()) {
+        try {
+          await ajustarStockSeguro({ productoId:item.producto_id, delta:-item.devolver, tipo:'reversion_devolucion_fumigacion', modulo:'Fumigaciones', referenciaId:id, detalle:'Reversion por error al anular aplicacion', stockActual:item.stock_actual + item.devolver })
+        } catch (rollbackError) {
+          console.error('No se pudo revertir una devolución de stock', rollbackError)
+        }
+      }
+      throw error
     }
   }
 
@@ -410,10 +433,31 @@ export default function Fumigaciones() {
 
   const eliminar = (id) => {
     setConfirmar({ fn: async () => {
-      await devolverStockFumigacion(id)
-      await supabase.from('fumigaciones').update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:'Anulada por el usuario', updated_at:new Date().toISOString() }).eq('id', id)
+      setFormError(''); setMensajeExito('')
+      const { data, error: deleteError } = await supabase.from('fumigaciones')
+        .update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:'Anulada por el usuario', updated_at:new Date().toISOString() })
+        .eq('id', id)
+        .select('id')
+      if (deleteError || !data?.length) {
+        setFormError(`No se pudo eliminar la fumigación: ${deleteError?.message || 'Supabase no confirmó el cambio'}`)
+        setConfirmar(null)
+        return
+      }
+      try {
+        await devolverStockFumigacion(id)
+      } catch (stockError) {
+        const { error: rollbackError } = await supabase.from('fumigaciones')
+          .update({ anulada:false, anulada_at:null, anulada_motivo:null, updated_at:new Date().toISOString() })
+          .eq('id', id)
+        setFormError(rollbackError
+          ? `No se pudo completar la eliminación ni restaurar automáticamente el registro: ${stockError.message || 'error de inventario'}`
+          : `No se eliminó la fumigación porque no se pudo devolver el stock: ${stockError.message || 'error de inventario'}`)
+        setConfirmar(null)
+        await fetchFumigaciones(); await fetchProductos()
+        return
+      }
       await registrarAuditoria({ accion:'Anulo fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:id })
-      setConfirmar(null); setDetalle(null); fetchFumigaciones(); fetchProductos()
+      setConfirmar(null); setDetalle(null); setMensajeExito('Fumigación eliminada y stock devuelto correctamente.'); await fetchFumigaciones(); await fetchProductos()
     }})
   }
 
@@ -542,7 +586,7 @@ export default function Fumigaciones() {
           padding: isDesktop ? '24px' : 0,
           overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
         }} onClick={e => e.target===e.currentTarget && setDetalle(null)}>
-          <div className="ui-0cdbc3" style={{ borderRadius: isDesktop ? 24 : '24px 24px 0 0', maxHeight: isDesktop ? 'calc(100vh - 96px)' : '85vh', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+          <div className="ui-0cdbc3" style={{ borderRadius: isDesktop ? 24 : '24px 24px 0 0', maxHeight: isDesktop ? 'calc(100dvh - 96px)' : '85dvh', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             {(() => {
               const tipo = TIPOS[detalle.tipo] || TIPOS.fumigacion
               const bloquesCodes = getBloquesConCultivo(detalle)
@@ -612,7 +656,7 @@ export default function Fumigaciones() {
           padding: isDesktop ? '24px' : 0,
           overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
         }}>
-          <div className="ui-0cdbc3" style={{ borderRadius: isDesktop ? 24 : '24px 24px 0 0', maxHeight: isDesktop ? 'calc(100vh - 96px)' : '90vh', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+          <div className="ui-0cdbc3" style={{ borderRadius: isDesktop ? 24 : '24px 24px 0 0', maxHeight: isDesktop ? 'calc(100dvh - 96px)' : '90dvh', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div className="ui-c7b1b6">{form.id ? 'Editar registro' : 'Nuevo registro'}</div>
             <Notice tone="error">{formError}</Notice><FormHeading number="01" detail="Tipo de trabajo y ubicación">Aplicación</FormHeading>
             <div className="ui-74cc19">Tipo</div>
