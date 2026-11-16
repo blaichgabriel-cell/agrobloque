@@ -64,8 +64,8 @@ export default function Auditoria() {
             <h1 className="ui-ee8706">Auditoria</h1>
           </div>
           <div className="ui-9c6869">
-            <button className="ui-2d8a82" onClick={exportarCsv}>CSV</button>
-            <button className="ui-b6b93a" onClick={exportarPdf}>PDF</button>
+            <button className="ui-2d8a82" onClick={exportarCsv}>Descargar para Excel</button>
+            <button className="ui-b6b93a" onClick={exportarPdf}>Descargar PDF</button>
             <button className="ui-eb7bbd" onClick={cargar}>
               <i className="ti ti-refresh ui-e5e6f8" aria-hidden="true"></i>
             </button>

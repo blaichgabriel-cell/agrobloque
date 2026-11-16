@@ -334,14 +334,14 @@ export default function Reportes({ campoActivo, isGuest = false }) {
           <div className="ui-9c6869">
             <button className="ui-21fbbe" onClick={exportarCsv}>
               <i className="ti ti-download ui-a1252a" aria-hidden="true"></i>
-              CSV
+              Descargar para Excel
             </button>
             <button className="ui-310dc2" onClick={imprimirReporte}>
               <i className="ti ti-printer ui-65edf6" aria-hidden="true"></i>
-              PDF resumen
+              Descargar resumen PDF
             </button>
             <button className="ui-296b48" onClick={imprimirCompleto}>
-              PDF completo
+              Descargar reporte completo
             </button>
           </div>
         </div>

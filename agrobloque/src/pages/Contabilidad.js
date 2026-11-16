@@ -255,8 +255,8 @@ export default function Contabilidad() {
             {can.create && <button className="ui-c59ad0" onClick={() => navigate('/contabilidad/facturas')} style={{ ...smallAction }}>
               <i className="ti ti-file-invoice" aria-hidden="true" /> Facturas
             </button>}
-            <button onClick={exportarCsv} style={smallAction}>CSV</button>
-            <button onClick={imprimirBalance} style={smallAction}>PDF</button>
+            <button onClick={exportarCsv} style={smallAction}>Descargar para Excel</button>
+            <button onClick={imprimirBalance} style={smallAction}>Descargar PDF</button>
             {can.create && <button onClick={() => abrirNuevo('compra')} style={smallAction}>Compra</button>}
             {can.create && <button className="ui-c84552" onClick={() => abrirNuevo('venta')} style={{ ...smallAction }}>Venta</button>}
           </div>

@@ -26,13 +26,21 @@ export default function Costos({ campoActivo, isGuest = false }) {
   const [costosAuto, setCostosAuto] = useState({ agroquimicos: 0, jornales: 0 })
   const [costosManuales, setCostosManuales] = useState([])
   const [modal, setModal] = useState(false)
-  const [form, setForm] = useState({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'' })
+  const [form, setForm] = useState({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'', plantacion_id:'' })
   const [saving, setSaving] = useState(false)
   const [periodo, setPeriodo] = useState('mes')
 
   useEffect(() => { fetchCampos() }, [])
   useEffect(() => { if (campoActivo) setCampoSel(campoActivo) }, [campoActivo])
   useEffect(() => { if (campoSel) { fetchBloques(); fetchCostos() } }, [campoSel, periodo])
+  useEffect(() => {
+    if (!campoSel || typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('nuevo') === '1') {
+      setForm(f => ({ ...f, bloque_id:params.get('bloque') || '', plantacion_id:params.get('plantacion') || '' }))
+      setModal(true)
+    }
+  }, [campoSel])
 
   const fetchCampos = async () => {
     const { data } = await supabase.from('campos').select('*').order('nombre')
@@ -45,7 +53,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
   }
 
   const fetchBloques = async () => {
-    const { data } = await supabase.from('bloques').select('*').eq('campo_id', campoSel.id).order('codigo')
+    const { data } = await supabase.from('bloques').select('*, plantaciones(id, activa, fecha_siembra, cultivos(nombre))').eq('campo_id', campoSel.id).order('codigo')
     setBloques(data || [])
   }
 
@@ -55,7 +63,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
   }
 
-  const formVacio = () => ({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'' })
+  const formVacio = () => ({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'', plantacion_id:'' })
 
   const abrirNuevo = () => {
     setForm(formVacio())
@@ -70,6 +78,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
       monto: costo.monto ? fmtGs(costo.monto) : '',
       fecha: costo.fecha || new Date().toISOString().split('T')[0],
       bloque_id: costo.bloque_id || '',
+      plantacion_id: costo.plantacion_id || '',
     })
     setModal(true)
   }
@@ -81,13 +90,8 @@ export default function Costos({ campoActivo, isGuest = false }) {
 
   const fetchCostos = async () => {
     const desde = getFechaDesde()
-    const { data: fumis } = await supabase.from('fumigaciones')
-      .select('fumigacion_productos(dosis, descuento_stock, productos(precio_unitario))')
-      .eq('campo_id', campoSel.id).gte('fecha', desde)
-    let totalAgro = 0
-    fumis?.forEach(f => f.fumigacion_productos?.forEach(fp => {
-        totalAgro += (Number(fp.productos?.precio_unitario) || 0) * (Number(fp.descuento_stock ?? parseFloat(fp.dosis)) || 0)
-    }))
+    const { data: consumos } = await supabase.from('consumos_valorizados').select('costo_total, anulado, bloques(campo_id)').gte('fecha', desde)
+    const totalAgro = (consumos || []).filter(c => !c.anulado && c.bloques?.campo_id === campoSel.id).reduce((s,c) => s + Number(c.costo_total || 0), 0)
     let totalJornales = 0
     if (!isGuest) {
       // La función devuelve solo la suma de jornales por campo, sin lo que cobra cada persona (la tabla
@@ -102,7 +106,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
     }
     setCostosAuto({ agroquimicos: totalAgro, jornales: totalJornales })
     const { data: manuales } = await supabase.from('costos')
-      .select('*, bloques(codigo)').eq('campo_id', campoSel.id).gte('fecha', desde).order('fecha', { ascending: false })
+      .select('*, bloques(codigo), plantaciones(id, cultivos(nombre))').eq('campo_id', campoSel.id).eq('anulada', false).gte('fecha', desde).order('fecha', { ascending: false })
     setCostosManuales(manuales || [])
   }
 
@@ -112,7 +116,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
     const payload = {
       tipo: form.tipo, descripcion: form.descripcion || null,
       monto: parsearGs(form.monto), fecha: form.fecha,
-      campo_id: campoSel?.id || null, bloque_id: form.bloque_id || null
+      campo_id: campoSel?.id || null, bloque_id: form.bloque_id || null, plantacion_id:form.plantacion_id || null
     }
     if (form.id) await supabase.from('costos').update(payload).eq('id', form.id)
     else await supabase.from('costos').insert(payload)
@@ -127,13 +131,13 @@ export default function Costos({ campoActivo, isGuest = false }) {
   }
 
   const eliminar = async (id) => {
-    await supabase.from('costos').delete().eq('id', id)
-    await registrarAuditoria({ accion:'Elimino costo manual', modulo:'Costos', tabla:'costos', registroId:id })
+    await supabase.from('costos').update({ anulada:true, anulada_at:new Date().toISOString() }).eq('id', id)
+    await registrarAuditoria({ accion:'Anulo costo manual', modulo:'Costos', tabla:'costos', registroId:id })
     fetchCostos()
   }
 
   const totalManuales = costosManuales.reduce((s, c) => s + Number(c.monto), 0)
-  const totalGeneral = costosAuto.agroquimicos + costosAuto.jornales + totalManuales
+  const totalGeneral = costosAuto.jornales + totalManuales
 
   const exportarCostos = () => {
     const rows = costosManuales.map(c => ({
@@ -181,7 +185,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
 
       <div style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         <div className="ui-006f11">
-          <div className="ui-280a4b">Total costos · {periodo === 'mes' ? 'este mes' : 'histórico'}</div>
+          <div className="ui-280a4b">Dinero gastado · {periodo === 'mes' ? 'este mes' : 'histórico'}</div>
           <div className="ui-e20fb2">Gs. {fmtGs(totalGeneral)}</div>
           <div className="ui-d773dd">{campoSel?.nombre}</div>
         </div>
@@ -190,7 +194,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
         <div className="ui-8551ef" style={{ boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
           <div className="ui-b98565">Calculados automaticamente</div>
           {[
-            { icon:'ti-spray', color:'#e07b00', bg:'#fff3e8', label:'Agroquimicos', sub:'Desde fumigaciones registradas', val: costosAuto.agroquimicos },
+            { icon:'ti-spray', color:'#e07b00', bg:'#fff3e8', label:'Insumos consumidos', sub:'Valor usado en las plantaciones; no se suma otra vez como gasto', val: costosAuto.agroquimicos },
             ...(!isGuest ? [{ icon:'ti-users', color:"#124e38", bg:'#eeeeee', label:'Jornales', sub:'Desde asistencia registrada', val: costosAuto.jornales }] : []),
           ].map((item, i) => (
             <div className="ui-0ff2a8" key={i} style={{ borderBottom: i===0 ? '1px solid #f2f1ef' : 'none' }}>
@@ -224,7 +228,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
                 </div>
                 <div className="ui-da5cd6">
                   <div className="ui-0993fa">{c.descripcion || tipo.label}</div>
-                  <div className="ui-552ff3">{c.fecha}{c.bloques?.codigo ? ' · ' + c.bloques.codigo : ''}</div>
+                  <div className="ui-552ff3">{c.fecha}{c.bloques?.codigo ? ' · ' + c.bloques.codigo : ''}{c.plantaciones?.cultivos?.nombre ? ` · ${c.plantaciones.cultivos.nombre}` : ''}</div>
                 </div>
                 <div className="ui-1d6b4b">Gs. {fmtGs(c.monto)}</div>
                 {!isGuest && (
@@ -271,10 +275,17 @@ export default function Costos({ campoActivo, isGuest = false }) {
               type="date" value={form.fecha} onChange={e => setForm(f=>({...f,fecha:e.target.value}))}/>
             <div className="ui-524895">Bloque (opcional)</div>
             <select className="ui-b5e991"
-              value={form.bloque_id} onChange={e => setForm(f=>({...f,bloque_id:e.target.value}))}>
+              value={form.bloque_id} onChange={e => { const bloque=bloques.find(b=>b.id===e.target.value); setForm(f=>({...f,bloque_id:e.target.value,plantacion_id:bloque?.plantaciones?.find(p=>p.activa)?.id || ''})) }}>
               <option value="">Sin bloque especifico</option>
               {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
             </select>
+            {form.bloque_id && <>
+              <div className="ui-524895">Plantación</div>
+              <select className="ui-b5e991" value={form.plantacion_id} onChange={e=>setForm(f=>({...f,plantacion_id:e.target.value}))}>
+                <option value="">Sin plantación específica</option>
+                {(bloques.find(b=>b.id===form.bloque_id)?.plantaciones || []).map(p=><option key={p.id} value={p.id}>{p.cultivos?.nombre || 'Cultivo'} · {p.fecha_siembra}{p.activa?' · activa':''}</option>)}
+              </select>
+            </>}
             <button className="ui-ae772b" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar costo'}</button>
             <button className="ui-3f3807" onClick={cerrarModal}>Cancelar</button>
           </div>

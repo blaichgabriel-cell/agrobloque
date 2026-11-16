@@ -30,7 +30,7 @@ const costoFertilizacion = (registro, productos) => (registro.soluciones || []).
 }, 0)
 
 export default function Rentabilidad({ campoActivo }) {
-  const [datos, setDatos] = useState({ bloques:[], plantaciones:[], ventas:[], costos:[], fumigaciones:[], fertilizaciones:[], productos:[], muertes:[] })
+  const [datos, setDatos] = useState({ bloques:[], plantaciones:[], ventas:[], costos:[], fumigaciones:[], fertilizaciones:[], productos:[], muertes:[], cosechas:[], consumos:[] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
@@ -47,7 +47,7 @@ export default function Rentabilidad({ campoActivo }) {
         if (bloquesError) throw bloquesError
         const ids = (bloques || []).map(b => b.id)
         if (!ids.length) {
-          if (activo) setDatos({ bloques:[], plantaciones:[], ventas:[], costos:[], fumigaciones:[], fertilizaciones:[], productos:[], muertes:[] })
+          if (activo) setDatos({ bloques:[], plantaciones:[], ventas:[], costos:[], fumigaciones:[], fertilizaciones:[], productos:[], muertes:[], cosechas:[], consumos:[] })
           return
         }
         const cargarProductos = async () => {
@@ -65,9 +65,9 @@ export default function Rentabilidad({ campoActivo }) {
           return supabase.from('fumigaciones').select('id,fecha,anulada,fumigacion_bloques(bloque_id),fumigacion_productos(dosis,descuento_stock)').eq('campo_id', campoActivo.id)
         }
         const resultados = await Promise.all([
-          supabase.from('plantaciones').select('id,bloque_id,fecha_siembra,cantidad_plantas,densidad_plantas_m2,activa,cultivos(nombre)').in('bloque_id', ids).eq('activa', true),
+          supabase.from('plantaciones').select('id,bloque_id,fecha_siembra,cantidad_plantas,densidad_plantas_m2,activa,cultivos(nombre)').in('bloque_id', ids),
           supabase.from('ventas').select('id,fecha,bloque_id,total,kg_total,precio_kg,monto_cobrado,estado_cobro').in('bloque_id', ids),
-          supabase.from('costos').select('id,fecha,bloque_id,campo_id,monto,tipo,descripcion').eq('campo_id', campoActivo.id),
+          supabase.from('costos').select('id,fecha,bloque_id,plantacion_id,campo_id,monto,tipo,descripcion,anulada').eq('campo_id', campoActivo.id),
           cargarFumigaciones(),
           supabase.from('fertilizaciones').select('id,fecha,bloque_id,anulada,soluciones').in('bloque_id', ids),
           cargarProductos(),
@@ -80,9 +80,14 @@ export default function Rentabilidad({ campoActivo }) {
           ? await supabase.from('muertes_plantas').select('plantacion_id,cantidad').in('plantacion_id', plantacionIds)
           : { data:[], error:null }
         if (muertesResultado.error) throw muertesResultado.error
+        const [cosechasResultado, consumosResultado] = await Promise.all([
+          supabase.from('cosechas').select('id,plantacion_id,bloque_id,fecha,kg_total,anulada').in('bloque_id', ids),
+          plantacionIds.length ? supabase.from('consumos_valorizados').select('id,plantacion_id,bloque_id,fecha,costo_total,origen_tipo,anulado').in('plantacion_id', plantacionIds) : Promise.resolve({ data:[], error:null }),
+        ])
         if (activo) setDatos({
           bloques:bloques || [], plantaciones, ventas:resultados[1].data || [], costos:resultados[2].data || [],
           fumigaciones:resultados[3].data || [], fertilizaciones:resultados[4].data || [], productos:resultados[5].data || [], muertes:muertesResultado.data || [],
+          cosechas:cosechasResultado.data || [], consumos:consumosResultado.data || [],
         })
       } catch (e) {
         if (activo) setError('No pudimos actualizar todos los datos financieros en este momento.')
@@ -112,16 +117,19 @@ export default function Rentabilidad({ campoActivo }) {
       const iniciales = Number(plantacion.cantidad_plantas ?? plantacion.densidad_plantas_m2 ?? 0)
       const bajas = datos.muertes.filter(m => m.plantacion_id === plantacion.id).reduce((s, m) => s + Number(m.cantidad || 0), 0)
       const vivas = Math.max(0, iniciales - bajas)
-      const manuales = datos.costos.filter(c => c.bloque_id === bloque.id && fechaClave(c.fecha) >= desde).reduce((s, c) => s + Number(c.monto || 0), 0)
-      const fumigacion = (fumigacionesPorBloque.get(bloque.id) || []).filter(c => fechaClave(c.fecha) >= desde).reduce((s, c) => s + c.monto, 0)
-      const fertilizacion = datos.fertilizaciones.filter(f => !f.anulada && f.bloque_id === bloque.id && fechaClave(f.fecha) >= desde).reduce((s, f) => s + costoFertilizacion(f, productos), 0)
+      const manuales = datos.costos.filter(c => !c.anulada && (c.plantacion_id === plantacion.id || (!c.plantacion_id && c.bloque_id === bloque.id && fechaClave(c.fecha) >= desde))).reduce((s, c) => s + Number(c.monto || 0), 0)
+      const consumosPlantacion = datos.consumos.filter(c => !c.anulado && c.plantacion_id === plantacion.id)
+      const consumoValorizado = consumosPlantacion.reduce((s,c) => s + Number(c.costo_total || 0), 0)
+      const fumigacion = consumosPlantacion.length ? 0 : (fumigacionesPorBloque.get(bloque.id) || []).filter(c => fechaClave(c.fecha) >= desde).reduce((s, c) => s + c.monto, 0)
+      const fertilizacion = consumosPlantacion.length ? 0 : datos.fertilizaciones.filter(f => !f.anulada && f.bloque_id === bloque.id && fechaClave(f.fecha) >= desde).reduce((s, f) => s + costoFertilizacion(f, productos), 0)
+      const kilos = datos.cosechas.filter(c => !c.anulada && (c.plantacion_id === plantacion.id || (!c.plantacion_id && c.bloque_id === bloque.id && fechaClave(c.fecha) >= desde))).reduce((s,c) => s + Number(c.kg_total || 0), 0)
       const ventas = datos.ventas.filter(v => v.bloque_id === bloque.id && fechaClave(v.fecha) >= desde)
       const facturado = ventas.reduce((s, v) => s + Number(v.total || (Number(v.kg_total || 0) * Number(v.precio_kg || 0))), 0)
       const cobrado = ventas.reduce((s, v) => s + Number(v.monto_cobrado || (v.estado_cobro === 'pagado' ? v.total : 0)), 0)
-      const costo = manuales + fumigacion + fertilizacion
+      const costo = manuales + consumoValorizado + fumigacion + fertilizacion
       return {
         id:plantacion.id, bloque:bloque.codigo, cultivo:plantacion.cultivos?.nombre || 'Sin cultivo', desde, iniciales, vivas,
-        costo, costoPlanta:vivas > 0 ? costo / vivas : 0, facturado, cobrado, balance:cobrado - costo,
+        costo, costoPlanta:vivas > 0 ? costo / vivas : 0, kilos, costoKilo:kilos > 0 ? costo/kilos : 0, activa:plantacion.activa, facturado, cobrado, balance:cobrado - costo,
         recuperado:costo > 0 ? Math.min(100, (cobrado / costo) * 100) : 0,
       }
     }).filter(Boolean)
@@ -150,7 +158,7 @@ export default function Rentabilidad({ campoActivo }) {
         {!preciosDisponibles && <div className="profitability-info"><i className="ti ti-info-circle" /><span><strong>Costos de insumos todavía no incluidos.</strong> El gráfico sí muestra ventas y costos manuales. Para sumar fertilizantes y fitosanitarios hay que habilitar el precio unitario del inventario.</span></div>}
         {calculo.sinAsignar > 0 && <div className="profitability-warning"><i className="ti ti-info-circle" /><span><strong>{fmtGs(calculo.sinAsignar)} sin asignar a un bloque.</strong> Este importe no se divide entre plantas para evitar mostrar un cálculo engañoso.</span></div>}
         <section className="profitability-section">
-          <div className="profitability-section-title"><div><h2>{bloqueSolicitado ? 'Plantación del bloque' : 'Plantaciones activas'}</h2><p>La recuperación se calcula con dinero cobrado, no solamente con ventas registradas.</p></div><span>{filasVisibles.length}</span></div>
+          <div className="profitability-section-title"><div><h2>{bloqueSolicitado ? 'Plantaciones del bloque' : 'Plantaciones actuales e históricas'}</h2><p>Los ciclos activos muestran costos acumulados hasta hoy; los finalizados conservan su resultado.</p></div><span>{filasVisibles.length}</span></div>
           {!filasVisibles.length ? <div className="empty-state"><span className="empty-state__icon"><i className="ti ti-chart-pie" /></span><div><strong>Sin plantaciones activas</strong><p>Cuando exista una plantación con ventas y costos aparecerá su rentabilidad.</p></div></div> : <div className="profitability-grid">{filasVisibles.map(fila => <PlantationProfit key={fila.id} data={fila} />)}</div>}
         </section>
       </>}
@@ -177,8 +185,8 @@ function FinancialChart({ data }) {
 
 function PlantationProfit({ data }) {
   return <article className="plantation-profit-card">
-    <div className="plantation-profit-head"><div><small>BLOQUE {data.bloque}</small><h3>{data.cultivo}</h3><span>Desde {new Date(`${data.desde}T12:00:00`).toLocaleDateString('es-PY')}</span></div><strong className={data.balance >= 0 ? 'positive' : 'negative'}>{data.balance >= 0 ? 'Ganancia' : 'Por recuperar'}<b>{fmtGs(Math.abs(data.balance))}</b></strong></div>
+    <div className="plantation-profit-head"><div><small>BLOQUE {data.bloque} · {data.activa ? 'EN PRODUCCIÓN' : 'FINALIZADA'}</small><h3>{data.cultivo}</h3><span>Desde {new Date(`${data.desde}T12:00:00`).toLocaleDateString('es-PY')}</span></div><strong className={data.balance >= 0 ? 'positive' : 'negative'}>{data.balance >= 0 ? 'Ganancia' : 'Por recuperar'}<b>{fmtGs(Math.abs(data.balance))}</b></strong></div>
     <div className="plantation-profit-progress"><div><span>Inversión recuperada</span><strong>{numero(data.recuperado)}%</strong></div><progress max="100" value={data.recuperado} /></div>
-    <div className="plantation-profit-metrics"><div><span>Plantas vivas</span><strong>{numero(data.vivas)}</strong><small>{data.iniciales !== data.vivas ? `${numero(data.iniciales)} iniciales` : 'registradas'}</small></div><div><span>Costo acumulado</span><strong>{fmtGs(data.costo)}</strong><small>{fmtGs(data.costoPlanta)} por planta</small></div><div><span>Ventas generadas</span><strong>{fmtGs(data.facturado)}</strong><small>{fmtGs(data.cobrado)} cobrados</small></div></div>
+    <div className="plantation-profit-metrics"><div><span>Plantas vivas</span><strong>{numero(data.vivas)}</strong><small>{data.iniciales !== data.vivas ? `${numero(data.iniciales)} iniciales` : 'registradas'}</small></div><div><span>Costo acumulado</span><strong>{fmtGs(data.costo)}</strong><small>{fmtGs(data.costoPlanta)} por planta</small></div><div><span>Kilos cosechados</span><strong>{numero(data.kilos)} kg</strong><small>{data.kilos > 0 ? `${fmtGs(data.costoKilo)} por kg ${data.activa ? 'hasta hoy' : 'final'}` : 'sin cosechas'}</small></div><div><span>Ventas generadas</span><strong>{fmtGs(data.facturado)}</strong><small>{fmtGs(data.cobrado)} cobrados</small></div></div>
   </article>
 }

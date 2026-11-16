@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { imprimirHtml } from '../lib/exporters'
 import NotasPanel from '../components/NotasPanel'
 import { supabase } from '../lib/supabase'
 
@@ -225,10 +226,7 @@ export default function CuentasPagar() {
         ${resumen.porProveedor.map(p => `<tr><td>${p.nombre}</td><td>${p.tipo || ''}</td><td>${p.movimientos.length}</td><td class="right">${fmtGs(p.saldo)}</td></tr>`).join('')}
         </tbody></table>
       </body></html>`
-    const w = window.open('', '_blank')
-    w.document.write(html)
-    w.document.close()
-    w.print()
+    imprimirHtml('cuentas-a-pagar', html.replace(/<\/?(?:html|head|body)[^>]*>/g, '').replace(/<title>.*?<\/title>/, '').replace(/<style>[\s\S]*?<\/style>/, ''))
   }
 
   return (
@@ -240,8 +238,8 @@ export default function CuentasPagar() {
             <h1 className="ui-5f0bf1">Cuentas a pagar</h1>
           </div>
           <div className="ui-9a2d51">
-            <button onClick={exportarCsv} style={smallBtn}>CSV</button>
-            <button onClick={imprimir} style={smallBtn}>PDF</button>
+            <button onClick={exportarCsv} style={smallBtn}>Descargar para Excel</button>
+            <button onClick={imprimir} style={smallBtn}>Descargar PDF</button>
             <button onClick={() => abrirProveedor()} style={darkBtn}>+ Proveedor</button>
             <button onClick={() => abrirMovimiento()} style={greenBtn}>+ Movimiento</button>
           </div>

@@ -2,6 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Skeleton, Modal } from '../components/UI'
 import QRCode from 'qrcode'
+import { esAdministradorGeneral } from '../lib/plataforma'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
 import { formatLocaleInteger, parseLocaleInteger } from '../lib/numbers'
@@ -131,8 +132,11 @@ export default function FichaBloque() {
   const [abonoRapidoError, setAbonoRapidoError] = useState('')
   const [saving, setSaving] = useState(false)
   const [showQr, setShowQr] = useState(false)
+  const [puedeVerQr, setPuedeVerQr] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [qrError, setQrError] = useState('')
+
+  useEffect(() => { let activo=true; esAdministradorGeneral().then(valor => { if (activo) setPuedeVerQr(valor) }); return () => { activo=false } }, [])
   const [mensajeExito, setMensajeExito] = useState('')
   const [showQuickActions, setShowQuickActions] = useState(false)
 
@@ -1146,12 +1150,13 @@ export default function FichaBloque() {
               <div className="ui-1d6b4b">Acciones del bloque</div>
               <div className="ui-a8f171">Registrá trabajo sin volver a seleccionar el bloque</div>
             </div>
-            <div className="block-detail-quick__buttons"><button className="ag-small-action block-detail-primary-action" type="button" aria-expanded={showQuickActions} onClick={() => setShowQuickActions(value => !value)}><i className={`ti ${showQuickActions ? 'ti-x' : 'ti-plus'}`} />{showQuickActions ? 'Cerrar' : 'Registrar trabajo'}</button><button className="ag-small-action ui-cd464c" type="button" onClick={() => setShowQr(true)}><i className="ti ti-qrcode ui-e5876b" aria-hidden="true"></i> QR</button></div>
+            <div className="block-detail-quick__buttons"><button className="ag-small-action block-detail-primary-action" type="button" aria-expanded={showQuickActions} onClick={() => setShowQuickActions(value => !value)}><i className={`ti ${showQuickActions ? 'ti-x' : 'ti-plus'}`} />{showQuickActions ? 'Cerrar' : 'Registrar trabajo'}</button>{puedeVerQr && <button className="ag-small-action ui-cd464c" type="button" onClick={() => setShowQr(true)}><i className="ti ti-qrcode ui-e5876b" aria-hidden="true"></i> QR</button>}</div>
           </div>
           {showQuickActions && <div className="block-detail-action-grid ui-1a4890">
             {canFum.create && <button className="ag-small-action ui-0ea43e" type="button" onClick={() => abrirCargaRapida('fumigaciones')}><i className="ti ti-spray" aria-hidden="true" /> Fumigación <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
             {canFert.create && <button className="ag-small-action ui-228318" type="button" onClick={() => abrirCargaRapida('fertilizacion')}><i className="ti ti-leaf" aria-hidden="true" /> Fertilización <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
             {canCos.create && <button className="ag-small-action ui-f0ca92" type="button" onClick={() => abrirCargaRapida('cosecha')}><i className="ti ti-cut" aria-hidden="true" /> Cosecha <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
+            {can.edit && plantacionActiva && <button className="ag-small-action ui-f0ca92" type="button" onClick={() => navigate(`/costos?nuevo=1&bloque=${bloque.id}&plantacion=${plantacionActiva.id}`)}><i className="ti ti-coin" aria-hidden="true" /> Costo directo <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
             <button className="ag-small-action ui-f0ca92" type="button" onClick={() => navigate(`/rentabilidad?bloque=${bloque.id}`)}><i className="ti ti-chart-line" aria-hidden="true" /> Rentabilidad <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
           </div>}
         </div>
@@ -1911,7 +1916,7 @@ export default function FichaBloque() {
         </Modal>
       )}
 
-      {showQr && (
+      {showQr && puedeVerQr && (
         <Modal onClose={() => setShowQr(false)} label="Registro del bloque" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:220, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
           <div className="ag-surface ui-701d98">
             <div className="ui-93a7e1">{bloque.campos?.nombre}</div>

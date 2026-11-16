@@ -496,6 +496,11 @@ export default function Fertilizaciones({ campoActivo }) {
   }
 
   const devolverInventarioGrupo = async (grupo, motivo = 'Correccion de fertilizacion') => {
+    const origenId = grupo.grupo_id || grupo.items[0]?.grupo_id
+    if (origenId) {
+      const { data:revertidos, error:revertirError } = await supabase.rpc('revertir_consumos_valorizados', { p_origen_tipo:'consumo_fertilizacion', p_origen_id:origenId })
+      if (!revertirError && Number(revertidos) > 0) return
+    }
     const totales = {}
     const solucionesBase = grupo.items[0]?.soluciones || grupo.soluciones || []
     solucionesBase.flatMap(sol => sol.productos || []).filter(p => p.modo !== 'por_planta').forEach(p => {
@@ -689,35 +694,23 @@ export default function Fertilizaciones({ campoActivo }) {
       return
     }
 
-    const descuentos = {}
     if (form.estado !== 'suspendida') {
-      solucionesLimpias.flatMap(sol => sol.productos).forEach(p => {
-        if (!p.producto_id) return
-        const cantidadUso = p.modo === 'por_planta'
-          ? Number(p.cantidad || 0) * bloquesDestino.reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0)
-          : Number(p.cantidad || 0) * tanquesCantidad
-        const cantidadStock = convertirAStock(cantidadUso, p.unidad, p.unidad_stock)
-        if (!cantidadStock || cantidadStock <= 0) return
-        descuentos[p.producto_id] = (descuentos[p.producto_id] || 0) + cantidadStock
-      })
-    }
-
-    for (const [productoId, descuento] of Object.entries(descuentos)) {
-      const { data: prodActual } = await supabase
-        .from('productos')
-        .select('stock_actual')
-        .eq('id', productoId)
-        .single()
-      if (!prodActual) continue
-      await ajustarStockSeguro({
-        productoId,
-        delta:-descuento,
-        tipo:'consumo_fertilizacion',
-        modulo:'Fertilizaciones',
-        referenciaId:form.plan_id || form.fecha,
-        detalle:`${bloquesDestino.length} bloque(s)`,
-        stockActual:prodActual.stock_actual,
-      })
+      for (const payload of payloads) {
+        const bloque = bloques.find(b => b.id === payload.bloque_id)
+        for (const producto of solucionesLimpias.flatMap(sol => sol.productos).filter(p => p.producto_id)) {
+          const cantidadUso = producto.modo === 'por_planta'
+            ? Number(producto.cantidad || 0) * plantasDelBloque(bloque)
+            : Number(producto.cantidad || 0) * tanquesCantidad / payloads.length
+          const descuento = convertirAStock(cantidadUso, producto.unidad, producto.unidad_stock)
+          if (!descuento || descuento <= 0) continue
+          const prodActual = productos.find(p => p.id === producto.producto_id)
+          await ajustarStockSeguro({
+            productoId:producto.producto_id, delta:-descuento, tipo:'consumo_fertilizacion', modulo:'Fertilizaciones',
+            referenciaId:grupoId, detalle:`Bloque ${bloque?.codigo || ''}`, stockActual:prodActual?.stock_actual || 0,
+            plantacionId:payload.plantacion_id, bloqueId:payload.bloque_id, fecha:form.fecha,
+          })
+        }
+      }
     }
 
     if (form.es_semanal && form.edit_plan_ids?.length) {

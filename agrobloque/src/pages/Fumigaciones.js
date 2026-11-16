@@ -221,7 +221,7 @@ export default function Fumigaciones() {
     setProductos(data || [])
   }
 
-  const toggleBloque = (id) => setForm(f => ({ ...f, bloques_ids: f.bloques_ids.includes(id) ? f.bloques_ids.filter(x=>x!==id) : [...f.bloques_ids, id] }))
+  const toggleBloque = (id) => setForm(f => ({ ...f, bloques_ids: f.bloques_ids.includes(id) ? [] : [id] }))
 
   const toggleOperario = (nombre) => {
     setForm(f => {
@@ -277,7 +277,31 @@ export default function Fumigaciones() {
     setModal(true)
   }
 
+  const abrirDuplicado = async (fumigacion) => {
+    if (fumigacion.campo_id) await fetchBloques(fumigacion.campo_id)
+    setForm({
+      id: '',
+      tipo: fumigacion.tipo || 'fumigacion',
+      fecha: fechaLocal(),
+      campo_id: fumigacion.campo_id || '',
+      bloques_ids: [],
+      operario: fumigacion.operario || '',
+      operarios_nombres: normalizarOperarios(fumigacion.operario || ''),
+      tanques_cantidad: fumigacion.tanques_cantidad || '',
+      tanque_litros: fumigacion.tanque_litros || '',
+      productos_form: (fumigacion.fumigacion_productos || []).length
+        ? fumigacion.fumigacion_productos.map(fp => parseProductoForm(fp, fumigacion.tipo || 'fumigacion'))
+        : [{ categoria_nombre:'', producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
+      notas: fumigacion.notas || '',
+    })
+    setFormError('')
+    setDetalle(null)
+    setModal(true)
+  }
+
   const devolverStockFumigacion = async (id) => {
+    const { data:revertidos, error:revertirError } = await supabase.rpc('revertir_consumos_valorizados', { p_origen_tipo:'consumo_fumigacion', p_origen_id:id })
+    if (!revertirError && Number(revertidos) > 0) return
     const { data: productosUsados, error: productosError } = await supabase
       .from('fumigacion_productos')
       .select('producto_id, descuento_stock, productos(stock_actual)')
@@ -358,7 +382,9 @@ export default function Fumigaciones() {
       if (!prod) continue
       const descuento = calcularDescuentoStock(p, prod, form.tanques_cantidad)
       if (!descuento || descuento <= 0) continue
-      await ajustarStockSeguro({ productoId:p.producto_id, delta:-descuento, tipo:'consumo_fumigacion', modulo:'Fumigaciones', referenciaId:fumigacionId, detalle:form.tipo || 'fumigacion', stockActual:prod.stock_actual })
+      const bloqueId = form.bloques_ids[0]
+      const bloque = bloques.find(x => x.id === bloqueId)
+      await ajustarStockSeguro({ productoId:p.producto_id, delta:-descuento, tipo:'consumo_fumigacion', modulo:'Fumigaciones', referenciaId:fumigacionId, detalle:form.tipo || 'fumigacion', stockActual:prod.stock_actual, plantacionId:getPlantacionActivaId(bloque), bloqueId, fecha:form.fecha })
     }
   }
 
@@ -633,6 +659,7 @@ export default function Fumigaciones() {
                     ))}
                   </div>
                 )}
+                {!isGuest && can.create && <button className="ag-small-action ui-6988cd" onClick={() => abrirDuplicado(detalle)}>Duplicar para otro bloque</button>}
                 {!isGuest && can.edit && <button className="ag-small-action ui-6988cd" onClick={() => abrirEditar(detalle)}>Editar registro</button>}
                 {!isGuest && can.delete && <button className="ag-small-action ui-939a40" onClick={() => eliminar(detalle.id)}>Eliminar registro</button>}
                 <button className="ag-small-action ui-3e2cc4" onClick={() => setDetalle(null)}>Cerrar</button>
@@ -675,7 +702,7 @@ export default function Fumigaciones() {
               {campos.map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select></label>
             {bloques.length > 0 && <>
-              <div className="ui-74cc19">Bloques tratados *</div>
+              <div className="ui-74cc19">Bloque tratado *</div>
               <div className="ui-1e850e">
                 {bloques.map(b=>{
                   const cultivo = getCultivoBloque(b)

@@ -39,6 +39,20 @@ const formatearCantidadConUnidad = (cantidad, unidad) => {
   return `${stock.cantidad} ${stock.unidad}`
 }
 
+const cantidadAStock = (cantidad, unidadCompra, unidadStock) => {
+  const valor = Number(String(cantidad || '').replace(',', '.')) || 0
+  const compra = normalizarUnidad(unidadCompra)
+  const stock = normalizarUnidad(unidadStock)
+  if (compra === stock) return valor
+  if (stock === 'kg' && compra === 'g') return valor / 1000
+  if (stock === 'g' && compra === 'kg') return valor * 1000
+  if (stock === 'L' && compra === 'cc') return valor / 1000
+  if (stock === 'cc' && compra === 'L') return valor * 1000
+  return null
+}
+
+const hoy = () => new Date().toISOString().slice(0, 10)
+
 const PRODUCT_CATEGORIES = [
   { key:'Semillas',      label:'Semillas',        icon:'ti-seeding',   color:'#3d7a35', bg:'#edf6e9' },
   { key:'Plantines',     label:'Plantines',       icon:'ti-plant-2',   color:'#4f8c42', bg:'#edf6e9' },
@@ -80,16 +94,18 @@ export default function Inventario() {
   const [productos, setProductos] = useState([])
   const [categorias, setCategorias] = useState([])
   const [movimientos, setMovimientos] = useState([])
+  const [compras, setCompras] = useState([])
   const [categoriaActiva, setCategoriaActiva] = useState(null)
   const [modal, setModal] = useState(null)
   const [confirmar, setConfirmar] = useState(null)
   const [form, setForm] = useState({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', stock_minimo:'', carencia_dias:'', notas:'' })
+  const [compra, setCompra] = useState({ producto_id:'', fecha:hoy(), cantidad:'', unidad:'kg', precio_total:'', notas:'' })
   const [saving, setSaving] = useState(false)
   const [sincronizandoAbonos, setSincronizandoAbonos] = useState(false)
   const [error, setError] = useState('')
   const [busqueda, setBusqueda] = useState('')
 
-  useEffect(() => { fetchProductos(); fetchCategorias(); fetchMovimientos() }, [])
+  useEffect(() => { fetchProductos(); fetchCategorias(); fetchMovimientos(); fetchCompras() }, [])
 
   const asegurarCategoriaProducto = async () => {
     const { data: existente } = await supabase
@@ -188,6 +204,49 @@ export default function Inventario() {
   const fetchMovimientos = async () => {
     const { data, error:movError } = await supabase.from('inventario_movimientos').select('id, cantidad, stock_nuevo, tipo, modulo, detalle, created_at, productos(nombre, unidad)').order('created_at', { ascending:false }).limit(12)
     if (!movError) setMovimientos(data || [])
+  }
+
+  const fetchCompras = async () => {
+    const { data, error:comprasError } = await supabase.from('inventario_compras')
+      .select('id, fecha, cantidad, unidad, precio_total, costo_unitario, anulada, productos(nombre, unidad)')
+      .order('fecha', { ascending:false }).limit(20)
+    if (!comprasError) setCompras(data || [])
+  }
+
+  const abrirCompra = producto => {
+    setError('')
+    setCompra({ producto_id:producto.id, fecha:hoy(), cantidad:'', unidad:normalizarUnidad(producto.unidad), precio_total:'', notas:'' })
+    setModal('compra')
+  }
+
+  const registrarCompra = async () => {
+    const producto = productos.find(p => p.id === compra.producto_id)
+    const cantidadStock = cantidadAStock(compra.cantidad, compra.unidad, producto?.unidad)
+    const precioTotal = Number(String(compra.precio_total || '').replace(/\./g, '')) || 0
+    if (!producto || !cantidadStock || cantidadStock <= 0 || precioTotal <= 0) {
+      setError('Completá una cantidad y un precio total válidos.')
+      return
+    }
+    setSaving(true); setError('')
+    const { data, error:compraError } = await supabase.rpc('registrar_compra_inventario', {
+      p_producto_id:producto.id, p_fecha:compra.fecha, p_cantidad:Number(String(compra.cantidad).replace(',', '.')),
+      p_unidad:compra.unidad, p_cantidad_stock:cantidadStock, p_precio_total:precioTotal, p_notas:compra.notas || null,
+    })
+    if (compraError) setError(`No se pudo registrar la compra: ${compraError.message}`)
+    else {
+      await registrarAuditoria({ accion:'Registro compra de inventario', modulo:'Inventario', tabla:'inventario_compras', registroId:data || '', detalle:`${producto.nombre} - Gs. ${precioTotal.toLocaleString('es-PY')}` })
+      setModal(null)
+      await Promise.all([fetchProductos(), fetchMovimientos(), fetchCompras()])
+    }
+    setSaving(false)
+  }
+
+  const anularCompra = async id => {
+    if (!window.confirm('¿Anular esta compra y retirar su stock?')) return
+    setError('')
+    const { error:anularError } = await supabase.rpc('anular_compra_inventario', { p_compra_id:id })
+    if (anularError) setError(anularError.message || 'No se pudo anular la compra.')
+    else await Promise.all([fetchProductos(), fetchMovimientos(), fetchCompras()])
   }
 
   const getCatNombre = (p) => p.categorias_producto?.nombre || 'Otro'
@@ -375,6 +434,7 @@ export default function Inventario() {
                 </div>
 
                 <div className="ui-f60339">
+                  {can.create && <button className="ag-small-action ui-922ea3" onClick={() => abrirCompra(p)}>Registrar compra</button>}
                   {can.edit && <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, -1)}>−</button>}
                   {can.edit && <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, 1)}>+</button>}
                   {can.edit && <button className="ag-small-action ui-922ea3" onClick={() => { setForm({...p, categoria_nombre: getCatNombre(p)}); setModal('form') }}>Editar</button>}
@@ -390,6 +450,14 @@ export default function Inventario() {
       )}
 
       <div className="ag-page-body" style={{ padding: isDesktop ? '0 36px 100px' : '0 14px 100px' }}>
+        {compras.length > 0 && <section className="ui-123417">
+          <div className="ui-f951e6">Compras recientes</div>
+          {compras.map(c => <div className="ui-c6e460" key={c.id} style={{ gridTemplateColumns:isDesktop ? '1fr auto auto' : '1fr auto' }}>
+            <div><strong className="ui-3044b6">{c.productos?.nombre || 'Producto'}</strong><div className="ui-13b58a">{c.fecha} · {fmtNumero(c.cantidad)} {c.unidad}</div></div>
+            <strong className="ui-3044b6">Gs. {Number(c.precio_total || 0).toLocaleString('es-PY')}</strong>
+            {can.delete && <button className="ag-small-action ui-14c146" onClick={() => anularCompra(c.id)}>Anular</button>}
+          </div>)}
+        </section>}
         {movimientos.length > 0 && <section className="ui-123417">
           <div className="ui-f951e6">Movimientos recientes</div>
           {movimientos.map(m => <div className="ui-c6e460" key={m.id} style={{ gridTemplateColumns:isDesktop ? '1fr auto auto' : '1fr auto' }}>
@@ -446,6 +514,23 @@ export default function Inventario() {
             <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(null)}>Cancelar</button>
           </div>
         </div>
+      )}
+
+      {modal === 'compra' && (
+        <Modal busy={saving} onClose={() => setModal(null)} label="Registrar compra" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:220, display:'flex', alignItems:isDesktop?'center':'flex-end', justifyContent:'center', padding:isDesktop?24:0 }}>
+          <div className="ui-7dd37e" style={{ borderRadius:isDesktop?24:'24px 24px 0 0' }}>
+            <div className="ui-c7b1b6">Registrar compra</div>
+            {error && <div className="ui-e136cb">{error}</div>}
+            <div className="ui-50089c">El stock anterior seguirá sin precio. Esta compra comienza la valorización del producto.</div>
+            <label className="ag-field-label ui-74cc19">Fecha<input style={inpStyle} type="date" value={compra.fecha} onChange={e => setCompra(c => ({...c,fecha:e.target.value}))}/></label>
+            <label className="ag-field-label ui-74cc19">Cantidad comprada<input style={inpStyle} inputMode="decimal" value={compra.cantidad} onChange={e => setCompra(c => ({...c,cantidad:e.target.value}))} placeholder="Ej: 1"/></label>
+            <label className="ag-field-label ui-74cc19">Unidad<select style={inpStyle} value={compra.unidad} onChange={e => setCompra(c => ({...c,unidad:e.target.value}))}>{['kg','g','L','cc','unidades'].map(u => <option key={u}>{u}</option>)}</select></label>
+            <label className="ag-field-label ui-74cc19">Precio total pagado (Gs.)<input style={inpStyle} inputMode="numeric" value={compra.precio_total} onChange={e => { const n=e.target.value.replace(/[^0-9]/g,''); setCompra(c => ({...c,precio_total:n?Number(n).toLocaleString('es-PY'):''})) }} placeholder="Ej: 50.000"/></label>
+            <label className="ag-field-label ui-74cc19">Nota opcional<input style={inpStyle} value={compra.notas} onChange={e => setCompra(c => ({...c,notas:e.target.value}))}/></label>
+            <button className="ag-small-action ui-17d991" onClick={registrarCompra} disabled={saving}>{saving?'Guardando...':'Guardar compra'}</button>
+            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(null)}>Cancelar</button>
+          </div>
+        </Modal>
       )}
     </div>
   )

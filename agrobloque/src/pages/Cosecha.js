@@ -228,6 +228,7 @@ export default function Cosecha() {
     const filasValidas = filasCosecha
       .map(fila => ({
         bloque_id: fila.bloque_id,
+        plantacion_id: bloques.find(b => b.id === fila.bloque_id)?.plantaciones?.find(p => p.activa)?.id || null,
         fecha: form.fecha,
         kg_total: parsearKg(fila.kg_total),
         precio_kg: 0,
@@ -274,6 +275,7 @@ export default function Cosecha() {
     try {
       const payload = {
         bloque_id: form.bloque_id, fecha: form.fecha,
+        plantacion_id: bloques.find(b => b.id === form.bloque_id)?.plantaciones?.find(p => p.activa)?.id || null,
         kg_total: parsearKg(form.kg_total),
         precio_kg: form.id ? parsearGs(form.precio_kg) : 0,
         calidad: form.calidad,
