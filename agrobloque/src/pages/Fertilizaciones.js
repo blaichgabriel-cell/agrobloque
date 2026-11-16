@@ -121,6 +121,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
   const width = useViewportWidth()
   const isMobile = width < 720
   const esSemana = form.tipo === 'plan' || form.es_semanal
+  const [avanzado, setAvanzado] = useState(esSemana || Boolean(form.plan_id || form.edit_grupo || form.edit_plan_id))
   const alternarBloque = (bloqueId) => {
     setForm(f => {
       const actuales = new Set(f.bloques_ids || [])
@@ -203,8 +204,8 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
         </div>
 
         <Notice tone="error">{error}</Notice>
-        {!esSemana && !form.plan_id && <div className="fert-ad-hoc-note"><i className="ti ti-bolt" /><div><strong>Aplicación extraordinaria</strong><span>Usá esta opción cuando aplicás hoy un producto que no estaba previsto. Se registra en el historial y descuenta inventario sin modificar el plan semanal.</span></div></div>}
-        <FormHeading number="01" detail="Fecha, preparación y bloques seleccionados">Datos de la aplicación</FormHeading>
+        {!esSemana && !form.plan_id && <div className="fert-ad-hoc-note"><i className="ti ti-bolt" /><div><strong>Registro rápido</strong><span>Elegí el bloque, el producto y la cantidad usada. Al guardar se descuenta automáticamente del inventario.</span></div></div>}
+        <FormHeading number="01" detail="Fecha y bloques donde se aplicó">Datos de la aplicación</FormHeading>
         <div className="ui-c66208" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, 1fr)' }}>
           {esSemana && <label className="ui-e22579" style={{ gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" className="bl-input" /></label>}
           <label className="ui-e22579">
@@ -212,11 +213,11 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
             <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(e.target.value, 6) } : {}) }))} className="bl-input" />
           </label>
           {esSemana && <label className="ui-e22579">Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} className="bl-input" /></label>}
-          <label className="ui-e22579">Litros por tanque<input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value.replace(/[^0-9]/g, '') }))} className="bl-input" /></label>
-          <label className="ui-e22579">Cantidad de tanques<input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value.replace(/[^0-9]/g, '') }))} className="bl-input" /></label>
+          {avanzado && <label className="ui-e22579">Litros por tanque<input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value.replace(/[^0-9]/g, '') }))} className="bl-input" /></label>}
+          {avanzado && <label className="ui-e22579">Cantidad de tanques<input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value.replace(/[^0-9]/g, '') }))} className="bl-input" /></label>}
           {form.plan_id && <label className="ui-e22579">Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} className="bl-input"><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
-          <label className="ui-e22579" style={{ gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Etapa fenológica<input value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" className="bl-input" /></label>
-          <div className="ui-7f9aff"><span className="ui-93a7e1">VOLUMEN TOTAL</span><strong className="ui-b45e7d">{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>
+          {avanzado && <label className="ui-e22579" style={{ gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Etapa fenológica<input value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" className="bl-input" /></label>}
+          {avanzado && <div className="ui-7f9aff"><span className="ui-93a7e1">VOLUMEN TOTAL</span><strong className="ui-b45e7d">{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>}
           <div className="ui-5cb862">
             <div className="ui-19585d">Bloques</div>
             <div className="ui-180d23">
@@ -234,17 +235,19 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           </div>
         </div>
 
-        <FormHeading number="02" detail="Fórmula NPK, nutriente y dosis por tanque o planta">Preparación nutricional</FormHeading>
-        <div className="ui-93fd8e">Las cantidades siguientes son por cada tanque.</div>
+        {!esSemana && <button type="button" className="ag-small-action" onClick={() => setAvanzado(valor => !valor)} style={{ margin:'18px 0 4px', width:'100%', justifyContent:'space-between' }}><span><i className="ti ti-adjustments-horizontal" /> Opciones avanzadas</span><i className={`ti ti-chevron-${avanzado ? 'up' : 'down'}`} /></button>}
+
+        <FormHeading number="02" detail={avanzado ? 'Fórmula, dosis y forma de aplicación' : 'Producto y cantidad realmente utilizada'}>Productos aplicados</FormHeading>
+        {avanzado && <div className="ui-93fd8e">Las cantidades siguientes son por cada tanque, salvo que elijas dosis por planta.</div>}
         <div className="ui-3dee6e">
           {form.soluciones.map((sol, si) => (
             <div key={si} className="bl-card ui-acd88b">
-              <div className="ui-4c2683">
+              {avanzado && <div className="ui-4c2683">
                 <input value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solución A" className="bl-input ui-df86fd" />
                 {form.soluciones.length > 1 && (
                   <button className="ag-small-action ui-9f7e00" onClick={() => eliminarSolucion(si)}>Eliminar</button>
                 )}
-              </div>
+              </div>}
               <div className="ui-b1b744">
                 {sol.productos.map((p, pi) => (
                   <div className="ui-0c313e" key={pi} style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 138px 120px 94px 38px' }}>
@@ -256,10 +259,10 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
                       {productos.filter(esProductoFertilizacion).length === 0 && !p.producto_id && <div className="ui-6d5651">No hay fertilizantes clasificados. Revisá la categoría del producto en Inventario.</div>}
                       {!p.producto_id && <input value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Escribir producto" className="bl-input ui-b6bf8d" />}
                     </div>
-                    <select value={p.modo || 'por_tanque'} onChange={e => actualizarProducto(si, pi, 'modo', e.target.value)} className="bl-input">
+                    {avanzado && <select value={p.modo || 'por_tanque'} onChange={e => actualizarProducto(si, pi, 'modo', e.target.value)} className="bl-input">
                       <option value="por_tanque">Por tanque</option>
                       <option value="por_planta">Por planta</option>
-                    </select>
+                    </select>}
                     <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value.replace(',', '.'))} placeholder={p.modo === 'por_planta' ? 'Dosis/planta' : 'Cantidad'} type="text" inputMode="decimal" className="bl-input" />
                     <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} className="bl-input">
                       {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
@@ -278,12 +281,12 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           ))}
         </div>
 
-        <button className="ag-small-action ui-b2096e" onClick={agregarSolucion}>+ Solución</button>
+        {avanzado && <button className="ag-small-action ui-b2096e" onClick={agregarSolucion}>+ Solución</button>}
 
-        <label className="ui-410276">
+        {avanzado && <label className="ui-410276">
           Notas
           <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicación por goteo, lote completo, observaciones..." className="bl-input ui-c1d38e" />
-        </label>
+        </label>}
 
         <div className="ui-b691ec">
           <button className="ag-small-action ui-accd8b" onClick={onClose}>Cancelar</button>
@@ -829,17 +832,17 @@ export default function Fertilizaciones({ campoActivo }) {
             <div className="ui-35a79d">Aplicaciones reales</div>
             <h1 className="ui-118f2f">Fertilizaciones</h1>
           </div>
-          {can.create && <div className="fert-actions"><span>Elegí cómo querés registrar</span></div>}
+          {can.create && <button type="button" className="bl-btn-solid" onClick={() => abrirModal('aplicacion')}><i className="ti ti-plus" /> Registrar fertilización</button>}
         </div>
 
         {error && <div className="ui-173cc6">{error}</div>}
         {success && <div className="ui-fb7aa5">{success}</div>}
         {!schemaPlanesDisponible && <div className="ui-9536bb">Los planes diarios y semanales se habilitaran después de ejecutar el SQL preparado para Supabase.</div>}
 
-        {can.create && <div className="fert-mode-picker">
-          <button type="button" onClick={() => abrirModal('plan')} disabled={!schemaPlanesDisponible}><span className="fert-mode-icon"><i className="ti ti-calendar-week" /></span><span><strong>Plan semanal</strong><small>Programá la fórmula, los bloques y los días de una semana.</small></span><i className="ti ti-chevron-right" /></button>
-          <button type="button" onClick={() => abrirModal('aplicacion')}><span className="fert-mode-icon is-extra"><i className="ti ti-bolt" /></span><span><strong>Aplicación puntual</strong><small>Registrá ahora un producto que surgió fuera del plan.</small></span><i className="ti ti-chevron-right" /></button>
-        </div>}
+        {can.create && schemaPlanesDisponible && <details className="bl-card" style={{ marginBottom:18 }}>
+          <summary style={{ cursor:'pointer', padding:16, fontWeight:700 }}><i className="ti ti-calendar-week" /> Planificación avanzada</summary>
+          <div style={{ padding:'0 16px 16px' }}><p style={{ margin:'0 0 12px', color:'#667069' }}>Para preparar una fórmula semanal, repetirla y crear sus tareas.</p><button type="button" className="ag-small-action" onClick={() => abrirModal('plan')}>Crear plan semanal</button></div>
+        </details>}
 
         <div className="ui-9e5e94" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))' }}>
           <div className="nutrition-card ui-9128d9" style={{ ...card }}>
