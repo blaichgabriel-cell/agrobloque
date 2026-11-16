@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
+import { CerrarX } from '../components/UI'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const parsearKg = (v) => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? 0 : n }
@@ -586,6 +587,7 @@ export default function Ventas() {
       {modal && (
         <div className="ui-8b7442" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end' }}>
           <div className="ui-44a917" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <CerrarX onClose={() => setModal(false)} disabled={saving} />
             <div className="ui-c7b1b6">{form.id ? 'Editar venta' : 'Registrar venta'}</div>
             {error && <div className="ui-fb48d7">{error}</div>}
 

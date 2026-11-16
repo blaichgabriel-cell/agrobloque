@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { descargarCsv, imprimirHtml } from '../lib/exporters'
 import { useCan } from '../lib/RoleContext'
+import { CerrarX } from '../components/UI'
 
 const meses = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -365,6 +366,7 @@ export default function Contabilidad() {
       {modal && (
         <div style={overlay}>
           <div style={sheet}>
+            <CerrarX onClose={() => setModal(false)} disabled={saving} />
             <div className="ui-d5c0da">
               {form.id ? 'Editar movimiento' : 'Nuevo movimiento'}
             </div>

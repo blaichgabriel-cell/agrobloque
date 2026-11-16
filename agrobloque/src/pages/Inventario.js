@@ -1,4 +1,4 @@
-import { Modal } from '../components/UI'
+import { CerrarX, Modal } from '../components/UI'
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
@@ -501,6 +501,7 @@ export default function Inventario() {
       {modal === 'form' && (
         <div className="ui-66d878" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end' }}>
           <div className="ui-7dd37e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <CerrarX onClose={() => setModal(null)} disabled={saving} />
             <div className="ui-c7b1b6">{form.id ? 'Editar producto' : 'Nuevo producto'}</div>
             {error && <div className="ui-e136cb">{error}</div>}
 
@@ -538,12 +539,12 @@ export default function Inventario() {
               ))}
             </div>
 
-            {!form.id && Number(String(form.stock_actual || '').replace(',', '.')) > 0 && <>
-              <div className="ui-50089c">Esta compra inicial cargará el stock y dejará registrado su costo.</div>
+            {!form.id && <>
+              <div className="ui-50089c">La cantidad y el precio registran la compra inicial del producto.</div>
               <label className="ag-field-label ui-74cc19">Fecha de compra
                 <input style={inpStyle} type="date" value={form.fecha_compra || hoy()} onChange={e => setForm(f => ({...f, fecha_compra:e.target.value}))}/>
               </label>
-              <label className="ag-field-label ui-74cc19">Precio total pagado (Gs.) *
+              <label className="ag-field-label ui-74cc19">Precio total pagado (Gs.)
                 <input style={inpStyle} inputMode="numeric" value={form.precio_total || ''} onChange={e => { const n=e.target.value.replace(/[^0-9]/g,''); setForm(f => ({...f,precio_total:n?Number(n).toLocaleString('es-PY'):''})) }} placeholder="Ej: 50.000"/>
               </label>
             </>}

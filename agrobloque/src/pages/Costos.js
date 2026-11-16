@@ -4,6 +4,7 @@ import NotasPanel from '../components/NotasPanel'
 import { descargarCsv } from '../lib/exporters'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
+import { CerrarX } from '../components/UI'
 
 const TIPOS_COSTO = [
   { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:"#124e38", bg:'#eeeeee' },
@@ -252,6 +253,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
       {modal && (
         <div className="ui-66d878" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end' }}>
           <div className="ui-526967" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <CerrarX onClose={cerrarModal} disabled={saving} />
             <div className="ui-c7b1b6">{form.id ? 'Editar costo' : 'Nuevo costo'}</div>
             <div className="ui-ad3529">Tipo</div>
             <div className="ui-06c66f">
