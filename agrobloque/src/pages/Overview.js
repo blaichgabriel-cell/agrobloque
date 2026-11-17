@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { canAccessModule } from '../lib/permissions'
-import { Skeleton } from '../components/UI'
+import { Modal, Skeleton } from '../components/UI'
 import WorkActions, { availableWork } from '../components/WorkActions'
+import { registrarAuditoria } from '../lib/audit'
 
 const dateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 const number = value => Number(value || 0).toLocaleString('es-PY', { maximumFractionDigits: 1 })
@@ -31,10 +32,41 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
   const [filter, setFilter] = useState('todos')
   const [sort, setSort] = useState('codigo')
   const [work, setWork] = useState(false)
+  const [editandoCampo, setEditandoCampo] = useState(false)
+  const [nombreCampo, setNombreCampo] = useState('')
+  const [campoError, setCampoError] = useState('')
+  const [guardandoCampo, setGuardandoCampo] = useState(false)
   const [now, setNow] = useState(() => new Date())
   const today = dateKey(now)
   const month = `${today.slice(0, 7)}-01`
   const can = key => canAccessModule(role, key)
+
+  const abrirEditarCampo = () => {
+    setNombreCampo(campoActivo?.nombre || '')
+    setCampoError('')
+    setEditandoCampo(true)
+  }
+
+  const guardarNombreCampo = async () => {
+    const nombre = nombreCampo.trim()
+    if (nombre.length < 2) return setCampoError('El nombre debe tener al menos 2 caracteres.')
+    if (campos.some(campo => campo.id !== campoActivo.id && String(campo.nombre || '').trim().toLowerCase() === nombre.toLowerCase())) return setCampoError('Ya existe otro campo con ese nombre.')
+    if (nombre === String(campoActivo?.nombre || '').trim()) return setEditandoCampo(false)
+    setGuardandoCampo(true); setCampoError('')
+    const anterior = campoActivo.nombre
+    const { error } = await supabase.from('campos').update({ nombre }).eq('id', campoActivo.id)
+    if (error) {
+      setCampoError(error.code === '23505' ? 'Ya existe otro campo con ese nombre.' : `No se pudo cambiar el nombre: ${error.message || 'intentá nuevamente.'}`)
+      setGuardandoCampo(false)
+      return
+    }
+    const actualizado = { ...campoActivo, nombre }
+    setCampos(actual => actual.map(campo => campo.id === actualizado.id ? actualizado : campo).sort((a,b) => a.nombre.localeCompare(b.nombre, 'es')))
+    setCampoActivo(actualizado)
+    await registrarAuditoria({ accion:'Edito nombre de campo', modulo:'Configuracion', tabla:'campos', registroId:campoActivo.id, detalle:`${anterior} → ${nombre}` })
+    window.dispatchEvent(new CustomEvent('agrobloque:campos-actualizados'))
+    setGuardandoCampo(false); setEditandoCampo(false)
+  }
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60000)
@@ -143,12 +175,13 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
       {can('buscar') && <button className="ag-search-link" onClick={() => navigate('/buscar')}><i className="ti ti-search" /><span>Buscar bloques, cultivos, actividades…</span><kbd>Ctrl K</kbd></button>}
       {can('alertas') && <button className={`ag-icon-button ${dueTasks.length ? 'has-alerts' : ''}`} aria-label={`Ver alertas${dueTasks.length ? `, ${dueTasks.length} tareas requieren atención` : ''}`} onClick={() => navigate('/alertas')}><i className="ti ti-bell" />{dueTasks.length > 0 && <span className="ag-notification-badge">{dueTasks.length > 9 ? '9+' : dueTasks.length}</span>}</button>}
       <label className="ag-field-select ag-top-field"><span className="ag-sr-only">Campo activo</span><i className="ti ti-map-pin" /><select value={campoActivo?.id || ''} onChange={e => { const campo = campos.find(c => c.id === e.target.value); if (campo) { setCampoActivo(campo); localStorage.setItem('agrobloque-campo-activo', campo.id) } }}>{!campos.length && <option value="">Sin campos</option>}{campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select><span className="ag-live" title="Conectado a la base de datos"><span className="ag-live-dot" aria-hidden="true" />En línea</span></label>
+      {!isGuest && can('configuracion') && campoActivo && <button type="button" className="ag-icon-button" onClick={abrirEditarCampo} aria-label="Editar nombre del campo" title="Editar nombre del campo"><i className="ti ti-pencil" /></button>}
       <span className="ag-top-account" aria-label="Usuario actual">{(nombre || 'U').charAt(0).toUpperCase()}</span>
     </header>
     <section className="ag-hero">
       <div className="ag-hero-head">
         <div className="ag-hero-copy"><span className="ag-hero-date">{fullDate}</span><h1><small>{greeting},</small>{nombre || 'bienvenido'}.</h1><p>Todo en orden para seguir haciendo crecer el campo.</p></div>
-        <div className="ag-hero-actions"><label className="ag-field-select ag-field-select-mobile"><span className="ag-sr-only">Campo activo</span><i className="ti ti-map-pin" /><select value={campoActivo?.id || ''} onChange={e => { const campo = campos.find(c => c.id === e.target.value); if (campo) { setCampoActivo(campo); localStorage.setItem('agrobloque-campo-activo', campo.id) } }}>{!campos.length && <option value="">Sin campos</option>}{campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>{mayWork && <button className="ag-primary" onClick={() => setWork(true)}><i className="ti ti-plus" aria-hidden="true" />Registrar trabajo</button>}</div>
+        <div className="ag-hero-actions"><label className="ag-field-select ag-field-select-mobile"><span className="ag-sr-only">Campo activo</span><i className="ti ti-map-pin" /><select value={campoActivo?.id || ''} onChange={e => { const campo = campos.find(c => c.id === e.target.value); if (campo) { setCampoActivo(campo); localStorage.setItem('agrobloque-campo-activo', campo.id) } }}>{!campos.length && <option value="">Sin campos</option>}{campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>{!isGuest && can('configuracion') && campoActivo && <button type="button" className="ag-icon-button" onClick={abrirEditarCampo} aria-label="Editar nombre del campo"><i className="ti ti-pencil" /></button>}{mayWork && <button className="ag-primary" onClick={() => setWork(true)}><i className="ti ti-plus" aria-hidden="true" />Registrar trabajo</button>}</div>
       </div>
       <div className="ag-metrics">
         {can('cosecha') && <Metric tone="bloques" loading={loading} icon="ti-leaf" label="Producción del mes" value={value('cosechas', monthlyKg > 0 ? `${number(monthlyKg)} kg` : 'Sin cosechas')} detail={new Date(`${today}T12:00:00`).toLocaleDateString('es-PY', { month: 'long', year: 'numeric' })} compact={monthlyKg <= 0} onClick={() => navigate('/cosecha')} />}
@@ -180,6 +213,7 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
       <section className="ag-panel ag-activity-panel"><div className="ag-section-heading"><div className="ag-title-with-icon"><span data-tone="neutral"><i className="ti ti-clock" /></span><h2>Actividad reciente</h2></div>{can('historial') && <button className="ag-text-button" onClick={() => navigate('/historial')}>Ver historial <i className="ti ti-arrow-right" /></button>}</div>{loading ? <Skeleton label="Cargando actividad…" rows={2} /> : recent.length ? recent.slice(0, 5).map(item => { const codigos = item.block ? data.bloques.find(b => b.id === item.block)?.codigo : (item.blocks || []).map(id => data.bloques.find(b => b.id === id)?.codigo).filter(Boolean).join(', '); return <button className="ag-activity" key={item.id} onClick={() => navigate(item.path)}><span className="ag-activity-icon" data-tone={item.tone}><i className={`ti ${item.icon}`} /></span><span><strong>{item.label}{codigos ? ` · ${codigos}` : ''}</strong><small>{item.sub}</small></span><time>{relativeDate(item.date, today)}</time></button> }) : <div className="ag-empty">{errors.some(key => ['cosechas', 'fumigaciones', 'fertilizaciones'].includes(key)) ? 'No se pudo consultar toda la actividad.' : 'Sin registros recientes para mostrar.'}</div>}</section>
     </div></div>
     {work && <WorkActions role={role} isGuest={isGuest} onClose={() => setWork(false)} />}
+    {editandoCampo && <Modal busy={guardandoCampo} onClose={() => setEditandoCampo(false)} label="Editar nombre del campo" style={{ position:'fixed', inset:0, zIndex:240, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface ui-211525" style={{ width:'min(430px, 100%)' }}><div className="ui-3e43be">Editar nombre del campo</div><div className="ui-01159a">El nuevo nombre aparecerá en el selector y en todos los módulos vinculados.</div>{campoError && <div className="ag-feedback ag-feedback-error" role="alert">{campoError}</div>}<label className="ag-field-label">Nombre<input className="bl-input" autoFocus value={nombreCampo} onChange={e => setNombreCampo(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') guardarNombreCampo() }} maxLength={80} placeholder="Ej: Jean Hauron" /></label><div className="ui-9c6869"><button className="ag-small-action ui-395a62" onClick={() => setEditandoCampo(false)} disabled={guardandoCampo}>Cancelar</button><button className="ag-small-action ui-f5f413" onClick={guardarNombreCampo} disabled={guardandoCampo}>{guardandoCampo ? 'Guardando…' : 'Guardar nombre'}</button></div></div></Modal>}
   </div>
 }
 
