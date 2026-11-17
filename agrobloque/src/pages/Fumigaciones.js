@@ -149,9 +149,11 @@ export default function Fumigaciones() {
     campo_id:'',
     bloques_ids:[],
     bloques_tanques:{},
+    bloques_litros:{},
+    distribucion:'por_bloque',
     operario:'',
     operarios_nombres:[],
-    tanques_cantidad:'',
+    tanques_cantidad:'1',
     tanque_litros:'',
     productos_form:[{ categoria_nombre:'', producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
     notas:'',
@@ -184,7 +186,7 @@ export default function Fumigaciones() {
 
     const abrirDesdeBloque = async () => {
       await fetchBloques(campoId)
-      setForm({ ...formVacio(), fecha:fechaLocal(), campo_id:campoId, bloques_ids:[bloqueId], bloques_tanques:{ [bloqueId]:'1' } })
+      setForm({ ...formVacio(), fecha:fechaLocal(), campo_id:campoId, bloques_ids:[bloqueId], bloques_tanques:{ [bloqueId]:'1' }, bloques_litros:{} })
       setDetalle(null)
       setModal(true)
     }
@@ -226,14 +228,20 @@ export default function Fumigaciones() {
     const seleccionado = f.bloques_ids.includes(id)
     const bloques_ids = seleccionado ? f.bloques_ids.filter(bloqueId => bloqueId !== id) : [...f.bloques_ids, id]
     const bloques_tanques = { ...(f.bloques_tanques || {}) }
-    if (seleccionado) delete bloques_tanques[id]
+    const bloques_litros = { ...(f.bloques_litros || {}) }
+    if (seleccionado) { delete bloques_tanques[id]; delete bloques_litros[id] }
     else bloques_tanques[id] = bloques_tanques[id] || f.tanques_cantidad || '1'
-    return { ...f, bloques_ids, bloques_tanques }
+    return { ...f, bloques_ids, bloques_tanques, bloques_litros }
   })
 
   const actualizarTanquesBloque = (bloqueId, valor) => setForm(f => ({
     ...f,
     bloques_tanques:{ ...(f.bloques_tanques || {}), [bloqueId]:valor.replace(/[^0-9]/g, '') },
+  }))
+
+  const actualizarLitrosBloque = (bloqueId, valor) => setForm(f => ({
+    ...f,
+    bloques_litros:{ ...(f.bloques_litros || {}), [bloqueId]:valor.replace(/[^0-9.,]/g, '') },
   }))
 
   const toggleOperario = (nombre) => {
@@ -278,6 +286,8 @@ export default function Fumigaciones() {
       campo_id: fumigacion.campo_id || '',
       bloques_ids: (fumigacion.fumigacion_bloques || []).map(fb => fb.bloque_id).filter(Boolean),
       bloques_tanques: Object.fromEntries((fumigacion.fumigacion_bloques || []).map(fb => [fb.bloque_id, String(fumigacion.tanques_cantidad || 1)])),
+      bloques_litros:{},
+      distribucion:'por_bloque',
       operario: fumigacion.operario || '',
       operarios_nombres: normalizarOperarios(fumigacion.operario || ''),
       tanques_cantidad: fumigacion.tanques_cantidad || '',
@@ -300,6 +310,8 @@ export default function Fumigaciones() {
       campo_id: fumigacion.campo_id || '',
       bloques_ids: [],
       bloques_tanques: {},
+      bloques_litros:{},
+      distribucion:'por_bloque',
       operario: fumigacion.operario || '',
       operarios_nombres: normalizarOperarios(fumigacion.operario || ''),
       tanques_cantidad: fumigacion.tanques_cantidad || '',
@@ -406,8 +418,21 @@ export default function Fumigaciones() {
   const guardar = async () => {
     setFormError('')
     if (!form.fecha || form.bloques_ids.length === 0) return
-    const bloquesSinTanques = form.bloques_ids.filter(id => Number(form.bloques_tanques?.[id] || (form.bloques_ids.length === 1 ? form.tanques_cantidad : 0)) <= 0)
-    if (bloquesSinTanques.length) return setFormError('Indicá la cantidad de tanques utilizada en cada bloque.')
+    const compartido = !form.id && form.distribucion === 'compartido'
+    const litrosTanque = Number(String(form.tanque_litros || '').replace(',', '.')) || 0
+    const tanquesPreparados = Number(String(form.tanques_cantidad || '').replace(',', '.')) || 0
+    const litrosPreparados = litrosTanque * tanquesPreparados
+    const litrosAsignados = form.bloques_ids.reduce((total, bloqueId) => total + (Number(String(form.bloques_litros?.[bloqueId] || '').replace(',', '.')) || 0), 0)
+    const litrosSobrantes = Math.max(0, litrosPreparados - litrosAsignados)
+    if (compartido) {
+      const bloquesSinLitros = form.bloques_ids.filter(id => (Number(String(form.bloques_litros?.[id] || '').replace(',', '.')) || 0) <= 0)
+      if (!litrosTanque || !tanquesPreparados) return setFormError('Indicá cuántos tanques preparaste y cuántos litros tiene cada tanque.')
+      if (bloquesSinLitros.length) return setFormError('Indicá cuántos litros recibió cada bloque seleccionado.')
+      if (litrosAsignados > litrosPreparados + 0.0001) return setFormError(`Distribuiste ${fmtCantidad(litrosAsignados)} L, pero solo preparaste ${fmtCantidad(litrosPreparados)} L.`)
+    } else {
+      const bloquesSinTanques = form.bloques_ids.filter(id => Number(form.bloques_tanques?.[id] || (form.bloques_ids.length === 1 ? form.tanques_cantidad : 0)) <= 0)
+      if (bloquesSinTanques.length) return setFormError('Indicá la cantidad de tanques utilizada en cada bloque.')
+    }
     const usaProductosLibres = form.productos_form.some(p => !p.producto_id && p.producto_nombre?.trim())
     if (usaProductosLibres) {
       const { error: soporteError } = await supabase.from('fumigacion_productos').select('producto_nombre').limit(1)
@@ -424,6 +449,7 @@ export default function Fumigaciones() {
         setFormError(mensaje)
         console.error(mensaje)
       }
+      const notaCompartida = compartido ? `Mezcla compartida: ${fmtCantidad(litrosPreparados)} L preparados · ${fmtCantidad(litrosAsignados)} L aplicados · ${fmtCantidad(litrosSobrantes)} L sin asignar.` : ''
       const payload = {
         campo_id: form.campo_id || null,
         tipo: form.tipo,
@@ -431,7 +457,7 @@ export default function Fumigaciones() {
         operario: (form.operarios_nombres?.length ? form.operarios_nombres.join(', ') : form.operario) || null,
         tanques_cantidad: Number(form.tanques_cantidad) || null,
         tanque_litros: Number(form.tanque_litros) || null,
-        notas: form.notas || null,
+        notas: [form.notas, notaCompartida].filter(Boolean).join(' ') || null,
       }
 
       if (form.id) {
@@ -454,7 +480,8 @@ export default function Fumigaciones() {
         await registrarAuditoria({ accion:'Edito fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
       } else {
         for (const bloqueId of form.bloques_ids) {
-          const tanquesBloque = Number(form.bloques_tanques?.[bloqueId] || form.tanques_cantidad) || 0
+          const litrosBloque = Number(String(form.bloques_litros?.[bloqueId] || '').replace(',', '.')) || 0
+          const tanquesBloque = compartido ? litrosBloque / litrosTanque : Number(form.bloques_tanques?.[bloqueId] || form.tanques_cantidad) || 0
           const { data: fum, error } = await supabase.from('fumigaciones').insert({ ...payload, tanques_cantidad:tanquesBloque }).select().single()
           if (error || !fum) {
             avisarError(`No se pudo guardar la fumigación: ${error?.message || 'sin respuesta de Supabase'}`)
@@ -473,7 +500,7 @@ export default function Fumigaciones() {
         .filter(Boolean)
         .map(codigo => `Bloque ${codigo}`)
         .join(', ')
-      setMensajeExito(`${eraEdicion ? 'Fumigación actualizada' : 'Fumigación guardada'} y vinculada a ${codigos || `${bloquesGuardados.length} bloque(s)`}. Ya aparece en la lista general.`)
+      setMensajeExito(`${eraEdicion ? 'Fumigación actualizada' : 'Fumigación guardada'} y vinculada a ${codigos || `${bloquesGuardados.length} bloque(s)`}.${compartido ? ` Se repartieron ${fmtCantidad(litrosAsignados)} L y quedaron ${fmtCantidad(litrosSobrantes)} L sin asignar.` : ''}`)
     } catch (error) {
       setFormError(`No se pudo completar la fumigación: ${error?.message || 'error desconocido'}`)
     } finally {
@@ -490,9 +517,10 @@ export default function Fumigaciones() {
       const tareas = form.bloques_ids.map(bloqueId => {
         const bloque = bloques.find(b => b.id === bloqueId)
         const tanques = Number(form.bloques_tanques?.[bloqueId] || 0)
+        const litrosCompartidos = Number(String(form.bloques_litros?.[bloqueId] || '').replace(',', '.')) || 0
         return {
           tipo:'fumigacion', campo_id:form.campo_id, bloque_id:bloqueId, fecha_programada:form.fecha, prioridad:'normal', completada:false,
-          descripcion:`Plan de ${TIPOS[form.tipo]?.label || 'fumigación'} · Bloque ${bloque?.codigo || ''}${tanques ? ` · ${tanques} tanque${tanques === 1 ? '' : 's'} de ${form.tanque_litros || 0} L` : ''}${productosPlan ? ` · ${productosPlan}` : ''}${form.notas ? ` · ${form.notas}` : ''}`,
+          descripcion:`Plan de ${TIPOS[form.tipo]?.label || 'fumigación'} · Bloque ${bloque?.codigo || ''}${form.distribucion === 'compartido' && litrosCompartidos ? ` · ${fmtCantidad(litrosCompartidos)} L de mezcla compartida` : tanques ? ` · ${tanques} tanque${tanques === 1 ? '' : 's'} de ${form.tanque_litros || 0} L` : ''}${productosPlan ? ` · ${productosPlan}` : ''}${form.notas ? ` · ${form.notas}` : ''}`,
         }
       })
       const { error } = await supabase.from('tareas').insert(tareas)
@@ -743,7 +771,7 @@ export default function Fumigaciones() {
             <label className="ag-field-label ui-74cc19">Fecha *
             <input className="ui-8dcd88" type="date" value={form.fecha} onChange={e=>setForm(f=>({...f,fecha:e.target.value}))}/></label>
             <label className="ag-field-label ui-74cc19">Campo
-            <select className="ui-2c08cb" value={form.campo_id} onChange={e=>{setForm(f=>({...f,campo_id:e.target.value,bloques_ids:[],bloques_tanques:{}}));fetchBloques(e.target.value)}}>
+            <select className="ui-2c08cb" value={form.campo_id} onChange={e=>{setForm(f=>({...f,campo_id:e.target.value,bloques_ids:[],bloques_tanques:{},bloques_litros:{}}));fetchBloques(e.target.value)}}>
               <option value="">Selecciona campo...</option>
               {campos.map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select></label>
@@ -761,7 +789,8 @@ export default function Fumigaciones() {
                   )
                 })}
               </div>
-              {form.bloques_ids.length > 0 && (
+              {!form.id && form.bloques_ids.length > 1 && <div className="ui-afd779"><strong>¿Cómo se repartió la mezcla?</strong><div className="ui-62b09f"><button type="button" className="ag-small-action ui-371bfd" onClick={() => setForm(f => ({...f, distribucion:'por_bloque'}))} style={{ background:form.distribucion !== 'compartido' ? '#0F3923' : '#fff', color:form.distribucion !== 'compartido' ? '#fff' : '#555' }}>Tanques separados por bloque</button><button type="button" className="ag-small-action ui-371bfd" onClick={() => setForm(f => ({...f, distribucion:'compartido', tanques_cantidad:f.tanques_cantidad || '1'}))} style={{ background:form.distribucion === 'compartido' ? '#0F3923' : '#fff', color:form.distribucion === 'compartido' ? '#fff' : '#555' }}>Tanque compartido</button></div><div className="ui-315e0e">Usá “tanque compartido” cuando una misma preparación alcanzó para varios bloques.</div></div>}
+              {form.bloques_ids.length > 0 && form.distribucion !== 'compartido' && (
                 <div className="ui-afd779">
                   <strong>Tanques por bloque</strong>
                   <div className="ui-180a1c">
@@ -774,6 +803,14 @@ export default function Fumigaciones() {
                         </label>
                       )
                     })}
+                  </div>
+                </div>
+              )}
+              {form.bloques_ids.length > 0 && form.distribucion === 'compartido' && (
+                <div className="ui-afd779">
+                  <strong>Litros aplicados por bloque</strong>
+                  <div className="ui-180a1c">
+                    {form.bloques_ids.map(bloqueId => { const bloque=bloques.find(b => b.id === bloqueId); return <label className="ag-field-label ui-74cc19" key={bloqueId}>Bloque {bloque?.codigo || ''}<input className="ui-2720fa" type="text" inputMode="decimal" value={form.bloques_litros?.[bloqueId] || ''} onChange={e => actualizarLitrosBloque(bloqueId, e.target.value)} placeholder="Ej: 120" /></label> })}
                   </div>
                 </div>
               )}
@@ -794,21 +831,23 @@ export default function Fumigaciones() {
             </>}
             <FormHeading number="02" detail="Volumen preparado para esta aplicación">Preparación</FormHeading>
             <div className="ui-180a1c">
+              {form.distribucion === 'compartido' && <div><label className="ag-field-label ui-74cc19">Tanques preparados<input className="ui-2720fa" type="text" inputMode="decimal" value={form.tanques_cantidad} onChange={e=>setForm(f=>({...f,tanques_cantidad:e.target.value.replace(/[^0-9.,]/g, '')}))} placeholder="Ej: 1" /></label></div>}
               <div>
                 <label className="ag-field-label ui-74cc19">Litros por tanque
                 <input className="ui-2720fa" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros} onChange={e=>setForm(f=>({...f,tanque_litros:e.target.value.replace(/[^0-9]/g, '')}))} placeholder="Ej: 20"/></label>
               </div>
             </div>
-            {form.bloques_ids.length > 0 && form.tanque_litros && (
+            {form.bloques_ids.length > 0 && form.tanque_litros && form.distribucion !== 'compartido' && (
               <div className="ui-afd779">
                 Total: {fmtCantidad(form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0))} tanques · {fmtCantidad(form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0) * (Number(form.tanque_litros) || 0))} L preparados
               </div>
             )}
+            {form.bloques_ids.length > 0 && form.tanque_litros && form.distribucion === 'compartido' && (() => { const preparados=(Number(String(form.tanques_cantidad || '').replace(',', '.')) || 0) * (Number(form.tanque_litros) || 0); const asignados=form.bloques_ids.reduce((total,id) => total + (Number(String(form.bloques_litros?.[id] || '').replace(',', '.')) || 0),0); const sobrante=preparados-asignados; return <div className="ui-afd779" style={{ color:sobrante < 0 ? '#c84040' : 'inherit' }}>Preparados: {fmtCantidad(preparados)} L · Asignados: {fmtCantidad(asignados)} L · {sobrante >= 0 ? `Sin asignar: ${fmtCantidad(sobrante)} L` : `Exceso: ${fmtCantidad(Math.abs(sobrante))} L`}</div> })()}
             <FormHeading number="03" detail="Cantidad, unidad y efecto sobre el stock">Productos utilizados</FormHeading>
             <div className="ui-74cc19">Productos <span className="ui-d6202d">(primero elegí la categoría)</span></div>
             {form.productos_form.map((pf,i)=>{
               const prod = productos.find(p=>p.id===pf.producto_id)
-              const totalTanques = form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0)
+              const totalTanques = form.distribucion === 'compartido' ? form.bloques_ids.reduce((total,id) => total + (Number(String(form.bloques_litros?.[id] || '').replace(',', '.')) || 0), 0) / (Number(form.tanque_litros) || 1) : form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0)
               const descuento = prod ? calcularDescuentoStock(pf, prod, totalTanques) : 0
               return (
                 <div className="ui-d51702" key={i}>
