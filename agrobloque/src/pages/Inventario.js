@@ -51,6 +51,21 @@ const cantidadAStock = (cantidad, unidadCompra, unidadStock) => {
   return null
 }
 
+const minimoParaFormulario = producto => {
+  const unidad = normalizarUnidad(producto?.unidad)
+  const minimo = Number(producto?.stock_minimo) || 0
+  if (unidad === 'kg' && minimo > 0 && minimo < 1) return { stock_minimo:String(minimo * 1000), stock_minimo_unidad:'g' }
+  if (unidad === 'L' && minimo > 0 && minimo < 1) return { stock_minimo:String(minimo * 1000), stock_minimo_unidad:'cc' }
+  return { stock_minimo:minimo ? String(minimo) : '', stock_minimo_unidad:unidad }
+}
+
+const unidadesMinimo = unidadProducto => {
+  const unidad = normalizarUnidad(unidadProducto)
+  if (['kg','g'].includes(unidad)) return ['kg','g']
+  if (['L','cc'].includes(unidad)) return ['L','cc']
+  return ['unidades']
+}
+
 const hoy = () => new Date().toISOString().slice(0, 10)
 
 const PRODUCT_CATEGORIES = [
@@ -98,7 +113,7 @@ export default function Inventario() {
   const [categoriaActiva, setCategoriaActiva] = useState(null)
   const [modal, setModal] = useState(null)
   const [confirmar, setConfirmar] = useState(null)
-  const [form, setForm] = useState({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', carencia_dias:'', notas:'' })
+  const [form, setForm] = useState({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', stock_minimo_unidad:'kg', carencia_dias:'', notas:'' })
   const [compra, setCompra] = useState({ producto_id:'', fecha:hoy(), cantidad:'', unidad:'kg', precio_total:'', notas:'' })
   const [saving, setSaving] = useState(false)
   const [sincronizandoAbonos, setSincronizandoAbonos] = useState(false)
@@ -263,6 +278,11 @@ export default function Inventario() {
     if (!form.nombre) return
     const cantidadInicial = Number(String(form.stock_actual || '').replace(',', '.')) || 0
     const precioInicial = Number(String(form.precio_total || '').replace(/\./g, '')) || 0
+    const stockMinimoNormalizado = cantidadAStock(form.stock_minimo, form.stock_minimo_unidad || form.unidad, form.unidad)
+    if (form.stock_minimo && stockMinimoNormalizado === null) {
+      setError('La unidad del stock mínimo no coincide con la unidad del producto.')
+      return
+    }
     if (!form.id && cantidadInicial > 0 && precioInicial <= 0) {
       setError('Ingresá el precio total pagado por la compra inicial.')
       return
@@ -284,7 +304,7 @@ export default function Inventario() {
         nombre: form.nombre, categoria_id,
         principio_activo: form.principio_activo || null, unidad: form.unidad,
         stock_actual: form.id ? cantidadInicial : 0,
-        stock_minimo: Number(form.stock_minimo) || 0,
+        stock_minimo: stockMinimoNormalizado || 0,
         carencia_dias: Number(form.carencia_dias) || 0,
         notas: form.notas || null
       }
@@ -322,7 +342,7 @@ export default function Inventario() {
         detalle: `${payload.nombre} - stock ${form.id ? payload.stock_actual : cantidadInicial}`,
       })
       await Promise.all([fetchProductos(), fetchMovimientos(), fetchCompras()]); setSaving(false); setModal(null)
-      setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', carencia_dias:'', notas:'' })
+      setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', stock_minimo_unidad:'kg', carencia_dias:'', notas:'' })
     } catch (e) { setError('Error: ' + e.message); setSaving(false) }
   }
 
@@ -370,7 +390,7 @@ export default function Inventario() {
             </div>
             <div className="bl-head-actions">
               {can.create && <button className="bl-icon-btn" aria-label="Sincronizar abonos de base" title="Sincronizar abonos de base" onClick={sincronizarAbonosManual} disabled={sincronizandoAbonos}><i className={`ti ${sincronizandoAbonos ? 'ti-loader-2' : 'ti-refresh'}`} aria-hidden="true" /></button>}
-              {can.create && <button className="ag-primary" onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}><i className="ti ti-plus" aria-hidden="true" />Nuevo producto</button>}
+              {can.create && <button className="ag-primary" onClick={() => { setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', stock_minimo_unidad:'kg', carencia_dias:'', notas:'' }); setModal('form') }}><i className="ti ti-plus" aria-hidden="true" />Nuevo producto</button>}
             </div>
           </header>
           {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
@@ -418,7 +438,7 @@ export default function Inventario() {
                 </div>
                 <div className="ui-edab21">{catActInfo.label}</div>
               </div>
-              {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.key, principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', carencia_dias:'', notas:'' }); setModal('form') }}
+              {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', categoria_nombre:catActInfo.key, principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', stock_minimo_unidad:'kg', carencia_dias:'', notas:'' }); setModal('form') }}
                >
                 <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
               </button>}
@@ -465,7 +485,7 @@ export default function Inventario() {
                   {can.create && <button className="ag-small-action ui-922ea3" onClick={() => abrirCompra(p)}>Registrar compra</button>}
                   {can.edit && <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, -1)}>−</button>}
                   {can.edit && <button className="ui-b7a1ba" onClick={() => ajustarStock(p.id, 1)}>+</button>}
-                  {can.edit && <button className="ag-small-action ui-922ea3" onClick={() => { setForm({...p, categoria_nombre: getCatNombre(p)}); setModal('form') }}>Editar</button>}
+                  {can.edit && <button className="ag-small-action ui-922ea3" onClick={() => { setForm({...p, ...minimoParaFormulario(p), categoria_nombre: getCatNombre(p)}); setModal('form') }}>Editar</button>}
                   {can.delete && <button className="ag-small-action ui-14c146" onClick={() => eliminar(p.id, p.nombre)}>Eliminar</button>}
                 </div>
               </div>
@@ -519,7 +539,6 @@ export default function Inventario() {
               ['Nombre *', 'nombre', 'text', 'Ej: Acetamix'],
               ['Principio activo', 'principio_activo', 'text', 'Ej: Acetamiprid'],
               [form.id ? 'Stock actual' : 'Cantidad comprada', 'stock_actual', 'number', '0'],
-              ['Stock mínimo (alerta)', 'stock_minimo', 'number', '0'],
               ['Días de carencia', 'carencia_dias', 'number', 'Ej: 7'],
               ['Notas', 'notas', 'text', 'Opcional'],
             ].map(([lbl, key, type, ph]) => (
@@ -532,12 +551,21 @@ export default function Inventario() {
             <div className="ui-74cc19">Unidad</div>
             <div className="ui-1e69e2">
               {['kg','gramos','litros','cc','unidades'].map(u => (
-                <button className="ag-small-action ui-45ba57" key={u} onClick={() => setForm(f => ({...f, unidad:u}))}
+                <button className="ag-small-action ui-45ba57" key={u} onClick={() => setForm(f => ({...f, unidad:u, stock_minimo_unidad:normalizarUnidad(u), stock_minimo:''}))}
                   style={{ background: form.unidad===u ? '#212121' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>
                   {u}
                 </button>
               ))}
             </div>
+
+            <div className="ui-74cc19">Stock mínimo para alerta</div>
+            <div className="ui-180a1c">
+              <input style={inpStyle} type="text" inputMode="decimal" value={form.stock_minimo || ''} onChange={e => setForm(f => ({...f, stock_minimo:e.target.value.replace(/[^0-9.,]/g,'')}))} placeholder="Ej: 100" />
+              <select style={inpStyle} value={form.stock_minimo_unidad || normalizarUnidad(form.unidad)} onChange={e => setForm(f => ({...f, stock_minimo_unidad:e.target.value}))}>
+                {unidadesMinimo(form.unidad).map(unidad => <option key={unidad} value={unidad}>{unidad}</option>)}
+              </select>
+            </div>
+            {form.stock_minimo && cantidadAStock(form.stock_minimo, form.stock_minimo_unidad, form.unidad) !== null && <div className="ui-50089c">Equivale a {fmtNumero(cantidadAStock(form.stock_minimo, form.stock_minimo_unidad, form.unidad))} {normalizarUnidad(form.unidad)} para comparar el stock.</div>}
 
             {!form.id && <>
               <div className="ui-50089c">La cantidad y el precio registran la compra inicial del producto.</div>
