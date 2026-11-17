@@ -263,15 +263,23 @@ function DesktopSidebar({ isGuest = false, role, organization = DEFAULT_ORGANIZA
   const campo = contexto.campo_nombre || campoNombre
   const nombre = role?.nombre || role?.email?.split('@')[0] || 'Usuario'
   const [alertCount, setAlertCount] = useState(0)
+  const alertCountConfirmado = useRef(false)
   useEffect(() => {
     if (modo !== 'campo' || !canAccessModule(role, 'alertas')) return
+    alertCountConfirmado.current = false
+    const sincronizarConteo = event => {
+      alertCountConfirmado.current = true
+      setAlertCount(Math.max(0, Number(event.detail?.count) || 0))
+    }
+    window.addEventListener('agrobloque:alertas-conteo', sincronizarConteo)
     Promise.all([
       supabase.from('tareas').select('id', { count:'exact', head:true }).eq('completada', false).eq('anulada', false),
       supabase.from('productos').select('id,stock_actual,stock_minimo').eq('activo', true),
     ]).then(([tareas, productos]) => {
       const stock = (productos.data || []).filter(p => Number(p.stock_actual) <= 0 || (Number(p.stock_minimo) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo))).length
-      setAlertCount(Number(tareas.count || 0) + stock)
+      if (!alertCountConfirmado.current) setAlertCount(Number(tareas.count || 0) + stock)
     }).catch(() => {})
+    return () => window.removeEventListener('agrobloque:alertas-conteo', sincronizarConteo)
   }, [role?.email, modo])
   const groups = [
     { title: 'CAMPO', paths: ['/', '/mapa', '/agenda', '/calendario', '/vivero'] },

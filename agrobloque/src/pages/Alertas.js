@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 
 const hoyIso = () => new Date().toISOString().slice(0, 10)
 const NOTIFICATION_KEY = 'agrobloque-notificaciones'
+const ALERT_COUNT_EVENT = 'agrobloque:alertas-conteo'
 const diasEntre = (fecha) => {
   if (!fecha) return 0
   return Math.floor((new Date(hoyIso() + 'T00:00:00') - new Date(fecha + 'T00:00:00')) / 86400000)
@@ -165,6 +166,7 @@ export default function Alertas() {
       return true
     })
     setAlertas(visibles)
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(ALERT_COUNT_EVENT, { detail:{ count:visibles.length } }))
     if (typeof window !== 'undefined' && window.localStorage.getItem(NOTIFICATION_KEY) === 'on' && window.Notification?.permission === 'granted') {
       visibles.filter(a => a.tipo !== 'baja').slice(0, 3).forEach(alerta => {
         const claveAviso = `agrobloque-alerta:${hoy}:${alerta.clave}`

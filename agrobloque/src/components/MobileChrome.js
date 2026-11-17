@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { canAccessModule } from '../lib/permissions'
@@ -15,19 +15,26 @@ export const operacionesPermitidas = role => OPERACIONES.filter(op => canAccessM
 // Tareas abiertas + productos sin stock o bajo el mínimo: lo mismo que cuenta el menú de escritorio.
 export function useConteoAlertas(role, activo = true) {
   const [conteo, setConteo] = useState(0)
+  const conteoConfirmado = useRef(false)
   const puede = activo && canAccessModule(role, 'alertas')
   useEffect(() => {
     if (!puede) { setConteo(0); return undefined }
     let cancelado = false
+    conteoConfirmado.current = false
+    const sincronizarConteo = event => {
+      conteoConfirmado.current = true
+      setConteo(Math.max(0, Number(event.detail?.count) || 0))
+    }
+    window.addEventListener('agrobloque:alertas-conteo', sincronizarConteo)
     Promise.all([
       supabase.from('tareas').select('id', { count: 'exact', head: true }).eq('completada', false).eq('anulada', false),
       supabase.from('productos').select('id,stock_actual,stock_minimo').eq('activo', true),
     ]).then(([tareas, productos]) => {
       if (cancelado) return
       const stock = (productos.data || []).filter(p => Number(p.stock_actual) <= 0 || (Number(p.stock_minimo) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo))).length
-      setConteo(Number(tareas.count || 0) + stock)
+      if (!conteoConfirmado.current) setConteo(Number(tareas.count || 0) + stock)
     }).catch(() => {})
-    return () => { cancelado = true }
+    return () => { cancelado = true; window.removeEventListener('agrobloque:alertas-conteo', sincronizarConteo) }
   }, [puede, role?.email])
   return conteo
 }
