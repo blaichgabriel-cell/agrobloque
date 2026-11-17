@@ -1414,6 +1414,9 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .ag-app .profitability-month-table>button { width:100%; border:0; border-top:1px solid rgba(15,23,42,.06); background:transparent; color:var(--text-secondary); font-family:var(--bl-font-mono); font-size:11px; cursor:pointer; }
 .ag-app .profitability-month-table>button.is-selected { background:rgba(99,102,241,.07); }
 .ag-app .profitability-month-table>button strong { color:var(--text-primary); }
+.ag-app .profitability-block-compare { margin-bottom:18px; }
+.ag-app .profitability-block-compare>div[role="row"]:not(.profitability-month-table__head) { display:grid; grid-template-columns:.65fr repeat(4,1fr); gap:10px; align-items:center; min-height:42px; padding:0 13px; border-top:1px solid rgba(15,23,42,.06); color:var(--text-secondary); font-family:var(--bl-font-mono); font-size:11px; text-align:right; }
+.ag-app .profitability-block-compare>div[role="row"] strong { color:var(--text-primary); text-align:left; }
 .ag-app .profitability-chart-wrap text { fill:var(--text-tertiary); font-size:11px; }
 .ag-app .positive,.ag-app .profitability-chart-summary .positive strong { color:var(--bl-emerald-600) !important; }
 .ag-app .negative,.ag-app .profitability-chart-summary .negative strong { color:#BE123C !important; }
@@ -1511,6 +1514,11 @@ html,body { -webkit-tap-highlight-color:transparent; }
   .ag-app .profitability-month-table>button span:nth-of-type(2)::before { content:'Cobrado '; color:var(--text-tertiary); }
   .ag-app .profitability-month-table>button span:nth-of-type(3)::before { content:'Costos '; color:var(--text-tertiary); }
   .ag-app .profitability-month-table>button span:nth-of-type(4)::before { content:'Resultado '; color:var(--text-tertiary); }
+  .ag-app .profitability-block-compare>div[role="row"]:not(.profitability-month-table__head) { grid-template-columns:1fr 1fr; gap:5px 10px; min-height:76px; padding:9px 10px; border:1px solid rgba(15,23,42,.07); border-radius:10px; background:var(--surface-primary); }
+  .ag-app .profitability-block-compare>div[role="row"] span:nth-of-type(1)::before { content:'Costos '; color:var(--text-tertiary); }
+  .ag-app .profitability-block-compare>div[role="row"] span:nth-of-type(2)::before { content:'Producción '; color:var(--text-tertiary); }
+  .ag-app .profitability-block-compare>div[role="row"] span:nth-of-type(3)::before { content:'Ventas '; color:var(--text-tertiary); }
+  .ag-app .profitability-block-compare>div[role="row"] span:nth-of-type(4)::before { content:'Resultado '; color:var(--text-tertiary); }
   .ag-app .plantation-profit-metrics { gap:6px; }
   .ag-app .plantation-profit-metrics>div { display:grid; grid-template-columns:1fr auto; align-items:baseline; gap:1px 10px; padding:10px 12px; }
   .ag-app .plantation-profit-metrics>div>strong { grid-column:2; grid-row:1; margin:0; text-align:right; }

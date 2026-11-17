@@ -194,7 +194,7 @@ export default function Fumigaciones() {
   const fetchFumigaciones = async () => {
     setLoading(true)
     const { data, error } = await supabase.from('fumigaciones')
-      .select('*, campos(nombre), fumigacion_bloques(bloque_id, cultivo_snapshot, plantacion_id_snapshot, bloques(codigo, plantaciones(id, activa, cultivos(nombre)))), fumigacion_productos(*, productos(nombre, unidad, carencia_dias, categorias_producto(nombre)))')
+      .select('*, campos(nombre), fumigacion_bloques(bloque_id, cultivo_snapshot, plantacion_id_snapshot, bloques(codigo, plantaciones(id, activa, cultivos(nombre)))), fumigacion_productos(*, productos(nombre, unidad, precio_unitario, carencia_dias, categorias_producto(nombre)))')
       .order('fecha', { ascending:false })
     if (error) setFormError('No se pudieron cargar las fumigaciones. Intentá nuevamente.')
     else setFumigaciones((data || []).filter(f => !f.anulada))
@@ -481,6 +481,29 @@ export default function Fumigaciones() {
     }
   }
 
+  const guardarPlan = async () => {
+    setFormError('')
+    if (!form.fecha || !form.campo_id || form.bloques_ids.length === 0) return setFormError('Elegí la fecha, el campo y por lo menos un bloque para preparar el plan.')
+    setSaving(true)
+    try {
+      const productosPlan = form.productos_form.map(item => item.producto_nombre || productos.find(p => p.id === item.producto_id)?.nombre).filter(Boolean).join(' + ')
+      const tareas = form.bloques_ids.map(bloqueId => {
+        const bloque = bloques.find(b => b.id === bloqueId)
+        const tanques = Number(form.bloques_tanques?.[bloqueId] || 0)
+        return {
+          tipo:'fumigacion', campo_id:form.campo_id, bloque_id:bloqueId, fecha_programada:form.fecha, prioridad:'normal', completada:false,
+          descripcion:`Plan de ${TIPOS[form.tipo]?.label || 'fumigación'} · Bloque ${bloque?.codigo || ''}${tanques ? ` · ${tanques} tanque${tanques === 1 ? '' : 's'} de ${form.tanque_litros || 0} L` : ''}${productosPlan ? ` · ${productosPlan}` : ''}${form.notas ? ` · ${form.notas}` : ''}`,
+        }
+      })
+      const { error } = await supabase.from('tareas').insert(tareas)
+      if (error) throw error
+      await registrarAuditoria({ accion:'Creo plan de fumigacion', modulo:'Fumigaciones', tabla:'tareas', registroId:'', detalle:`${form.fecha} · ${form.bloques_ids.length} bloque(s)` })
+      cerrarModal()
+      setMensajeExito('Plan guardado en Agenda. No se descontó inventario ni se registró como trabajo realizado.')
+    } catch (error) { setFormError(`No se pudo guardar el plan: ${error.message || 'error desconocido'}`) }
+    finally { setSaving(false) }
+  }
+
   const eliminar = (id) => {
     setConfirmar({ fn: async () => {
       setFormError(''); setMensajeExito('')
@@ -676,9 +699,10 @@ export default function Fumigaciones() {
                     {detalle.fumigacion_productos.map(fp => (
                       <div className="ui-a7a997" key={fp.id}>
                         <div className="ui-7b80c9">{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</div>
-                        <div className="ui-197309">{fp.dosis || '—'}</div>
+                        <div className="ui-197309">{fp.dosis || '—'}{Number(fp.descuento_stock) > 0 ? ` · descontó ${fmtCantidad(fp.descuento_stock)} ${fp.productos?.unidad || ''}` : ''}</div>
                       </div>
                     ))}
+                    <div className="ui-a7a997"><strong>Costo de insumos</strong><strong>Gs. {detalle.fumigacion_productos.reduce((total, fp) => total + Number(fp.descuento_stock || 0) * Number(fp.productos?.precio_unitario || 0), 0).toLocaleString('es-PY')}</strong></div>
                   </div>
                 )}
                 {!isGuest && can.create && <button className="ag-small-action ui-6988cd" onClick={() => abrirDuplicado(detalle)}>Duplicar para otro bloque</button>}
@@ -819,7 +843,9 @@ export default function Fumigaciones() {
             <button className="ag-small-action ui-a0449e" onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{categoria_nombre:'',producto_id:'',producto_nombre:'',cantidad:'',unidad_uso:'g'}]}))}>+ Agregar producto</button>
             <label className="ag-field-label ui-74cc19">Notas
             <textarea className="ui-641669" value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/></label>
-            <button className="ag-form-submit ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar registro'}</button>
+            {!form.id && <div className="ui-50089c">Elegí una opción: planificar solo lo deja anotado en Agenda; registrar aplicación descuenta inventario y entra al historial.</div>}
+            {!form.id && <button className="ag-small-action ui-9d2a4a" onClick={guardarPlan} disabled={saving}><i className="ti ti-calendar-plus" /> Guardar como plan (sin descontar stock)</button>}
+            <button className="ag-form-submit ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Registrar aplicación realizada'}</button>
             <button className="ag-small-action ui-9d2a4a" onClick={cerrarModal}>Cancelar</button>
           </div>
         </Modal>

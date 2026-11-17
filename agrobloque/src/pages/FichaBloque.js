@@ -532,8 +532,8 @@ export default function FichaBloque() {
   const finalizarPlantacionActiva = () => {
     if (!plantacionActiva) return
     setConfirmar({
-      titulo: 'Finalizar plantación?',
-      mensaje: 'La plantación actual pasara al historial del bloque. No se borra ningún dato.',
+      titulo: 'Resumen antes de finalizar',
+      mensaje: `Bloque ${bloque?.codigo || ''}: ${fmtKg(totalKgCiclo)} kg cosechados y Gs. ${fmtGs(costosCiclo.total)} de costo acumulado (fumigaciones Gs. ${fmtGs(costosCiclo.fumigaciones)}, fertilizaciones Gs. ${fmtGs(costosCiclo.fertilizaciones)} y gastos directos Gs. ${fmtGs(costosCiclo.manuales)}). La plantación pasará al historial y no se borrará ningún dato.`,
       fn: async () => {
         await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
         await registrarAuditoria({ accion:'Finalizo plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
