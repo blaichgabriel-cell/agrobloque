@@ -36,6 +36,8 @@ export function Modal({ children, onClose, busy = false, label = 'Detalle o regi
   useEffect(() => {
     const previous = document.activeElement
     const element = root.current
+    document.documentElement.classList.add('ag-modal-open')
+    document.body.classList.add('ag-modal-open')
     const focusables = () => Array.from(element.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]')).filter(item => item.getClientRects().length)
     element.focus({ preventScroll: true })
     // Las confirmaciones («¿Eliminar?») ya tienen Cancelar/Eliminar; el resto lleva X si no trae su propio cierre.
@@ -68,6 +70,14 @@ export function Modal({ children, onClose, busy = false, label = 'Detalle o regi
     return () => {
       window.cancelAnimationFrame(marco)
       document.removeEventListener('keydown', keydown)
+      // Puede haber un segundo diálogo encima del primero (por ejemplo, una confirmación).
+      // Sólo devolvemos el scroll cuando ya no queda ninguno abierto.
+      window.requestAnimationFrame(() => {
+        if (!document.querySelector('[data-ag-modal]')) {
+          document.documentElement.classList.remove('ag-modal-open')
+          document.body.classList.remove('ag-modal-open')
+        }
+      })
       if (previous?.isConnected) previous.focus({ preventScroll: true })
     }
   }, [])
