@@ -119,6 +119,9 @@ export default function FichaBloque() {
   const [incidenciaDetalle, setIncidenciaDetalle] = useState(null)
 
   const [showEditarPlantacion, setShowEditarPlantacion] = useState(false)
+  const [showEditarNombre, setShowEditarNombre] = useState(false)
+  const [nombreBloque, setNombreBloque] = useState('')
+  const [nombreBloqueError, setNombreBloqueError] = useState('')
   const [showNuevaPlantacion, setShowNuevaPlantacion] = useState(false)
   const [showMuerte, setShowMuerte] = useState(false)
   const [confirmar, setConfirmar] = useState(null)
@@ -140,6 +143,32 @@ export default function FichaBloque() {
   useEffect(() => { let activo=true; esAdministradorGeneral().then(valor => { if (activo) setPuedeVerQr(valor) }); return () => { activo=false } }, [])
   const [mensajeExito, setMensajeExito] = useState('')
   const [showQuickActions, setShowQuickActions] = useState(false)
+
+  const abrirEditarNombre = () => {
+    setNombreBloque(bloque?.codigo || '')
+    setNombreBloqueError('')
+    setShowEditarNombre(true)
+  }
+
+  const guardarNombreBloque = async () => {
+    const nuevoNombre = nombreBloque.trim()
+    if (!nuevoNombre) return setNombreBloqueError('Escribí un nombre para el bloque.')
+    const repetido = bloquesCampo.some(item => item.id !== bloque.id && String(item.codigo || '').trim().toLowerCase() === nuevoNombre.toLowerCase())
+    if (repetido) return setNombreBloqueError('Ya existe otro bloque con ese nombre en este campo.')
+    if (nuevoNombre === String(bloque.codigo || '').trim()) return setShowEditarNombre(false)
+    setSaving(true); setNombreBloqueError('')
+    const nombreAnterior = bloque.codigo
+    const { error } = await supabase.from('bloques').update({ codigo:nuevoNombre }).eq('id', bloque.id)
+    if (error) {
+      setNombreBloqueError(error.code === '23505' ? 'Ya existe otro bloque con ese nombre.' : `No se pudo cambiar el nombre: ${error.message || 'intentá nuevamente.'}`)
+      setSaving(false)
+      return
+    }
+    setBloque(actual => ({ ...actual, codigo:nuevoNombre }))
+    setBloquesCampo(actual => actual.map(item => item.id === bloque.id ? { ...item, codigo:nuevoNombre } : item).sort((a,b) => String(a.codigo).localeCompare(String(b.codigo), 'es', { numeric:true })))
+    await registrarAuditoria({ accion:'Edito nombre de bloque', modulo:'Bloque', tabla:'bloques', registroId:bloque.id, detalle:`${nombreAnterior} → ${nuevoNombre}` })
+    setSaving(false); setShowEditarNombre(false); setMensajeExito(`El bloque ahora se llama ${nuevoNombre}.`)
+  }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1136,6 +1165,7 @@ export default function FichaBloque() {
   return (
     <div className="ag-page block-detail-modern ui-c1c124">
       {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
+      {showEditarNombre && <Modal busy={saving} onClose={() => setShowEditarNombre(false)} label="Editar nombre del bloque" style={{ position:'fixed', inset:0, zIndex:220, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface ui-211525" style={{ width:'min(430px, 100%)' }}><div className="ui-3e43be">Editar nombre del bloque</div><div className="ui-01159a">Este nombre se actualizará en mapas, aplicaciones, costos e historiales vinculados.</div>{nombreBloqueError && <div className="ag-feedback ag-feedback-error" role="alert">{nombreBloqueError}</div>}<label className="ag-field-label">Nombre<input className="bl-input" autoFocus value={nombreBloque} onChange={e => setNombreBloque(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') guardarNombreBloque() }} maxLength={50} placeholder="Ej: A-1" /></label><div className="ui-9c6869"><button className="ag-small-action ui-395a62" onClick={() => setShowEditarNombre(false)} disabled={saving}>Cancelar</button><button className="ag-small-action ui-f5f413" onClick={guardarNombreBloque} disabled={saving}>{saving ? 'Guardando…' : 'Guardar nombre'}</button></div></div></Modal>}
       <input className="ui-cb4589" type="file" accept="image/*" ref={fileRef} onChange={subirFoto} />
 
       {/* Header */}
@@ -1149,7 +1179,7 @@ export default function FichaBloque() {
             <span className="block-detail-mark" aria-hidden="true"><i className="ti ti-box" /></span>
             <div>
             <div className="ag-eyebrow">{bloque.campos?.nombre} · {bloque.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}</div>
-            <h1>Bloque {bloque.codigo}</h1>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}><h1>Bloque {bloque.codigo}</h1>{can.edit && <button type="button" className="ag-small-action" onClick={abrirEditarNombre} aria-label="Editar nombre del bloque" title="Editar nombre del bloque" style={{ padding:'7px 9px' }}><i className="ti ti-pencil" aria-hidden="true" /></button>}</div>
             {plantacionActiva && (
               <div className="ag-block-crop">
                 {plantacionActiva.cultivos?.nombre}{getVariedad(plantacionActiva) ? `  -  ${getVariedad(plantacionActiva)}` : ''}
