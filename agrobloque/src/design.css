@@ -2696,3 +2696,7 @@ img.bl-logo--sobre-oscuro { display:none !important; }
 
 /* El encabezado que sigue a la X deja espacio a su derecha: ni el título ni las etiquetas quedan debajo. */
 .ag-modal-x+* { box-sizing:border-box; padding-right:50px !important; }
+
+/* Costos: bloque de compras de insumos (no suman al total; el consumo ya entra como «Insumos consumidos»). */
+.ag-app .costos-compras { margin-top:12px; }
+.ag-app .costos-nota { margin:0 0 8px; color:var(--text-secondary); font-size:12px; line-height:1.45; }

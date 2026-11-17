@@ -26,6 +26,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
   const [bloques, setBloques] = useState([])
   const [costosAuto, setCostosAuto] = useState({ agroquimicos: 0, jornales: 0 })
   const [costosManuales, setCostosManuales] = useState([])
+  const [comprasInsumos, setComprasInsumos] = useState([])
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'', plantacion_id:'' })
   const [saving, setSaving] = useState(false)
@@ -109,6 +110,10 @@ export default function Costos({ campoActivo, isGuest = false }) {
     const { data: manuales } = await supabase.from('costos')
       .select('*, bloques(codigo), plantaciones(id, cultivos(nombre))').eq('campo_id', campoSel.id).eq('anulada', false).gte('fecha', desde).order('fecha', { ascending: false })
     setCostosManuales(manuales || [])
+    // Las compras de inventario se guardan sin campo (el stock es de toda la empresa), por eso no entran en el filtro por campo de arriba.
+    const { data: compras } = await supabase.from('costos')
+      .select('id, fecha, monto, descripcion').eq('origen_tipo', 'compra_inventario').eq('anulada', false).gte('fecha', desde).order('fecha', { ascending: false })
+    setComprasInsumos(compras || [])
   }
 
   const guardar = async () => {
@@ -138,6 +143,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
   }
 
   const totalManuales = costosManuales.reduce((s, c) => s + Number(c.monto), 0)
+  const totalCompras = comprasInsumos.reduce((s, c) => s + Number(c.monto), 0)
   const totalGeneral = costosAuto.agroquimicos + costosAuto.jornales + totalManuales
 
   const exportarCostos = () => {
@@ -247,6 +253,30 @@ export default function Costos({ campoActivo, isGuest = false }) {
           })}
         </div>
         </div>
+        {comprasInsumos.length > 0 && (
+          <div className="ui-8551ef costos-compras">
+            <div className="ui-546e10">
+              <div className="ui-f25207">Compras de insumos</div>
+              <div className="ui-1d6b4b">Gs. {fmtGs(totalCompras)}</div>
+            </div>
+            <p className="costos-nota">Compras de toda la empresa: el inventario no se divide por campo. Es dinero que salió, pero no suma al total de arriba porque el insumo ya entra cuando se consume. Para anular una compra, hacerlo desde Inventario.</p>
+            {comprasInsumos.map(c => {
+              const tipo = TIPOS_COSTO.find(t => t.key === 'insumos') || TIPOS_COSTO[0]
+              return (
+                <div className="ui-9760f1" key={c.id}>
+                  <div className="ui-94c3f8" style={{ background:tipo.bg }}>
+                    <i className={`${`ti ${tipo.icon}`} ui-0cf08e`} style={{ color:tipo.color }} aria-hidden="true"></i>
+                  </div>
+                  <div className="ui-da5cd6">
+                    <div className="ui-0993fa">{c.descripcion || 'Compra de insumos'}</div>
+                    <div className="ui-552ff3">{c.fecha}</div>
+                  </div>
+                  <div className="ui-1d6b4b">Gs. {fmtGs(c.monto)}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
         <NotasPanel modulo="costos" titulo="Bloc de notas de costos" />
       </div>
 
