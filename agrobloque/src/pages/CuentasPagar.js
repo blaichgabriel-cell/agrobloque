@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { imprimirHtml } from '../lib/exporters'
 import NotasPanel from '../components/NotasPanel'
+import { Modal as SharedModal } from '../components/UI'
 import { supabase } from '../lib/supabase'
 
 const tiposProveedor = ['Agropecuaria', 'Ferreteria', 'Transporte', 'Servicios', 'Otro']
@@ -408,15 +409,15 @@ function MiniTotal({ label, value }) {
 
 function Modal({ title, children, onClose }) {
   return (
-    <div className="ui-9d3361">
+    <SharedModal label={title} onClose={onClose}>
       <div className="ui-b344e7">
         <div className="ui-57d669">
           <h2 className="ui-8f657d">{title}</h2>
-          <button className="ui-685979" onClick={onClose}>x</button>
+          <button className="ui-685979" onClick={onClose} aria-label="Cerrar"><i className="ti ti-x" aria-hidden="true" /></button>
         </div>
         {children}
       </div>
-    </div>
+    </SharedModal>
   )
 }
 

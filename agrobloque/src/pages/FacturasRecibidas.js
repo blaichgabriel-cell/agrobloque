@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { leerFacturaPdf } from '../lib/facturaPdf'
 import { useCan } from '../lib/RoleContext'
+import { Modal } from '../components/UI'
 
 const hoy = () => new Date().toISOString().slice(0, 10)
 const fmtGs = value => Math.round(Number(value) || 0).toLocaleString('es-PY')
@@ -241,8 +242,8 @@ export default function FacturasRecibidas({ role }) {
       </div>
 
       {modal && (
-        <div style={overlay} role="presentation" onMouseDown={event => event.target === event.currentTarget && cerrar()}>
-          <section role="dialog" aria-modal="true" aria-labelledby="factura-title" style={sheet}>
+        <Modal label="Nueva factura" onClose={cerrar} busy={saving} onMouseDown={event => event.target === event.currentTarget && cerrar()}>
+          <section aria-labelledby="factura-title" style={sheet}>
             <div className="ui-9bae07">
               <div><div className="ui-51b095">Revisar lectura</div><h2 className="ui-aad0a1" id="factura-title">Nueva factura</h2></div>
               <button className="ag-close-btn" onClick={cerrar} aria-label="Cerrar"><i className="ti ti-x" /></button>
@@ -262,7 +263,7 @@ export default function FacturasRecibidas({ role }) {
             <button className="ui-d6167d" onClick={guardarPendiente} disabled={saving} style={{ ...primaryButton, opacity:saving ? .65 : 1 }}>{saving ? 'Guardando…' : 'Guardar para revisar'}</button>
             <button onClick={cerrar} disabled={saving} style={secondaryButton}>Cancelar</button>
           </section>
-        </div>
+        </Modal>
       )}
     </main>
   )
@@ -292,7 +293,6 @@ const secondaryButton = { width:'100%', marginTop:8, border:'1px solid #dde3de',
 const miniButton = { width:31, height:31, border:'1px solid #dfe5e0', borderRadius:8, background:'#fff', color:'#4e5851', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center' }
 const tab = { border:'1px solid #dfe5e0', borderRadius:8, background:'#fff', color:'#667069', padding:'8px 11px', fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }
 const tabActive = { ...tab, background:'#182c25', borderColor:'#182c25', color:'#fff' }
-const overlay = { position:'fixed', inset:0, zIndex:200, background:'rgba(14, 24, 19, .48)', display:'flex', alignItems:typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent:'center' }
 const sheet = { width:'100%', maxWidth:620, maxHeight:'92vh', overflowY:'auto', boxSizing:'border-box', padding:'22px 20px 28px', background:'#f7f9f7', borderRadius:typeof window !== 'undefined' && window.innerWidth >= 768 ? 16 : '18px 18px 0 0' }
 const fileSummary = { display:'grid', gridTemplateColumns:'28px minmax(0, 1fr)', gap:9, alignItems:'center', padding:11, marginBottom:14, border:'1px solid #e2e7e3', borderRadius:8, background:'#fff', color:'#314039', fontSize:12 }
 const fieldWrap = { display:'block', minWidth:0 }
