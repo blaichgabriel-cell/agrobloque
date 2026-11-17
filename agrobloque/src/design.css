@@ -2700,3 +2700,13 @@ img.bl-logo--sobre-oscuro { display:none !important; }
 /* Costos: bloque de compras de insumos (no suman al total; el consumo ya entra como «Insumos consumidos»). */
 .ag-app .costos-compras { margin-top:12px; }
 .ag-app .costos-nota { margin:0 0 8px; color:var(--text-secondary); font-size:12px; line-height:1.45; }
+
+/* Modo oscuro: Rentabilidad y tarjeta de costo del bloque con contraste legible (auditor de contraste 2026-11-17).
+   Antes: negativos en #BE123C (2,3-2,7:1) y acento #0F6B48 (2,6:1) sobre fondo oscuro. */
+[data-theme='dark'] .ag-app .negative,
+[data-theme='dark'] .ag-app .profitability-chart-summary .negative strong { color:var(--dk-red) !important; }
+[data-theme='dark'] .ag-app .profitability-chart-summary .positive strong { color:var(--dk-green) !important; }
+[data-theme='dark'] .block-detail-modern { --block-accent:var(--dk-green); }
+[data-theme='dark'] .block-cost-card__breakdown i { background:rgba(52,211,153,.14); }
+[data-theme='dark'] .ui-fe5017.ui-fe5017.ui-fe5017 { color:var(--dk-green); }
+[data-theme='dark'] .ui-626bf4.ui-626bf4.ui-626bf4 { color:rgba(255,255,255,.72); }
