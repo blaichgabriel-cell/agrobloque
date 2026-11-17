@@ -31,11 +31,13 @@ export default function Compradores() {
   const [form, setForm] = useState({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' })
   const [saving, setSaving] = useState(false)
   const [expandido, setExpandido] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => { fetchCompradores() }, [])
 
   const fetchCompradores = async () => {
-    const { data } = await supabase.from('compradores').select('*').order('nombre')
+    const { data, error:consultaError } = await supabase.from('compradores').select('*').order('nombre')
+    if (consultaError) { setError('No se pudieron cargar los compradores. Revisá la conexión e intentá nuevamente.'); return }
     setCompradores(data || [])
     setHistorial({})
   }
@@ -58,19 +60,20 @@ export default function Compradores() {
 
   const guardar = async () => {
     if (!form.nombre.trim()) return
-    setSaving(true)
-    if (form.id) {
-      await supabase.from('compradores').update({ nombre:form.nombre, tipo:form.tipo, telefono:form.telefono||null, notas:form.notas||null }).eq('id', form.id)
-    } else {
-      await supabase.from('compradores').insert({ nombre:form.nombre, tipo:form.tipo, telefono:form.telefono||null, notas:form.notas||null })
-    }
-    await fetchCompradores(); setSaving(false); setModal(false)
-    setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' })
+    setSaving(true); setError('')
+    const payload = { nombre:form.nombre.trim(), tipo:form.tipo, telefono:form.telefono||null, notas:form.notas||null }
+    const { error:guardarError } = form.id
+      ? await supabase.from('compradores').update(payload).eq('id', form.id)
+      : await supabase.from('compradores').insert(payload)
+    if (guardarError) { setError(`No se pudo guardar el comprador: ${guardarError.message || 'revisá la conexión.'}`); setSaving(false); return }
+    await fetchCompradores(); setSaving(false); setModal(false); setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' })
   }
 
   const eliminar = (c) => {
     setConfirmar({ nombre: c.nombre, fn: async () => {
-      await supabase.from('compradores').delete().eq('id', c.id)
+      setError('')
+      const { error:eliminarError } = await supabase.from('compradores').delete().eq('id', c.id)
+      if (eliminarError) { setError(`No se pudo eliminar el comprador: ${eliminarError.message || 'revisá si tiene ventas vinculadas.'}`); setConfirmar(null); return }
       setConfirmar(null); fetchCompradores()
     }})
   }
@@ -90,6 +93,7 @@ export default function Compradores() {
   return (
     <div className="ag-page ui-c1c124">
       {confirmar && <ModalConfirm nombre={confirmar.nombre} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
+      {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
 
       <div className="ag-page-header ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div className="ui-f46979">
@@ -116,7 +120,7 @@ export default function Compradores() {
           const isOpen = expandido === c.id
           return (
             <div className="ag-surface ui-9a7f69" key={c.id} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-              <div className="ui-38997f" onClick={() => setExpandido(isOpen ? null : c.id)}>
+              <div className="ui-38997f" role="button" tabIndex={0} aria-expanded={isOpen} onClick={() => setExpandido(isOpen ? null : c.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandido(isOpen ? null : c.id) } }}>
                 <div className="ui-f9ef33">
                   <i className="ti ti-building-store ui-b45e7d" aria-hidden="true"></i>
                 </div>
@@ -187,6 +191,7 @@ export default function Compradores() {
         <Modal onClose={() => setModal(false)} label="Compradores" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
           <div className="ui-ab5655" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <div className="ui-c7b1b6">{form.id ? 'Editar comprador' : 'Nuevo comprador'}</div>
+            {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
             <label style={lblStyle}>Nombre *</label>
             <input style={inpStyle} value={form.nombre} onChange={e => setForm(f => ({...f, nombre:e.target.value}))} placeholder="Ej: Mercado Central"/>
             <label style={lblStyle}>Tipo</label>

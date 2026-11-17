@@ -70,13 +70,15 @@ export default function Asistencia() {
   const indiceNotaActivo = Math.max(0, diasFechas.indexOf(fechaNotaActual))
 
   useEffect(() => { fetchCampos() }, [])
+  useEffect(() => () => Object.values(saveTimers.current).forEach(clearTimeout), [])
   useEffect(() => { if (campoActivo) { fetchOperarios(); fetchRegistros(); fetchNotasDia() } }, [campoActivo, semanaOffset])
   useEffect(() => {
     setFechaNotaActiva(prev => diasFechas.includes(prev) ? prev : diasFechas[0])
   }, [campoActivo?.id, semanaOffset])
 
   const fetchCampos = async () => {
-    const { data } = await supabase.from('campos').select('*').order('nombre')
+    const { data, error } = await supabase.from('campos').select('*').order('nombre')
+    if (error) { setError(`No se pudieron cargar los campos: ${error.message}`); return }
     const lista = data || []
     setCampos(lista)
     if (lista.length > 0) {
@@ -140,7 +142,8 @@ export default function Asistencia() {
   }
 
   const fetchRegistros = async () => {
-    const { data } = await supabase.from('asistencia').select('*').in('fecha', diasFechas)
+    const { data, error } = await supabase.from('asistencia').select('*').in('fecha', diasFechas)
+    if (error) { setError(`No se pudo cargar la asistencia: ${error.message}`); return }
     const mapa = {}
     const newInputs = {}
     ;(data || []).forEach(a => {
@@ -176,7 +179,8 @@ export default function Asistencia() {
       setAdelantos([])
       return
     }
-    const { data } = await supabase.from('adelantos').select('*').in('operario_id', ids).order('fecha', { ascending: false })
+    const { data, error } = await supabase.from('adelantos').select('*').in('operario_id', ids).order('fecha', { ascending: false })
+    if (error) { setError(`No se pudieron cargar los adelantos: ${error.message}`); return }
     setAdelantos((data || []).filter(a => !a.anulado))
   }
 
@@ -194,11 +198,13 @@ export default function Asistencia() {
       const existing = registros[key]
       try {
         if (existing) {
-          await supabase.from('asistencia').update({ monto }).eq('id', existing.id)
+          const { error } = await supabase.from('asistencia').update({ monto }).eq('id', existing.id)
+          if (error) throw error
         } else {
-          const { data } = await supabase.from('asistencia').insert({
+          const { data, error } = await supabase.from('asistencia').insert({
             operario_id, fecha, dia_semana: DIAS[diaIdx], monto, estado: 'presente'
           }).select().single()
+          if (error) throw error
           if (data) setRegistros(prev => ({ ...prev, [key]: { id: data.id, monto: data.monto } }))
         }
       } catch (e) {
@@ -298,11 +304,12 @@ export default function Asistencia() {
     if (!monto) return
     setSavingAdelanto(true)
     try {
-      await supabase.from('adelantos').insert({
+      const { error } = await supabase.from('adelantos').insert({
         operario_id: modalAdelanto.id,
         fecha: fechaLocal(),
         monto, descripcion: formAdelanto.descripcion || null
       })
+      if (error) throw error
       setModalAdelanto(null)
       setFormAdelanto({ monto:'', descripcion:'' })
       fetchAdelantos(operarios)
@@ -311,7 +318,9 @@ export default function Asistencia() {
   }
 
   const eliminarAdelanto = async (id) => {
-    await supabase.from('adelantos').update({ anulado:true, anulado_at:new Date().toISOString(), anulado_motivo:'Anulado por el usuario', updated_at:new Date().toISOString() }).eq('id', id)
+    setError('')
+    const { error } = await supabase.from('adelantos').update({ anulado:true, anulado_at:new Date().toISOString(), anulado_motivo:'Anulado por el usuario', updated_at:new Date().toISOString() }).eq('id', id)
+    if (error) { setError(`No se pudo anular el adelanto: ${error.message}`); return }
     fetchAdelantos(operarios)
   }
 
@@ -333,10 +342,11 @@ export default function Asistencia() {
       const fechaPago = getFechaPagoAdelanto(modalEditarAdelanto)
       const descripcionBase = (formEditarAdelanto.descripcion || '').trim()
       const descripcion = `${descripcionBase}${estabaPagado ? ` [PAGADO${fechaPago ? ` ${fechaPago}` : ''}]` : ''}`.trim() || null
-      await supabase
+      const { error } = await supabase
         .from('adelantos')
         .update({ monto, descripcion })
         .eq('id', modalEditarAdelanto.id)
+      if (error) throw error
       setModalEditarAdelanto(null)
       setFormEditarAdelanto({ monto:'', descripcion:'' })
       fetchAdelantos(operarios)
@@ -349,7 +359,9 @@ export default function Asistencia() {
   const marcarPagado = async (adelanto) => {
     if (esAdelantoPagado(adelanto)) return
     const descripcion = `${limpiarMarcaPagado(adelanto.descripcion || '')} [PAGADO ${fechaLocal()}]`.trim()
-    await supabase.from('adelantos').update({ descripcion }).eq('id', adelanto.id)
+    setError('')
+    const { error } = await supabase.from('adelantos').update({ descripcion }).eq('id', adelanto.id)
+    if (error) { setError(`No se pudo marcar el adelanto como pagado: ${error.message}`); return }
     fetchAdelantos(operarios)
   }
 

@@ -515,7 +515,7 @@ export default function Ventas() {
               const esGrupo = g.items.length > 1
               const v = g.items[0]
               return (
-                <div className="ui-a2222c" key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)}>
+                <div className="ui-a2222c" role="button" tabIndex={0} key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); esGrupo ? setDetalleGrupo(g) : setDetalle(v) } }}>
                   <div className="ui-3f9f96">
                     <div className="ui-0debaf">{esGrupo ? `${g.items.length} productos vendidos` : v.producto}</div>
                     {esGrupo && <div className="ui-a4ec02">{g.items.map(item => item.producto).join(', ')}</div>}
@@ -550,7 +550,7 @@ export default function Ventas() {
               const esGrupo = g.items.length > 1
               const v = g.items[0]
               return (
-                <div className="ui-ccaf82" key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+                <div className="ui-ccaf82" role="button" tabIndex={0} key={g.key} onClick={() => esGrupo ? setDetalleGrupo(g) : setDetalle(v)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); esGrupo ? setDetalleGrupo(g) : setDetalle(v) } }} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                   <div className="ui-2b96ff">
                     <div className="ui-3f9f96">
                       <div className="ui-62e15c">{esGrupo ? `${g.items.length} productos vendidos` : v.producto}</div>

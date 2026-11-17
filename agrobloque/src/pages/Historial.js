@@ -238,7 +238,7 @@ export default function Historial({ campoActivo }) {
             {visibles.map((e, i) => {
               const t = tipos[e.tipo] || tipos.tarea
               return (
-                <div className="ui-e331bd" key={`${e.tipo}-${e.fecha}-${i}`} onClick={() => navigate(e.path)}>
+                <div className="ui-e331bd" role="button" tabIndex={0} key={`${e.tipo}-${e.fecha}-${i}`} onClick={() => navigate(e.path)} onKeyDown={evento => { if (evento.key === 'Enter' || evento.key === ' ') { evento.preventDefault(); navigate(e.path) } }}>
                   <div className="ui-a1cc9d">
                     <span className="ui-13ebd9" style={{ background:t.bg, color:t.color }}>
                       <i className={`${`ti ${t.icon}`} ui-27a8ac`} />

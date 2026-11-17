@@ -150,7 +150,7 @@ export default function Buscador() {
         ) : resultados.length === 0 ? (
           <div className="ag-surface ui-8a232f">Sin resultados.</div>
         ) : resultados.map((r, i) => (
-          <div key={`${r.tipo}-${r.titulo}-${i}`} style={card} onClick={() => navigate(r.path)}>
+          <div role="button" tabIndex={0} key={`${r.tipo}-${r.titulo}-${i}`} style={card} onClick={() => navigate(r.path)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(r.path) } }}>
             <div className="ui-caa1ed">
               <span className="ui-dd385b">
                 <i className={`${`ti ${r.icon}`} ui-d932c2`} aria-hidden="true"></i>

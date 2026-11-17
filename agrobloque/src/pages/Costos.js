@@ -30,6 +30,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'', plantacion_id:'' })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [periodo, setPeriodo] = useState('mes')
 
   useEffect(() => { fetchCampos() }, [])
@@ -118,14 +119,16 @@ export default function Costos({ campoActivo, isGuest = false }) {
 
   const guardar = async () => {
     if (!form.monto || !form.fecha) return
-    setSaving(true)
+    setSaving(true); setError('')
     const payload = {
       tipo: form.tipo, descripcion: form.descripcion || null,
       monto: parsearGs(form.monto), fecha: form.fecha,
       campo_id: campoSel?.id || null, bloque_id: form.bloque_id || null, plantacion_id:form.plantacion_id || null
     }
-    if (form.id) await supabase.from('costos').update(payload).eq('id', form.id)
-    else await supabase.from('costos').insert(payload)
+    const { error:guardarError } = form.id
+      ? await supabase.from('costos').update(payload).eq('id', form.id)
+      : await supabase.from('costos').insert(payload)
+    if (guardarError) { setError(`No se pudo guardar el costo: ${guardarError.message || 'revisá la conexión.'}`); setSaving(false); return }
     await registrarAuditoria({
       accion: form.id ? 'Edito costo manual' : 'Registro costo manual',
       modulo: 'Costos',
@@ -137,7 +140,9 @@ export default function Costos({ campoActivo, isGuest = false }) {
   }
 
   const eliminar = async (id) => {
-    await supabase.from('costos').update({ anulada:true, anulada_at:new Date().toISOString() }).eq('id', id)
+    setError('')
+    const { error:anularError } = await supabase.from('costos').update({ anulada:true, anulada_at:new Date().toISOString() }).eq('id', id)
+    if (anularError) { setError(`No se pudo anular el costo: ${anularError.message || 'revisá la conexión.'}`); return }
     await registrarAuditoria({ accion:'Anulo costo manual', modulo:'Costos', tabla:'costos', registroId:id })
     fetchCostos()
   }
@@ -159,6 +164,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
 
   return (
     <div className="ui-c1c124">
+      {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
       <div className="ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div className="ui-796b93">
           <div>
@@ -285,6 +291,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
           <div className="ui-526967" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
             <CerrarX onClose={cerrarModal} disabled={saving} />
             <div className="ui-c7b1b6">{form.id ? 'Editar costo' : 'Nuevo costo'}</div>
+            {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
             <div className="ui-ad3529">Tipo</div>
             <div className="ui-06c66f">
               {TIPOS_COSTO.map(t => (

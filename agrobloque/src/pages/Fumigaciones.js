@@ -613,7 +613,7 @@ export default function Fumigaciones() {
               const tanques = f.tanques_cantidad && f.tanque_litros ? `${fmtCantidad(f.tanques_cantidad)} tanque${Number(f.tanques_cantidad) === 1 ? '' : 's'} x ${fmtCantidad(f.tanque_litros)} L` : ''
 
               return (
-                <div className="ag-surface timeline-entry ui-d788bc" key={f.id} onClick={() => setDetalle(f)} style={{ padding: isDesktop ? '16px 18px' : '14px 16px', marginBottom: isDesktop ? 10 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+                <div className="ag-surface timeline-entry ui-d788bc" role="button" tabIndex={0} key={f.id} onClick={() => setDetalle(f)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetalle(f) } }} style={{ padding: isDesktop ? '16px 18px' : '14px 16px', marginBottom: isDesktop ? 10 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
                   <div className="ui-c36754">
                     <div className="ui-f67a29" style={{ background:tipo.bg }}>
                       <i className={`${`ti ${tipo.icon}`} ui-bf83cf`} style={{ color:tipo.color }} aria-hidden="true"></i>
@@ -754,7 +754,7 @@ export default function Fumigaciones() {
                   const cultivo = getCultivoBloque(b)
                   const activo = form.bloques_ids.includes(b.id)
                   return (
-                    <div className="ui-ed8e79" key={b.id} onClick={()=>toggleBloque(b.id)} style={{ background: activo ? '#0F3923' : '#fff', color: activo ? '#fff' : '#555' }}>
+                    <div className="ui-ed8e79" role="checkbox" aria-checked={activo} tabIndex={0} key={b.id} onClick={()=>toggleBloque(b.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBloque(b.id) } }} style={{ background: activo ? '#0F3923' : '#fff', color: activo ? '#fff' : '#555' }}>
                       <div>{b.codigo}</div>
                       <div className="ui-c0a65d" style={{ opacity: activo ? 0.78 : 0.7 }}>{cultivo || 'Sin cultivo'}</div>
                     </div>

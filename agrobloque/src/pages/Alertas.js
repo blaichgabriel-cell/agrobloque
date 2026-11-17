@@ -236,7 +236,7 @@ export default function Alertas() {
         ) : alertas.map((a, i) => {
           const s = severidad[a.tipo] || severidad.baja
           return (
-            <div className="ag-surface ui-ff9ccf" key={`${a.titulo}-${i}`} onClick={() => navigate(a.path)} style={{ boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
+            <div className="ag-surface ui-ff9ccf" role="button" tabIndex={0} key={`${a.titulo}-${i}`} onClick={() => navigate(a.path)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(a.path) } }} style={{ boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
               <div className="ui-f4d829">
                 <span className="ui-51b32e" style={{ background:s.bg }}>
                   <i className={`${`ti ${s.icon}`} ui-b5ef88`} style={{ color:s.color }} aria-hidden="true"></i>

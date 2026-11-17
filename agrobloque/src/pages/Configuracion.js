@@ -665,7 +665,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
         </section>
         {esAdmin && !isPlatformAdmin && <SoporteCliente />}
         {menuItems.map((it, i) => (
-          <div className="ag-surface ui-f40337" key={i} onClick={it.action}>
+          <div className="ag-surface ui-f40337" role="button" tabIndex={0} key={i} onClick={it.action} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); it.action() } }}>
             <div className="ui-3044e7" style={{ background: it.bg || '#f2f1ef' }}>
               <i className={`${`ti ${it.icon}`} ui-bf83cf`} style={{ color: it.color || '#0a0a0a' }} aria-hidden="true"></i>
             </div>
@@ -676,7 +676,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
             <i className="ti ti-chevron-right ui-d63ae8" aria-hidden="true"></i>
           </div>
         ))}
-        <div className="ag-surface ui-4000ee" onClick={() => forceLocalSignOut()}>
+        <div className="ag-surface ui-4000ee" role="button" tabIndex={0} onClick={() => forceLocalSignOut()} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); forceLocalSignOut() } }}>
           <div className="ui-fce2c6">Cerrar sesión</div>
         </div>
       </div>
@@ -1051,7 +1051,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
                   <div className="ui-269365">{campo.nombre}</div>
                   <div className="ui-c4905b">
                     {bloques.filter(b => b.campo_id === campo.id).map(b => (
-                      <div className="ui-6a9e69" key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })}
+                      <div className="ui-6a9e69" role="button" tabIndex={0} key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo }) } }}
                         style={{ background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
                         {b.codigo}  -  {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
                       </div>

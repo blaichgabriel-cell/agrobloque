@@ -535,27 +535,20 @@ export default function FichaBloque() {
 
   const guardarEditarPlantacion = async () => {
     if (!plantacionActiva || !form.cultivo_id || !form.fecha_siembra) return
-    setSaving(true)
-    await guardarPlantacionCompatible({
-      cultivo_id: form.cultivo_id,
-      notas: form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null,
-      fecha_siembra: form.fecha_siembra,
-      cantidad_plantas: form.cantidad_plantas ? parseLocaleInteger(form.cantidad_plantas, null) : null,
-    }, plantacionActiva.id)
-    await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionActiva.id)
-    if (form.abonos_ids.length > 0) {
-      await supabase.from('plantacion_abonos').insert(
-        form.abonos_ids.map(ab => ({
-          plantacion_id: plantacionActiva.id, abono_id: ab,
-          cantidad: form.abonos_cantidades[ab] || null,
-          unidad: form.abonos_cantidades[`${ab}_unidad`] || 'kg',
-          alcance: form.abonos_cantidades[`${ab}_alcance`] || 'total'
-        }))
-      )
-    }
-    setSaving(false); setShowEditarPlantacion(false)
-    await registrarAuditoria({ accion:'Edito plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
-    fetchData()
+    setSaving(true); setPlantacionFormError('')
+    try {
+      await guardarPlantacionCompatible({ cultivo_id:form.cultivo_id, notas:form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null, fecha_siembra:form.fecha_siembra, cantidad_plantas:form.cantidad_plantas ? parseLocaleInteger(form.cantidad_plantas, null) : null }, plantacionActiva.id)
+      const { error:eliminarError } = await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionActiva.id)
+      if (eliminarError) throw eliminarError
+      if (form.abonos_ids.length > 0) {
+        const { error:abonosError } = await supabase.from('plantacion_abonos').insert(form.abonos_ids.map(ab => ({ plantacion_id:plantacionActiva.id, abono_id:ab, cantidad:form.abonos_cantidades[ab] || null, unidad:form.abonos_cantidades[`${ab}_unidad`] || 'kg', alcance:form.abonos_cantidades[`${ab}_alcance`] || 'total' })))
+        if (abonosError) throw abonosError
+      }
+      setShowEditarPlantacion(false)
+      await registrarAuditoria({ accion:'Edito plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
+      await fetchData()
+    } catch (error) { setPlantacionFormError(`No se pudo guardar la edición: ${error.message || 'revisá la conexión.'}`) }
+    finally { setSaving(false) }
   }
 
   const finalizarPlantacionActiva = () => {
@@ -564,7 +557,8 @@ export default function FichaBloque() {
       titulo: 'Resumen antes de finalizar',
       mensaje: `Bloque ${bloque?.codigo || ''}: ${fmtKg(totalKgCiclo)} kg cosechados y Gs. ${fmtGs(costosCiclo.total)} de costo acumulado (fumigaciones Gs. ${fmtGs(costosCiclo.fumigaciones)}, fertilizaciones Gs. ${fmtGs(costosCiclo.fertilizaciones)} y gastos directos Gs. ${fmtGs(costosCiclo.manuales)}). La plantación pasará al historial y no se borrará ningún dato.`,
       fn: async () => {
-        await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
+        const { error } = await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
+        if (error) { setMensajeExito(`No se pudo finalizar la plantación: ${error.message || 'revisá la conexión.'}`); setConfirmar(null); return }
         await registrarAuditoria({ accion:'Finalizo plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
         setConfirmar(null)
         setSeccion('historial')
@@ -1407,7 +1401,7 @@ export default function FichaBloque() {
                 {fertilizaciones[0] && (
                   <>
                     <div className="ui-4192ca">Fertilización actual</div>
-                    <div className="ui-2e75cf" onClick={() => setFertDetalle(fertilizaciones[0])}
+                    <div className="ui-2e75cf" role="button" tabIndex={0} onClick={() => setFertDetalle(fertilizaciones[0])} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFertDetalle(fertilizaciones[0]) } }}
                      >
                       <div className="ui-5ad71a">
                         <div className="ui-659921">{rangoFertilizacion(fertilizaciones[0])}</div>
@@ -1432,7 +1426,7 @@ export default function FichaBloque() {
                 {fertilizaciones[1] && (
                   <>
                     <div className="ui-4899be">Fertilización anterior</div>
-                    <div className="ag-surface ui-fe238f" onClick={() => setFertDetalle(fertilizaciones[1])}
+                    <div className="ag-surface ui-fe238f" role="button" tabIndex={0} onClick={() => setFertDetalle(fertilizaciones[1])} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFertDetalle(fertilizaciones[1]) } }}
                      >
                       <div className="ui-5ad71a">
                         <div className="ui-62e15c">{rangoFertilizacion(fertilizaciones[1])}</div>
@@ -1455,7 +1449,7 @@ export default function FichaBloque() {
                   <>
                     <div className="ui-4899be">Historial</div>
                     {fertilizaciones.slice(2).map(fert => (
-                      <div className="ag-surface ui-652941" key={fert.id} onClick={() => setFertDetalle(fert)}
+                      <div className="ag-surface ui-652941" role="button" tabIndex={0} key={fert.id} onClick={() => setFertDetalle(fert)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFertDetalle(fert) } }}
                        >
                         <div className="ui-da5cd6">
                           <div className="ui-076bb2">{rangoFertilizacion(fert)}</div>
@@ -1523,7 +1517,7 @@ export default function FichaBloque() {
             {incidencias.length === 0 ? (
               <div className="ui-5baa7a">Sin fumigaciones registradas</div>
             ) : incidencias.map((inc, i) => (
-              <div className="ag-surface ui-3451cf" key={i} onClick={() => setIncidenciaDetalle(inc)}>
+              <div className="ag-surface ui-3451cf" role="button" tabIndex={0} key={i} onClick={() => setIncidenciaDetalle(inc)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIncidenciaDetalle(inc) } }}>
                 <div className="ui-31d953">
                   <div className="ui-878e4e" style={{ background: inc.tipo==='fumigacion' ? '#fff3e8' : '#eaf4fb', color: inc.tipo==='fumigacion' ? '#e07b00' : '#2980b9' }}>
                     {inc.tipo === 'fumigacion' ? 'Fumigación' : inc.tipo === 'fertiriego' ? 'Fertiriego' : 'Foliar'}
@@ -1590,7 +1584,7 @@ export default function FichaBloque() {
             {historial.length === 0 ? (
               <div className="ui-5baa7a">Sin ciclos anteriores</div>
             ) : historial.map(p => (
-              <div className="ag-surface ui-4aac8a" key={p.id} onClick={() => abrirHistorialDetalle(p)}
+              <div className="ag-surface ui-4aac8a" role="button" tabIndex={0} key={p.id} onClick={() => abrirHistorialDetalle(p)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirHistorialDetalle(p) } }}
                >
                 <div className="ui-da5cd6">
                   <div className="ui-451b76">
@@ -1666,7 +1660,7 @@ export default function FichaBloque() {
             {form.abonos_ids.length > 0 && <div style={{ fontSize:12, fontWeight:700, color:'#315344', margin:'8px 0 6px' }}>Abonos agregados: {form.abonos_ids.length}</div>}
             {abonos.map(a => (
               <div className="ui-d51702" key={a.id}>
-                <div className="ui-bfa195" onClick={() => toggleAbono(a.id)}
+                <div className="ui-bfa195" role="checkbox" tabIndex={0} aria-checked={form.abonos_ids.includes(a.id)} onClick={() => toggleAbono(a.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAbono(a.id) } }}
                   style={{ background: form.abonos_ids.includes(a.id) ? '#0F3923' : '#fff', marginBottom: form.abonos_ids.includes(a.id) ? 6 : 0 }}>
                   <div className="ui-7b138e" style={{ border: form.abonos_ids.includes(a.id) ? 'none' : '1.5px solid #d0d0d0', background: form.abonos_ids.includes(a.id) ? '#fff' : 'transparent' }}>
                     {form.abonos_ids.includes(a.id) && <i className="ti ti-check ui-aa481a" aria-hidden="true"></i>}

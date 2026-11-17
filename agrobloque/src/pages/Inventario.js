@@ -296,8 +296,17 @@ export default function Inventario() {
       setModal(null)
       await Promise.all([fetchProductos(), fetchMovimientos(), fetchCompras()])
     } catch (e) {
-      for (const id of creadas.reverse()) await supabase.rpc('anular_compra_inventario', { p_compra_id:id })
-      setError(`No se guardó la compra completa: ${e.message || 'error desconocido'}. Se revirtieron las líneas cargadas.`)
+      const reversionesFallidas = []
+      for (const id of [...creadas].reverse()) {
+        const { error:reversionError } = await supabase.rpc('anular_compra_inventario', { p_compra_id:id })
+        if (reversionError) reversionesFallidas.push(id)
+      }
+      if (reversionesFallidas.length) {
+        setError(`La compra quedó incompleta y ${reversionesFallidas.length} línea(s) no pudieron revertirse. No vuelvas a guardar: avisá al administrador con estos identificadores: ${reversionesFallidas.join(', ')}.`)
+      } else {
+        setError(`No se guardó la compra completa: ${e.message || 'error desconocido'}. Todas las líneas parciales fueron anuladas y el stock quedó restaurado.`)
+      }
+      await Promise.all([fetchProductos(), fetchMovimientos(), fetchCompras()])
     }
     setSaving(false)
   }

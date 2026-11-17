@@ -367,7 +367,7 @@ export default function Cosecha() {
             {cosechas.map(c => {
               const cultivo = getCultivoCosecha(c)
               return (
-                <div className="harvest-table__row ui-8d792c" key={c.id} onClick={() => setDetalle(c)}>
+                <div className="harvest-table__row ui-8d792c" role="button" tabIndex={0} key={c.id} onClick={() => setDetalle(c)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetalle(c) } }}>
                   <div>
                     <div className="ui-62e15c">{c.bloques?.codigo || '-'}</div>
                     <div className="ui-13b58a">Bloque</div>
@@ -403,7 +403,7 @@ export default function Cosecha() {
           {cosechas.map(c => {
           const cultivo = getCultivoCosecha(c)
           return (
-            <div className="ag-surface ui-78436a" key={c.id} onClick={() => setDetalle(c)} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
+            <div className="ag-surface ui-78436a" role="button" tabIndex={0} key={c.id} onClick={() => setDetalle(c)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetalle(c) } }} style={{ marginBottom: isDesktop ? 0 : 8, boxShadow: isDesktop ? '0 12px 28px rgba(31,36,31,0.05)' : 'none' }}>
               <div className="ui-f81471">
                 <div>
                   <div className="ui-62e15c">Bloque {c.bloques?.codigo}</div>

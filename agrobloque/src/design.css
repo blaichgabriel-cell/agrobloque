@@ -1417,6 +1417,20 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .ag-app .profitability-block-compare { margin-bottom:18px; }
 .ag-app .profitability-block-compare>div[role="row"]:not(.profitability-month-table__head) { display:grid; grid-template-columns:.65fr repeat(4,1fr); gap:10px; align-items:center; min-height:42px; padding:0 13px; border-top:1px solid rgba(15,23,42,.06); color:var(--text-secondary); font-family:var(--bl-font-mono); font-size:11px; text-align:right; }
 .ag-app .profitability-block-compare>div[role="row"] strong { color:var(--text-primary); text-align:left; }
+
+/* Cierre móvil: evita el zoom automático de Safari y mantiene los diálogos correctos al girar la pantalla. */
+@media (max-width:1099px) {
+  .ag-app input:not([type="checkbox"]):not([type="radio"]),
+  .ag-app select,
+  .ag-app textarea { font-size:16px !important; }
+  .ag-app .ag-modal-overlay { align-items:flex-end !important; justify-content:center !important; padding:0 !important; }
+  .ag-app .ag-modal-overlay > .ag-surface,
+  .ag-app .ag-modal-overlay > [class*="ui-"] { width:100% !important; max-width:100% !important; border-radius:24px 24px 0 0 !important; }
+}
+@media (min-width:1100px) {
+  .ag-app .ag-modal-overlay { align-items:center !important; justify-content:center !important; padding:24px !important; }
+}
+.ag-app [role="button"]:focus-visible { outline:3px solid var(--ag-focus, #18a66f); outline-offset:3px; }
 .ag-app .profitability-chart-wrap text { fill:var(--text-tertiary); font-size:11px; }
 .ag-app .positive,.ag-app .profitability-chart-summary .positive strong { color:var(--bl-emerald-600) !important; }
 .ag-app .negative,.ag-app .profitability-chart-summary .negative strong { color:#BE123C !important; }
