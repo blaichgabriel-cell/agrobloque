@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { canPerformAction } from '../lib/permissions'
 
 // Acción rápida universal (botón «+» de la barra inferior y «Registrar trabajo» del Inicio).
-// Cada acceso abre directamente el formulario de alta de su módulo (?nuevo=1, ver useAccionNueva).
+// Los accesos con ?nuevo=1 abren directamente el alta; Fumigaciones primero muestra su resumen e historial.
 export const workOptions = [
   { key: 'cosecha', path: '/cosecha?nuevo=1', icon: 'ti-basket', label: 'Registrar cosecha', detail: 'Kilos por bloque', tone: 'bloques' },
-  { key: 'fumigaciones', path: '/fumigaciones?nuevo=1', icon: 'ti-spray', label: 'Nueva fumigación', detail: 'Productos y dosis', tone: 'alerta' },
+  { key: 'fumigaciones', path: '/fumigaciones', icon: 'ti-spray', label: 'Fumigaciones', detail: 'Ver historial y registrar', tone: 'alerta' },
   { key: 'plan_nutricional', path: '/fertilizaciones?nuevo=1', icon: 'ti-droplet', label: 'Nueva fertilización', detail: 'Aplicación puntual', tone: 'agua' },
   { key: 'agenda', path: '/agenda?nuevo=1', icon: 'ti-calendar-plus', label: 'Tarea en agenda', detail: 'Para hoy o más adelante', tone: 'neutral' },
   { key: 'vivero', path: '/vivero?nuevo=1', icon: 'ti-seeding', label: 'Lote en vivero', detail: 'Siembra y bandejas', tone: 'agua' },

@@ -7,7 +7,6 @@ import { useCan } from '../lib/RoleContext'
 import { ajustarStockSeguro } from '../lib/inventory'
 import { categoriaProducto, incluirSeleccionados } from '../lib/productCategories'
 import { useNavigate } from 'react-router-dom'
-import { useAccionNueva } from '../lib/useAccionNueva'
 
 const TIPOS = {
   fumigacion: { label:'Fumigación', icon:'ti-spray',   color:'#e07b00', bg:'#fff3e8' },
@@ -264,8 +263,6 @@ export default function Fumigaciones() {
     setForm(formVacio())
     setModal(true)
   }
-  useAccionNueva(abrirNuevo, { permitido: !isGuest && can.create, listo: !loading })
-
   const parseProductoForm = (fp, tipo) => {
     const match = String(fp.dosis || '').match(/^\s*([\d.,]+)\s*([a-zA-Z]+)?/)
     return {
