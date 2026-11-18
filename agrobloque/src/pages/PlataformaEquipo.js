@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { PlataformaCabecera } from '../components/PlataformaUI'
 import { forceLocalSignOut, supabase } from '../lib/supabase'
+import { SeguridadDosFactores } from '../components/DosFactores'
 
 const TEMAS = [['light', 'ti-sun', 'Claro'], ['dark', 'ti-moon-stars', 'Oscuro'], ['system', 'ti-device-desktop', 'Del dispositivo']]
 
@@ -31,6 +32,7 @@ export default function PlataformaEquipo({ themeMode = 'system', onThemeChange }
     <section className="pl-bloque" aria-labelledby="eq-reglas">
       <h2 id="eq-reglas"><i className="ti ti-list-check" aria-hidden="true" />Reglas de la plataforma</h2>
       <ul className="pl-reglas">
+        <li><i className="ti ti-shield-lock" aria-hidden="true" /><span>Las cuentas de administración general exigen verificación en dos pasos (app autenticadora).</span></li>
         <li><i className="ti ti-mail" aria-hidden="true" /><span>Un correo pertenece a una sola empresa.</span></li>
         <li><i className="ti ti-eye-off" aria-hidden="true" /><span>Los administradores generales no ven datos de clientes sin autorización.</span></li>
         <li><i className="ti ti-clock-hour-4" aria-hidden="true" /><span>El acceso de soporte es de solo lectura y dura como máximo 72 horas.</span></li>
@@ -41,6 +43,7 @@ export default function PlataformaEquipo({ themeMode = 'system', onThemeChange }
 
     <section className="pl-bloque" aria-labelledby="eq-config">
       <h2 id="eq-config"><i className="ti ti-settings" aria-hidden="true" />Configuración</h2>
+      <SeguridadDosFactores obligatorio />
       <div className="pl-temas" role="radiogroup" aria-label="Tema de la aplicación">
         {TEMAS.map(([valor, icono, etiqueta]) => <button type="button" key={valor} className={themeMode === valor ? 'activo' : ''} role="radio" aria-checked={themeMode === valor} onClick={() => onThemeChange?.(valor)}>
           <i className={`ti ${icono}`} aria-hidden="true" /><span>{etiqueta}</span>

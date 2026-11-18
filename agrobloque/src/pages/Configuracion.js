@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Modal } from '../components/UI'
 import { SoporteCliente } from '../components/Soporte'
+import { SeguridadDosFactores } from '../components/DosFactores'
 import { useNavigate } from 'react-router-dom'
 import { forceLocalSignOut, supabase } from '../lib/supabase'
 import { descargarJson } from '../lib/exporters'
@@ -663,6 +664,7 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
             ))}
           </div>
         </section>
+        {(esAdmin || isPlatformAdmin) && <SeguridadDosFactores obligatorio={isPlatformAdmin} />}
         {esAdmin && !isPlatformAdmin && <SoporteCliente />}
         {menuItems.map((it, i) => (
           <div className="ag-surface ui-f40337" role="button" tabIndex={0} key={i} onClick={it.action} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); it.action() } }}>

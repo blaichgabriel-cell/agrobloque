@@ -2730,3 +2730,58 @@ img.bl-logo--sobre-oscuro { display:none !important; }
 [data-theme='dark'] .block-cost-card__breakdown i { background:rgba(52,211,153,.14); }
 [data-theme='dark'] .ui-fe5017.ui-fe5017.ui-fe5017 { color:var(--dk-green); }
 [data-theme='dark'] .ui-626bf4.ui-626bf4.ui-626bf4 { color:rgba(255,255,255,.72); }
+
+/* =====================================================================================================
+   VERIFICACIÓN EN DOS PASOS (src/components/DosFactores.js)
+   Pantalla previa a la app (código al entrar y vinculación de la app) y tarjeta de Configuración.
+   ===================================================================================================== */
+.ag-2fa { position:fixed; inset:0; z-index:300; display:grid; place-items:center; overflow-y:auto; padding:20px 16px; background:var(--bl-canvas,#EEF2F6); }
+.ag-2fa__card { width:min(100%,440px); padding:28px 24px 22px; border-radius:24px; text-align:center; color:var(--text-primary); }
+.ag-2fa__logo { height:34px; width:auto; margin:0 auto 18px; display:block; }
+.ag-2fa__icono { width:54px; height:54px; margin:0 auto 12px; display:grid; place-items:center; border-radius:17px; background:var(--grad-finanzas,linear-gradient(135deg,#4F46E5,#9333EA)); color:#fff; font-size:27px; box-shadow:0 10px 22px -10px rgba(79,70,229,.7); }
+.ag-2fa h1 { margin:0 0 8px; font:700 22px/1.25 'Plus Jakarta Sans',system-ui,sans-serif; color:var(--text-primary); }
+.ag-2fa__texto { margin:0 0 18px; color:var(--text-secondary); font-size:14px; line-height:1.5; }
+.ag-2fa__aviso { margin:0 0 14px; padding:10px 12px; border-radius:12px; background:rgba(245,158,11,.14); border:1px solid rgba(217,119,6,.28); color:var(--text-primary); font-size:13px; line-height:1.45; text-align:left; }
+.ag-2fa__pasos { margin:0 0 16px; padding-left:20px; text-align:left; color:var(--text-secondary); font-size:14px; line-height:1.5; }
+.ag-2fa__pasos li { margin-bottom:12px; padding-left:4px; }
+.ag-2fa__pasos li::marker { font-weight:700; color:var(--text-primary); }
+.ag-2fa__qr { width:196px; height:196px; margin:10px auto 8px; display:grid; place-items:center; border-radius:16px; background:#fff; border:1px solid rgba(15,23,42,.1); }
+.ag-2fa__qr img { display:block; width:168px; height:168px; }
+.ag-2fa__qr span { padding:12px; color:#475569; font-size:13px; }
+.ag-2fa__clave { display:grid; gap:6px; justify-items:center; font-size:13px; }
+.ag-2fa__clave code { max-width:100%; padding:7px 10px; border-radius:10px; background:rgba(15,23,42,.06); color:var(--text-primary); font-family:'JetBrains Mono',ui-monospace,monospace; font-size:13px; letter-spacing:.06em; overflow-wrap:anywhere; user-select:all; }
+.ag-2fa__clave button { border:0; background:transparent; color:var(--bl-emerald-600,#059669); font-weight:600; font-size:13px; text-decoration:underline; }
+.ag-2fa__codigo { width:100%; min-height:56px; margin:4px 0 12px; padding:0 14px; border:1px solid rgba(15,23,42,.14); border-radius:14px; background:rgba(255,255,255,.85); color:var(--text-primary); font-family:'JetBrains Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums; font-size:26px; font-weight:600; letter-spacing:.42em; text-align:center; text-indent:.42em; }
+.ag-2fa__codigo::placeholder { color:#94A3B8; letter-spacing:.42em; }
+.ag-2fa__codigo:focus { outline:0; border-color:rgba(16,185,129,.7); box-shadow:0 0 0 4px rgba(16,185,129,.16); }
+.ag-2fa__boton { width:100%; min-height:48px; border:0; border-radius:14px; background:var(--grad-bloques); color:#fff; font:600 15px 'Inter',system-ui,sans-serif; box-shadow:0 10px 22px -10px rgba(5,150,105,.7); }
+.ag-2fa__boton:disabled { opacity:.55; box-shadow:none; }
+.ag-2fa__error { display:flex; align-items:flex-start; gap:9px; margin:0 0 12px; padding:10px 12px; border:1px solid rgba(220,38,38,.18); border-radius:12px; background:rgba(254,242,242,.92); color:#991B1B; font-size:13px; line-height:1.45; text-align:left; }
+.ag-2fa__salir { margin-top:14px; border:0; background:transparent; color:var(--text-secondary); font-size:13px; text-decoration:underline; }
+
+/* Tarjeta en Configuración */
+.ag-app .ag-2fa-setting { padding:14px 16px; }
+.ag-app .ag-2fa-setting__cabecera { display:flex; align-items:center; gap:12px; }
+.ag-app .ag-2fa-setting__icono { flex:0 0 42px; width:42px; height:42px; display:grid; place-items:center; border-radius:13px; background:var(--grad-finanzas,linear-gradient(135deg,#4F46E5,#9333EA)); color:#fff; font-size:21px; }
+.ag-app .ag-2fa-setting__copia { flex:1 1 auto; min-width:0; display:grid; gap:2px; }
+.ag-app .ag-2fa-setting__copia strong { color:var(--text-primary); font-size:15px; }
+.ag-app .ag-2fa-setting__copia small { color:var(--text-secondary); font-size:12.5px; line-height:1.4; }
+.ag-app .ag-2fa-setting__aviso { margin-top:10px; padding:8px 10px; border-radius:10px; background:rgba(16,185,129,.12); color:var(--text-primary); font-size:13px; }
+.ag-app .ag-2fa-setting__quitar { margin-top:12px; display:grid; gap:8px; font-size:13px; color:var(--text-secondary); }
+.ag-app .ag-2fa-setting__quitar .ag-2fa__codigo { margin:0; }
+.ag-app .ag-2fa-setting__acciones { display:flex; justify-content:flex-end; gap:8px; }
+
+/* Modo oscuro */
+[data-theme='dark'] .ag-2fa { background:#04130E; }
+[data-theme='dark'] .ag-2fa__codigo { border-color:var(--dk-line); background:var(--dk-soft); color:#F8FAFC; }
+[data-theme='dark'] .ag-2fa__clave code { background:var(--dk-soft); color:#F8FAFC; }
+[data-theme='dark'] .ag-2fa__error { background:rgba(127,29,29,.35); border-color:rgba(248,113,113,.35); color:var(--dk-red); }
+[data-theme='dark'] .ag-2fa__aviso { background:rgba(245,158,11,.14); border-color:rgba(245,158,11,.35); color:var(--text-primary); }
+[data-theme='dark'] .ag-app .ag-2fa-setting__aviso { background:rgba(16,185,129,.16); color:var(--text-primary); }
+
+@media (max-width:480px) {
+  .ag-2fa { place-items:start center; padding:16px 12px; }
+  .ag-2fa__card { padding:22px 16px 18px; border-radius:20px; }
+  .ag-2fa__codigo { font-size:24px; }
+}
+@media (prefers-reduced-motion:reduce) { .ag-2fa__boton { transition:none; } }

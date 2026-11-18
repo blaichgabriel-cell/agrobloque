@@ -18,6 +18,8 @@ import { RoleContext } from './lib/RoleContext'
 import { SoporteBarras, useContextoSoporte, useVolverAlPanel } from './components/Soporte'
 import DemoInmersion from './components/DemoInmersion'
 import { esAdministradorGeneral } from './lib/plataforma'
+import { estadoDosFactores } from './lib/dosFactores'
+import { PantallaDosFactores } from './components/DosFactores'
 
 const Mapa = lazy(() => import('./pages/MapaProfesional'))
 const FichaBloque = lazy(() => import('./pages/FichaBloque'))
@@ -411,6 +413,9 @@ export default function App() {
   const [fieldsRefresh, setFieldsRefresh] = useState(0)
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [platformReady, setPlatformReady] = useState(false)
+  // Verificación en dos pasos: null mientras se consulta; si la consulta falla no se bloquea la entrada (la protección real es la base).
+  const [dosFactores, setDosFactores] = useState(null)
+  const [dosFactoresRev, setDosFactoresRev] = useState(0)
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'system'
     const stored = window.localStorage.getItem('agrobloque-theme')
@@ -553,6 +558,16 @@ export default function App() {
   }, [session?.user?.id, guestPath])
 
   useEffect(() => {
+    let cancelled = false
+    setDosFactores(null)
+    if (!session?.user?.id || guestPath) return
+    estadoDosFactores()
+      .then(estado => { if (!cancelled) setDosFactores(estado) })
+      .catch(error => { console.error('No se pudo consultar la verificación en dos pasos', error); if (!cancelled) setDosFactores({ error: true }) })
+    return () => { cancelled = true }
+  }, [session?.user?.id, guestPath, dosFactoresRev])
+
+  useEffect(() => {
     if (guestPath) return
     if (!session && !guestPath) {
       setCampoActivo(null)
@@ -642,6 +657,14 @@ export default function App() {
       <Login />
     </>
   )
+
+  // Verificación en dos pasos. Si la cuenta ya tiene la app vinculada, cada sesión nueva debe escribir el código.
+  // Las cuentas de administración general están obligadas a vincularla antes de ver nada.
+  const necesitaCodigo = dosFactores && !dosFactores.error && dosFactores.tieneFactor && dosFactores.actual !== 'aal2'
+  const debeVincular = dosFactores && !dosFactores.error && !dosFactores.tieneFactor && isPlatformAdmin && platformReady
+  if (!dosFactores || (!dosFactores.error && !dosFactores.tieneFactor && !platformReady)) return <StartupScreen />
+  if (necesitaCodigo) return <PantallaDosFactores modo="reto" factorId={dosFactores.factorId} onListo={() => setDosFactoresRev(v => v + 1)} onSalir={() => forceLocalSignOut()} />
+  if (debeVincular) return <PantallaDosFactores modo="alta" obligatorio onListo={() => setDosFactoresRev(v => v + 1)} onSalir={() => forceLocalSignOut()} />
 
   return (
     <BrowserRouter>
