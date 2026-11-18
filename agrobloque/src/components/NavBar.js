@@ -9,6 +9,7 @@ import { useVolverAlPanel } from './Soporte'
 const GRUPOS_MODULOS = [
   { titulo: 'Campo', items: [
     { path: '/agenda', icon: 'ti-calendar', label: 'Agenda', tone: 'neutral' },
+    { path: '/notas', icon: 'ti-notes', label: 'Bloc de notas', tone: 'neutral' },
     { path: '/calendario', icon: 'ti-calendar-month', label: 'Calendario', tone: 'neutral' },
     { path: '/vivero', icon: 'ti-seeding', label: 'Vivero', tone: 'agua' },
   ] },

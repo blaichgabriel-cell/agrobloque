@@ -10,8 +10,8 @@ const hoy = () => {
   return `${year}-${month}-${day}`
 }
 
-export default function NotasPanel({ modulo, titulo = 'Notas' }) {
-  const can = useCan(modulo)
+export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = modulo, mostrarFecha = true, limite = 6, modoPagina = false }) {
+  const can = useCan(permisoModulo)
   const [notas, setNotas] = useState([])
   const [abierto, setAbierto] = useState(false)
   const [form, setForm] = useState({ fecha: hoy(), titulo: '', contenido: '' })
@@ -68,7 +68,7 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
   }
 
   return (
-    <section className="ui-0ccf91">
+    <section className={`ui-0ccf91 notes-panel ${modoPagina ? 'notes-panel--page' : ''}`}>
       <div className="ui-a3f6e0">
         <div>
           <div className="ui-6dc1df">{titulo}</div>
@@ -86,8 +86,8 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
 
       {abierto && (
         <div className="ui-31eb11">
-          <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value }))}
-            style={inputStyle} />
+          {mostrarFecha && <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value }))}
+            style={inputStyle} />}
           <input value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo:e.target.value }))}
             placeholder="Título opcional" style={inputStyle} />
           <textarea className="ui-db2152" value={form.contenido} onChange={e => setForm(f => ({ ...f, contenido:e.target.value }))}
@@ -103,11 +103,11 @@ export default function NotasPanel({ modulo, titulo = 'Notas' }) {
         <div className="ui-58e1e8">Sin notas registradas.</div>
       ) : (
         <div className="ui-b1b744">
-          {notas.slice(0, 6).map(n => (
+          {(limite ? notas.slice(0, limite) : notas).map(n => (
             <div className="ui-62d523" key={n.id}>
               <div className="ui-7f7e09">
                 <div className="ui-3f9f96">
-                  <div className="ui-93a7e1">{n.fecha}</div>
+                  {mostrarFecha && <div className="ui-93a7e1">{n.fecha}</div>}
                   {n.titulo && <div className="ui-51b484">{n.titulo}</div>}
                 </div>
                 {!isGuest && can.delete && (

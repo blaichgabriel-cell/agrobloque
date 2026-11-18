@@ -227,7 +227,7 @@ export default function Agenda() {
                 </div>
                 <div className="ui-da5cd6">
                   <div className="ui-8c86bf">{tipo.label}{t.campos?.nombre ? ' · ' + t.campos.nombre : ''}{t.bloques?.codigo ? ' · ' + t.bloques.codigo : ''}</div>
-                  <div className="ui-076bb2">{t.descripcion}</div>
+                  <div className="ui-076bb2 agenda-task-description">{t.descripcion}</div>
                 </div>
                 {badge && <div className="ui-fb8dcd" style={{ background:badge.bg, color:badge.color }}>{badge.label}</div>}
               </div>
