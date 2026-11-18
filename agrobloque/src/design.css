@@ -2785,3 +2785,9 @@ img.bl-logo--sobre-oscuro { display:none !important; }
   .ag-2fa__codigo { font-size:24px; }
 }
 @media (prefers-reduced-motion:reduce) { .ag-2fa__boton { transition:none; } }
+
+/* Aviso de stock insuficiente en los formularios de fumigación y fertilización (el registro se guarda igual) */
+.ag-stock-aviso { display:flex; align-items:flex-start; gap:9px; margin:8px 0; padding:10px 12px; border:1px solid rgba(217,119,6,.32); border-radius:12px; background:rgba(245,158,11,.13); color:var(--text-primary); font-size:13px; line-height:1.45; }
+.ag-stock-aviso i { flex:0 0 auto; margin-top:1px; color:#B45309; font-size:17px; }
+[data-theme='dark'] .ag-stock-aviso { border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.16); }
+[data-theme='dark'] .ag-stock-aviso i { color:var(--dk-amber); }

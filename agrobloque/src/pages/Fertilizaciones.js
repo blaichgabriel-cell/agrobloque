@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
-import { ajustarStockSeguro } from '../lib/inventory'
+import { ajustarStockSeguro, textoFaltantes } from '../lib/inventory'
 import { esProductoFertilizacion, incluirSeleccionados } from '../lib/productCategories'
 import { useNavigate } from 'react-router-dom'
 import { useAccionNueva } from '../lib/useAccionNueva'
@@ -70,6 +70,27 @@ const convertirAStock = (cantidad, unidadUso, unidadStock) => {
   if (stock === 'L' && ['cc', 'ml'].includes(uso)) return valor / 1000
   if (['cc', 'ml'].includes(stock) && uso === 'L') return valor * 1000
   return null
+}
+
+// Cuánto producto va a usar la aplicación del formulario (misma cuenta que al guardar) frente a lo que hay en inventario.
+// Devuelve solo los productos que no alcanzan.
+const productosQueNoAlcanzan = (form, productos, bloques) => {
+  const tanques = Math.max(1, Number(form.tanques_cantidad) || 1)
+  const destino = form.bloques_ids || []
+  const usados = new Map()
+  for (const sol of form.soluciones || []) {
+    for (const p of sol.productos || []) {
+      const prod = p.producto_id ? productos.find(x => x.id === p.producto_id) : null
+      if (!prod) continue
+      for (const bloqueId of destino) {
+        const bloque = bloques.find(b => b.id === bloqueId)
+        const uso = p.modo === 'por_planta' ? Number(p.cantidad || 0) * plantasDelBloque(bloque) : Number(p.cantidad || 0) * tanques / (destino.length || 1)
+        const descuento = convertirAStock(uso, p.unidad || prod.unidad || 'kg', prod.unidad)
+        if (descuento > 0) usados.set(prod.id, { prod, usado:(usados.get(prod.id)?.usado || 0) + descuento })
+      }
+    }
+  }
+  return [...usados.values()].filter(({ prod, usado }) => usado > Number(prod.stock_actual || 0) + 1e-9)
 }
 
 function useViewportWidth() {
@@ -288,6 +309,7 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
           <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicación por goteo, lote completo, observaciones..." className="bl-input ui-c1d38e" />
         </label>}
 
+        {!esSemana && form.estado !== 'suspendida' && !form.edit_grupo && productosQueNoAlcanzan(form, productos, bloques).map(({ prod, usado }) => <div className="ag-stock-aviso" role="status" key={prod.id}><i className="ti ti-alert-triangle" aria-hidden="true" /><span>Falta producto: de {prod.nombre} hay {fmtNum(prod.stock_actual)} {prod.unidad || ''} y esta aplicación usa {fmtNum(usado)} {prod.unidad || ''}. Se guardará igual, el stock quedará en 0 y te avisaremos para registrar la compra pendiente.</span></div>)}
         <div className="ui-b691ec">
           <button className="ag-small-action ui-accd8b" onClick={onClose}>Cancelar</button>
           <button onClick={onSave} disabled={saving} className="bl-btn-solid" style={{ opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios de la semana' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicación'}</button>
@@ -697,6 +719,7 @@ export default function Fertilizaciones({ campoActivo }) {
       return
     }
 
+    const faltantes = []
     if (form.estado !== 'suspendida') {
       for (const payload of payloads) {
         const bloque = bloques.find(b => b.id === payload.bloque_id)
@@ -707,11 +730,12 @@ export default function Fertilizaciones({ campoActivo }) {
           const descuento = convertirAStock(cantidadUso, producto.unidad, producto.unidad_stock)
           if (!descuento || descuento <= 0) continue
           const prodActual = productos.find(p => p.id === producto.producto_id)
-          await ajustarStockSeguro({
+          const consumo = await ajustarStockSeguro({
             productoId:producto.producto_id, delta:-descuento, tipo:'consumo_fertilizacion', modulo:'Fertilizaciones',
             referenciaId:grupoId, detalle:`Bloque ${bloque?.codigo || ''}`, stockActual:prodActual?.stock_actual || 0,
             plantacionId:payload.plantacion_id, bloqueId:payload.bloque_id, fecha:form.fecha,
           })
+          if (consumo?.faltante > 0) faltantes.push({ nombre:producto.nombre || prodActual?.nombre || 'Producto', unidad:prodActual?.unidad || producto.unidad_stock, pedido:consumo.pedido, disponible:consumo.disponible, faltante:consumo.faltante })
         }
       }
     }
@@ -768,7 +792,8 @@ export default function Fertilizaciones({ campoActivo }) {
     })
 
     setModal(false)
-    setSuccess(form.edit_grupo ? (form.es_semanal ? 'Fertilización semanal actualizada en todos sus bloques.' : 'Fertilización corregida correctamente.') : form.plan_id ? 'Aplicación del plan registrada correctamente.' : 'Fertilización guardada correctamente.')
+    const mensajeGuardado = form.edit_grupo ? (form.es_semanal ? 'Fertilización semanal actualizada en todos sus bloques.' : 'Fertilización corregida correctamente.') : form.plan_id ? 'Aplicación del plan registrada correctamente.' : 'Fertilización guardada correctamente.'
+    setSuccess(faltantes.length ? `${mensajeGuardado} ${textoFaltantes(faltantes, (cantidad, unidad) => `${fmtNum(cantidad)}${unidad ? ` ${unidad}` : ''}`)}` : mensajeGuardado)
     cargarDatos()
   }
 

@@ -4,7 +4,7 @@ import { guestToken, supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
-import { ajustarStockSeguro } from '../lib/inventory'
+import { ajustarStockSeguro, textoFaltantes } from '../lib/inventory'
 import { categoriaProducto, incluirSeleccionados } from '../lib/productCategories'
 import { useNavigate } from 'react-router-dom'
 
@@ -364,7 +364,7 @@ export default function Fumigaciones() {
     }
   }
 
-  const guardarRelacionesFumigacion = async (fumigacionId, bloquesIds = form.bloques_ids, tanquesCantidad = form.tanques_cantidad) => {
+  const guardarRelacionesFumigacion = async (fumigacionId, bloquesIds = form.bloques_ids, tanquesCantidad = form.tanques_cantidad, faltantes = []) => {
     if (bloquesIds.length > 0) {
       const { error: bloquesError } = await supabase.from('fumigacion_bloques').insert(bloquesIds.map(b => {
         const bloque = bloques.find(x => x.id === b)
@@ -408,7 +408,8 @@ export default function Fumigaciones() {
       if (!descuento || descuento <= 0) continue
       const bloqueId = bloquesIds[0]
       const bloque = bloques.find(x => x.id === bloqueId)
-      await ajustarStockSeguro({ productoId:p.producto_id, delta:-descuento, tipo:'consumo_fumigacion', modulo:'Fumigaciones', referenciaId:fumigacionId, detalle:form.tipo || 'fumigacion', stockActual:prod.stock_actual, plantacionId:getPlantacionActivaId(bloque), bloqueId, fecha:form.fecha })
+      const consumo = await ajustarStockSeguro({ productoId:p.producto_id, delta:-descuento, tipo:'consumo_fumigacion', modulo:'Fumigaciones', referenciaId:fumigacionId, detalle:form.tipo || 'fumigacion', stockActual:prod.stock_actual, plantacionId:getPlantacionActivaId(bloque), bloqueId, fecha:form.fecha })
+      if (consumo?.faltante > 0) faltantes.push({ nombre:productos.find(x => x.id === p.producto_id)?.nombre || p.producto_nombre || 'Producto', unidad:prod.unidad, pedido:consumo.pedido, disponible:consumo.disponible, faltante:consumo.faltante })
     }
   }
 
@@ -440,6 +441,7 @@ export default function Fumigaciones() {
     }
     const bloquesGuardados = [...form.bloques_ids]
     const eraEdicion = Boolean(form.id)
+    const faltantes = []
     setSaving(true)
     try {
       const avisarError = (mensaje) => {
@@ -473,7 +475,7 @@ export default function Fumigaciones() {
         await devolverStockFumigacion(form.id)
         await supabase.from('fumigacion_bloques').delete().eq('fumigacion_id', form.id)
         await supabase.from('fumigacion_productos').delete().eq('fumigacion_id', form.id)
-        await guardarRelacionesFumigacion(fum.id, form.bloques_ids, tanquesEdicion)
+        await guardarRelacionesFumigacion(fum.id, form.bloques_ids, tanquesEdicion, faltantes)
         await registrarAuditoria({ accion:'Edito fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
       } else {
         for (const bloqueId of form.bloques_ids) {
@@ -484,7 +486,7 @@ export default function Fumigaciones() {
             avisarError(`No se pudo guardar la fumigación: ${error?.message || 'sin respuesta de Supabase'}`)
             return
           }
-          await guardarRelacionesFumigacion(fum.id, [bloqueId], tanquesBloque)
+          await guardarRelacionesFumigacion(fum.id, [bloqueId], tanquesBloque, faltantes)
           await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
         }
       }
@@ -497,7 +499,7 @@ export default function Fumigaciones() {
         .filter(Boolean)
         .map(codigo => `Bloque ${codigo}`)
         .join(', ')
-      setMensajeExito(`${eraEdicion ? 'Fumigación actualizada' : 'Fumigación guardada'} y vinculada a ${codigos || `${bloquesGuardados.length} bloque(s)`}.${compartido ? ` Se repartieron ${fmtCantidad(litrosAsignados)} L y quedaron ${fmtCantidad(litrosSobrantes)} L sin asignar.` : ''}`)
+      setMensajeExito(`${eraEdicion ? 'Fumigación actualizada' : 'Fumigación guardada'} y vinculada a ${codigos || `${bloquesGuardados.length} bloque(s)`}.${compartido ? ` Se repartieron ${fmtCantidad(litrosAsignados)} L y quedaron ${fmtCantidad(litrosSobrantes)} L sin asignar.` : ''}${faltantes.length ? ` ${textoFaltantes(faltantes, formatearStock)}` : ''}`)
     } catch (error) {
       setFormError(`No se pudo completar la fumigación: ${error?.message || 'error desconocido'}`)
     } finally {
@@ -873,6 +875,7 @@ export default function Fumigaciones() {
                     {descuento === null ? ' · medida incompatible con el stock' : descuento > 0 ? ` · descuenta ${formatearStock(descuento, prod.unidad)}` : ''}
                     {prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}
                   </div>}
+                  {!form.id && prod && descuento > 0 && descuento > Number(prod.stock_actual || 0) + 1e-9 && <div className="ag-stock-aviso" role="status"><i className="ti ti-alert-triangle" aria-hidden="true" /><span>Falta producto: hay {formatearStock(prod.stock_actual, prod.unidad)} y esta aplicación usa {formatearStock(descuento, prod.unidad)}. Se guardará igual, el stock quedará en 0 y te avisaremos para registrar la compra pendiente.</span></div>}
                 </div>
               )
             })}
