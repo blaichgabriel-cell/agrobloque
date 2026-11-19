@@ -10,27 +10,36 @@ const hoy = () => {
   return `${year}-${month}-${day}`
 }
 
-export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = modulo, mostrarFecha = true, limite = 6, modoPagina = false }) {
+export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = modulo, mostrarFecha = true, limite = 6, modoPagina = false, permitirAsignarBloque = false, referenciaTipo = '', referenciaId = '', referenciaEtiqueta = '' }) {
   const can = useCan(permisoModulo)
   const [notas, setNotas] = useState([])
+  const [bloques, setBloques] = useState([])
   const [abierto, setAbierto] = useState(false)
-  const [form, setForm] = useState({ fecha: hoy(), titulo: '', contenido: '' })
+  const [form, setForm] = useState({ fecha: hoy(), titulo: '', contenido: '', bloque_id: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const isGuest = Boolean(guestToken)
 
   useEffect(() => {
     fetchNotas()
-  }, [modulo])
+  }, [modulo, referenciaTipo, referenciaId])
+
+  useEffect(() => {
+    if (!permitirAsignarBloque) return
+    supabase.from('bloques').select('id,codigo,campos(nombre)').eq('activo', true).order('codigo')
+      .then(({ data }) => setBloques(data || []))
+  }, [permitirAsignarBloque])
 
   const fetchNotas = async () => {
     if (!modulo) return
-    const { data, error } = await supabase
+    let consulta = supabase
       .from('notas_modulo')
       .select('*')
       .eq('modulo', modulo)
       .order('fecha', { ascending: false })
       .order('created_at', { ascending: false })
+    if (referenciaTipo && referenciaId) consulta = consulta.eq('referencia_tipo', referenciaTipo).eq('referencia_id', referenciaId)
+    const { data, error } = await consulta
 
     if (error) {
       setError('Falta ejecutar el SQL de notas en Supabase.')
@@ -45,17 +54,20 @@ export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = m
   const guardar = async () => {
     if (!form.contenido.trim() && !form.titulo.trim()) return
     setSaving(true)
+    const bloqueId = referenciaTipo === 'bloque' && referenciaId ? referenciaId : form.bloque_id
     const { error } = await supabase.from('notas_modulo').insert({
       modulo,
       fecha: form.fecha || hoy(),
       titulo: form.titulo.trim() || null,
       contenido: form.contenido.trim(),
+      referencia_tipo: bloqueId ? 'bloque' : null,
+      referencia_id: bloqueId || null,
     })
 
     if (error) {
       setError('No se pudo guardar la nota. Revisa el SQL de Supabase.')
     } else {
-      setForm({ fecha: hoy(), titulo: '', contenido: '' })
+      setForm({ fecha: hoy(), titulo: '', contenido: '', bloque_id: '' })
       setAbierto(false)
       await fetchNotas()
     }
@@ -90,6 +102,12 @@ export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = m
             style={inputStyle} />}
           <input value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo:e.target.value }))}
             placeholder="Título opcional" style={inputStyle} />
+          {permitirAsignarBloque && <label className="note-block-field">Asignar a un bloque (opcional)
+            <select value={form.bloque_id} onChange={e => setForm(f => ({ ...f, bloque_id:e.target.value }))} style={inputStyle}>
+              <option value="">Sin asignar a un bloque</option>
+              {bloques.map(b => <option key={b.id} value={b.id}>{b.campos?.nombre ? `${b.campos.nombre} · ` : ''}Bloque {b.codigo}</option>)}
+            </select>
+          </label>}
           <textarea className="ui-db2152" value={form.contenido} onChange={e => setForm(f => ({ ...f, contenido:e.target.value }))}
             placeholder="Escribir nota..." style={{ ...inputStyle }} />
           <button className="ui-c630d0" type="button" onClick={guardar} disabled={saving}
@@ -117,6 +135,7 @@ export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = m
                   </button>
                 )}
               </div>
+              {n.referencia_tipo === 'bloque' && <div className="note-block-badge"><i className="ti ti-box" aria-hidden="true" />{referenciaId === n.referencia_id && referenciaEtiqueta ? referenciaEtiqueta : (() => { const bloque = bloques.find(b => b.id === n.referencia_id); return bloque ? `${bloque.campos?.nombre ? `${bloque.campos.nombre} · ` : ''}Bloque ${bloque.codigo}` : 'Asignada a un bloque' })()}</div>}
               <div className="ui-48791d">{n.contenido}</div>
             </div>
           ))}

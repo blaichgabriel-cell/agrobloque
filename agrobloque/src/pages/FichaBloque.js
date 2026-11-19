@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
 import { formatLocaleInteger, parseLocaleInteger } from '../lib/numbers'
 import { useCan } from '../lib/RoleContext'
+import NotasPanel from '../components/NotasPanel'
 
 const diasDesde = (fecha) => {
   if (!fecha) return null
@@ -1213,6 +1214,17 @@ export default function FichaBloque() {
             <button className="ag-small-action ui-f0ca92" type="button" onClick={() => navigate(`/rentabilidad?bloque=${bloque.id}`)}><i className="ti ti-chart-line" aria-hidden="true" /> Rentabilidad <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
           </div>}
         </div>
+
+        <NotasPanel
+          modulo="bloc_notas"
+          permisoModulo="agenda"
+          titulo="Notas de este bloque"
+          mostrarFecha={false}
+          limite={null}
+          referenciaTipo="bloque"
+          referenciaId={bloque.id}
+          referenciaEtiqueta={`Bloque ${bloque.codigo}`}
+        />
 
         {/* Tabs */}
         <div className="ag-block-tabs block-detail-tabs ui-c1894b" aria-label="Secciones del bloque">

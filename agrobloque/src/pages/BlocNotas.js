@@ -19,6 +19,7 @@ export default function BlocNotas() {
           mostrarFecha={false}
           limite={null}
           modoPagina
+          permitirAsignarBloque
         />
       </main>
     </div>
