@@ -10,12 +10,25 @@ const hoy = () => {
   return `${year}-${month}-${day}`
 }
 
+// La tabla admite una referencia por fila. Las notas destinadas a varios bloques se guardan
+// con el mismo `created_at` y aquí vuelven a presentarse como una sola nota con varios vínculos.
+const agruparNotas = (filas = []) => {
+  const grupos = new Map()
+  filas.forEach(nota => {
+    const clave = `${nota.created_at || nota.id}|${nota.titulo || ''}|${nota.contenido || ''}`
+    if (!grupos.has(clave)) grupos.set(clave, { ...nota, ids:[nota.id], referencias:[] })
+    else grupos.get(clave).ids.push(nota.id)
+    if (nota.referencia_tipo === 'bloque' && nota.referencia_id) grupos.get(clave).referencias.push(nota.referencia_id)
+  })
+  return Array.from(grupos.values())
+}
+
 export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = modulo, mostrarFecha = true, limite = 6, modoPagina = false, permitirAsignarBloque = false, referenciaTipo = '', referenciaId = '', referenciaEtiqueta = '' }) {
   const can = useCan(permisoModulo)
   const [notas, setNotas] = useState([])
   const [bloques, setBloques] = useState([])
   const [abierto, setAbierto] = useState(false)
-  const [form, setForm] = useState({ fecha: hoy(), titulo: '', contenido: '', bloque_id: '' })
+  const [form, setForm] = useState({ fecha: hoy(), titulo: '', contenido: '', bloques_ids: [] })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const isGuest = Boolean(guestToken)
@@ -48,36 +61,45 @@ export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = m
     }
 
     setError('')
-    setNotas(data || [])
+    setNotas(agruparNotas(data || []))
   }
 
   const guardar = async () => {
     if (!form.contenido.trim() && !form.titulo.trim()) return
     setSaving(true)
-    const bloqueId = referenciaTipo === 'bloque' && referenciaId ? referenciaId : form.bloque_id
-    const { error } = await supabase.from('notas_modulo').insert({
+    const bloquesIds = referenciaTipo === 'bloque' && referenciaId ? [referenciaId] : form.bloques_ids
+    const createdAt = new Date().toISOString()
+    const base = {
       modulo,
       fecha: form.fecha || hoy(),
       titulo: form.titulo.trim() || null,
       contenido: form.contenido.trim(),
-      referencia_tipo: bloqueId ? 'bloque' : null,
-      referencia_id: bloqueId || null,
-    })
+      created_at: createdAt,
+    }
+    const registros = bloquesIds.length
+      ? bloquesIds.map(bloqueId => ({ ...base, referencia_tipo:'bloque', referencia_id:bloqueId }))
+      : [{ ...base, referencia_tipo:null, referencia_id:null }]
+    const { error } = await supabase.from('notas_modulo').insert(registros)
 
     if (error) {
       setError('No se pudo guardar la nota. Revisa el SQL de Supabase.')
     } else {
-      setForm({ fecha: hoy(), titulo: '', contenido: '', bloque_id: '' })
+      setForm({ fecha: hoy(), titulo: '', contenido: '', bloques_ids: [] })
       setAbierto(false)
       await fetchNotas()
     }
     setSaving(false)
   }
 
-  const eliminar = async (id) => {
-    await supabase.from('notas_modulo').delete().eq('id', id)
+  const eliminar = async (ids) => {
+    await supabase.from('notas_modulo').delete().in('id', Array.isArray(ids) ? ids : [ids])
     fetchNotas()
   }
+
+  const alternarBloque = id => setForm(actual => ({
+    ...actual,
+    bloques_ids: actual.bloques_ids.includes(id) ? actual.bloques_ids.filter(item => item !== id) : [...actual.bloques_ids, id],
+  }))
 
   return (
     <section className={`ui-0ccf91 notes-panel ${modoPagina ? 'notes-panel--page' : ''}`}>
@@ -102,12 +124,13 @@ export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = m
             style={inputStyle} />}
           <input value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo:e.target.value }))}
             placeholder="Título opcional" style={inputStyle} />
-          {permitirAsignarBloque && <label className="note-block-field">Asignar a un bloque (opcional)
-            <select value={form.bloque_id} onChange={e => setForm(f => ({ ...f, bloque_id:e.target.value }))} style={inputStyle}>
-              <option value="">Sin asignar a un bloque</option>
-              {bloques.map(b => <option key={b.id} value={b.id}>{b.campos?.nombre ? `${b.campos.nombre} · ` : ''}Bloque {b.codigo}</option>)}
-            </select>
-          </label>}
+          {permitirAsignarBloque && <fieldset className="note-block-picker">
+            <legend>Asignar a bloques (opcional)</legend>
+            <div className="note-block-picker__summary"><span>{form.bloques_ids.length ? `${form.bloques_ids.length} bloque${form.bloques_ids.length === 1 ? '' : 's'} seleccionado${form.bloques_ids.length === 1 ? '' : 's'}` : 'Sin asignar a bloques'}</span>{form.bloques_ids.length > 0 && <button type="button" onClick={() => setForm(f => ({ ...f, bloques_ids:[] }))}>Quitar selección</button>}</div>
+            <div className="note-block-picker__options">
+              {bloques.map(b => { const seleccionado = form.bloques_ids.includes(b.id); return <button type="button" key={b.id} aria-pressed={seleccionado} onClick={() => alternarBloque(b.id)}><i className={`ti ${seleccionado ? 'ti-circle-check-filled' : 'ti-circle'}`} aria-hidden="true" /><span>{b.campos?.nombre && <small>{b.campos.nombre}</small>}Bloque {b.codigo}</span></button> })}
+            </div>
+          </fieldset>}
           <textarea className="ui-db2152" value={form.contenido} onChange={e => setForm(f => ({ ...f, contenido:e.target.value }))}
             placeholder="Escribir nota..." style={{ ...inputStyle }} />
           <button className="ui-c630d0" type="button" onClick={guardar} disabled={saving}
@@ -129,13 +152,13 @@ export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = m
                   {n.titulo && <div className="ui-51b484">{n.titulo}</div>}
                 </div>
                 {!isGuest && can.delete && (
-                  <button className="ui-55ae91" type="button" onClick={() => eliminar(n.id)}
+                  <button className="ui-55ae91" type="button" onClick={() => eliminar(n.ids || [n.id])}
                    >
                     Eliminar
                   </button>
                 )}
               </div>
-              {n.referencia_tipo === 'bloque' && <div className="note-block-badge"><i className="ti ti-box" aria-hidden="true" />{referenciaId === n.referencia_id && referenciaEtiqueta ? referenciaEtiqueta : (() => { const bloque = bloques.find(b => b.id === n.referencia_id); return bloque ? `${bloque.campos?.nombre ? `${bloque.campos.nombre} · ` : ''}Bloque ${bloque.codigo}` : 'Asignada a un bloque' })()}</div>}
+              {n.referencias?.length > 0 && <div className="note-block-badges">{n.referencias.map(bloqueId => <div className="note-block-badge" key={bloqueId}><i className="ti ti-box" aria-hidden="true" />{referenciaId === bloqueId && referenciaEtiqueta ? referenciaEtiqueta : (() => { const bloque = bloques.find(b => b.id === bloqueId); return bloque ? `${bloque.campos?.nombre ? `${bloque.campos.nombre} · ` : ''}Bloque ${bloque.codigo}` : 'Asignada a un bloque' })()}</div>)}</div>}
               <div className="ui-48791d">{n.contenido}</div>
             </div>
           ))}
