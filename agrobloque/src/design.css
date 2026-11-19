@@ -196,6 +196,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search
 .notes-panel--page .ui-db2152 { min-height:150px; resize:vertical; }
 .notes-panel--page .ui-b1b744 { display:grid; gap:14px; }
 .notes-panel--page .ui-62d523 { margin:0; padding:16px !important; border:1px solid rgba(15,41,30,.1); border-radius:16px !important; background:var(--surface-glass-solid) !important; box-shadow:0 10px 28px rgba(15,41,30,.06) !important; }
+.note-form-mode { margin:0 0 10px; color:var(--text-primary); font-size:13px; font-weight:800; }
+.note-card-actions { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+.note-card-actions button { min-height:36px; display:inline-flex; align-items:center; gap:5px; padding:5px 9px; }
+.note-edit-button { border:1px solid rgba(15,41,30,.12); border-radius:8px; background:transparent; color:var(--forest-700); font-size:11px; font-weight:700; }
 .note-block-picker { min-width:0; margin:2px 0 10px; padding:0; border:0; }
 .note-block-picker legend { margin-bottom:6px; color:var(--text-secondary); font-size:11px; font-weight:700; }
 .note-block-picker__summary { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:7px; color:var(--text-secondary); font-size:11px; }
@@ -377,6 +381,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,.ag-block-search
   .notes-page__body { padding:8px 12px 110px; }
   .notes-panel--page .ui-db2152 { min-height:130px; }
   .note-block-picker__options { grid-template-columns:1fr; }
+  .note-card-actions button { min-width:40px; padding-inline:8px; }
   input:not([type='checkbox']):not([type='radio']),select,textarea { font-size:16px !important; }
 }
 @media (max-width:390px) {
