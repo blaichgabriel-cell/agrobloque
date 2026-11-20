@@ -313,7 +313,14 @@ export default function FichaBloque() {
         const { data: fts } = await supabase.from('fotos_bloque')
           .select('*').eq('bloque_id', id).eq('plantacion_id', activa.id)
           .order('created_at', { ascending: false })
-        setFotos(fts || [])
+        const fotosIds = (fts || []).map(foto => foto.id)
+        const { data: descripcionesFotos } = fotosIds.length ? await supabase.from('notas_modulo')
+          .select('referencia_id,contenido')
+          .eq('modulo', 'fotos_bloque')
+          .eq('referencia_tipo', 'foto_bloque')
+          .in('referencia_id', fotosIds) : { data:[] }
+        const descripcionPorFoto = Object.fromEntries((descripcionesFotos || []).map(nota => [nota.referencia_id, nota.contenido]))
+        setFotos((fts || []).map(foto => ({ ...foto, descripcion:descripcionPorFoto[foto.id] || '' })))
 
         const { data: mts } = await supabase.from('muertes_plantas')
           .select('*').eq('bloque_id', id).eq('plantacion_id', activa.id)
@@ -628,14 +635,24 @@ export default function FichaBloque() {
     setSaving(true)
     const reader = new FileReader()
     reader.onload = async (ev) => {
-      const { error } = await supabase.from('fotos_bloque').insert({
+      const { data:fotoGuardada, error } = await supabase.from('fotos_bloque').insert({
         bloque_id: id, plantacion_id: plantacionActiva?.id,
         url: ev.target.result,
         fecha: new Date().toISOString().split('T')[0],
-        descripcion: fotoDescripcion.trim() || null,
-      })
+      }).select('id').single()
+      if (error) { setSaving(false); return setFotoError('No se pudo guardar la foto.') }
+      if (fotoDescripcion.trim()) {
+        const { error:descripcionError } = await supabase.from('notas_modulo').insert({
+          modulo:'fotos_bloque', referencia_tipo:'foto_bloque', referencia_id:fotoGuardada.id,
+          fecha:new Date().toISOString().split('T')[0], titulo:'Descripción de foto', contenido:fotoDescripcion.trim(),
+        })
+        if (descripcionError) {
+          await supabase.from('fotos_bloque').delete().eq('id', fotoGuardada.id)
+          setSaving(false)
+          return setFotoError('No se pudo guardar la descripción. Intentá nuevamente.')
+        }
+      }
       setSaving(false)
-      if (error) return setFotoError(error.message?.includes('descripcion') ? 'Falta aplicar la actualización de descripciones de fotos en Supabase.' : 'No se pudo guardar la foto.')
       setFotoPendiente(null)
       setFotoDescripcion('')
       fetchData()
@@ -644,6 +661,7 @@ export default function FichaBloque() {
   }
 
   const eliminarFoto = async (fotoId) => {
+    await supabase.from('notas_modulo').delete().eq('modulo', 'fotos_bloque').eq('referencia_tipo', 'foto_bloque').eq('referencia_id', fotoId)
     await supabase.from('fotos_bloque').delete().eq('id', fotoId)
     fetchData()
   }
@@ -965,7 +983,7 @@ export default function FichaBloque() {
       supabase.from('fumigacion_bloques').select('fumigaciones(id, fecha, tipo, operario, notas, tanques_cantidad, tanque_litros, anulada, fumigacion_productos(*, productos(nombre, unidad, carencia_dias)))').eq('bloque_id', id),
       conPeriodo(supabase.from('fertilizaciones').select('id, fecha, notas, soluciones, anulada, plan_id').eq('bloque_id', id)).order('fecha', { ascending:false }),
       supabase.from('muertes_plantas').select('id, fecha, cantidad, causa, descripcion').eq('plantacion_id', plantacion.id).order('fecha', { ascending:false }),
-      supabase.from('fotos_bloque').select('id, fecha, url, descripcion').eq('plantacion_id', plantacion.id).order('fecha', { ascending:false }),
+      supabase.from('fotos_bloque').select('id, fecha, url').eq('plantacion_id', plantacion.id).order('fecha', { ascending:false }),
       conPeriodo(supabase.from('costos').select('id, fecha, tipo, descripcion, monto').eq('bloque_id', id)).order('fecha', { ascending:false }),
       conPeriodo(supabase.from('ventas').select('id, fecha, producto, kg_total, precio_kg, total, monto_cobrado, estado_cobro, compradores(nombre)').eq('bloque_id', id)).order('fecha', { ascending:false }),
     ])
@@ -976,6 +994,11 @@ export default function FichaBloque() {
       .filter(fumigacion => fumigacion && dentroDelPeriodo(fumigacion.fecha) && !fumigacion.anulada)
       .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))
 
+    const fotosHistoricasBase = resultados[4].data || []
+    const idsFotosHistoricas = fotosHistoricasBase.map(foto => foto.id)
+    const { data:descripcionesHistoricas } = idsFotosHistoricas.length ? await supabase.from('notas_modulo').select('referencia_id,contenido').eq('modulo', 'fotos_bloque').eq('referencia_tipo', 'foto_bloque').in('referencia_id', idsFotosHistoricas) : { data:[] }
+    const descripcionHistoricaPorFoto = Object.fromEntries((descripcionesHistoricas || []).map(nota => [nota.referencia_id, nota.contenido]))
+
     setHistorialCiclo({
       inicio,
       finExclusivo,
@@ -983,7 +1006,7 @@ export default function FichaBloque() {
       fumigaciones:fumigacionesCiclo,
       fertilizaciones:(resultados[2].data || []).filter(item => !item.anulada),
       muertes:resultados[3].data || [],
-      fotos:resultados[4].data || [],
+      fotos:fotosHistoricasBase.map(foto => ({ ...foto, descripcion:descripcionHistoricaPorFoto[foto.id] || '' })),
       costos:resultados[5].data || [],
       ventas:resultados[6].data || [],
     })
