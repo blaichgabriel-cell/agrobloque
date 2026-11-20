@@ -37,7 +37,7 @@ export default function Alertas() {
       { data: planesFertilizacion },
       { data: fertilizacionesRecientes },
     ] = await Promise.all([
-      supabase.from('tareas').select('id, descripcion, fecha_programada, completada').eq('completada', false).order('fecha_programada'),
+      supabase.from('tareas').select('id, descripcion, fecha_programada, completada, anulada').eq('completada', false).or('anulada.is.null,anulada.eq.false').order('fecha_programada'),
       supabase.from('productos').select('id, nombre, stock_actual, stock_minimo').eq('activo', true).order('nombre'),
       supabase.from('plantaciones').select('id, fecha_siembra, activa, bloques(id, codigo), cultivos(nombre)').eq('activa', true),
       supabase.from('vivero_lotes').select('id, cultivo, variedad, fecha_siembra, fecha_estimada_trasplante, estado').eq('archivado', false).order('fecha_siembra', { ascending:false }),
@@ -48,7 +48,7 @@ export default function Alertas() {
 
     const lista = []
 
-    ;(tareas || []).forEach(t => {
+    ;(tareas || []).filter(t => !t.anulada && !String(t.descripcion || '').startsWith('[Cancelada]')).forEach(t => {
       const vencida = t.fecha_programada && t.fecha_programada < hoy
       lista.push({
         tipo: vencida ? 'alta' : 'media',

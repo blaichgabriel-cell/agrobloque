@@ -67,11 +67,15 @@ export default function FichaBloque() {
   const [plantacionActiva, setPlantacionActiva] = useState(null)
   const [historial, setHistorial] = useState([])
   const [cosechasCiclo, setCosechasCiclo] = useState([])
-  const [costosCiclo, setCostosCiclo] = useState({ loading:true, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, error:'' })
+  const [costosCiclo, setCostosCiclo] = useState({ loading:true, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, consumos:[], costosManuales:[], error:'' })
+  const [detalleCostos, setDetalleCostos] = useState(null)
   const [cosechaError, setCosechaError] = useState('')
   const [cosechaSuccess, setCosechaSuccess] = useState('')
   const [incidencias, setIncidencias] = useState([])
   const [fotos, setFotos] = useState([])
+  const [fotoPendiente, setFotoPendiente] = useState(null)
+  const [fotoDescripcion, setFotoDescripcion] = useState('')
+  const [fotoError, setFotoError] = useState('')
   const [muertes, setMuertes] = useState([])
   const [cultivos, setCultivos] = useState([])
   const [abonos, setAbonos] = useState([])
@@ -318,10 +322,10 @@ export default function FichaBloque() {
 
         const [consumosResultado, costosResultado] = await Promise.all([
           supabase.from('consumos_valorizados')
-            .select('costo_total, origen_tipo, anulado')
+            .select('id, fecha, cantidad_stock, costo_unitario, costo_total, origen_tipo, origen_id, anulado, productos(nombre, unidad)')
             .eq('plantacion_id', activa.id),
           supabase.from('costos')
-            .select('monto, fecha, plantacion_id, anulada')
+            .select('id, monto, fecha, tipo, descripcion, plantacion_id, anulada')
             .eq('bloque_id', id)
             .gte('fecha', activa.fecha_siembra || '2000-01-01'),
         ])
@@ -338,10 +342,12 @@ export default function FichaBloque() {
           fumigaciones,
           fertilizaciones,
           manuales:manualesTotal,
+          consumos,
+          costosManuales:manuales,
           error:consumosResultado.error || costosResultado.error ? 'No se pudieron consultar todos los costos del ciclo.' : '',
         })
       } else {
-        setCostosCiclo({ loading:false, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, error:'' })
+        setCostosCiclo({ loading:false, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, consumos:[], costosManuales:[], error:'' })
       }
     }
 
@@ -609,15 +615,29 @@ export default function FichaBloque() {
     fetchData()
   }
 
-  const subirFoto = async (e) => {
+  const seleccionarFoto = (e) => {
     const file = e.target.files[0]; if (!file) return
+    setFotoPendiente(file)
+    setFotoDescripcion('')
+    setFotoError('')
+    e.target.value = ''
+  }
+
+  const subirFoto = async () => {
+    const file = fotoPendiente; if (!file) return
+    setSaving(true)
     const reader = new FileReader()
     reader.onload = async (ev) => {
-      await supabase.from('fotos_bloque').insert({
+      const { error } = await supabase.from('fotos_bloque').insert({
         bloque_id: id, plantacion_id: plantacionActiva?.id,
         url: ev.target.result,
-        fecha: new Date().toISOString().split('T')[0]
+        fecha: new Date().toISOString().split('T')[0],
+        descripcion: fotoDescripcion.trim() || null,
       })
+      setSaving(false)
+      if (error) return setFotoError(error.message?.includes('descripcion') ? 'Falta aplicar la actualización de descripciones de fotos en Supabase.' : 'No se pudo guardar la foto.')
+      setFotoPendiente(null)
+      setFotoDescripcion('')
       fetchData()
     }
     reader.readAsDataURL(file)
@@ -945,7 +965,7 @@ export default function FichaBloque() {
       supabase.from('fumigacion_bloques').select('fumigaciones(id, fecha, tipo, operario, notas, tanques_cantidad, tanque_litros, anulada, fumigacion_productos(*, productos(nombre, unidad, carencia_dias)))').eq('bloque_id', id),
       conPeriodo(supabase.from('fertilizaciones').select('id, fecha, notas, soluciones, anulada, plan_id').eq('bloque_id', id)).order('fecha', { ascending:false }),
       supabase.from('muertes_plantas').select('id, fecha, cantidad, causa, descripcion').eq('plantacion_id', plantacion.id).order('fecha', { ascending:false }),
-      supabase.from('fotos_bloque').select('id, fecha, url').eq('plantacion_id', plantacion.id).order('fecha', { ascending:false }),
+      supabase.from('fotos_bloque').select('id, fecha, url, descripcion').eq('plantacion_id', plantacion.id).order('fecha', { ascending:false }),
       conPeriodo(supabase.from('costos').select('id, fecha, tipo, descripcion, monto').eq('bloque_id', id)).order('fecha', { ascending:false }),
       conPeriodo(supabase.from('ventas').select('id, fecha, producto, kg_total, precio_kg, total, monto_cobrado, estado_cobro, compradores(nombre)').eq('bloque_id', id)).order('fecha', { ascending:false }),
     ])
@@ -1126,7 +1146,7 @@ export default function FichaBloque() {
               {muertesHistoricas.map(muerte => <CycleRow key={muerte.id} date={muerte.fecha} title={`${Number(muerte.cantidad || 0).toLocaleString('es-PY')} planta${Number(muerte.cantidad) === 1 ? '' : 's'} · ${muerte.causa || 'Sin causa'}`} detail={muerte.descripcion} />)}
             </CycleSection>
 
-            {fotosHistoricas.length > 0 && <section className="ag-surface cycle-history-section"><div className="cycle-history-section__head"><span><i className="ti ti-photo" aria-hidden="true" /><strong>Fotos del ciclo</strong></span><em>{fotosHistoricas.length}</em></div><div className="cycle-history-photos">{fotosHistoricas.map(foto => <img key={foto.id} src={foto.url} alt={`Registro del ${foto.fecha || 'ciclo'}`} loading="lazy" />)}</div></section>}
+            {fotosHistoricas.length > 0 && <section className="ag-surface cycle-history-section"><div className="cycle-history-section__head"><span><i className="ti ti-photo" aria-hidden="true" /><strong>Fotos del ciclo</strong></span><em>{fotosHistoricas.length}</em></div><div className="cycle-history-photos">{fotosHistoricas.map(foto => <figure key={foto.id}><img src={foto.url} alt={foto.descripcion || `Registro del ${foto.fecha || 'ciclo'}`} loading="lazy" />{foto.descripcion && <figcaption>{foto.descripcion}</figcaption>}</figure>)}</div></section>}
           </>}
 
           <div className="ag-surface ui-49272e">
@@ -1161,7 +1181,9 @@ export default function FichaBloque() {
     <div className="ag-page block-detail-modern ui-c1c124">
       {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
       {showEditarNombre && <Modal busy={saving} onClose={() => setShowEditarNombre(false)} label="Editar nombre del bloque" style={{ position:'fixed', inset:0, zIndex:220, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface ui-211525" style={{ width:'min(430px, 100%)' }}><div className="ui-3e43be">Editar nombre del bloque</div><div className="ui-01159a">Este nombre se actualizará en mapas, aplicaciones, costos e historiales vinculados.</div>{nombreBloqueError && <div className="ag-feedback ag-feedback-error" role="alert">{nombreBloqueError}</div>}<label className="ag-field-label">Nombre<input className="bl-input" autoFocus value={nombreBloque} onChange={e => setNombreBloque(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') guardarNombreBloque() }} maxLength={50} placeholder="Ej: A-1" /></label><div className="ui-9c6869"><button className="ag-small-action ui-395a62" onClick={() => setShowEditarNombre(false)} disabled={saving}>Cancelar</button><button className="ag-small-action ui-f5f413" onClick={guardarNombreBloque} disabled={saving}>{saving ? 'Guardando…' : 'Guardar nombre'}</button></div></div></Modal>}
-      <input className="ui-cb4589" type="file" accept="image/*" ref={fileRef} onChange={subirFoto} />
+      <input className="ui-cb4589" type="file" accept="image/*" ref={fileRef} onChange={seleccionarFoto} />
+      {fotoPendiente && <Modal busy={saving} onClose={() => { setFotoPendiente(null); setFotoError('') }} label="Describir foto" style={{ position:'fixed', inset:0, zIndex:230, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface ui-211525" style={{ width:'min(480px, 100%)' }}><div className="ui-3e43be">Agregar foto al bloque</div><div className="ui-01159a">La descripción es opcional y quedará visible junto a la foto.</div>{fotoError && <div className="ag-feedback ag-feedback-error" role="alert">{fotoError}</div>}<label className="ag-field-label">Descripción (opcional)<textarea className="bl-input photo-description-input" autoFocus value={fotoDescripcion} onChange={e => setFotoDescripcion(e.target.value)} maxLength={300} placeholder="Ej: Planta con 35 días; se observan manchas en las hojas" /></label><div className="ui-9c6869"><button className="ag-small-action ui-395a62" onClick={() => setFotoPendiente(null)} disabled={saving}>Cancelar</button><button className="ag-small-action ui-f5f413" onClick={subirFoto} disabled={saving}>{saving ? 'Guardando…' : 'Guardar foto'}</button></div></div></Modal>}
+      {detalleCostos && <Modal onClose={() => setDetalleCostos(null)} label="Detalle de costos" style={{ position:'fixed', inset:0, zIndex:225, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface block-cost-detail"><div className="block-cost-detail__head"><div><small>HISTORIAL DEL CICLO</small><h2>{detalleCostos === 'fumigaciones' ? 'Fumigaciones' : detalleCostos === 'fertilizaciones' ? 'Fertilizaciones' : 'Gastos directos'}</h2></div><button className="ag-small-action" onClick={() => setDetalleCostos(null)} aria-label="Cerrar"><i className="ti ti-x" /></button></div><CostDetailList tipo={detalleCostos} costos={costosCiclo} /></div></Modal>}
 
       {/* Header */}
       <div className="ag-block-header block-detail-header ui-606ba4">
@@ -1289,9 +1311,9 @@ export default function FichaBloque() {
                   </div>
                   {costosCiclo.error && <div className="ag-feedback ag-feedback-error" role="alert">{costosCiclo.error}</div>}
                   {!costosCiclo.loading && <div className="block-cost-card__breakdown">
-                    <span><i className="ti ti-spray" /><small>Fumigaciones</small><strong>Gs. {fmtGs(costosCiclo.fumigaciones)}</strong></span>
-                    <span><i className="ti ti-leaf" /><small>Fertilizaciones</small><strong>Gs. {fmtGs(costosCiclo.fertilizaciones)}</strong></span>
-                    <span><i className="ti ti-receipt" /><small>Gastos directos</small><strong>Gs. {fmtGs(costosCiclo.manuales)}</strong></span>
+                    <button type="button" onClick={() => setDetalleCostos('fumigaciones')}><i className="ti ti-spray" /><small>Fumigaciones</small><strong>Gs. {fmtGs(costosCiclo.fumigaciones)}</strong><em>Ver detalle <i className="ti ti-chevron-right" /></em></button>
+                    <button type="button" onClick={() => setDetalleCostos('fertilizaciones')}><i className="ti ti-leaf" /><small>Fertilizaciones</small><strong>Gs. {fmtGs(costosCiclo.fertilizaciones)}</strong><em>Ver detalle <i className="ti ti-chevron-right" /></em></button>
+                    <button type="button" onClick={() => setDetalleCostos('manuales')}><i className="ti ti-receipt" /><small>Gastos directos</small><strong>Gs. {fmtGs(costosCiclo.manuales)}</strong><em>Ver detalle <i className="ti ti-chevron-right" /></em></button>
                   </div>}
                   <div className="block-cost-card__foot"><span>Incluye insumos consumidos y gastos asignados a este bloque. No reparte jornales generales del campo.</span><button type="button" onClick={() => navigate(`/rentabilidad?bloque=${bloque.id}`)}>Ver rentabilidad <i className="ti ti-arrow-up-right" /></button></div>
                 </section>
@@ -1577,6 +1599,7 @@ export default function FichaBloque() {
                 {fotos.map(f => (
                   <div className="ui-8e4804" key={f.id}>
                     <img className="ui-caf585" src={f.url} alt="foto bloque"/>
+                    {f.descripcion && <div className="block-photo-description">{f.descripcion}</div>}
                     <div className="ui-aa460d">
                       <span className="ui-e3758e">{f.fecha}</span>
                       {can.delete && <button aria-label="Eliminar" className="ag-small-action ui-d088ca" onClick={() => eliminarFoto(f.id)}>
@@ -2039,4 +2062,13 @@ function CycleRow({ date, title, detail }) {
       <div><strong>{title}</strong>{detail && <p>{detail}</p>}</div>
     </article>
   )
+}
+
+function CostDetailList({ tipo, costos }) {
+  const items = tipo === 'manuales'
+    ? (costos.costosManuales || []).map(item => ({ ...item, nombre:item.descripcion || item.tipo || 'Gasto directo', total:item.monto, detalle:item.tipo || '' }))
+    : (costos.consumos || [])
+      .filter(item => item.origen_tipo === `consumo_${tipo === 'fumigaciones' ? 'fumigacion' : 'fertilizacion'}`)
+      .map(item => ({ ...item, nombre:item.productos?.nombre || 'Insumo', total:item.costo_total, detalle:`${fmtKg(item.cantidad_stock)} ${item.productos?.unidad || ''} × Gs. ${fmtGs(item.costo_unitario)}` }))
+  return <div className="block-cost-detail__list">{items.length === 0 ? <div className="ui-5baa7a">No hay costos registrados en esta categoría.</div> : items.map(item => <article key={item.id}><div><strong>{item.nombre}</strong><small>{fechaCorta(item.fecha)}{item.detalle ? ` · ${item.detalle}` : ''}</small></div><b>Gs. {fmtGs(item.total)}</b></article>)}</div>
 }

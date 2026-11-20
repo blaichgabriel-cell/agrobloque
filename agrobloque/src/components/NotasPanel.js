@@ -26,7 +26,7 @@ const agruparNotas = (filas = []) => {
   return Array.from(grupos.values())
 }
 
-export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = modulo, mostrarFecha = true, limite = 6, modoPagina = false, permitirAsignarBloque = false, referenciaTipo = '', referenciaId = '', referenciaEtiqueta = '' }) {
+export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'Notas', permisoModulo = modulo, mostrarFecha = true, limite = 6, modoPagina = false, permitirAsignarBloque = false, referenciaTipo = '', referenciaId = '', referenciaEtiqueta = '' }) {
   const can = useCan(permisoModulo)
   const [notas, setNotas] = useState([])
   const [bloques, setBloques] = useState([])
@@ -39,7 +39,7 @@ export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = m
 
   useEffect(() => {
     fetchNotas()
-  }, [modulo, referenciaTipo, referenciaId])
+  }, [modulo, JSON.stringify(modulos || []), referenciaTipo, referenciaId])
 
   useEffect(() => {
     if (!permitirAsignarBloque) return
@@ -49,12 +49,13 @@ export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = m
 
   const fetchNotas = async () => {
     if (!modulo) return
+    const fuentes = modulos?.length ? modulos : [modulo]
     let consulta = supabase
       .from('notas_modulo')
       .select('*')
-      .eq('modulo', modulo)
       .order('fecha', { ascending: false })
       .order('created_at', { ascending: false })
+    consulta = fuentes.length === 1 ? consulta.eq('modulo', fuentes[0]) : consulta.in('modulo', fuentes)
     if (referenciaTipo && referenciaId) consulta = consulta.eq('referencia_tipo', referenciaTipo).eq('referencia_id', referenciaId)
     const { data, error } = await consulta
 
@@ -73,7 +74,7 @@ export default function NotasPanel({ modulo, titulo = 'Notas', permisoModulo = m
     setSaving(true)
     const bloquesIds = referenciaTipo === 'bloque' && referenciaId ? [referenciaId] : form.bloques_ids
     const datos = {
-      modulo,
+      modulo: moduloDestino || modulo,
       fecha: form.fecha || hoy(),
       titulo: form.titulo.trim() || null,
       contenido: form.contenido.trim(),

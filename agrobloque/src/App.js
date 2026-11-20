@@ -29,7 +29,6 @@ const PlataformaSoporte = lazy(() => import('./pages/PlataformaSoporte'))
 const PlataformaPlanes = lazy(() => import('./pages/PlataformaPlanes'))
 const PlataformaEquipo = lazy(() => import('./pages/PlataformaEquipo'))
 const Agenda = lazy(() => import('./pages/Agenda'))
-const BlocNotas = lazy(() => import('./pages/BlocNotas'))
 const Calendario = lazy(() => import('./pages/Calendario'))
 const Asistencia = lazy(() => import('./pages/Asistencia'))
 const Cosecha = lazy(() => import('./pages/Cosecha'))
@@ -95,7 +94,6 @@ const allTabs = [
   { path:'/', icon:'ti-home', label:'Inicio' },
   { path:'/mapa', icon:'ti-map', label:'Mapa' },
   { path:'/agenda', icon:'ti-calendar', label:'Agenda' },
-  { path:'/notas', icon:'ti-notes', label:'Bloc de notas' },
   { path:'/calendario', icon:'ti-calendar-month', label:'Calendario' },
   { path:'/vivero', icon:'vivero-icon', label:'Vivero' },
   { path:'/asistencia', icon:'ti-users', label:'Asistencia' },
@@ -370,7 +368,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/mapa" element={<ProtectedRoute role={effectiveRole} moduleKey="mapa"><Mapa campoActivo={campoActivo}/></ProtectedRoute>}/>
             <Route path="/bloque/:id" element={<ProtectedRoute role={effectiveRole} moduleKey="mapa"><FichaBloque/></ProtectedRoute>}/>
             <Route path="/agenda" element={<ProtectedRoute role={effectiveRole} moduleKey="agenda"><Agenda/></ProtectedRoute>}/>
-            <Route path="/notas" element={<ProtectedRoute role={effectiveRole} moduleKey="agenda"><BlocNotas/></ProtectedRoute>}/>
+            <Route path="/notas" element={<Navigate to="/agenda" replace/>}/>
             <Route path="/calendario" element={<ProtectedRoute role={effectiveRole} moduleKey="agenda"><Calendario/></ProtectedRoute>}/>
             <Route path="/vivero" element={<ProtectedRoute role={effectiveRole} moduleKey="vivero"><Vivero/></ProtectedRoute>}/>
             <Route path="/asistencia" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={effectiveRole} moduleKey="asistencia"><Asistencia/></ProtectedRoute>}/>

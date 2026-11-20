@@ -27,12 +27,13 @@ export function useConteoAlertas(role, activo = true) {
     }
     window.addEventListener('agrobloque:alertas-conteo', sincronizarConteo)
     Promise.all([
-      supabase.from('tareas').select('id', { count: 'exact', head: true }).eq('completada', false).eq('anulada', false),
+      supabase.from('tareas').select('id,descripcion,anulada').eq('completada', false).or('anulada.is.null,anulada.eq.false'),
       supabase.from('productos').select('id,stock_actual,stock_minimo').eq('activo', true),
     ]).then(([tareas, productos]) => {
       if (cancelado) return
       const stock = (productos.data || []).filter(p => Number(p.stock_actual) <= 0 || (Number(p.stock_minimo) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo))).length
-      if (!conteoConfirmado.current) setConteo(Number(tareas.count || 0) + stock)
+      const abiertas = (tareas.data || []).filter(t => !t.anulada && !String(t.descripcion || '').startsWith('[Cancelada]')).length
+      if (!conteoConfirmado.current) setConteo(abiertas + stock)
     }).catch(() => {})
     return () => { cancelado = true; window.removeEventListener('agrobloque:alertas-conteo', sincronizarConteo) }
   }, [puede, role?.email])
