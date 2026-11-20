@@ -364,6 +364,29 @@ export default function Fumigaciones() {
     }
   }
 
+  // Si la base todavía no tiene las funciones atómicas, se usa el camino anterior (guardar en varios pasos).
+  const rpcAusente = (error) => error?.code === 'PGRST202' || /could not find the function|schema cache/i.test(error?.message || '')
+
+  // Bloques y productos de una aplicación, con el descuento de stock ya calculado, para las funciones atómicas de la base.
+  const armarDetalleAtomico = (bloquesIds, tanquesCantidad) => ({
+    bloques: bloquesIds.map(b => {
+      const bloque = bloques.find(x => x.id === b)
+      return { bloque_id: b, cultivo_snapshot: getCultivoBloque(bloque) || null, plantacion_id: getPlantacionActivaId(bloque) }
+    }),
+    productos: form.productos_form.filter(p => (p.producto_id || p.producto_nombre?.trim()) && p.cantidad).map(p => {
+      const prod = productos.find(x => x.id === p.producto_id)
+      const descuento = calcularDescuentoStock(p, prod, tanquesCantidad)
+      return {
+        producto_id: p.producto_id || null,
+        producto_nombre: p.producto_id ? null : p.producto_nombre.trim(),
+        dosis: `${p.cantidad} ${p.unidad_uso}`,
+        cantidad: Number(String(p.cantidad || '').replace(',', '.')) || null,
+        unidad_uso: p.unidad_uso || null,
+        descuento_stock: descuento === null ? null : descuento,
+      }
+    }),
+  })
+
   const guardarRelacionesFumigacion = async (fumigacionId, bloquesIds = form.bloques_ids, tanquesCantidad = form.tanques_cantidad, faltantes = []) => {
     if (bloquesIds.length > 0) {
       const { error: bloquesError } = await supabase.from('fumigacion_bloques').insert(bloquesIds.map(b => {
@@ -462,6 +485,15 @@ export default function Fumigaciones() {
       if (form.id) {
         const tanquesEdicion = Number(form.bloques_tanques?.[form.bloques_ids[0]] || form.tanques_cantidad) || null
         payload.tanques_cantidad = tanquesEdicion
+        // Todo en una sola operación de la base: si algo falla, no se guarda nada (ni el stock queda a medias).
+        const { data: atomico, error: atomicoError } = await supabase.rpc('editar_fumigacion', { p_id: form.id, p: { ...payload, ...armarDetalleAtomico(form.bloques_ids, tanquesEdicion) } })
+        if (!atomicoError) {
+          faltantes.push(...(atomico?.faltantes || []))
+          await registrarAuditoria({ accion:'Edito fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:form.id, detalle:`${form.tipo} - ${form.fecha}` })
+        } else if (!rpcAusente(atomicoError)) {
+          avisarError(`No se pudo editar la fumigación: ${atomicoError.message || 'error desconocido'}`)
+          return
+        } else {
         const { data: fum, error } = await supabase
           .from('fumigaciones')
           .update(payload)
@@ -477,10 +509,26 @@ export default function Fumigaciones() {
         await supabase.from('fumigacion_productos').delete().eq('fumigacion_id', form.id)
         await guardarRelacionesFumigacion(fum.id, form.bloques_ids, tanquesEdicion, faltantes)
         await registrarAuditoria({ accion:'Edito fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
+        }
       } else {
-        for (const bloqueId of form.bloques_ids) {
+        const tanquesDelBloque = (bloqueId) => {
           const litrosBloque = Number(String(form.bloques_litros?.[bloqueId] || '').replace(',', '.')) || 0
-          const tanquesBloque = compartido ? litrosBloque / litrosTanque : Number(form.bloques_tanques?.[bloqueId] || form.tanques_cantidad) || 0
+          return compartido ? litrosBloque / litrosTanque : Number(form.bloques_tanques?.[bloqueId] || form.tanques_cantidad) || 0
+        }
+        // Todas las fumigaciones (una por bloque) con sus productos y el descuento de stock, en una sola operación de la base.
+        const { data: atomico, error: atomicoError } = await supabase.rpc('registrar_fumigaciones', { p: {
+          campo_id: payload.campo_id, tipo: payload.tipo, fecha: payload.fecha, operario: payload.operario, notas: payload.notas, tanque_litros: payload.tanque_litros,
+          aplicaciones: form.bloques_ids.map(bloqueId => ({ tanques_cantidad: tanquesDelBloque(bloqueId), ...armarDetalleAtomico([bloqueId], tanquesDelBloque(bloqueId)) })),
+        } })
+        if (!atomicoError) {
+          faltantes.push(...(atomico?.faltantes || []))
+          for (const nuevaId of atomico?.ids || []) await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:nuevaId, detalle:`${form.tipo} - ${form.fecha}` })
+        } else if (!rpcAusente(atomicoError)) {
+          avisarError(`No se pudo guardar la fumigación: ${atomicoError.message || 'error desconocido'}`)
+          return
+        } else {
+        for (const bloqueId of form.bloques_ids) {
+          const tanquesBloque = tanquesDelBloque(bloqueId)
           const { data: fum, error } = await supabase.from('fumigaciones').insert({ ...payload, tanques_cantidad:tanquesBloque }).select().single()
           if (error || !fum) {
             avisarError(`No se pudo guardar la fumigación: ${error?.message || 'sin respuesta de Supabase'}`)
@@ -488,6 +536,7 @@ export default function Fumigaciones() {
           }
           await guardarRelacionesFumigacion(fum.id, [bloqueId], tanquesBloque, faltantes)
           await registrarAuditoria({ accion:'Registro fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:fum.id, detalle:`${form.tipo} - ${form.fecha}` })
+        }
         }
       }
 
@@ -534,6 +583,18 @@ export default function Fumigaciones() {
   const eliminar = (id) => {
     setConfirmar({ fn: async () => {
       setFormError(''); setMensajeExito('')
+      // Anular y devolver el stock en una sola operación de la base.
+      const { error: atomicoError } = await supabase.rpc('anular_fumigacion', { p_id: id, p_motivo: 'Anulada por el usuario' })
+      if (!atomicoError) {
+        await registrarAuditoria({ accion:'Anulo fumigacion', modulo:'Fumigaciones', tabla:'fumigaciones', registroId:id })
+        setConfirmar(null); setDetalle(null); setMensajeExito('Fumigación eliminada y stock devuelto correctamente.'); await fetchFumigaciones(); await fetchProductos()
+        return
+      }
+      if (!rpcAusente(atomicoError)) {
+        setFormError(`No se pudo eliminar la fumigación: ${atomicoError.message || 'error desconocido'}`)
+        setConfirmar(null)
+        return
+      }
       const { data, error: deleteError } = await supabase.from('fumigaciones')
         .update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:'Anulada por el usuario', updated_at:new Date().toISOString() })
         .eq('id', id)
