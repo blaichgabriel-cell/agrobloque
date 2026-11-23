@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { guestToken, supabase } from '../lib/supabase'
 import { useCan } from '../lib/RoleContext'
 
@@ -35,6 +35,7 @@ export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'N
   const [editando, setEditando] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const formRef = useRef(null)
   const isGuest = Boolean(guestToken)
 
   useEffect(() => {
@@ -89,11 +90,11 @@ export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'N
         const existente = existentes.get(bloqueId || '__general__')
         const referencia = { referencia_tipo:bloqueId ? 'bloque' : null, referencia_id:bloqueId || null }
         return existente
-          ? supabase.from('notas_modulo').update({ ...datos, ...referencia }).eq('id', existente.id)
-          : supabase.from('notas_modulo').insert({ ...datos, ...referencia, created_at:editando.created_at || new Date().toISOString() })
+          ? supabase.from('notas_modulo').update({ ...datos, ...referencia }).eq('id', existente.id).select('id').maybeSingle()
+          : supabase.from('notas_modulo').insert({ ...datos, ...referencia, created_at:editando.created_at || new Date().toISOString() }).select('id').single()
       })
       const resultados = await Promise.all(escrituras)
-      error = resultados.find(resultado => resultado.error)?.error || null
+      error = resultados.find(resultado => resultado.error)?.error || (resultados.some(resultado => !resultado.data) ? new Error('La nota no fue actualizada. Revisá tu permiso de edición.') : null)
       if (!error) {
         const quitar = filas.filter(fila => !deseados.has(fila.referencia_id || '__general__')).map(fila => fila.id)
         if (quitar.length) error = (await supabase.from('notas_modulo').delete().in('id', quitar)).error
@@ -103,11 +104,12 @@ export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'N
       const registros = bloquesIds.length
         ? bloquesIds.map(bloqueId => ({ ...datos, referencia_tipo:'bloque', referencia_id:bloqueId, created_at:createdAt }))
         : [{ ...datos, referencia_tipo:null, referencia_id:null, created_at:createdAt }]
-      error = (await supabase.from('notas_modulo').insert(registros)).error
+      const resultado = await supabase.from('notas_modulo').insert(registros).select('id')
+      error = resultado.error || (!resultado.data?.length ? new Error('La nota no fue creada. Revisá tu permiso de creación.') : null)
     }
 
     if (error) {
-      setError('No se pudo guardar la nota. Revisa el SQL de Supabase.')
+      setError(error.message || 'No se pudo guardar la nota. Intentá nuevamente.')
     } else {
       setForm({ fecha: hoy(), titulo: '', contenido: '', bloques_ids: [] })
       setEditando(null)
@@ -128,6 +130,7 @@ export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'N
     setForm({ fecha:hoy(), titulo:'', contenido:'', bloques_ids:[] })
     setAbierto(true)
     setError('')
+    window.requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior:'smooth', block:'center' }))
   }
 
   const abrirEdicion = nota => {
@@ -135,6 +138,7 @@ export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'N
     setForm({ fecha:nota.fecha || hoy(), titulo:nota.titulo || '', contenido:nota.contenido || '', bloques_ids:[...(nota.referencias || [])] })
     setAbierto(true)
     setError('')
+    window.requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior:'smooth', block:'center' }))
   }
 
   const cerrarFormulario = () => {
@@ -166,7 +170,7 @@ export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'N
       {error && <div className="ui-ced6bf">{error}</div>}
 
       {abierto && (
-        <div className="ui-31eb11">
+        <div className="ui-31eb11" ref={formRef}>
           <div className="note-form-mode">{editando ? 'Editar nota' : 'Nueva nota'}</div>
           {mostrarFecha && <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value }))}
             style={inputStyle} />}

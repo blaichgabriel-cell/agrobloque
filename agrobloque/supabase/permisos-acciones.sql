@@ -91,7 +91,7 @@ declare
     array['plan_nutricional_registros','plan_nutricional'],
     array['compradores','compradores'],
     array['tareas','agenda'],
-    array['notas_modulo','historial'],
+    array['notas_modulo','agenda'],
     array['vivero_lotes','vivero'],
     array['vivero_tratamientos','vivero'],
     array['contabilidad_movimientos','contabilidad']
