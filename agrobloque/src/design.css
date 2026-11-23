@@ -1169,6 +1169,12 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .block-report-picker__head h2 { margin:5px 0 4px; color:var(--text-primary); font-size:23px; }
 .block-report-picker__head p { max-width:520px; margin:0; color:var(--text-secondary); font-size:12px; line-height:1.5; }
 .block-report-picker__options { display:grid; gap:10px; margin-top:18px; }
+.block-report-observation { display:grid; gap:7px; margin-top:17px; }
+.block-report-observation>span { color:var(--text-primary); font-size:12px; font-weight:800; }
+.block-report-observation>span em { margin-left:5px; color:var(--text-tertiary); font-size:10px; font-style:normal; font-weight:650; }
+.block-report-observation textarea { width:100%; min-height:84px; padding:11px 12px; border:1px solid rgba(15,41,30,.13); border-radius:11px; background:var(--surface-muted); color:var(--text-primary); font:inherit; font-size:12px; line-height:1.45; resize:vertical; }
+.block-report-observation textarea:focus { outline:2px solid rgba(16,185,129,.2); border-color:rgba(15,107,72,.45); }
+.block-report-observation small { color:var(--text-tertiary); font-size:10px; line-height:1.4; }
 .block-report-picker__options>button { width:100%; min-width:0; display:grid; grid-template-columns:46px minmax(0,1fr) 24px; align-items:center; gap:13px; padding:16px; border:1px solid rgba(15,41,30,.11); border-radius:15px; background:var(--surface-glass-solid); color:var(--text-primary); text-align:left; cursor:pointer; }
 .block-report-picker__options>button:hover { border-color:rgba(15,107,72,.38); background:rgba(16,185,129,.055); }
 .block-report-picker__options>button.is-recommended { border-color:rgba(15,107,72,.3); background:rgba(16,185,129,.075); }
