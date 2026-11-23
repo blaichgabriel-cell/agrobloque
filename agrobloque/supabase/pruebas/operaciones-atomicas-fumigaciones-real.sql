@@ -133,7 +133,7 @@ begin
 
   -- ---- 2. Administrador registra dos aplicaciones (una con cultivo activo, otra sin) de una vez
   carga := jsonb_build_object(
-    'campo_id', campo_a, 'tipo', 'preventiva', 'fecha', current_date, 'operario', 'Prueba', 'notas', 'prueba atomica', 'tanque_litros', 200,
+    'campo_id', campo_a, 'tipo', 'fumigacion', 'fecha', current_date, 'operario', 'Prueba', 'notas', 'prueba atomica', 'tanque_litros', 200,
     'aplicaciones', jsonb_build_array(
       jsonb_build_object('tanques_cantidad', 2,
         'bloques', jsonb_build_array(jsonb_build_object('bloque_id', bloque_1, 'cultivo_snapshot', 'Cultivo prueba', 'plantacion_id', plant_1)),
@@ -157,7 +157,7 @@ begin
   -- ---- 3. Atomicidad: si la segunda aplicacion falla, NO queda guardada la primera
   select count(*) into f_cant from public.fumigaciones where organizacion_id = org_a;
   select count(*) into b_cant from public.fumigacion_bloques where organizacion_id = org_a;
-  carga := jsonb_build_object('campo_id', campo_a, 'tipo', 'preventiva', 'fecha', current_date,
+  carga := jsonb_build_object('campo_id', campo_a, 'tipo', 'fumigacion', 'fecha', current_date,
     'aplicaciones', jsonb_build_array(
       jsonb_build_object('tanques_cantidad', 1, 'bloques', jsonb_build_array(jsonb_build_object('bloque_id', bloque_1, 'plantacion_id', plant_1)),
         'productos', jsonb_build_array(jsonb_build_object('producto_id', prod_a, 'dosis', '1 kg', 'cantidad', 1, 'unidad_uso', 'kg', 'descuento_stock', 7))),
@@ -171,7 +171,7 @@ begin
     'no quedo NADA a medias: mismas fumigaciones, mismos bloques y mismo stock (' || stock2 || ')');
 
   -- ---- 4. Stock insuficiente: se guarda igual, descuenta lo que hay y avisa del faltante
-  carga := jsonb_build_object('campo_id', campo_a, 'tipo', 'curativa', 'fecha', current_date,
+  carga := jsonb_build_object('campo_id', campo_a, 'tipo', 'foliar', 'fecha', current_date,
     'aplicaciones', jsonb_build_array(jsonb_build_object('tanques_cantidad', 1, 'bloques', jsonb_build_array(jsonb_build_object('bloque_id', bloque_2)),
       'productos', jsonb_build_array(jsonb_build_object('producto_id', prod_b, 'dosis', '5 kg', 'cantidad', 5, 'unidad_uso', 'kg', 'descuento_stock', 5)))))::text;
   r := pg_temp.llamar(u_admin, m_admin, format('select public.registrar_fumigaciones(%L::jsonb)', carga));
@@ -185,7 +185,7 @@ begin
 
   -- ---- 5. Editar: devuelve el stock, reemplaza (sin duplicar) y descuenta de nuevo
   select stock_actual into stock from public.productos where id = prod_a;   -- 80
-  carga := jsonb_build_object('campo_id', campo_a, 'tipo', 'curativa', 'fecha', current_date, 'tanques_cantidad', 3, 'tanque_litros', 200,
+  carga := jsonb_build_object('campo_id', campo_a, 'tipo', 'foliar', 'fecha', current_date, 'tanques_cantidad', 3, 'tanque_litros', 200,
     'bloques', jsonb_build_array(jsonb_build_object('bloque_id', bloque_1, 'cultivo_snapshot', 'Cultivo prueba', 'plantacion_id', plant_1)),
     'productos', jsonb_build_array(jsonb_build_object('producto_id', prod_a, 'dosis', '15 kg', 'cantidad', 15, 'unidad_uso', 'kg', 'descuento_stock', 30)))::text;
   r := pg_temp.llamar(u_admin, m_admin, format('select public.editar_fumigacion(%L, %L::jsonb)', f1, carga));
@@ -195,10 +195,10 @@ begin
   select count(*) into b_cant from public.fumigacion_bloques where fumigacion_id = f1;
   select count(*) into p_cant from public.fumigacion_productos where fumigacion_id = f1;
   fallos := fallos + pg_temp.chk(b_cant = 1 and p_cant = 1, 'al editar NO se duplican bloques ni productos (bloques ' || b_cant || ', productos ' || p_cant || ')');
-  fallos := fallos + pg_temp.chk((select tipo from public.fumigaciones where id = f1) = 'curativa' and (select tanques_cantidad from public.fumigaciones where id = f1) = 3, 'los datos de la fumigacion quedaron actualizados');
+  fallos := fallos + pg_temp.chk((select tipo from public.fumigaciones where id = f1) = 'foliar' and (select tanques_cantidad from public.fumigaciones where id = f1) = 3, 'los datos de la fumigacion quedaron actualizados');
 
   -- ---- 6. Operador (sin "eliminar"): puede registrar; NO puede reemplazar el detalle al editar -> falla entera, sin duplicar
-  carga_reg := jsonb_build_object('campo_id', campo_a, 'tipo', 'preventiva', 'fecha', current_date,
+  carga_reg := jsonb_build_object('campo_id', campo_a, 'tipo', 'fumigacion', 'fecha', current_date,
     'aplicaciones', jsonb_build_array(jsonb_build_object('tanques_cantidad', 1, 'bloques', jsonb_build_array(jsonb_build_object('bloque_id', bloque_2)),
       'productos', jsonb_build_array(jsonb_build_object('producto_id', prod_a, 'dosis', '1 kg', 'cantidad', 1, 'unidad_uso', 'kg', 'descuento_stock', 2)))))::text;
   r := pg_temp.llamar(u_oper, m_oper, format('select public.registrar_fumigaciones(%L::jsonb)', carga_reg));
@@ -211,7 +211,7 @@ begin
 
   select stock_actual into stock from public.productos where id = prod_a;
   select fecha into fecha_antes from public.fumigaciones where id = f_op;
-  carga_edit := jsonb_build_object('campo_id', campo_a, 'tipo', 'curativa', 'fecha', current_date - 1, 'tanques_cantidad', 1,
+  carga_edit := jsonb_build_object('campo_id', campo_a, 'tipo', 'foliar', 'fecha', current_date - 1, 'tanques_cantidad', 1,
     'bloques', jsonb_build_array(jsonb_build_object('bloque_id', bloque_2)),
     'productos', jsonb_build_array(jsonb_build_object('producto_id', prod_a, 'dosis', '1 kg', 'cantidad', 1, 'unidad_uso', 'kg', 'descuento_stock', 4)))::text;
   r := pg_temp.llamar(u_oper, m_oper, format('select public.editar_fumigacion(%L, %L::jsonb)', f_op, carga_edit));
