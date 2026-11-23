@@ -187,22 +187,23 @@ export default function Agenda() {
             <div className="ui-476525">Planificación</div>
             <div className="ag-page-title ui-136b85">Agenda</div>
           </div>
-          <div className="agenda-header-actions"><button className="app-button app-button--secondary app-button--icon" aria-label="Activar notificaciones" onClick={activarNotificaciones}><i className="ti ti-bell" aria-hidden="true" /></button>{can.create && <button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus ui-d0538c" aria-hidden="true"></i></button>}</div>
+          <div className="agenda-header-actions"><button className="app-button app-button--secondary app-button--icon" aria-label="Activar notificaciones" onClick={activarNotificaciones}><i className="ti ti-bell" aria-hidden="true" /></button>{can.create && vista !== 'notas' && <button className="app-button app-button--primary app-button--icon" aria-label="Agregar tarea" onClick={() => { setForm(vacio); setModal(true) }}><i className="ti ti-plus ui-d0538c" aria-hidden="true"></i></button>}</div>
         </div>
-        <div className="SegmentedControl agenda-segments" role="tablist" aria-label="Filtrar tareas">
+        {vista !== 'notas' && <div className="SegmentedControl agenda-segments" role="tablist" aria-label="Filtrar tareas">
           {[['pendientes','Pendientes'],['hoy','Hoy'],['completadas','Completadas'],['todas','Todas']].map(([k,v]) => (
             <button className={filtro === k ? 'active' : ''} role="tab" aria-selected={filtro === k} key={k} onClick={() => setFiltro(k)}>{v}</button>
           ))}
-        </div>
+        </div>}
         <div className="agenda-view-switch" role="tablist" aria-label="Vista de agenda">
           <button type="button" className={vista === 'lista' ? 'active' : ''} aria-selected={vista === 'lista'} onClick={() => setVista('lista')}><i className="ti ti-list" />Lista</button>
           <button type="button" className={vista === 'calendario' ? 'active' : ''} aria-selected={vista === 'calendario'} onClick={() => setVista('calendario')}><i className="ti ti-calendar-month" />Calendario lunar</button>
+          <button type="button" className={vista === 'notas' ? 'active' : ''} aria-selected={vista === 'notas'} onClick={() => setVista('notas')}><i className="ti ti-notes" />Notas sin fecha</button>
         </div>
       </div>
 
       <div className="ag-page-body" style={{ padding: isDesktop ? '12px 36px 100px' : '12px 14px 100px' }}>
         <Notice tone="error">{!modal && error}</Notice><Notice>{success}</Notice>
-        {loading ? <Skeleton rows={3} label="Cargando agenda" /> : vista === 'calendario' ? (
+        {vista === 'notas' ? <NotasPanel modulo="bloc_notas" modulos={['bloc_notas','agenda']} moduloDestino="bloc_notas" permisoModulo="agenda" titulo="Notas sin fecha" mostrarFecha={false} limite={null} modoPagina permitirAsignarBloque /> : loading ? <Skeleton rows={3} label="Cargando agenda" /> : vista === 'calendario' ? (
           <AgendaCalendar
             tareas={tareasFiltradas}
             mes={mesVisible}
@@ -227,7 +228,7 @@ export default function Agenda() {
                 </div>
                 <div className="ui-da5cd6">
                   <div className="ui-8c86bf">{tipo.label}{t.campos?.nombre ? ' · ' + t.campos.nombre : ''}{t.bloques?.codigo ? ' · ' + t.bloques.codigo : ''}</div>
-                  <div className="ui-076bb2">{t.descripcion}</div>
+                  <div className="ui-076bb2 agenda-task-description">{t.descripcion}</div>
                 </div>
                 {badge && <div className="ui-fb8dcd" style={{ background:badge.bg, color:badge.color }}>{badge.label}</div>}
               </div>
@@ -252,7 +253,6 @@ export default function Agenda() {
         })}
           </div>
         )}
-        <NotasPanel modulo="agenda" titulo="Bloc de notas de agenda" />
       </div>
 
       {modal && (

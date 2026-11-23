@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
 import { formatLocaleInteger, parseLocaleInteger } from '../lib/numbers'
 import { useCan } from '../lib/RoleContext'
+import NotasPanel from '../components/NotasPanel'
 
 const diasDesde = (fecha) => {
   if (!fecha) return null
@@ -66,11 +67,15 @@ export default function FichaBloque() {
   const [plantacionActiva, setPlantacionActiva] = useState(null)
   const [historial, setHistorial] = useState([])
   const [cosechasCiclo, setCosechasCiclo] = useState([])
-  const [costosCiclo, setCostosCiclo] = useState({ loading:true, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, error:'' })
+  const [costosCiclo, setCostosCiclo] = useState({ loading:true, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, consumos:[], costosManuales:[], error:'' })
+  const [detalleCostos, setDetalleCostos] = useState(null)
   const [cosechaError, setCosechaError] = useState('')
   const [cosechaSuccess, setCosechaSuccess] = useState('')
   const [incidencias, setIncidencias] = useState([])
   const [fotos, setFotos] = useState([])
+  const [fotoPendiente, setFotoPendiente] = useState(null)
+  const [fotoDescripcion, setFotoDescripcion] = useState('')
+  const [fotoError, setFotoError] = useState('')
   const [muertes, setMuertes] = useState([])
   const [cultivos, setCultivos] = useState([])
   const [abonos, setAbonos] = useState([])
@@ -308,7 +313,14 @@ export default function FichaBloque() {
         const { data: fts } = await supabase.from('fotos_bloque')
           .select('*').eq('bloque_id', id).eq('plantacion_id', activa.id)
           .order('created_at', { ascending: false })
-        setFotos(fts || [])
+        const fotosIds = (fts || []).map(foto => foto.id)
+        const { data: descripcionesFotos } = fotosIds.length ? await supabase.from('notas_modulo')
+          .select('referencia_id,contenido')
+          .eq('modulo', 'fotos_bloque')
+          .eq('referencia_tipo', 'foto_bloque')
+          .in('referencia_id', fotosIds) : { data:[] }
+        const descripcionPorFoto = Object.fromEntries((descripcionesFotos || []).map(nota => [nota.referencia_id, nota.contenido]))
+        setFotos((fts || []).map(foto => ({ ...foto, descripcion:descripcionPorFoto[foto.id] || '' })))
 
         const { data: mts } = await supabase.from('muertes_plantas')
           .select('*').eq('bloque_id', id).eq('plantacion_id', activa.id)
@@ -317,10 +329,10 @@ export default function FichaBloque() {
 
         const [consumosResultado, costosResultado] = await Promise.all([
           supabase.from('consumos_valorizados')
-            .select('costo_total, origen_tipo, anulado')
+            .select('id, fecha, cantidad_stock, costo_unitario, costo_total, origen_tipo, origen_id, anulado, productos(nombre, unidad)')
             .eq('plantacion_id', activa.id),
           supabase.from('costos')
-            .select('monto, fecha, plantacion_id, anulada')
+            .select('id, monto, fecha, tipo, descripcion, plantacion_id, anulada')
             .eq('bloque_id', id)
             .gte('fecha', activa.fecha_siembra || '2000-01-01'),
         ])
@@ -337,10 +349,12 @@ export default function FichaBloque() {
           fumigaciones,
           fertilizaciones,
           manuales:manualesTotal,
+          consumos,
+          costosManuales:manuales,
           error:consumosResultado.error || costosResultado.error ? 'No se pudieron consultar todos los costos del ciclo.' : '',
         })
       } else {
-        setCostosCiclo({ loading:false, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, error:'' })
+        setCostosCiclo({ loading:false, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, consumos:[], costosManuales:[], error:'' })
       }
     }
 
@@ -608,21 +622,46 @@ export default function FichaBloque() {
     fetchData()
   }
 
-  const subirFoto = async (e) => {
+  const seleccionarFoto = (e) => {
     const file = e.target.files[0]; if (!file) return
+    setFotoPendiente(file)
+    setFotoDescripcion('')
+    setFotoError('')
+    e.target.value = ''
+  }
+
+  const subirFoto = async () => {
+    const file = fotoPendiente; if (!file) return
+    setSaving(true)
     const reader = new FileReader()
     reader.onload = async (ev) => {
-      await supabase.from('fotos_bloque').insert({
+      const { data:fotoGuardada, error } = await supabase.from('fotos_bloque').insert({
         bloque_id: id, plantacion_id: plantacionActiva?.id,
         url: ev.target.result,
-        fecha: new Date().toISOString().split('T')[0]
-      })
+        fecha: new Date().toISOString().split('T')[0],
+      }).select('id').single()
+      if (error) { setSaving(false); return setFotoError('No se pudo guardar la foto.') }
+      if (fotoDescripcion.trim()) {
+        const { error:descripcionError } = await supabase.from('notas_modulo').insert({
+          modulo:'fotos_bloque', referencia_tipo:'foto_bloque', referencia_id:fotoGuardada.id,
+          fecha:new Date().toISOString().split('T')[0], titulo:'Descripción de foto', contenido:fotoDescripcion.trim(),
+        })
+        if (descripcionError) {
+          await supabase.from('fotos_bloque').delete().eq('id', fotoGuardada.id)
+          setSaving(false)
+          return setFotoError('No se pudo guardar la descripción. Intentá nuevamente.')
+        }
+      }
+      setSaving(false)
+      setFotoPendiente(null)
+      setFotoDescripcion('')
       fetchData()
     }
     reader.readAsDataURL(file)
   }
 
   const eliminarFoto = async (fotoId) => {
+    await supabase.from('notas_modulo').delete().eq('modulo', 'fotos_bloque').eq('referencia_tipo', 'foto_bloque').eq('referencia_id', fotoId)
     await supabase.from('fotos_bloque').delete().eq('id', fotoId)
     fetchData()
   }
@@ -955,6 +994,11 @@ export default function FichaBloque() {
       .filter(fumigacion => fumigacion && dentroDelPeriodo(fumigacion.fecha) && !fumigacion.anulada)
       .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))
 
+    const fotosHistoricasBase = resultados[4].data || []
+    const idsFotosHistoricas = fotosHistoricasBase.map(foto => foto.id)
+    const { data:descripcionesHistoricas } = idsFotosHistoricas.length ? await supabase.from('notas_modulo').select('referencia_id,contenido').eq('modulo', 'fotos_bloque').eq('referencia_tipo', 'foto_bloque').in('referencia_id', idsFotosHistoricas) : { data:[] }
+    const descripcionHistoricaPorFoto = Object.fromEntries((descripcionesHistoricas || []).map(nota => [nota.referencia_id, nota.contenido]))
+
     setHistorialCiclo({
       inicio,
       finExclusivo,
@@ -962,7 +1006,7 @@ export default function FichaBloque() {
       fumigaciones:fumigacionesCiclo,
       fertilizaciones:(resultados[2].data || []).filter(item => !item.anulada),
       muertes:resultados[3].data || [],
-      fotos:resultados[4].data || [],
+      fotos:fotosHistoricasBase.map(foto => ({ ...foto, descripcion:descripcionHistoricaPorFoto[foto.id] || '' })),
       costos:resultados[5].data || [],
       ventas:resultados[6].data || [],
     })
@@ -1125,7 +1169,7 @@ export default function FichaBloque() {
               {muertesHistoricas.map(muerte => <CycleRow key={muerte.id} date={muerte.fecha} title={`${Number(muerte.cantidad || 0).toLocaleString('es-PY')} planta${Number(muerte.cantidad) === 1 ? '' : 's'} · ${muerte.causa || 'Sin causa'}`} detail={muerte.descripcion} />)}
             </CycleSection>
 
-            {fotosHistoricas.length > 0 && <section className="ag-surface cycle-history-section"><div className="cycle-history-section__head"><span><i className="ti ti-photo" aria-hidden="true" /><strong>Fotos del ciclo</strong></span><em>{fotosHistoricas.length}</em></div><div className="cycle-history-photos">{fotosHistoricas.map(foto => <img key={foto.id} src={foto.url} alt={`Registro del ${foto.fecha || 'ciclo'}`} loading="lazy" />)}</div></section>}
+            {fotosHistoricas.length > 0 && <section className="ag-surface cycle-history-section"><div className="cycle-history-section__head"><span><i className="ti ti-photo" aria-hidden="true" /><strong>Fotos del ciclo</strong></span><em>{fotosHistoricas.length}</em></div><div className="cycle-history-photos">{fotosHistoricas.map(foto => <figure key={foto.id}><img src={foto.url} alt={foto.descripcion || `Registro del ${foto.fecha || 'ciclo'}`} loading="lazy" />{foto.descripcion && <figcaption>{foto.descripcion}</figcaption>}</figure>)}</div></section>}
           </>}
 
           <div className="ag-surface ui-49272e">
@@ -1160,7 +1204,9 @@ export default function FichaBloque() {
     <div className="ag-page block-detail-modern ui-c1c124">
       {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
       {showEditarNombre && <Modal busy={saving} onClose={() => setShowEditarNombre(false)} label="Editar nombre del bloque" style={{ position:'fixed', inset:0, zIndex:220, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface ui-211525" style={{ width:'min(430px, 100%)' }}><div className="ui-3e43be">Editar nombre del bloque</div><div className="ui-01159a">Este nombre se actualizará en mapas, aplicaciones, costos e historiales vinculados.</div>{nombreBloqueError && <div className="ag-feedback ag-feedback-error" role="alert">{nombreBloqueError}</div>}<label className="ag-field-label">Nombre<input className="bl-input" autoFocus value={nombreBloque} onChange={e => setNombreBloque(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') guardarNombreBloque() }} maxLength={50} placeholder="Ej: A-1" /></label><div className="ui-9c6869"><button className="ag-small-action ui-395a62" onClick={() => setShowEditarNombre(false)} disabled={saving}>Cancelar</button><button className="ag-small-action ui-f5f413" onClick={guardarNombreBloque} disabled={saving}>{saving ? 'Guardando…' : 'Guardar nombre'}</button></div></div></Modal>}
-      <input className="ui-cb4589" type="file" accept="image/*" ref={fileRef} onChange={subirFoto} />
+      <input className="ui-cb4589" type="file" accept="image/*" ref={fileRef} onChange={seleccionarFoto} />
+      {fotoPendiente && <Modal busy={saving} onClose={() => { setFotoPendiente(null); setFotoError('') }} label="Describir foto" style={{ position:'fixed', inset:0, zIndex:230, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface ui-211525" style={{ width:'min(480px, 100%)' }}><div className="ui-3e43be">Agregar foto al bloque</div><div className="ui-01159a">La descripción es opcional y quedará visible junto a la foto.</div>{fotoError && <div className="ag-feedback ag-feedback-error" role="alert">{fotoError}</div>}<label className="ag-field-label">Descripción (opcional)<textarea className="bl-input photo-description-input" autoFocus value={fotoDescripcion} onChange={e => setFotoDescripcion(e.target.value)} maxLength={300} placeholder="Ej: Planta con 35 días; se observan manchas en las hojas" /></label><div className="ui-9c6869"><button className="ag-small-action ui-395a62" onClick={() => setFotoPendiente(null)} disabled={saving}>Cancelar</button><button className="ag-small-action ui-f5f413" onClick={subirFoto} disabled={saving}>{saving ? 'Guardando…' : 'Guardar foto'}</button></div></div></Modal>}
+      {detalleCostos && <Modal onClose={() => setDetalleCostos(null)} label="Detalle de costos" style={{ position:'fixed', inset:0, zIndex:225, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface block-cost-detail"><div className="block-cost-detail__head"><div><small>HISTORIAL DEL CICLO</small><h2>{detalleCostos === 'fumigaciones' ? 'Fumigaciones' : detalleCostos === 'fertilizaciones' ? 'Fertilizaciones' : 'Gastos directos'}</h2></div><button className="ag-small-action" onClick={() => setDetalleCostos(null)} aria-label="Cerrar"><i className="ti ti-x" /></button></div><CostDetailList tipo={detalleCostos} costos={costosCiclo} /></div></Modal>}
 
       {/* Header */}
       <div className="ag-block-header block-detail-header ui-606ba4">
@@ -1213,6 +1259,17 @@ export default function FichaBloque() {
             <button className="ag-small-action ui-f0ca92" type="button" onClick={() => navigate(`/rentabilidad?bloque=${bloque.id}`)}><i className="ti ti-chart-line" aria-hidden="true" /> Rentabilidad <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>
           </div>}
         </div>
+
+        <NotasPanel
+          modulo="bloc_notas"
+          permisoModulo="agenda"
+          titulo="Notas de este bloque"
+          mostrarFecha={false}
+          limite={null}
+          referenciaTipo="bloque"
+          referenciaId={bloque.id}
+          referenciaEtiqueta={`Bloque ${bloque.codigo}`}
+        />
 
         {/* Tabs */}
         <div className="ag-block-tabs block-detail-tabs ui-c1894b" aria-label="Secciones del bloque">
@@ -1277,9 +1334,9 @@ export default function FichaBloque() {
                   </div>
                   {costosCiclo.error && <div className="ag-feedback ag-feedback-error" role="alert">{costosCiclo.error}</div>}
                   {!costosCiclo.loading && <div className="block-cost-card__breakdown">
-                    <span><i className="ti ti-spray" /><small>Fumigaciones</small><strong>Gs. {fmtGs(costosCiclo.fumigaciones)}</strong></span>
-                    <span><i className="ti ti-leaf" /><small>Fertilizaciones</small><strong>Gs. {fmtGs(costosCiclo.fertilizaciones)}</strong></span>
-                    <span><i className="ti ti-receipt" /><small>Gastos directos</small><strong>Gs. {fmtGs(costosCiclo.manuales)}</strong></span>
+                    <button type="button" onClick={() => setDetalleCostos('fumigaciones')}><i className="ti ti-spray" /><small>Fumigaciones</small><strong>Gs. {fmtGs(costosCiclo.fumigaciones)}</strong><em>Ver detalle <i className="ti ti-chevron-right" /></em></button>
+                    <button type="button" onClick={() => setDetalleCostos('fertilizaciones')}><i className="ti ti-leaf" /><small>Fertilizaciones</small><strong>Gs. {fmtGs(costosCiclo.fertilizaciones)}</strong><em>Ver detalle <i className="ti ti-chevron-right" /></em></button>
+                    <button type="button" onClick={() => setDetalleCostos('manuales')}><i className="ti ti-receipt" /><small>Gastos directos</small><strong>Gs. {fmtGs(costosCiclo.manuales)}</strong><em>Ver detalle <i className="ti ti-chevron-right" /></em></button>
                   </div>}
                   <div className="block-cost-card__foot"><span>Incluye insumos consumidos y gastos asignados a este bloque. No reparte jornales generales del campo.</span><button type="button" onClick={() => navigate(`/rentabilidad?bloque=${bloque.id}`)}>Ver rentabilidad <i className="ti ti-arrow-up-right" /></button></div>
                 </section>
@@ -1565,6 +1622,7 @@ export default function FichaBloque() {
                 {fotos.map(f => (
                   <div className="ui-8e4804" key={f.id}>
                     <img className="ui-caf585" src={f.url} alt="foto bloque"/>
+                    {f.descripcion && <div className="block-photo-description">{f.descripcion}</div>}
                     <div className="ui-aa460d">
                       <span className="ui-e3758e">{f.fecha}</span>
                       {can.delete && <button aria-label="Eliminar" className="ag-small-action ui-d088ca" onClick={() => eliminarFoto(f.id)}>
@@ -2027,4 +2085,13 @@ function CycleRow({ date, title, detail }) {
       <div><strong>{title}</strong>{detail && <p>{detail}</p>}</div>
     </article>
   )
+}
+
+function CostDetailList({ tipo, costos }) {
+  const items = tipo === 'manuales'
+    ? (costos.costosManuales || []).map(item => ({ ...item, nombre:item.descripcion || item.tipo || 'Gasto directo', total:item.monto, detalle:item.tipo || '' }))
+    : (costos.consumos || [])
+      .filter(item => item.origen_tipo === `consumo_${tipo === 'fumigaciones' ? 'fumigacion' : 'fertilizacion'}`)
+      .map(item => ({ ...item, nombre:item.productos?.nombre || 'Insumo', total:item.costo_total, detalle:`${fmtKg(item.cantidad_stock)} ${item.productos?.unidad || ''} × Gs. ${fmtGs(item.costo_unitario)}` }))
+  return <div className="block-cost-detail__list">{items.length === 0 ? <div className="ui-5baa7a">No hay costos registrados en esta categoría.</div> : items.map(item => <article key={item.id}><div><strong>{item.nombre}</strong><small>{fechaCorta(item.fecha)}{item.detalle ? ` · ${item.detalle}` : ''}</small></div><b>Gs. {fmtGs(item.total)}</b></article>)}</div>
 }

@@ -46,11 +46,16 @@ const pinSave = () => {
     objetivo.setAttribute('data-sheet-save', '')
   })
 }
-// Alto del teclado en iOS (visualViewport): el botón fijo sube por encima de él.
+// En iOS, `innerHeight` puede conservar la altura anterior aunque `100dvh` ya haya reducido
+// el modal. Medimos sólo la parte del teclado que realmente tapa al overlay para no elevar
+// dos veces la barra de guardado (quedaba flotando en medio del formulario).
 const trackKeyboard = () => {
   const vv = window.visualViewport
   if (!vv) return
-  const alto = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+  const overlay = document.querySelector('.ag-modal-overlay')
+  const limiteInferior = overlay?.getBoundingClientRect().bottom || document.documentElement.clientHeight
+  const bordeVisible = vv.offsetTop + vv.height
+  const alto = Math.max(0, limiteInferior - bordeVisible)
   document.documentElement.style.setProperty('--teclado', `${Math.round(alto)}px`)
 }
 
@@ -65,6 +70,7 @@ export default function SheetGestures() {
     })
     observer.observe(document.body, { childList: true, subtree: true })
     window.visualViewport?.addEventListener('resize', trackKeyboard)
+    window.visualViewport?.addEventListener('scroll', trackKeyboard)
 
     const point = (e) => (e.touches ? e.touches[0] : e)
 
@@ -126,6 +132,8 @@ export default function SheetGestures() {
       observer.disconnect()
       window.cancelAnimationFrame(pendiente)
       window.visualViewport?.removeEventListener('resize', trackKeyboard)
+      window.visualViewport?.removeEventListener('scroll', trackKeyboard)
+      document.documentElement.style.removeProperty('--teclado')
       document.removeEventListener('touchstart', start)
       document.removeEventListener('touchmove', move)
       document.removeEventListener('touchend', end)
