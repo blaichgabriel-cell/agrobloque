@@ -15,6 +15,7 @@ const diasDesde = (fecha) => {
 }
 const fmtGs = (n) => Math.round(Number(n)||0).toLocaleString('es-PY')
 const fmtKg = (n) => { const num=Number(n)||0; return num%1===0 ? num.toLocaleString('es-PY') : num.toLocaleString('es-PY',{minimumFractionDigits:1,maximumFractionDigits:2}) }
+const escapeHtml = (valor) => String(valor ?? '').replace(/[&<>'"]/g, caracter => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[caracter])
 const MARCA_FIN_SEMANA = /\s*\[\[semana_fin:(\d{4}-\d{2}-\d{2})\]\]\s*/
 const notasFertilizacionVisibles = (notas = '') => String(notas || '').replace(MARCA_FIN_SEMANA, '').trim()
 const sumarDiasFecha = (fecha, dias) => {
@@ -69,6 +70,8 @@ export default function FichaBloque() {
   const [cosechasCiclo, setCosechasCiclo] = useState([])
   const [costosCiclo, setCostosCiclo] = useState({ loading:true, total:0, insumos:0, fumigaciones:0, fertilizaciones:0, manuales:0, consumos:[], costosManuales:[], error:'' })
   const [detalleCostos, setDetalleCostos] = useState(null)
+  const [exportandoPdf, setExportandoPdf] = useState(false)
+  const [pdfError, setPdfError] = useState('')
   const [cosechaError, setCosechaError] = useState('')
   const [cosechaSuccess, setCosechaSuccess] = useState('')
   const [incidencias, setIncidencias] = useState([])
@@ -1016,6 +1019,67 @@ export default function FichaBloque() {
 
   const totalKgCiclo = cosechasCiclo.reduce((s, c) => s + Number(c.kg_total), 0)
   const cantidadPlantasActiva = Number(plantacionActiva?.cantidad_plantas ?? plantacionActiva?.densidad_plantas_m2 ?? 0)
+
+  const descargarInformeBloque = async () => {
+    if (!bloque || exportandoPdf) return
+    setExportandoPdf(true)
+    setPdfError('')
+    try {
+      const { data:notasBloque, error:notasError } = await supabase.from('notas_modulo')
+        .select('id,fecha,titulo,contenido,created_at')
+        .in('modulo', ['bloc_notas','agenda'])
+        .eq('referencia_tipo', 'bloque')
+        .eq('referencia_id', bloque.id)
+        .order('created_at', { ascending:false })
+      if (notasError) throw notasError
+
+      const desde = plantacionActiva?.fecha_siembra || null
+      const fumigacionesInforme = (incidencias || []).filter(item => !desde || item.fecha >= desde)
+      const fertilizacionesInforme = (fertilizaciones || []).filter(item => !item.anulada && (!desde || item.fecha >= desde))
+      const filaVacia = (columnas, texto) => `<tr><td colspan="${columnas}" class="muted">${escapeHtml(texto)}</td></tr>`
+      const productosFumigacion = fumigacion => (fumigacion.fumigacion_productos || []).map(item => {
+        const nombre = item.productos?.nombre || item.producto_nombre || 'Producto'
+        const dosis = item.dosis ? ` (${item.dosis}${item.unidad ? ` ${item.unidad}` : ''})` : ''
+        return `${nombre}${dosis}`
+      }).join(', ')
+      const productosFertilizacion = fertilizacion => (fertilizacion.soluciones || []).flatMap(solucion => (solucion.productos || []).map(producto => `${producto.nombre || 'Producto'} ${producto.cantidad || ''} ${producto.unidad || ''}`.trim())).join(', ')
+      const costosDetalle = [
+        ...(costosCiclo.consumos || []).map(item => ({ fecha:item.fecha, concepto:item.productos?.nombre || (item.origen_tipo === 'consumo_fumigacion' ? 'Fumigación' : 'Fertilización'), detalle:`${fmtKg(item.cantidad_stock)} ${item.productos?.unidad || ''} × Gs. ${fmtGs(item.costo_unitario)}`, monto:item.costo_total })),
+        ...(costosCiclo.costosManuales || []).map(item => ({ fecha:item.fecha, concepto:item.descripcion || item.tipo || 'Gasto directo', detalle:item.tipo || '', monto:item.monto })),
+      ].sort((a,b) => String(b.fecha || '').localeCompare(String(a.fecha || '')))
+
+      const html = `
+        <h1>Informe del bloque ${escapeHtml(bloque.codigo)}</h1>
+        <p class="muted">${escapeHtml(bloque.campos?.nombre || 'Campo sin especificar')} · ${bloque.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'} · ${plantacionActiva ? 'En producción' : 'Sin cultivo activo'}</p>
+        <h2>Resumen actual</h2>
+        <table><tbody>
+          <tr><th>Cultivo</th><td>${escapeHtml(plantacionActiva?.cultivos?.nombre || 'Sin cultivo activo')}</td><th>Variedad</th><td>${escapeHtml(getVariedad(plantacionActiva) || '-')}</td></tr>
+          <tr><th>Fecha de siembra</th><td>${escapeHtml(plantacionActiva?.fecha_siembra || '-')}</td><th>Edad</th><td>${plantacionActiva ? `${diasDesde(plantacionActiva.fecha_siembra) ?? '-'} días` : '-'}</td></tr>
+          <tr><th>Plantas activas</th><td>${cantidadPlantasActiva ? cantidadPlantasActiva.toLocaleString('es-PY') : '-'}</td><th>Cosecha del ciclo</th><td>${fmtKg(totalKgCiclo)} kg</td></tr>
+          <tr><th>Costo acumulado</th><td>Gs. ${fmtGs(costosCiclo.total)}</td><th>Fotos registradas</th><td>${fotos.length}</td></tr>
+        </tbody></table>
+        <h2>Costos del ciclo</h2>
+        <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Detalle / precio usado</th><th class="right">Monto</th></tr></thead><tbody>${costosDetalle.length ? costosDetalle.map(item => `<tr><td>${escapeHtml(item.fecha || '-')}</td><td>${escapeHtml(item.concepto)}</td><td>${escapeHtml(item.detalle)}</td><td class="right">Gs. ${fmtGs(item.monto)}</td></tr>`).join('') : filaVacia(4, 'Sin costos registrados en el ciclo actual.')}<tr class="total"><td colspan="3">TOTAL DEL CICLO</td><td class="right">Gs. ${fmtGs(costosCiclo.total)}</td></tr></tbody></table>
+        <h2>Fumigaciones</h2>
+        <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Productos</th><th>Preparación / responsable</th></tr></thead><tbody>${fumigacionesInforme.length ? fumigacionesInforme.map(item => `<tr><td>${escapeHtml(item.fecha)}</td><td>${escapeHtml(item.tipo || 'Fumigación')}</td><td>${escapeHtml(productosFumigacion(item) || '-')}</td><td>${escapeHtml([item.tanques_cantidad && item.tanque_litros ? `${item.tanques_cantidad} × ${item.tanque_litros} L` : '', item.operario, item.notas].filter(Boolean).join(' · ') || '-')}</td></tr>`).join('') : filaVacia(4, 'Sin fumigaciones registradas en el ciclo actual.')}</tbody></table>
+        <h2>Fertilizaciones</h2>
+        <table><thead><tr><th>Fecha</th><th>Productos</th><th>Observaciones</th></tr></thead><tbody>${fertilizacionesInforme.length ? fertilizacionesInforme.map(item => `<tr><td>${escapeHtml(item.fecha)}</td><td>${escapeHtml(productosFertilizacion(item) || '-')}</td><td>${escapeHtml(notasFertilizacionVisibles(item.notas) || '-')}</td></tr>`).join('') : filaVacia(3, 'Sin fertilizaciones registradas en el ciclo actual.')}</tbody></table>
+        <h2>Cosechas</h2>
+        <table><thead><tr><th>Fecha</th><th class="right">Cantidad</th><th>Calidad</th><th>Observaciones</th></tr></thead><tbody>${cosechasCiclo.length ? cosechasCiclo.map(item => `<tr><td>${escapeHtml(item.fecha)}</td><td class="right">${fmtKg(item.kg_total)} kg</td><td>${escapeHtml(item.calidad || '-')}</td><td>${escapeHtml(item.notas || '-')}</td></tr>`).join('') : filaVacia(4, 'Sin cosechas registradas en el ciclo actual.')}</tbody></table>
+        <h2>Registro fotográfico</h2>
+        <table><thead><tr><th>Fecha</th><th>Descripción</th></tr></thead><tbody>${fotos.length ? fotos.map(item => `<tr><td>${escapeHtml(item.fecha || '-')}</td><td>${escapeHtml(item.descripcion || 'Sin descripción')}</td></tr>`).join('') : filaVacia(2, 'Sin fotos registradas en el ciclo actual.')}</tbody></table>
+        <h2>Notas asignadas al bloque</h2>
+        <table><thead><tr><th>Fecha</th><th>Título</th><th>Nota</th></tr></thead><tbody>${(notasBloque || []).length ? (notasBloque || []).map(item => `<tr><td>${escapeHtml(item.fecha || '-')}</td><td>${escapeHtml(item.titulo || '-')}</td><td>${escapeHtml(item.contenido || '-')}</td></tr>`).join('') : filaVacia(3, 'Sin notas asignadas a este bloque.')}</tbody></table>
+        <h2>Ciclos anteriores</h2>
+        <table><thead><tr><th>Cultivo</th><th>Siembra</th><th>Estado</th></tr></thead><tbody>${historial.length ? historial.map(item => `<tr><td>${escapeHtml(item.cultivos?.nombre || 'Cultivo')}${getVariedad(item) ? ` · ${escapeHtml(getVariedad(item))}` : ''}</td><td>${escapeHtml(item.fecha_siembra || '-')}</td><td>Finalizado</td></tr>`).join('') : filaVacia(3, 'Este bloque todavía no tiene ciclos anteriores.')}</tbody></table>`
+      const { descargarPdfHtml } = await import('../lib/pdfReports')
+      await descargarPdfHtml(`informe-bloque-${bloque.codigo}`, html)
+    } catch (error) {
+      setPdfError(`No se pudo generar el PDF: ${error.message || 'intentá nuevamente.'}`)
+    } finally {
+      setExportandoPdf(false)
+    }
+  }
   const kgPorPlanta = cantidadPlantasActiva && totalKgCiclo > 0
     ? (totalKgCiclo / cantidadPlantasActiva).toFixed(2)
     : null
@@ -1242,6 +1306,7 @@ export default function FichaBloque() {
             <button className="ui-ecf4ec" type="button" onClick={() => setMensajeExito('')} aria-label="Cerrar mensaje">×</button>
           </div>
         )}
+        {pdfError && <div className="ag-feedback ag-feedback-error block-pdf-error" role="alert">{pdfError}</div>}
 
         <div className="ag-surface ag-block-quick block-detail-quick ui-46ae6b">
           <div className="ui-d4e113">
@@ -1249,7 +1314,7 @@ export default function FichaBloque() {
               <div className="ui-1d6b4b">Acciones del bloque</div>
               <div className="ui-a8f171">Registrá trabajo sin volver a seleccionar el bloque</div>
             </div>
-            <div className="block-detail-quick__buttons"><button className="ag-small-action block-detail-primary-action" type="button" aria-expanded={showQuickActions} onClick={() => setShowQuickActions(value => !value)}><i className={`ti ${showQuickActions ? 'ti-x' : 'ti-plus'}`} />{showQuickActions ? 'Cerrar' : 'Registrar trabajo'}</button>{puedeVerQr && <button className="ag-small-action ui-cd464c" type="button" onClick={() => setShowQr(true)}><i className="ti ti-qrcode ui-e5876b" aria-hidden="true"></i> QR</button>}</div>
+            <div className="block-detail-quick__buttons"><button className="ag-small-action block-detail-primary-action" type="button" aria-expanded={showQuickActions} onClick={() => setShowQuickActions(value => !value)}><i className={`ti ${showQuickActions ? 'ti-x' : 'ti-plus'}`} />{showQuickActions ? 'Cerrar' : 'Registrar trabajo'}</button><button className="ag-small-action block-pdf-button" type="button" onClick={descargarInformeBloque} disabled={exportandoPdf || costosCiclo.loading}><i className={`ti ${exportandoPdf ? 'ti-loader-2' : 'ti-file-type-pdf'}`} aria-hidden="true" />{exportandoPdf ? 'Preparando…' : 'Descargar informe PDF'}</button>{puedeVerQr && <button className="ag-small-action ui-cd464c" type="button" onClick={() => setShowQr(true)}><i className="ti ti-qrcode ui-e5876b" aria-hidden="true"></i> QR</button>}</div>
           </div>
           {showQuickActions && <div className="block-detail-action-grid ui-1a4890">
             {canFum.create && <button className="ag-small-action ui-0ea43e" type="button" onClick={() => abrirCargaRapida('fumigaciones')}><i className="ti ti-spray" aria-hidden="true" /> Fumigación <i className="ti ti-arrow-up-right" aria-hidden="true" /></button>}
