@@ -526,6 +526,18 @@ export default function Fertilizaciones({ campoActivo }) {
       const { data:revertidos, error:revertirError } = await supabase.rpc('revertir_consumos_valorizados', { p_origen_tipo:'consumo_fertilizacion', p_origen_id:origenId })
       if (!revertirError && Number(revertidos) > 0) return
     }
+    for (const { producto_id:productoId, cantidad } of totalesLegado(grupo)) {
+      const prod = productos.find(x => x.id === productoId)
+      await ajustarStockSeguro({ productoId, delta:cantidad, tipo:'devolucion_fertilizacion', modulo:'Fertilizaciones', referenciaId:grupo.grupo_id || grupo.items[0]?.id, detalle:motivo, stockActual:prod?.stock_actual || 0 })
+    }
+  }
+
+  // Si la base todavía no tiene las funciones atómicas, se usa el camino anterior (guardar en varios pasos).
+  const rpcAusente = (error) => error?.code === 'PGRST202' || /could not find the function|schema cache/i.test(error?.message || '')
+
+  // Cuánto devolver por producto según lo guardado en la aplicación (la cuenta de siempre de la pantalla). La base solo la usa
+  // para aplicaciones antiguas que no tienen ningún movimiento de inventario.
+  const totalesLegado = (grupo) => {
     const totales = {}
     const solucionesBase = grupo.items[0]?.soluciones || grupo.soluciones || []
     solucionesBase.flatMap(sol => sol.productos || []).filter(p => p.modo !== 'por_planta').forEach(p => {
@@ -540,10 +552,7 @@ export default function Fertilizaciones({ campoActivo }) {
       const convertido = convertirAStock(p.cantidad, p.unidad, prod?.unidad)
       if (convertido) totales[p.producto_id] = (totales[p.producto_id] || 0) + convertido
     }))
-    for (const [productoId, cantidad] of Object.entries(totales)) {
-      const prod = productos.find(x => x.id === productoId)
-      await ajustarStockSeguro({ productoId, delta:cantidad, tipo:'devolucion_fertilizacion', modulo:'Fertilizaciones', referenciaId:grupo.grupo_id || grupo.items[0]?.id, detalle:motivo, stockActual:prod?.stock_actual || 0 })
-    }
+    return Object.entries(totales).map(([producto_id, cantidad]) => ({ producto_id, cantidad }))
   }
 
   const anularAplicacion = async (grupo) => {
@@ -551,9 +560,14 @@ export default function Fertilizaciones({ campoActivo }) {
     if (!motivo) return setError('Escribí el motivo de la anulación.')
     setSaving(true); setError(''); setSuccess('')
     try {
-      const { error:anularError } = await supabase.from('fertilizaciones').update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:motivo.trim(), updated_at:new Date().toISOString() }).in('id', grupo.items.map(i => i.id))
-      if (anularError) throw anularError
-      await devolverInventarioGrupo(grupo, motivo.trim())
+      // Anular y devolver el stock en una sola operación de la base: si algo falla, no queda nada a medias.
+      const { error:atomicoError } = await supabase.rpc('anular_fertilizacion', { p_ids:grupo.items.map(i => i.id), p_grupo_origen:grupo.grupo_id || grupo.items[0]?.grupo_id || null, p_motivo:motivo, p_legado:totalesLegado(grupo) })
+      if (atomicoError && !rpcAusente(atomicoError)) throw atomicoError
+      if (atomicoError) {
+        const { error:anularError } = await supabase.from('fertilizaciones').update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:motivo.trim(), updated_at:new Date().toISOString() }).in('id', grupo.items.map(i => i.id))
+        if (anularError) throw anularError
+        await devolverInventarioGrupo(grupo, motivo.trim())
+      }
       await registrarAuditoria({ accion:'Anulo fertilizacion', modulo:'Fertilizaciones', tabla:'fertilizaciones', registroId:grupo.grupo_id || grupo.items[0]?.id || '', detalle:motivo.trim() })
       setDetalle(null); setMotivoAnulacion(''); setSuccess('Aplicación anulada y productos devueltos al inventario.'); await cargarDatos()
     } catch (e) { setError(`No se pudo anular: ${e.message || 'error desconocido'}`) }
@@ -669,16 +683,6 @@ export default function Fertilizaciones({ campoActivo }) {
     }
 
     setSaving(true)
-    if (form.edit_grupo) {
-      try {
-        const { error:reemplazoError } = await supabase.from('fertilizaciones').update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:'Reemplazada por edición', updated_at:new Date().toISOString() }).in('id', form.edit_ids || [])
-        if (reemplazoError) throw reemplazoError
-        await devolverInventarioGrupo(form.edit_grupo, 'Edición de fertilización')
-      } catch (e) {
-        setSaving(false)
-        return setError(`No se pudo preparar la edición: ${e.message || 'error desconocido'}`)
-      }
-    }
     const grupoId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null
     const solucionesPorBloque = (bloque) => solucionesLimpias.map(sol => ({
       nombre:sol.nombre,
@@ -712,6 +716,60 @@ export default function Fertilizaciones({ campoActivo }) {
       }
     })
 
+    // Seguimiento del plan (solo al registrar una aplicación del plan) y cuánto producto descuenta cada bloque.
+    const seguimientoPlan = (form.plan_id || form.plan_ids_by_block) && !form.edit_grupo ? payloads.filter(item => item.plan_id).map(item => ({
+      plan_id:item.plan_id,
+      bloque_id:item.bloque_id,
+      plantacion_id:item.plantacion_id,
+      fecha:form.fecha,
+      litros_aplicados:form.estado === 'suspendida' ? 0 : tanqueLitros * tanquesCantidad,
+      tanques_aplicados:form.estado === 'suspendida' ? 0 : tanquesCantidad,
+      estado:form.estado || 'completa',
+      productos:item.soluciones || [],
+      notas:form.notas || null,
+    })) : []
+    const descuentosDelBloque = (payload) => {
+      if (form.estado === 'suspendida') return []
+      const bloque = bloques.find(b => b.id === payload.bloque_id)
+      return solucionesLimpias.flatMap(sol => sol.productos).filter(p => p.producto_id).map(producto => {
+        const cantidadUso = producto.modo === 'por_planta'
+          ? Number(producto.cantidad || 0) * plantasDelBloque(bloque)
+          : Number(producto.cantidad || 0) * tanquesCantidad / payloads.length
+        return { producto_id:producto.producto_id, cantidad:convertirAStock(cantidadUso, producto.unidad, producto.unidad_stock) }
+      }).filter(d => d.cantidad && d.cantidad > 0)
+    }
+    const faltantes = []
+    // Todo en una sola operación de la base (filas, descuento de stock, seguimiento y tarea del plan): si algo falla, no se guarda nada.
+    const cargaAtomica = {
+      grupo_id:grupoId, fecha:form.fecha,
+      aplicaciones:payloads.map(payload => ({ ...payload, detalle:`Bloque ${bloques.find(b => b.id === payload.bloque_id)?.codigo || ''}`, descuentos:descuentosDelBloque(payload) })),
+      seguimiento:seguimientoPlan,
+      planes_completar:[...new Set(seguimientoPlan.map(item => item.plan_id).filter(Boolean))],
+    }
+    const { data:atomico, error:atomicoError } = form.edit_grupo
+      ? await supabase.rpc('editar_fertilizacion', { p_ids:form.edit_ids || [], p_grupo_origen:form.edit_grupo.grupo_id || form.edit_grupo.items?.[0]?.grupo_id || null, p_legado:totalesLegado(form.edit_grupo), p:cargaAtomica })
+      : await supabase.rpc('registrar_fertilizacion', { p:cargaAtomica })
+    if (atomicoError && !rpcAusente(atomicoError)) {
+      setSaving(false)
+      setError(`No se pudo guardar la fertilización: ${atomicoError.message || 'error desconocido'}`)
+      return
+    }
+    const guardadoAtomico = !atomicoError
+    if (guardadoAtomico) {
+      faltantes.push(...(atomico?.faltantes || []))
+      setSaving(false)
+    } else {
+    // Camino anterior (la base todavía no tiene las funciones atómicas): varios pasos sueltos.
+    if (form.edit_grupo) {
+      try {
+        const { error:reemplazoError } = await supabase.from('fertilizaciones').update({ anulada:true, anulada_at:new Date().toISOString(), anulada_motivo:'Reemplazada por edición', updated_at:new Date().toISOString() }).in('id', form.edit_ids || [])
+        if (reemplazoError) throw reemplazoError
+        await devolverInventarioGrupo(form.edit_grupo, 'Edición de fertilización')
+      } catch (e) {
+        setSaving(false)
+        return setError(`No se pudo preparar la edición: ${e.message || 'error desconocido'}`)
+      }
+    }
     const { error: insertError } = await supabase.from('fertilizaciones').insert(payloads)
     setSaving(false)
     if (insertError) {
@@ -719,7 +777,6 @@ export default function Fertilizaciones({ campoActivo }) {
       return
     }
 
-    const faltantes = []
     if (form.estado !== 'suspendida') {
       for (const payload of payloads) {
         const bloque = bloques.find(b => b.id === payload.bloque_id)
@@ -738,6 +795,7 @@ export default function Fertilizaciones({ campoActivo }) {
           if (consumo?.faltante > 0) faltantes.push({ nombre:producto.nombre || prodActual?.nombre || 'Producto', unidad:prodActual?.unidad || producto.unidad_stock, pedido:consumo.pedido, disponible:consumo.disponible, faltante:consumo.faltante })
         }
       }
+    }
     }
 
     if (form.es_semanal && form.edit_plan_ids?.length) {
@@ -763,18 +821,8 @@ export default function Fertilizaciones({ campoActivo }) {
       }))
     }
 
-    if ((form.plan_id || form.plan_ids_by_block) && !form.edit_grupo) {
-      const seguimiento = payloads.filter(item => item.plan_id).map(item => ({
-        plan_id:item.plan_id,
-        bloque_id:item.bloque_id,
-        plantacion_id:item.plantacion_id,
-        fecha:form.fecha,
-        litros_aplicados:form.estado === 'suspendida' ? 0 : tanqueLitros * tanquesCantidad,
-        tanques_aplicados:form.estado === 'suspendida' ? 0 : tanquesCantidad,
-        estado:form.estado || 'completa',
-        productos:item.soluciones || [],
-        notas:form.notas || null,
-      }))
+    if (!guardadoAtomico && (form.plan_id || form.plan_ids_by_block) && !form.edit_grupo) {
+      const seguimiento = seguimientoPlan
       const { error: seguimientoError } = seguimiento.length ? await supabase.from('fertilizacion_plan_aplicaciones').insert(seguimiento) : { error:null }
       if (seguimientoError) setError(`La fertilización se guardo, pero fallo el seguimiento del plan: ${seguimientoError.message}`)
       const planIdsAplicados = [...new Set(seguimiento.map(item => item.plan_id).filter(Boolean))]
