@@ -482,6 +482,17 @@ export default function FichaBloque() {
     }))
   }
 
+  // Si la base todavía no tiene las funciones atómicas, se usa el camino anterior (guardar en varios pasos).
+  const rpcAusente = (error) => error?.code === 'PGRST202' || /could not find the function|schema cache/i.test(error?.message || '')
+
+  // Abonos del formulario en el formato que reciben las funciones de la base.
+  const abonosParaBase = (abonosIds) => abonosIds.map(ab => ({
+    abono_id: ab,
+    cantidad: form.abonos_cantidades[ab] || null,
+    unidad: form.abonos_cantidades[`${ab}_unidad`] || 'kg',
+    alcance: form.abonos_cantidades[`${ab}_alcance`] || 'total',
+  }))
+
   const guardarPlantacionCompatible = async (payload, plantacionId = null) => {
     const ejecutar = (datos) => plantacionId
       ? supabase.from('plantaciones').update(datos).eq('id', plantacionId).select().single()
@@ -510,6 +521,7 @@ export default function FichaBloque() {
     }
     setSaving(true)
     let nueva = null
+    let caminoAnterior = false
     try {
       let abonosIds = [...form.abonos_ids]
       if (nuevoAbonoNombre.trim()) {
@@ -517,6 +529,15 @@ export default function FichaBloque() {
         if (!abonoPendienteId) throw new Error('No se pudo agregar el abono escrito.')
         if (!abonosIds.includes(abonoPendienteId)) abonosIds.push(abonoPendienteId)
       }
+      // Cerrar la plantación activa, crear la nueva y sus abonos, en una sola operación de la base: si algo falla, no cambia nada.
+      const { data:atomico, error:atomicoError } = await supabase.rpc('registrar_plantacion', { p:{
+        bloque_id:id, cultivo_id:cultivoId, notas:form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null, fecha_siembra:form.fecha_siembra,
+        cantidad_plantas:form.cantidad_plantas ? parseLocaleInteger(form.cantidad_plantas, null) : null, abonos:abonosParaBase(abonosIds),
+      } })
+      if (!atomicoError) nueva = { id:atomico?.id }
+      else if (!rpcAusente(atomicoError)) throw atomicoError
+      else caminoAnterior = true
+      if (caminoAnterior) {
       if (plantacionActiva) {
         const { error } = await supabase.from('plantaciones').update({ activa: false }).eq('id', plantacionActiva.id)
         if (error) throw error
@@ -539,12 +560,16 @@ export default function FichaBloque() {
         )
         if (error) throw error
       }
+      }
       setShowNuevaPlantacion(false)
       await registrarAuditoria({ accion:'Registro plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:nueva?.id || '', detalle:`Bloque ${bloque?.codigo || ''}` })
       await fetchData()
     } catch (error) {
-      if (nueva?.id) await supabase.from('plantaciones').update({ activa: false }).eq('id', nueva.id)
-      if (plantacionActiva) await supabase.from('plantaciones').update({ activa: true }).eq('id', plantacionActiva.id)
+      // Solo el camino anterior necesita deshacer a mano lo que ya guardó; la operación atómica no deja nada a medias.
+      if (caminoAnterior) {
+        if (nueva?.id) await supabase.from('plantaciones').update({ activa: false }).eq('id', nueva.id)
+        if (plantacionActiva) await supabase.from('plantaciones').update({ activa: true }).eq('id', plantacionActiva.id)
+      }
       setPlantacionFormError(`No se pudo guardar la plantación: ${error.message || 'intentá nuevamente.'}`)
     } finally {
       setSaving(false)
@@ -555,12 +580,20 @@ export default function FichaBloque() {
     if (!plantacionActiva || !form.cultivo_id || !form.fecha_siembra) return
     setSaving(true); setPlantacionFormError('')
     try {
+      // Datos y abonos en una sola operación de la base. Los abonos solo se reemplazan si cambiaron.
+      const { error:atomicoError } = await supabase.rpc('editar_plantacion', { p_id:plantacionActiva.id, p:{
+        cultivo_id:form.cultivo_id, notas:form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null, fecha_siembra:form.fecha_siembra,
+        cantidad_plantas:form.cantidad_plantas ? parseLocaleInteger(form.cantidad_plantas, null) : null, abonos:abonosParaBase(form.abonos_ids),
+      } })
+      if (atomicoError && !rpcAusente(atomicoError)) throw atomicoError
+      if (atomicoError) {
       await guardarPlantacionCompatible({ cultivo_id:form.cultivo_id, notas:form.variedad_texto ? `Variedad: ${form.variedad_texto}` : null, fecha_siembra:form.fecha_siembra, cantidad_plantas:form.cantidad_plantas ? parseLocaleInteger(form.cantidad_plantas, null) : null }, plantacionActiva.id)
       const { error:eliminarError } = await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionActiva.id)
       if (eliminarError) throw eliminarError
       if (form.abonos_ids.length > 0) {
         const { error:abonosError } = await supabase.from('plantacion_abonos').insert(form.abonos_ids.map(ab => ({ plantacion_id:plantacionActiva.id, abono_id:ab, cantidad:form.abonos_cantidades[ab] || null, unidad:form.abonos_cantidades[`${ab}_unidad`] || 'kg', alcance:form.abonos_cantidades[`${ab}_alcance`] || 'total' })))
         if (abonosError) throw abonosError
+      }
       }
       setShowEditarPlantacion(false)
       await registrarAuditoria({ accion:'Edito plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
@@ -591,10 +624,19 @@ export default function FichaBloque() {
       titulo: 'Eliminar plantación?',
       mensaje: 'Se borrara definitivamente la plantación activa y sus abonos, fotos y muertes registradas. No se puede deshacer.',
       fn: async () => {
+        // Abonos, fotos, muertes y plantación en una sola operación de la base: o se borra todo o no se borra nada.
+        const { error:atomicoError } = await supabase.rpc('eliminar_plantacion', { p_id:plantacionActiva.id, p_con_fotos_y_muertes:true })
+        if (atomicoError && !rpcAusente(atomicoError)) {
+          setMensajeExito(`No se pudo eliminar la plantación: ${atomicoError.message || 'revisá la conexión.'}`)
+          setConfirmar(null)
+          return
+        }
+        if (atomicoError) {
         await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionActiva.id)
         await supabase.from('fotos_bloque').delete().eq('plantacion_id', plantacionActiva.id)
         await supabase.from('muertes_plantas').delete().eq('plantacion_id', plantacionActiva.id)
         await supabase.from('plantaciones').delete().eq('id', plantacionActiva.id)
+        }
         await registrarAuditoria({ accion:'Elimino plantacion', modulo:'Bloque', tabla:'plantaciones', registroId:plantacionActiva.id, detalle:`Bloque ${bloque?.codigo || ''}` })
         setConfirmar(null)
         setSeccion('plantacion')
@@ -605,8 +647,17 @@ export default function FichaBloque() {
 
   const eliminarHistorial = (plantacionId) => {
     setConfirmar({ titulo:'Eliminar ciclo?', mensaje:'Se eliminara este ciclo del historial. No se puede deshacer.', fn: async () => {
+      // Los abonos y la plantación se borran en una sola operación (las fotos y muertes del ciclo se conservan, como antes).
+      const { error:atomicoError } = await supabase.rpc('eliminar_plantacion', { p_id:plantacionId, p_con_fotos_y_muertes:false })
+      if (atomicoError && !rpcAusente(atomicoError)) {
+        setMensajeExito(`No se pudo eliminar el ciclo: ${atomicoError.message || 'revisá la conexión.'}`)
+        setConfirmar(null)
+        return
+      }
+      if (atomicoError) {
       await supabase.from('plantacion_abonos').delete().eq('plantacion_id', plantacionId)
       await supabase.from('plantaciones').delete().eq('id', plantacionId)
+      }
       setConfirmar(null); setHistorialDetalle(null); fetchData()
     }})
   }
