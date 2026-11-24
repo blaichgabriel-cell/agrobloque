@@ -21,6 +21,7 @@ export default function Alertas() {
   const [loading, setLoading] = useState(true)
   const [alertas, setAlertas] = useState([])
   const [mensaje, setMensaje] = useState('')
+  const [expandidas, setExpandidas] = useState({})
   const [notificaciones, setNotificaciones] = useState(() => typeof window !== 'undefined' && window.localStorage.getItem(NOTIFICATION_KEY) === 'on' && window.Notification?.permission === 'granted')
 
   useEffect(() => { cargar() }, [])
@@ -52,6 +53,8 @@ export default function Alertas() {
       const vencida = t.fecha_programada && t.fecha_programada < hoy
       lista.push({
         tipo: vencida ? 'alta' : 'media',
+        categoria:'importante',
+        claveBase:`tarea:${t.id}`,
         titulo: vencida ? 'Tarea vencida' : 'Tarea pendiente',
         detalle: `${t.descripcion} - ${t.fecha_programada || 'sin fecha'}`,
         path: '/agenda',
@@ -62,9 +65,9 @@ export default function Alertas() {
       const stock = Number(p.stock_actual) || 0
       const minimo = Number(p.stock_minimo) || 0
       if (stock <= 0) {
-        lista.push({ tipo:'alta', titulo:'Producto sin stock', detalle:p.nombre, path:'/inventario' })
+        lista.push({ tipo:'alta', categoria:'importante', claveBase:`stock:${p.id}`, titulo:'Producto sin stock', detalle:p.nombre, path:'/inventario' })
       } else if (minimo > 0 && stock <= minimo) {
-        lista.push({ tipo:'media', titulo:'Producto con bajo stock', detalle:`${p.nombre} - stock ${stock} / mínimo ${minimo}`, path:'/inventario' })
+        lista.push({ tipo:'media', categoria:'importante', claveBase:`stock:${p.id}`, titulo:'Producto con bajo stock', detalle:`${p.nombre} - stock ${stock} / mínimo ${minimo}`, path:'/inventario' })
       }
     })
 
@@ -73,6 +76,8 @@ export default function Alertas() {
       if (l.fecha_estimada_trasplante && l.fecha_estimada_trasplante <= hoy) {
         lista.push({
           tipo:'media',
+          categoria:'importante',
+          claveBase:`vivero:${l.id}`,
           titulo:'Lote de vivero listo para revisar',
           detalle:`${l.cultivo || 'Cultivo'} ${l.variedad || ''} - trasplante estimado ${l.fecha_estimada_trasplante}`,
           path:'/vivero',
@@ -94,6 +99,9 @@ export default function Alertas() {
       if (dias >= 7) {
         lista.push({
           tipo: dias >= 10 ? 'alta' : 'media',
+          categoria:'sugerencia',
+          grupo:'planes-fertilizacion',
+          claveBase:`plan-fertilizacion:${plan.id}`,
           titulo: 'Plan semanal sin aplicación reciente',
           detalle:`Bloque ${plan.bloques?.codigo || '-'} - ${plan.nombre || 'Plan semanal'} - ${dias} días desde la última aplicación`,
           path: plan.bloque_id ? `/bloque/${plan.bloque_id}` : '/mapa',
@@ -128,6 +136,8 @@ export default function Alertas() {
       const productosTxt = (f.fumigacion_productos || []).map(fp => fp.productos?.nombre).filter(Boolean).join(', ')
       lista.push({
         tipo:'alta',
+        categoria:'importante',
+        claveBase:`carencia:${f.id}`,
         titulo:'Carencia activa',
         detalle:`Bloques ${bloquesTxt || '-'} - faltan ${restantes} dia${restantes === 1 ? '' : 's'} - ${productosTxt || 'producto con carencia'}`,
         path:'/fumigaciones',
@@ -141,6 +151,9 @@ export default function Alertas() {
       if (dias >= 14 && (!ultimaFert || diasEntre(ultimaFert.fecha) >= 14)) {
         lista.push({
           tipo:'media',
+          categoria:'sugerencia',
+          grupo:'fertilizacion-reciente',
+          claveBase:`fertilizacion-bloque:${p.bloques?.id || p.id}`,
           titulo:'Bloque activo sin fertilización reciente',
           detalle:`Bloque ${p.bloques?.codigo || '-'} - ${p.cultivos?.nombre || 'cultivo'} - ${ultimaFert ? `${diasEntre(ultimaFert.fecha)} días desde última fertilización` : 'sin fertilización registrada'}`,
           path:'/fertilizaciones',
@@ -149,6 +162,9 @@ export default function Alertas() {
       if (dias >= 21 && (!ultima || diasEntre(ultima.fecha) >= 21)) {
         lista.push({
           tipo:'baja',
+          categoria:'sugerencia',
+          grupo:'fumigacion-reciente',
+          claveBase:`fumigacion-bloque:${p.bloques?.id || p.id}`,
           titulo:'Cultivo sin fumigación reciente',
           detalle:`Bloque ${p.bloques?.codigo || '-'} - ${p.cultivos?.nombre || 'cultivo'} - ${ultima ? `${diasEntre(ultima.fecha)} días desde última` : 'sin registro'}`,
           path: p.bloques?.id ? `/bloque/${p.bloques.id}` : '/mapa',
@@ -158,7 +174,7 @@ export default function Alertas() {
 
     const { data:gestiones } = await supabase.from('alertas_gestion').select('clave,estado,pospuesta_hasta')
     const gestionPorClave = Object.fromEntries((gestiones || []).map(g => [g.clave, g]))
-    const visibles = lista.map(a => ({ ...a, clave:`${a.titulo}|${a.detalle}`.slice(0, 240) })).filter(a => {
+    const visibles = lista.map(a => ({ ...a, categoria:a.categoria || 'importante', clave:(a.claveBase || `${a.titulo}|${a.detalle}`).slice(0, 240) })).filter(a => {
       const gestion = gestionPorClave[a.clave]
       if (!gestion) return true
       if (gestion.estado === 'resuelta') return false
@@ -166,9 +182,9 @@ export default function Alertas() {
       return true
     })
     setAlertas(visibles)
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(ALERT_COUNT_EVENT, { detail:{ count:visibles.length } }))
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(ALERT_COUNT_EVENT, { detail:{ count:visibles.filter(a => a.categoria === 'importante').length } }))
     if (typeof window !== 'undefined' && window.localStorage.getItem(NOTIFICATION_KEY) === 'on' && window.Notification?.permission === 'granted') {
-      visibles.filter(a => a.tipo !== 'baja').slice(0, 3).forEach(alerta => {
+      visibles.filter(a => a.categoria === 'importante').slice(0, 3).forEach(alerta => {
         const claveAviso = `agrobloque-alerta:${hoy}:${alerta.clave}`
         if (window.localStorage.getItem(claveAviso)) return
         try { new Notification(`AgroBloque · ${alerta.titulo}`, { body:alerta.detalle, icon:'/logo192.png', tag:alerta.clave }) } catch {}
@@ -194,21 +210,40 @@ export default function Alertas() {
     cargar()
   }
 
-  const gestionar = async (alerta, estado) => {
+  const gestionarVarias = async (items, estado) => {
     const { data:{ user } } = await supabase.auth.getUser()
     if (!user?.id) return
     const pospuesta_hasta = estado === 'pospuesta' ? new Date(Date.now() + 3 * 86400000).toISOString().slice(0,10) : null
-    const { error } = await supabase.from('alertas_gestion').upsert({ clave:alerta.clave, usuario_id:user.id, estado, pospuesta_hasta, updated_at:new Date().toISOString() }, { onConflict:'clave,usuario_id' })
+    const registros = items.map(alerta => ({ clave:alerta.clave, usuario_id:user.id, estado, pospuesta_hasta, updated_at:new Date().toISOString() }))
+    const { error } = await supabase.from('alertas_gestion').upsert(registros, { onConflict:'clave,usuario_id' })
     if (error) return setMensaje(`No se pudo actualizar la alerta: ${error.message}`)
-    setMensaje(estado === 'resuelta' ? 'Alerta marcada como resuelta.' : 'Alerta pospuesta por 3 días.')
-    setAlertas(actual => actual.filter(a => a.clave !== alerta.clave))
+    const claves = new Set(items.map(item => item.clave))
+    setMensaje(estado === 'resuelta' ? `${items.length === 1 ? 'Aviso ocultado' : `${items.length} avisos ocultados`} permanentemente.` : `${items.length === 1 ? 'Aviso pospuesto' : `${items.length} avisos pospuestos`} por 3 días.`)
+    setAlertas(actual => actual.filter(a => !claves.has(a.clave)))
   }
 
+  const gestionar = (alerta, estado) => gestionarVarias([alerta], estado)
+
+  const importantes = useMemo(() => alertas.filter(alerta => alerta.categoria === 'importante'), [alertas])
+  const sugerencias = useMemo(() => {
+    const grupos = new Map()
+    alertas.filter(alerta => alerta.categoria === 'sugerencia').forEach(alerta => {
+      const claveGrupo = alerta.grupo || alerta.titulo
+      if (!grupos.has(claveGrupo)) grupos.set(claveGrupo, { claveGrupo, titulo:alerta.titulo, tipo:alerta.tipo, path:alerta.path, items:[] })
+      grupos.get(claveGrupo).items.push(alerta)
+    })
+    return Array.from(grupos.values()).map(grupo => ({
+      ...grupo,
+      titulo: grupo.claveGrupo === 'fertilizacion-reciente' ? 'Fertilización para revisar' : grupo.claveGrupo === 'fumigacion-reciente' ? 'Fumigación para revisar' : grupo.titulo,
+      detalle: grupo.items.length === 1 ? grupo.items[0].detalle : `${grupo.items.length} avisos agrupados. Abrí la lista para ver los bloques.`,
+    }))
+  }, [alertas])
+
   const resumen = useMemo(() => ({
-    alta: alertas.filter(a => a.tipo === 'alta').length,
-    media: alertas.filter(a => a.tipo === 'media').length,
-    baja: alertas.filter(a => a.tipo === 'baja').length,
-  }), [alertas])
+    urgentes: importantes.filter(a => a.tipo === 'alta').length,
+    importantes: importantes.length,
+    sugerencias: alertas.filter(a => a.categoria === 'sugerencia').length,
+  }), [alertas, importantes])
 
   return (
     <div className="ag-page ag-page-body ui-71cde8" style={{ padding: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '34px 36px 100px' : '24px 14px 100px' }}>
@@ -224,32 +259,19 @@ export default function Alertas() {
         <div className="alerts-notification-note"><i className="ti ti-info-circle" /><span>Los avisos del navegador funcionan mientras AgroBloque está abierto. Las notificaciones con la aplicación cerrada requieren activar el servicio push del servidor.</span></div>
 
         <div className="ui-9420ec">
-          <Stat label="Altas" value={resumen.alta} color="#c84040" />
-          <Stat label="Medias" value={resumen.media} color="#e07b00" />
-          <Stat label="Avisos" value={resumen.baja} color="#176a25" />
+          <Stat label="Urgentes" value={resumen.urgentes} color="#c84040" />
+          <Stat label="Importantes" value={resumen.importantes} color="#e07b00" />
+          <Stat label="Sugerencias agrupadas" value={sugerencias.length} color="#176a25" />
         </div>
 
         {loading ? (
           <div className="ui-4e47d3">Calculando alertas...</div>
         ) : alertas.length === 0 ? (
           <div className="ag-surface ui-422178">Todo tranquilo por ahora.</div>
-        ) : alertas.map((a, i) => {
-          const s = severidad[a.tipo] || severidad.baja
-          return (
-            <div className="ag-surface ui-ff9ccf" role="button" tabIndex={0} key={`${a.titulo}-${i}`} onClick={() => navigate(a.path)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(a.path) } }} style={{ boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 10px 28px rgba(29,38,29,0.045)' : 'none' }}>
-              <div className="ui-f4d829">
-                <span className="ui-51b32e" style={{ background:s.bg }}>
-                  <i className={`${`ti ${s.icon}`} ui-b5ef88`} style={{ color:s.color }} aria-hidden="true"></i>
-                </span>
-                <span>
-                  <strong className="ui-8ccc2b">{a.titulo}</strong>
-                  <span className="ui-962f1b">{a.detalle}</span>
-                </span>
-                <div className="ui-5a9605"><button className="ag-small-action ui-2e1c5c" onClick={e => { e.stopPropagation(); gestionar(a, 'pospuesta') }}>Posponer 3 días</button><button className="ag-small-action ui-707b17" onClick={e => { e.stopPropagation(); gestionar(a, 'resuelta') }}>Resolver</button></div>
-              </div>
-            </div>
-          )
-        })}
+        ) : <>
+          <section className="alerts-section"><div className="alerts-section__head"><div><span>REQUIERE ATENCIÓN</span><h2>Alertas importantes</h2></div><em>{importantes.length}</em></div>{importantes.length ? importantes.map(alerta => <AlertItem key={alerta.clave} alerta={alerta} onOpen={() => navigate(alerta.path)} onPostpone={() => gestionar(alerta, 'pospuesta')} onResolve={() => gestionar(alerta, 'resuelta')} />) : <div className="ag-surface alerts-empty"><i className="ti ti-circle-check" />No hay alertas importantes.</div>}</section>
+          <section className="alerts-section alerts-section--suggestions"><div className="alerts-section__head"><div><span>RECOMENDACIONES AUTOMÁTICAS</span><h2>Sugerencias agronómicas</h2><p>No se incluyen en el contador principal.</p></div><em>{sugerencias.length}</em></div>{sugerencias.length ? sugerencias.map(grupo => <GroupedAlert key={grupo.claveGrupo} grupo={grupo} expanded={Boolean(expandidas[grupo.claveGrupo])} onToggle={() => setExpandidas(actual => ({ ...actual, [grupo.claveGrupo]:!actual[grupo.claveGrupo] }))} onOpen={item => navigate(item.path)} onPostpone={() => gestionarVarias(grupo.items, 'pospuesta')} onResolve={() => gestionarVarias(grupo.items, 'resuelta')} />) : <div className="ag-surface alerts-empty"><i className="ti ti-leaf" />No hay sugerencias pendientes.</div>}</section>
+        </>}
       </div>
     </div>
   )
@@ -262,4 +284,29 @@ function Stat({ label, value, color }) {
       <div className="ui-121d5b" style={{ color }}>{value}</div>
     </div>
   )
+}
+
+function AlertItem({ alerta, onOpen, onPostpone, onResolve, compact = false }) {
+  const s = severidad[alerta.tipo] || severidad.baja
+  return <article className={`ag-surface alert-row ${compact ? 'is-compact' : ''}`}>
+    <button type="button" className="alert-row__main" onClick={onOpen}>
+      <span className="alert-row__icon" style={{ background:s.bg }}><i className={`ti ${s.icon}`} style={{ color:s.color }} /></span>
+      <span className="alert-row__copy"><strong>{alerta.titulo}</strong><small>{alerta.detalle}</small></span>
+      <i className="ti ti-chevron-right alert-row__chevron" />
+    </button>
+    {!compact && <div className="alert-row__actions"><button type="button" onClick={onPostpone}>Recordar en 3 días</button><button type="button" onClick={onResolve}>No volver a avisar</button></div>}
+  </article>
+}
+
+function GroupedAlert({ grupo, expanded, onToggle, onOpen, onPostpone, onResolve }) {
+  const s = severidad[grupo.tipo] || severidad.baja
+  return <article className="ag-surface alert-group">
+    <button type="button" className="alert-group__summary" onClick={onToggle} aria-expanded={expanded}>
+      <span className="alert-row__icon" style={{ background:s.bg }}><i className={`ti ${s.icon}`} style={{ color:s.color }} /></span>
+      <span className="alert-row__copy"><strong>{grupo.titulo}</strong><small>{grupo.detalle}</small></span>
+      <span className="alert-group__count">{grupo.items.length}</span><i className={`ti ti-chevron-${expanded ? 'up' : 'down'}`} />
+    </button>
+    {expanded && <div className="alert-group__details">{grupo.items.map(item => <AlertItem key={item.clave} alerta={item} compact onOpen={() => onOpen(item)} />)}</div>}
+    <div className="alert-row__actions"><button type="button" onClick={onPostpone}>Recordar en 3 días</button><button type="button" onClick={onResolve}>No volver a avisar</button></div>
+  </article>
 }

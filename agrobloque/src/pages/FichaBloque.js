@@ -72,6 +72,7 @@ export default function FichaBloque() {
   const [detalleCostos, setDetalleCostos] = useState(null)
   const [exportandoPdf, setExportandoPdf] = useState(false)
   const [showInformeOpciones, setShowInformeOpciones] = useState(false)
+  const [estadoInforme, setEstadoInforme] = useState('')
   const [pdfError, setPdfError] = useState('')
   const [cosechaError, setCosechaError] = useState('')
   const [cosechaSuccess, setCosechaSuccess] = useState('')
@@ -1085,26 +1086,21 @@ export default function FichaBloque() {
       const productosFertilizacion = item => (item.soluciones || []).flatMap(solucion => (solucion.productos || []).map(producto => `${producto.nombre || 'Producto'} ${producto.cantidad || ''} ${producto.unidad || ''}`.trim())).join(', ')
       const bases = (abonosPlantacion || []).map(item => ({ nombre:item.abonos?.nombre || 'Base', cantidad:fmtAbonoPlantacion(item) }))
       const html = `
-        <h1>Ficha técnica · Bloque ${escapeHtml(bloque.codigo)}</h1>
-        <p class="muted">Informe agronómico para seguimiento del cultivo · ${escapeHtml(bloque.campos?.nombre || 'Campo sin especificar')}</p>
-        <h2>Datos del cultivo</h2>
-        <table><tbody>
-          <tr><th>Bloque</th><td>${escapeHtml(bloque.codigo)}</td><th>Ubicación</th><td>${escapeHtml(bloque.campos?.nombre || '-')}</td></tr>
-          <tr><th>Cultivo</th><td>${escapeHtml(plantacionActiva?.cultivos?.nombre || 'Sin cultivo activo')}</td><th>Variedad</th><td>${escapeHtml(getVariedad(plantacionActiva) || '-')}</td></tr>
-          <tr><th>Fecha de siembra</th><td>${escapeHtml(plantacionActiva?.fecha_siembra || '-')}</td><th>Días en campo</th><td>${plantacionActiva ? `${diasDesde(plantacionActiva.fecha_siembra) ?? '-'} días` : '-'}</td></tr>
-          <tr><th>Plantas registradas</th><td>${cantidadPlantasActiva ? cantidadPlantasActiva.toLocaleString('es-PY') : '-'}</td><th>Pérdidas registradas</th><td>${totalMuertes ? totalMuertes.toLocaleString('es-PY') : '0'}</td></tr>
-          <tr><th>Tipo de bloque</th><td>${bloque.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}</td><th>Estado</th><td>${plantacionActiva ? 'En producción' : 'Sin cultivo activo'}</td></tr>
-        </tbody></table>
+        <p class="report-kicker">Informe de bloque</p>
+        <div class="report-title-row"><h1>Bloque ${escapeHtml(bloque.codigo)}</h1><span class="status-pill">${plantacionActiva ? 'En producción' : 'Sin cultivo activo'}</span></div>
+        <div class="crop-title">${escapeHtml(plantacionActiva?.cultivos?.nombre || 'Sin cultivo')}${getVariedad(plantacionActiva) ? ` · ${escapeHtml(getVariedad(plantacionActiva))}` : ''}</div>
+        <p class="field-name">${escapeHtml(bloque.campos?.nombre || 'Campo sin especificar')}</p>
+        <div class="metric-row"><div class="metric"><span>Plantas</span><strong>${cantidadPlantasActiva ? cantidadPlantasActiva.toLocaleString('es-PY') : '-'}</strong></div><div class="metric"><span>Días en campo</span><strong>${plantacionActiva ? diasDesde(plantacionActiva.fecha_siembra) ?? '-' : '-'}</strong></div><div class="metric"><span>Siembra</span><strong>${escapeHtml(plantacionActiva?.fecha_siembra || '-')}</strong></div><div class="metric"><span>Pérdidas</span><strong>${totalMuertes ? totalMuertes.toLocaleString('es-PY') : '0'}</strong></div></div>
         <h2>Base utilizada</h2>
         <table><thead><tr><th>Producto / abono</th><th>Cantidad y alcance</th></tr></thead><tbody>${bases.length ? bases.map(item => `<tr><td>${escapeHtml(item.nombre)}</td><td>${escapeHtml(item.cantidad)}</td></tr>`).join('') : filaVacia(2, 'No se registró una base para este cultivo.')}</tbody></table>
         <h2>Fertilizaciones realizadas</h2>
         <table><thead><tr><th>Fecha</th><th>Productos y cantidades</th><th>Observaciones</th></tr></thead><tbody>${fertilizacionesInforme.length ? fertilizacionesInforme.map(item => `<tr><td>${escapeHtml(item.fecha || '-')}</td><td>${escapeHtml(productosFertilizacion(item) || '-')}</td><td>${escapeHtml(notasFertilizacionVisibles(item.notas) || '-')}</td></tr>`).join('') : filaVacia(3, 'Sin fertilizaciones registradas en este cultivo.')}</tbody></table>
         <h2>Fumigaciones realizadas</h2>
         <table><thead><tr><th>Fecha</th><th>Productos y dosis</th><th>Aplicación</th><th>Observaciones</th></tr></thead><tbody>${fumigacionesInforme.length ? fumigacionesInforme.map(item => `<tr><td>${escapeHtml(item.fecha || '-')}</td><td>${escapeHtml(productosFumigacion(item) || '-')}</td><td>${escapeHtml(item.tanques_cantidad && item.tanque_litros ? `${item.tanques_cantidad} × ${item.tanque_litros} L` : '-')}</td><td>${escapeHtml(item.notas || '-')}</td></tr>`).join('') : filaVacia(4, 'Sin fumigaciones registradas en este cultivo.')}</tbody></table>
-        <h2>Observaciones fotográficas</h2>
-        <table><thead><tr><th>Fecha</th><th>Descripción</th></tr></thead><tbody>${fotos.length ? fotos.map(item => `<tr><td>${escapeHtml(item.fecha || '-')}</td><td>${escapeHtml(item.descripcion || 'Sin descripción')}</td></tr>`).join('') : filaVacia(2, 'Sin registros fotográficos en este cultivo.')}</tbody></table>`
+        ${estadoInforme.trim() ? `<h2>Estado actual</h2><div class="state-box"><span class="state-check">✓</span><div>${escapeHtml(estadoInforme.trim())}</div></div>` : ''}
+        <div class="report-footer"><span><strong>AgroBloque</strong> · ${escapeHtml(bloque.campos?.nombre || 'Ficha técnica')}</span><span>Ficha técnica del cultivo</span></div>`
       const { descargarPdfHtml } = await import('../lib/pdfReports')
-      await descargarPdfHtml(`ficha-tecnica-bloque-${bloque.codigo}`, html)
+      await descargarPdfHtml(`ficha-tecnica-bloque-${bloque.codigo}`, html, { variant:'block-clean' })
       setShowInformeOpciones(false)
     } catch (error) {
       setPdfError(`No se pudo generar la ficha técnica: ${error.message || 'intentá nuevamente.'}`)
@@ -1142,8 +1138,10 @@ export default function FichaBloque() {
       ].sort((a,b) => String(b.fecha || '').localeCompare(String(a.fecha || '')))
 
       const html = `
-        <h1>Informe del bloque ${escapeHtml(bloque.codigo)}</h1>
-        <p class="muted">${escapeHtml(bloque.campos?.nombre || 'Campo sin especificar')} · ${bloque.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'} · ${plantacionActiva ? 'En producción' : 'Sin cultivo activo'}</p>
+        <p class="report-kicker">Informe completo de bloque</p>
+        <div class="report-title-row"><h1>Bloque ${escapeHtml(bloque.codigo)}</h1><span class="status-pill">${plantacionActiva ? 'En producción' : 'Sin cultivo activo'}</span></div>
+        <div class="crop-title">${escapeHtml(plantacionActiva?.cultivos?.nombre || 'Sin cultivo')}${getVariedad(plantacionActiva) ? ` · ${escapeHtml(getVariedad(plantacionActiva))}` : ''}</div>
+        <p class="field-name">${escapeHtml(bloque.campos?.nombre || 'Campo sin especificar')}</p>
         <h2>Resumen actual</h2>
         <table><tbody>
           <tr><th>Cultivo</th><td>${escapeHtml(plantacionActiva?.cultivos?.nombre || 'Sin cultivo activo')}</td><th>Variedad</th><td>${escapeHtml(getVariedad(plantacionActiva) || '-')}</td></tr>
@@ -1164,9 +1162,9 @@ export default function FichaBloque() {
         <h2>Notas asignadas al bloque</h2>
         <table><thead><tr><th>Fecha</th><th>Título</th><th>Nota</th></tr></thead><tbody>${(notasBloque || []).length ? (notasBloque || []).map(item => `<tr><td>${escapeHtml(item.fecha || '-')}</td><td>${escapeHtml(item.titulo || '-')}</td><td>${escapeHtml(item.contenido || '-')}</td></tr>`).join('') : filaVacia(3, 'Sin notas asignadas a este bloque.')}</tbody></table>
         <h2>Ciclos anteriores</h2>
-        <table><thead><tr><th>Cultivo</th><th>Siembra</th><th>Estado</th></tr></thead><tbody>${historial.length ? historial.map(item => `<tr><td>${escapeHtml(item.cultivos?.nombre || 'Cultivo')}${getVariedad(item) ? ` · ${escapeHtml(getVariedad(item))}` : ''}</td><td>${escapeHtml(item.fecha_siembra || '-')}</td><td>Finalizado</td></tr>`).join('') : filaVacia(3, 'Este bloque todavía no tiene ciclos anteriores.')}</tbody></table>`
+        <table><thead><tr><th>Cultivo</th><th>Siembra</th><th>Estado</th></tr></thead><tbody>${historial.length ? historial.map(item => `<tr><td>${escapeHtml(item.cultivos?.nombre || 'Cultivo')}${getVariedad(item) ? ` · ${escapeHtml(getVariedad(item))}` : ''}</td><td>${escapeHtml(item.fecha_siembra || '-')}</td><td>Finalizado</td></tr>`).join('') : filaVacia(3, 'Este bloque todavía no tiene ciclos anteriores.')}</tbody></table>${estadoInforme.trim() ? `<h2>Estado actual</h2><div class="state-box"><span class="state-check">✓</span><div>${escapeHtml(estadoInforme.trim())}</div></div>` : ''}<div class="report-footer"><span><strong>AgroBloque</strong> · ${escapeHtml(bloque.campos?.nombre || 'Informe de bloque')}</span><span>Informe completo</span></div>`
       const { descargarPdfHtml } = await import('../lib/pdfReports')
-      await descargarPdfHtml(`informe-bloque-${bloque.codigo}`, html)
+      await descargarPdfHtml(`informe-bloque-${bloque.codigo}`, html, { variant:'block-clean' })
       setShowInformeOpciones(false)
     } catch (error) {
       setPdfError(`No se pudo generar el PDF: ${error.message || 'intentá nuevamente.'}`)
@@ -1365,7 +1363,7 @@ export default function FichaBloque() {
       <input className="ui-cb4589" type="file" accept="image/*" ref={fileRef} onChange={seleccionarFoto} />
       {fotoPendiente && <Modal busy={saving} onClose={() => { setFotoPendiente(null); setFotoError('') }} label="Describir foto" style={{ position:'fixed', inset:0, zIndex:230, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface ui-211525" style={{ width:'min(480px, 100%)' }}><div className="ui-3e43be">Agregar foto al bloque</div><div className="ui-01159a">La descripción es opcional y quedará visible junto a la foto.</div>{fotoError && <div className="ag-feedback ag-feedback-error" role="alert">{fotoError}</div>}<label className="ag-field-label">Descripción (opcional)<textarea className="bl-input photo-description-input" autoFocus value={fotoDescripcion} onChange={e => setFotoDescripcion(e.target.value)} maxLength={300} placeholder="Ej: Planta con 35 días; se observan manchas en las hojas" /></label><div className="ui-9c6869"><button className="ag-small-action ui-395a62" onClick={() => setFotoPendiente(null)} disabled={saving}>Cancelar</button><button className="ag-small-action ui-f5f413" onClick={subirFoto} disabled={saving}>{saving ? 'Guardando…' : 'Guardar foto'}</button></div></div></Modal>}
       {detalleCostos && <Modal onClose={() => setDetalleCostos(null)} label="Detalle de costos" style={{ position:'fixed', inset:0, zIndex:225, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface block-cost-detail"><div className="block-cost-detail__head"><div><small>HISTORIAL DEL CICLO</small><h2>{detalleCostos === 'fumigaciones' ? 'Fumigaciones' : detalleCostos === 'fertilizaciones' ? 'Fertilizaciones' : 'Gastos directos'}</h2></div><button className="ag-small-action" onClick={() => setDetalleCostos(null)} aria-label="Cerrar"><i className="ti ti-x" /></button></div><CostDetailList tipo={detalleCostos} costos={costosCiclo} /></div></Modal>}
-      {showInformeOpciones && <Modal busy={exportandoPdf} onClose={() => !exportandoPdf && setShowInformeOpciones(false)} label="Elegir informe" style={{ position:'fixed', inset:0, zIndex:228, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface block-report-picker"><div className="block-report-picker__head"><div><small>DESCARGAR DATOS DEL BLOQUE</small><h2>¿Qué informe necesitás?</h2><p>Elegí la ficha técnica para compartir con el ingeniero o el informe completo para administración.</p></div><button type="button" className="ag-small-action" aria-label="Cerrar" onClick={() => setShowInformeOpciones(false)} disabled={exportandoPdf}><i className="ti ti-x" /></button></div>{pdfError && <div className="ag-feedback ag-feedback-error" role="alert">{pdfError}</div>}<div className="block-report-picker__options"><button type="button" className="is-recommended" onClick={descargarFichaTecnica} disabled={exportandoPdf}><span><i className="ti ti-plant-2" /></span><div><strong>Ficha técnica para el ingeniero</strong><em>Recomendado</em><p>Plantas, variedad, siembra, días en campo, base, fertilizaciones y fumigaciones. Sin precios ni costos.</p></div><i className="ti ti-download" /></button><button type="button" onClick={descargarInformeBloque} disabled={exportandoPdf || costosCiclo.loading}><span><i className="ti ti-file-description" /></span><div><strong>Informe completo del bloque</strong><p>Incluye también costos, cosechas, notas, fotos e historial administrativo.</p></div><i className="ti ti-download" /></button></div>{exportandoPdf && <div className="block-report-picker__loading"><i className="ti ti-loader-2" />Preparando el PDF…</div>}</div></Modal>}
+      {showInformeOpciones && <Modal busy={exportandoPdf} onClose={() => !exportandoPdf && setShowInformeOpciones(false)} label="Elegir informe" style={{ position:'fixed', inset:0, zIndex:228, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface block-report-picker"><div className="block-report-picker__head"><div><small>DESCARGAR DATOS DEL BLOQUE</small><h2>¿Qué informe necesitás?</h2><p>Elegí la ficha técnica para compartir con el ingeniero o el informe completo para administración.</p></div><button type="button" className="ag-small-action" aria-label="Cerrar" onClick={() => setShowInformeOpciones(false)} disabled={exportandoPdf}><i className="ti ti-x" /></button></div>{pdfError && <div className="ag-feedback ag-feedback-error" role="alert">{pdfError}</div>}<label className="block-report-observation"><span>Estado actual / observaciones <em>Opcional</em></span><textarea value={estadoInforme} onChange={event => setEstadoInforme(event.target.value)} maxLength={700} placeholder="Ej: Cultivo con buen vigor, floración uniforme y sin incidencia visible de plagas." /><small>Solo aparecerá en el PDF si escribís algo. AgroBloque no genera recomendaciones automáticamente.</small></label><div className="block-report-picker__options"><button type="button" className="is-recommended" onClick={descargarFichaTecnica} disabled={exportandoPdf}><span><i className="ti ti-plant-2" /></span><div><strong>Ficha técnica para el ingeniero</strong><em>Recomendado</em><p>Plantas, variedad, siembra, días en campo, base, fertilizaciones y fumigaciones. Sin precios ni costos.</p></div><i className="ti ti-download" /></button><button type="button" onClick={descargarInformeBloque} disabled={exportandoPdf || costosCiclo.loading}><span><i className="ti ti-file-description" /></span><div><strong>Informe completo del bloque</strong><p>Incluye también costos, cosechas, notas, fotos e historial administrativo.</p></div><i className="ti ti-download" /></button></div>{exportandoPdf && <div className="block-report-picker__loading"><i className="ti ti-loader-2" />Preparando el PDF…</div>}</div></Modal>}
 
       {/* Header */}
       <div className="ag-block-header block-detail-header ui-606ba4">
