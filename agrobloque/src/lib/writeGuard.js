@@ -51,6 +51,10 @@ export const createWriteGuard = (baseFetch, notify) => async (input, init = {}) 
     if (!response.ok) {
       const body = await response.clone().json().catch(() => ({}))
       if (isExpectedFallback(target.table, body?.code)) return response
+      // Los errores del servidor (5xx) no son culpa de la persona: se anotan en el registro de errores (src/lib/errores.js).
+      if (response.status >= 500 && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('agrobloque:error-guardado', { detail: { mensaje: `${accion} ${target.table}: error ${response.status} ${body?.message || ''}`.trim(), detalle: body?.details || body?.hint || '' } }))
+      }
       const info = explicarError({ message: body?.message || `Error ${response.status}` }, { modulo: target.table, accion })
       notify({
         kind: 'error',

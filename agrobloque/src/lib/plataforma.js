@@ -321,3 +321,18 @@ export const estadoVisible = soporte => {
   if (s.estado === 'aprobado' && s.expira_en && new Date(s.expira_en) <= new Date()) return 'vencida'
   return s.estado || 'sin_acceso'
 }
+
+// ---------------------------------------------------------------------------------------------
+// Errores de la app (registro-errores-2026-11-24.sql): solo administradores generales
+// ---------------------------------------------------------------------------------------------
+export async function listarErrores(dias = 14) {
+  const { data, error } = await supabase.rpc('plataforma_errores', { p_dias: dias })
+  if (funcionAusente(error)) return { disponible: false, errores: [] }
+  if (error) throw new Error(error.message || 'No se pudo cargar el registro de errores.')
+  return { disponible: true, errores: Array.isArray(data) ? data : [] }
+}
+
+export async function descartarError(huella) {
+  const { error } = await supabase.rpc('plataforma_errores_descartar', { p_huella: huella })
+  if (error) throw new Error(error.message || 'No se pudo descartar el error.')
+}

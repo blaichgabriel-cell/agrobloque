@@ -31,11 +31,12 @@ const GRUPOS_MODULOS = [
   ] },
 ]
 
-// Modo Plataforma (administradores generales sin empresa abierta): solo las 4 vistas del panel.
+// Modo Plataforma (administradores generales sin empresa abierta): solo las 5 vistas del panel.
 const plataformaTabs = [
   { path: '/plataforma', icon: 'ti-building-community', label: 'Empresas' },
   { path: '/plataforma/soporte', icon: 'ti-shield-check', label: 'Soporte' },
   { path: '/plataforma/planes', icon: 'ti-credit-card', label: 'Planes' },
+  { path: '/plataforma/errores', icon: 'ti-bug', label: 'Errores' },
   { path: '/plataforma/equipo', icon: 'ti-shield-lock', label: 'Equipo' },
 ]
 

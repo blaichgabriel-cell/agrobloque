@@ -2912,3 +2912,26 @@ img.bl-logo--sobre-oscuro { display:none !important; }
 .ag-stock-aviso i { flex:0 0 auto; margin-top:1px; color:#B45309; font-size:17px; }
 [data-theme='dark'] .ag-stock-aviso { border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.16); }
 [data-theme='dark'] .ag-stock-aviso i { color:var(--dk-amber); }
+
+/* =====================================================================================================
+   ERRORES DE LA APP en el Panel de plataforma (src/pages/PlataformaErrores.js)
+   ===================================================================================================== */
+.ag-app .pl-errores__filtros { display:flex; flex-wrap:wrap; gap:8px; }
+.ag-app .pl-errores__filtros button { min-height:40px; padding:0 14px; border:1px solid rgba(15,23,42,.12); border-radius:999px; background:rgba(255,255,255,.7); color:var(--text-secondary); font-size:13px; font-weight:600; }
+.ag-app .pl-errores__filtros button.activo { border-color:transparent; background:var(--grad-finanzas); color:#fff; }
+.ag-app .pl-errores { margin:0; padding:0; list-style:none; display:grid; gap:12px; }
+.ag-app .pl-error { display:grid; gap:8px; padding:14px 16px; border:1px solid rgba(15,23,42,.08); border-radius:18px; background:var(--glass-bg,rgba(255,255,255,.68)); }
+.ag-app .pl-error__cabecera { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.ag-app .pl-error__cuando { color:var(--text-tertiary); font-size:12.5px; }
+.ag-app .pl-error__mensaje { margin:0; color:var(--text-primary); font:600 14px/1.45 'JetBrains Mono',ui-monospace,monospace; overflow-wrap:anywhere; }
+.ag-app .pl-error__meta,.ag-app .pl-error__empresas { margin:0; display:flex; flex-wrap:wrap; gap:6px 14px; color:var(--text-secondary); font-size:12.5px; }
+.ag-app .pl-error__meta i,.ag-app .pl-error__empresas i { margin-right:5px; color:var(--text-tertiary); }
+.ag-app .pl-error__meta code { font-family:'JetBrains Mono',ui-monospace,monospace; }
+.ag-app .pl-error__detalle summary { cursor:pointer; color:var(--bl-emerald-600,#059669); font-size:13px; font-weight:600; }
+.ag-app .pl-error__detalle pre { margin:8px 0 0; padding:10px 12px; max-height:240px; overflow:auto; border-radius:12px; background:rgba(15,23,42,.06); color:var(--text-primary); font:12px/1.5 'JetBrains Mono',ui-monospace,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ag-app .pl-error__agente { margin:8px 0 0; color:var(--text-tertiary); font-size:11.5px; overflow-wrap:anywhere; }
+.ag-app .pl-error__acciones { display:flex; justify-content:flex-end; }
+[data-theme='dark'] .ag-app .pl-errores__filtros button { border-color:var(--dk-line); background:var(--dk-soft); }
+[data-theme='dark'] .ag-app .pl-error { border-color:var(--dk-line); }
+[data-theme='dark'] .ag-app .pl-error__detalle pre { background:var(--dk-soft); }
+@media (max-width:640px) { .ag-app .pl-error { padding:12px 12px; } .ag-app .pl-error__acciones .bl-btn { width:100%; } }

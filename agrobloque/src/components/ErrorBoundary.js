@@ -1,4 +1,5 @@
 import React from 'react'
+import { reportarError } from '../lib/errores'
 
 // Evita la pantalla en blanco: si una pantalla falla al dibujarse (o su archivo no
 // carga tras un despliegue nuevo) se muestra un aviso con salida, y la navegación sigue viva.
@@ -7,7 +8,10 @@ export default class ErrorBoundary extends React.Component {
 
   static getDerivedStateFromError(error) { return { error } }
 
-  componentDidCatch(error, info) { console.error('Error de pantalla', error, info?.componentStack) }
+  componentDidCatch(error, info) {
+    console.error('Error de pantalla', error, info?.componentStack)
+    reportarError({ origen: 'pantalla', mensaje: `${error?.name || 'Error'}: ${error?.message || ''}`, detalle: [error?.stack, info?.componentStack].filter(Boolean).join('\n') })
+  }
 
   componentDidUpdate(prev) {
     if (this.state.error && prev.resetKey !== this.props.resetKey) this.setState({ error: null })

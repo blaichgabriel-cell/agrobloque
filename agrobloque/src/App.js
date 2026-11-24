@@ -28,6 +28,7 @@ const Plataforma = lazy(() => import('./pages/Plataforma'))
 const PlataformaSoporte = lazy(() => import('./pages/PlataformaSoporte'))
 const PlataformaPlanes = lazy(() => import('./pages/PlataformaPlanes'))
 const PlataformaEquipo = lazy(() => import('./pages/PlataformaEquipo'))
+const PlataformaErrores = lazy(() => import('./pages/PlataformaErrores'))
 const Agenda = lazy(() => import('./pages/Agenda'))
 const Calendario = lazy(() => import('./pages/Calendario'))
 const Asistencia = lazy(() => import('./pages/Asistencia'))
@@ -251,6 +252,7 @@ const PLATAFORMA_ITEMS = [
   { path:'/plataforma', end:true, icon:'ti-building-community', label:'Empresas y Campos' },
   { path:'/plataforma/soporte', icon:'ti-shield-check', label:'Accesos de Soporte' },
   { path:'/plataforma/planes', icon:'ti-credit-card', label:'Planes y Estado comercial' },
+  { path:'/plataforma/errores', icon:'ti-bug', label:'Errores de la app' },
   { path:'/plataforma/equipo', icon:'ti-shield-lock', label:'Equipo Super Admin' },
 ]
 
@@ -361,6 +363,7 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/plataforma" element={isPlatformAdmin ? <Plataforma/> : <Navigate to="/"/>}/>
             <Route path="/plataforma/soporte" element={isPlatformAdmin ? <PlataformaSoporte/> : <Navigate to="/"/>}/>
             <Route path="/plataforma/planes" element={isPlatformAdmin ? <PlataformaPlanes/> : <Navigate to="/"/>}/>
+            <Route path="/plataforma/errores" element={isPlatformAdmin ? <PlataformaErrores/> : <Navigate to="/"/>}/>
             <Route path="/plataforma/equipo" element={isPlatformAdmin ? <PlataformaEquipo themeMode={themeMode} onThemeChange={onThemeChange}/> : <Navigate to="/"/>}/>
             <Route path="/buscar" element={<ProtectedRoute role={effectiveRole} moduleKey="buscar"><Buscador/></ProtectedRoute>}/>
             <Route path="/alertas" element={<ProtectedRoute role={effectiveRole} moduleKey="alertas"><Alertas/></ProtectedRoute>}/>
