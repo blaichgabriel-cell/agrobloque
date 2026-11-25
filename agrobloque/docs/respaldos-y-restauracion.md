@@ -32,7 +32,7 @@ powershell -ExecutionPolicy Bypass -File .\volcar.ps1      # 1-private.sql, 2-pu
 
 ## Rutina recomendada (mientras sea piloto)
 - **Cada semana:** los dos respaldos, subir a Drive, conservar los últimos 4.
-- **Antes de cualquier cambio grande** en la base (SQL de seguridad, mover fotos a Storage, etc.): un volcado nuevo.
+- **Antes de cualquier cambio grande** en la base (SQL de seguridad, borrado de tablas, etc.): un volcado nuevo.
 - **Cada mes:** repetir la prueba de restauración de abajo.
 - **Con el primer cliente que pague:** pasar a Supabase Pro (respaldos diarios automáticos).
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
@@ -25,7 +25,6 @@ const formInicial = {
   abono_sustrato: '',
   proveedor: '',
   precio_compra: '',
-  fotos: [],
   fecha_estimada_trasplante: '',
   fecha_real_trasplante: '',
   germinadas: '',
@@ -61,30 +60,9 @@ function ViveroIcon({ size = 24, color = '#2f741f' }) {
   )
 }
 
-const optimizarFoto = (archivo) => new Promise((resolve, reject) => {
-  const lector = new FileReader()
-  lector.onerror = () => reject(new Error('No se pudo leer la imagen.'))
-  lector.onload = () => {
-    const imagen = new Image()
-    imagen.onerror = () => reject(new Error('El archivo no es una imagen válida.'))
-    imagen.onload = () => {
-      const maximo = 1400
-      const escala = Math.min(1, maximo / Math.max(imagen.width, imagen.height))
-      const canvas = document.createElement('canvas')
-      canvas.width = Math.max(1, Math.round(imagen.width * escala))
-      canvas.height = Math.max(1, Math.round(imagen.height * escala))
-      canvas.getContext('2d').drawImage(imagen, 0, 0, canvas.width, canvas.height)
-      resolve(canvas.toDataURL('image/jpeg', 0.78))
-    }
-    imagen.src = lector.result
-  }
-  lector.readAsDataURL(archivo)
-})
-
 export default function Vivero() {
   const can = useCan('vivero')
   const navigate = useNavigate()
-  const fotosRef = useRef(null)
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
   const [lotes, setLotes] = useState([])
@@ -176,7 +154,6 @@ export default function Vivero() {
       abono_sustrato: lote.abono_sustrato || '',
       proveedor: lote.proveedor || '',
       precio_compra: formatLocaleInteger(lote.precio_compra),
-      fotos: Array.isArray(lote.fotos) ? lote.fotos : [],
       fecha_estimada_trasplante: lote.fecha_estimada_trasplante || '',
       fecha_real_trasplante: lote.fecha_real_trasplante || '',
       germinadas: formatLocaleInteger(lote.germinadas),
@@ -203,7 +180,6 @@ export default function Vivero() {
       abono_sustrato: form.abono_sustrato || null,
       proveedor: form.proveedor || null,
       precio_compra: form.precio_compra ? num(form.precio_compra) : null,
-      fotos: Array.isArray(form.fotos) ? form.fotos : [],
       fecha_estimada_trasplante: form.fecha_estimada_trasplante || null,
       fecha_real_trasplante: form.fecha_real_trasplante || null,
       germinadas: num(form.germinadas),
@@ -230,31 +206,6 @@ export default function Vivero() {
     }
     setSaving(false)
   }
-
-  const agregarFotos = async (event) => {
-    const archivos = Array.from(event.target.files || [])
-    event.target.value = ''
-    if (!archivos.length) return
-    const disponibles = Math.max(0, 6 - (form.fotos || []).length)
-    if (!disponibles) {
-      setError('Podés guardar hasta 6 fotos por lote.')
-      return
-    }
-    try {
-      const nuevas = await Promise.all(archivos.slice(0, disponibles).map(async archivo => ({
-        id:`${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        nombre:archivo.name,
-        fecha:hoy(),
-        url:await optimizarFoto(archivo),
-      })))
-      setForm(actual => ({ ...actual, fotos:[...(actual.fotos || []), ...nuevas] }))
-      setError(archivos.length > disponibles ? `Se agregaron ${disponibles} fotos. El máximo por lote es 6.` : '')
-    } catch (err) {
-      setError(err.message || 'No se pudieron preparar las fotos.')
-    }
-  }
-
-  const quitarFoto = (fotoId) => setForm(actual => ({ ...actual, fotos:(actual.fotos || []).filter(foto => foto.id !== fotoId) }))
 
   const eliminarLote = async (id) => {
     if (!window.confirm('¿Archivar este lote de vivero? El historial se conservará.')) return
@@ -435,7 +386,6 @@ export default function Vivero() {
               const germ = Math.min(100, pct(lote.germinadas, lote.cantidad_semillas))
               return (
                 <button className="ag-surface nursery-lot-card" key={lote.id} onClick={() => setDetalle(lote)} data-state={lote.estado}>
-                  {Array.isArray(lote.fotos) && lote.fotos[0]?.url && <span className="nursery-lot-photo"><img src={lote.fotos[0].url} alt={`Plantines de ${lote.cultivo}`} loading="lazy" /><small><i className="ti ti-photo" aria-hidden="true" /> {lote.fotos.length}</small></span>}
                   <span className="nursery-lot-head">
                     <span className="nursery-ring" style={{ '--p': germ }} role="img" aria-label={`Germinación ${germ}%`}><b className="mono">{germ}%</b></span>
                     <span className="nursery-lot-title"><strong>{lote.cultivo}</strong><em>{lote.variedad || 'Sin variedad'}</em><small className="mono">{lote.fecha_siembra} · {lote.campos?.nombre || 'Sin campo'}</small></span>
@@ -484,8 +434,6 @@ export default function Vivero() {
 
             {detalle.notas && <div className="ui-9c4127">{detalle.notas}</div>}
 
-            {Array.isArray(detalle.fotos) && detalle.fotos.length > 0 && <div className="nursery-photo-gallery"><div className="bl-label">Fotos de los plantines</div><div>{detalle.fotos.map(foto => <img key={foto.id || foto.url} src={foto.url} alt={foto.nombre || `Plantines de ${detalle.cultivo}`} loading="lazy" />)}</div></div>}
-
             {detalle.bloque_id ? (
               <button className="ui-fa3e1c" onClick={() => navigate(`/bloque/${detalle.bloque_id}`)} style={{ ...primaryBtn }}>
                 Ver bloque trasplantado
@@ -524,7 +472,7 @@ export default function Vivero() {
           <div className="bl-sheet">
             <CerrarX onClose={() => setModal(false)} disabled={saving} />
             <div className="ui-9c155f">{form.id ? 'Editar lote' : 'Nuevo lote de vivero'}</div>
-            <p className="nursery-form-intro">Guardá el origen, costo y evidencia visual del lote desde el primer día.</p>
+            <p className="nursery-form-intro">Guardá el origen y el costo del lote desde el primer día.</p>
             <Select label="Campo" value={form.campo_id} onChange={v => setForm(f => ({ ...f, campo_id:v }))} options={campos.map(c => [c.id, c.nombre])} />
             <Field label="Fecha de siembra *" type="date" value={form.fecha_siembra} onChange={v => setForm(f => ({ ...f, fecha_siembra:v }))} />
             <Field label="Cultivo/semilla *" value={form.cultivo} onChange={v => setForm(f => ({ ...f, cultivo:v }))} placeholder="Ej: Tomate" />
@@ -533,11 +481,6 @@ export default function Vivero() {
             <div className="ui-f56ef1">
               <Field label="Proveedor / vendedor" value={form.proveedor} onChange={v => setForm(f => ({ ...f, proveedor:v }))} placeholder="Nombre de la persona o empresa" />
               <Field label="Precio de compra (Gs.)" type="number" value={form.precio_compra} onChange={v => setForm(f => ({ ...f, precio_compra:v }))} placeholder="Ej: 250.000" />
-            </div>
-            <div className="nursery-photo-uploader">
-              <input ref={fotosRef} type="file" accept="image/*" multiple onChange={agregarFotos} />
-              <div className="nursery-photo-uploader__head"><div><strong>Fotos de los plantines</strong><span>Hasta 6 imágenes. Se optimizan antes de guardar.</span></div><button type="button" className="bl-btn bl-btn--ghost" onClick={() => fotosRef.current?.click()}><i className="ti ti-camera-plus" aria-hidden="true" /> Agregar fotos</button></div>
-              {(form.fotos || []).length > 0 ? <div className="nursery-photo-preview">{form.fotos.map(foto => <figure key={foto.id || foto.url}><img src={foto.url} alt={foto.nombre || 'Plantines'} /><button type="button" aria-label="Quitar foto" onClick={() => quitarFoto(foto.id)}><i className="ti ti-x" aria-hidden="true" /></button></figure>)}</div> : <div className="nursery-photo-empty"><i className="ti ti-photo" aria-hidden="true" /><span>Todavía no agregaste fotos a este lote.</span></div>}
             </div>
             <div className="ui-f56ef1">
               <Field label="Cantidad semillas" type="number" value={form.cantidad_semillas} onChange={v => setForm(f => ({ ...f, cantidad_semillas:v }))} />

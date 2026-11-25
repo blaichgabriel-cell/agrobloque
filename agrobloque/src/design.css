@@ -1228,10 +1228,6 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .block-cost-detail__list strong { overflow-wrap:anywhere; font-size:13px; }
 .block-cost-detail__list small { color:var(--text-tertiary); font-size:11px; }
 .block-cost-detail__list b { flex:0 0 auto; font-family:var(--bl-font-mono); font-size:13px; }
-.photo-description-input { min-height:105px; margin-top:6px; resize:vertical; }
-.block-photo-description { padding:9px 10px 2px; color:var(--text-secondary); font-size:12px; line-height:1.45; white-space:pre-wrap; }
-.cycle-history-photos figure { margin:0; }
-.cycle-history-photos figcaption { padding:7px 2px 0; color:var(--text-secondary); font-size:11px; line-height:1.4; }
 .block-cost-card__foot { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:13px; color:var(--text-tertiary); font-size:11px; }
 .block-cost-card__foot button { display:inline-flex; align-items:center; gap:5px; padding:0; border:0; background:transparent; color:var(--block-accent); font-weight:800; cursor:pointer; white-space:nowrap; }
 .block-detail-content .ui-e4712c>div { min-height:112px; border-radius:17px; box-shadow:none; }
@@ -1830,8 +1826,6 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .cycle-history-row strong { display:block; color:var(--text-primary); font-size:14px; line-height:1.45; }
 .cycle-history-row p { margin:4px 0 0; color:var(--text-secondary); font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
 .cycle-history-empty { padding:24px 19px; color:var(--text-tertiary); font-size:13px; }
-.cycle-history-photos { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; padding:18px; }
-.cycle-history-photos img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:13px; border:var(--border-subtle); }
 
 /* Registro puntual de fertilizacion ------------------------------------- */
 .fert-quick-modal { position:fixed; inset:0; z-index:240; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(3,19,13,.5); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
@@ -1873,25 +1867,9 @@ html,body { -webkit-tap-highlight-color:transparent; }
 .fert-dialog__save:disabled,.fert-dialog__cancel:disabled { cursor:not-allowed; opacity:.6; }
 
 /* Fotos y compra de lotes de vivero ------------------------------------- */
-.nursery-lot-photo { position:relative; display:block; margin:-4px -4px 2px; overflow:hidden; border-radius:14px; }
-.nursery-lot-photo img { display:block; width:100%; aspect-ratio:16/7; object-fit:cover; }
-.nursery-lot-photo small { position:absolute; right:9px; bottom:9px; display:inline-flex; align-items:center; gap:4px; padding:5px 8px; border:1px solid rgba(255,255,255,.35); border-radius:999px; background:rgba(3,19,13,.62); color:#fff; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); font-size:11px; font-weight:800; }
 .nursery-form-intro { margin:-4px 0 18px; color:var(--text-secondary); font-size:13px; line-height:1.45; }
-.nursery-photo-uploader { margin:16px 0; padding:15px; border:1px solid rgba(15,41,30,.11); border-radius:16px; background:rgba(248,250,249,.72); }
-.nursery-photo-uploader>input { position:absolute; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none; }
-.nursery-photo-uploader__head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.nursery-photo-uploader__head>div { display:flex; flex-direction:column; gap:3px; }
-.nursery-photo-uploader__head strong { color:var(--text-primary); font-size:13px; }
-.nursery-photo-uploader__head span { color:var(--text-tertiary); font-size:11px; }
-.nursery-photo-uploader__head .bl-btn { width:auto; margin:0; white-space:nowrap; }
-.nursery-photo-preview,.nursery-photo-gallery>div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin-top:13px; }
-.nursery-photo-preview figure { position:relative; margin:0; overflow:hidden; border-radius:12px; }
-.nursery-photo-preview img,.nursery-photo-gallery img { display:block; width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:12px; border:var(--border-subtle); }
-.nursery-photo-preview button { position:absolute; top:6px; right:6px; display:grid; width:30px; height:30px; place-items:center; padding:0; border:1px solid rgba(255,255,255,.42); border-radius:9px; background:rgba(3,19,13,.66); color:#fff; cursor:pointer; }
-.nursery-photo-empty { display:flex; align-items:center; gap:8px; margin-top:12px; padding:14px; border:1px dashed rgba(15,41,30,.15); border-radius:12px; color:var(--text-tertiary); font-size:12px; }
-.nursery-photo-gallery { margin:18px 0; }
 
-[data-theme='dark'] .cycle-history-datum,[data-theme='dark'] .fert-block-picker,[data-theme='dark'] .nursery-photo-uploader { background:rgba(255,255,255,.035); }
+[data-theme='dark'] .cycle-history-datum,[data-theme='dark'] .fert-block-picker { background:rgba(255,255,255,.035); }
 [data-theme='dark'] .fert-dialog { background:rgba(13,26,20,.98); border-color:rgba(255,255,255,.1); }
 [data-theme='dark'] .fert-dialog__header,[data-theme='dark'] .fert-dialog__footer { background:rgba(18,35,27,.96); }
 [data-theme='dark'] .fert-control,[data-theme='dark'] .fert-block-option,[data-theme='dark'] .fert-dialog__close,[data-theme='dark'] .fert-icon-action,[data-theme='dark'] .fert-dialog__cancel,[data-theme='dark'] .fert-solution-card { background:rgba(255,255,255,.055); border-color:rgba(255,255,255,.1); color:var(--text-primary); }
@@ -1972,7 +1950,6 @@ button.ag-close-btn.ag-close-btn.ag-close-btn:disabled { opacity:.5; cursor:not-
   .cycle-history-data-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .cycle-history-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .cycle-history-row { grid-template-columns:88px minmax(0,1fr); gap:11px; }
-  .cycle-history-photos { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .fert-quick-modal { align-items:flex-end; padding:0; }
   .fert-dialog { max-height:calc(100dvh - 10px); border-radius:26px 26px 0 0; }
   .fert-dialog__header { padding:19px 18px 17px; }
@@ -1985,8 +1962,6 @@ button.ag-close-btn.ag-close-btn.ag-close-btn:disabled { opacity:.5; cursor:not-
   .fert-product-row__remove { grid-column:3; }
   .fert-dialog__footer { padding:13px 18px calc(13px + env(safe-area-inset-bottom,0px)); }
   .fert-dialog__footer>* { flex:1; }
-  .nursery-photo-uploader__head { align-items:flex-start; flex-direction:column; }
-  .nursery-photo-preview,.nursery-photo-gallery>div { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:520px) {
   .cycle-history-kpis { grid-template-columns:1fr; }

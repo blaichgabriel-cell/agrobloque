@@ -163,7 +163,7 @@ Verificar siempre **el número final** (stock, saldo, monto), no solo que "no di
 5. El enlace de A nunca muestra datos de B (ver 2.9).
 
 ### 4.8 Vivero
-1. Crear un lote con proveedor, **precio de compra** (con separador de miles, por ejemplo `250.000`) y fotos (hasta 6) → se guarda y se muestra bien.
+1. Crear un lote con proveedor y **precio de compra** (con separador de miles, por ejemplo `250.000`) → se guarda y se muestra bien.
 2. Editar el lote y recargar → los números conservan su valor.
 3. Los lotes de A no aparecen en B.
 
