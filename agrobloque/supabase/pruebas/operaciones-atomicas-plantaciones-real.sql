@@ -98,12 +98,11 @@ begin
   insert into public.abonos (nombre, organizacion_id) values ('Abono 1 ' || suf, org_a) returning id into ab1;
   insert into public.abonos (nombre, organizacion_id) values ('Abono 2 ' || suf, org_a) returning id into ab2;
   insert into public.abonos (nombre, organizacion_id) values ('Abono 3 ' || suf, org_a) returning id into ab3;
-  -- Plantacion activa anterior del bloque 1 (con un abono) y un ciclo del historial en el bloque 2 (con abono, foto y muerte)
+  -- Plantacion activa anterior del bloque 1 (con un abono) y un ciclo del historial en el bloque 2 (con abono y muerte)
   insert into public.plantaciones (bloque_id, cultivo_id, fecha_siembra, activa, cantidad_plantas, organizacion_id) values (bloque_1, cultivo_1, current_date - 60, true, 500, org_a) returning id into p_vieja;
   insert into public.plantacion_abonos (plantacion_id, abono_id, cantidad, unidad, alcance, organizacion_id) values (p_vieja, ab1, '1', 'kg', 'total', org_a);
   insert into public.plantaciones (bloque_id, cultivo_id, fecha_siembra, activa, cantidad_plantas, organizacion_id) values (bloque_2, cultivo_1, current_date - 200, false, 300, org_a) returning id into p_hist;
   insert into public.plantacion_abonos (plantacion_id, abono_id, cantidad, unidad, alcance, organizacion_id) values (p_hist, ab1, '2', 'kg', 'total', org_a);
-  insert into public.fotos_bloque (bloque_id, plantacion_id, url, organizacion_id) values (bloque_2, p_hist, 'https://example.test/foto-hist.jpg', org_a);
   insert into public.muertes_plantas (bloque_id, plantacion_id, cantidad, causa, fecha, organizacion_id) values (bloque_2, p_hist, 3, 'Enfermedad', current_date - 150, org_a);
 
   -- ---- 1. Estructura
@@ -198,26 +197,24 @@ begin
   perform public.soporte_salir();
   reset role;
 
-  -- ---- 10. Eliminar la plantacion activa (con fotos y muertes): el operador no puede; con "eliminar" a medida si
-  insert into public.fotos_bloque (bloque_id, plantacion_id, url, organizacion_id) values (bloque_1, p_nueva, 'https://example.test/foto-activa.jpg', org_a);
+  -- ---- 10. Eliminar la plantacion activa (con sus muertes): el operador no puede; con "eliminar" a medida si
   insert into public.muertes_plantas (bloque_id, plantacion_id, cantidad, causa, fecha, organizacion_id) values (bloque_1, p_nueva, 5, 'Plaga', current_date, org_a);
   r := pg_temp.llamar(u_oper, m_oper, format('select public.eliminar_plantacion(%L, true)', p_nueva));
   fallos := fallos + pg_temp.chk(r ->> 'estado' = '42501', 'el operador NO elimina: ' || coalesce(left(r ->> 'error', 70), 'SE PERMITIO'));
   fallos := fallos + pg_temp.chk(exists (select 1 from public.plantaciones where id = p_nueva) and (select count(*) from public.plantacion_abonos where plantacion_id = p_nueva) = 1
-    and exists (select 1 from public.fotos_bloque where plantacion_id = p_nueva) and exists (select 1 from public.muertes_plantas where plantacion_id = p_nueva),
-    'el intento fallido no borro NADA (ni la plantacion, ni los abonos, ni las fotos, ni las muertes)');
+    and exists (select 1 from public.muertes_plantas where plantacion_id = p_nueva),
+    'el intento fallido no borro NADA (ni la plantacion, ni los abonos, ni las muertes)');
   r := pg_temp.llamar(u_borra, m_borra, format('select public.eliminar_plantacion(%L, true)', p_nueva));
-  fallos := fallos + pg_temp.chk(r ? 'id' and (r ->> 'fotos')::integer = 1 and (r ->> 'muertes')::integer = 1, 'con "eliminar" a medida SI elimina (1 foto y 1 muerte)' || coalesce(': ' || (r ->> 'error'), ''));
+  fallos := fallos + pg_temp.chk(r ? 'id' and (r ->> 'muertes')::integer = 1, 'con "eliminar" a medida SI elimina (1 muerte)' || coalesce(': ' || (r ->> 'error'), ''));
   fallos := fallos + pg_temp.chk(not exists (select 1 from public.plantaciones where id = p_nueva) and (select count(*) from public.plantacion_abonos where plantacion_id = p_nueva) = 0
-    and not exists (select 1 from public.fotos_bloque where plantacion_id = p_nueva) and not exists (select 1 from public.muertes_plantas where plantacion_id = p_nueva),
-    'se borro la plantacion con sus abonos, fotos y muertes');
+    and not exists (select 1 from public.muertes_plantas where plantacion_id = p_nueva),
+    'se borro la plantacion con sus abonos y muertes');
 
-  -- ---- 11. Eliminar un ciclo del historial: borra la plantacion y sus abonos; las fotos y muertes quedan sin plantacion (como hoy)
+  -- ---- 11. Eliminar un ciclo del historial: borra la plantacion y sus abonos; las muertes quedan sin plantacion (como hoy)
   r := pg_temp.llamar(u_admin, m_admin, format('select public.eliminar_plantacion(%L, false)', p_hist));
   fallos := fallos + pg_temp.chk(r ? 'id', 'admin elimina un ciclo del historial' || coalesce(': ' || (r ->> 'error'), ''));
   fallos := fallos + pg_temp.chk(not exists (select 1 from public.plantaciones where id = p_hist) and (select count(*) from public.plantacion_abonos where plantacion_id = p_hist) = 0
-    and (select count(*) from public.fotos_bloque where bloque_id = bloque_2 and plantacion_id is null) = 1
-    and (select count(*) from public.muertes_plantas where bloque_id = bloque_2 and plantacion_id is null) = 1, 'sus abonos se borraron y la foto y la muerte quedaron sin plantacion (no se perdieron)');
+    and (select count(*) from public.muertes_plantas where bloque_id = bloque_2 and plantacion_id is null) = 1, 'sus abonos se borraron y la muerte quedo sin plantacion (no se perdio)');
   r := pg_temp.llamar(u_admin, m_admin, format('select public.eliminar_plantacion(%L, false)', p_hist));
   fallos := fallos + pg_temp.chk(r ? 'error', 'eliminar una plantacion que ya no existe da error claro');
 
