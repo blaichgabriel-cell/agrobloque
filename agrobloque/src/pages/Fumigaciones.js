@@ -1,11 +1,13 @@
-import { Modal, FormHeading, Notice, Skeleton } from '../components/UI'
+import { Modal, Notice, Skeleton } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, BlockChips, resumenPie } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
 import { guestToken, supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
 import { ajustarStockSeguro, textoFaltantes } from '../lib/inventory'
-import { categoriaProducto, incluirSeleccionados } from '../lib/productCategories'
+import { categoriaProducto } from '../lib/productCategories'
 import { useNavigate } from 'react-router-dom'
 
 const TIPOS = {
@@ -31,6 +33,8 @@ const fechaLocal = () => {
 }
 
 const UNIDADES_USO = ['g', 'kg', 'cc', 'ml', 'L', 'unidades']
+const OTRO_PRODUCTO = '__otro'
+const productoVacio = () => ({ categoria_nombre:'', producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g', libre:false })
 
 const normalizarUnidad = (unidad = '') => {
   const u = String(unidad).trim().toLowerCase()
@@ -130,7 +134,7 @@ const formatFechaLabel = (fecha) => {
   return d.toLocaleDateString('es-PY', { weekday:'long', day:'numeric', month:'long' })
 }
 
-export default function Fumigaciones() {
+export default function Fumigaciones({ campoActivo = null }) {
   const can = useCan('fumigaciones')
   const navigate = useNavigate()
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1100)
@@ -154,7 +158,7 @@ export default function Fumigaciones() {
     operarios_nombres:[],
     tanques_cantidad:'1',
     tanque_litros:'',
-    productos_form:[{ categoria_nombre:'', producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
+    productos_form:[productoVacio()],
     notas:'',
   })
   const [form, setForm] = useState(formVacio())
@@ -163,9 +167,8 @@ export default function Fumigaciones() {
   const [mensajeExito, setMensajeExito] = useState('')
   const [formError, setFormError] = useState('')
   const [loading, setLoading] = useState(true)
-  const [pasoForm, setPasoForm] = useState(1)
-  const [busquedaBloque, setBusquedaBloque] = useState('')
-  const [soloConCultivo, setSoloConCultivo] = useState(false)
+  const [cargandoBloques, setCargandoBloques] = useState(false)
+  const [ajusteFino, setAjusteFino] = useState(false)
   const isGuest = Boolean(guestToken)
 
   useEffect(() => { fetchFumigaciones(); fetchCampos(); fetchProductos() }, [])
@@ -211,8 +214,10 @@ export default function Fumigaciones() {
   }
 
   const fetchBloques = async (campo_id) => {
+    setCargandoBloques(true)
     const { data: bl } = await supabase.from('bloques').select('*, plantaciones(id, activa, cultivos(nombre))').eq('campo_id', campo_id).order('codigo')
     setBloques(bl || [])
+    setCargandoBloques(false)
     if (isGuest) {
       setOperarios([])
       return
@@ -259,19 +264,20 @@ export default function Fumigaciones() {
   const cerrarModal = () => {
     setModal(false)
     setForm(formVacio())
-    setPasoForm(1)
-    setBusquedaBloque('')
-    setSoloConCultivo(false)
+    setAjusteFino(false)
     setFormError('')
   }
 
+  // Valores por defecto: fecha de hoy y el campo activo del sistema (editable, nunca vacío si hay campos).
   const abrirNuevo = () => {
+    const campoId = campos.some(c => c.id === campoActivo?.id) ? campoActivo.id : (campos[0]?.id || '')
     setDetalle(null)
-    setForm(formVacio())
-    setPasoForm(1)
-    setBusquedaBloque('')
-    setSoloConCultivo(false)
+    setFormError('')
+    setAjusteFino(false)
+    setBloques([])
+    setForm({ ...formVacio(), fecha:fechaLocal(), campo_id:campoId })
     setModal(true)
+    if (campoId) fetchBloques(campoId)
   }
   const parseProductoForm = (fp, tipo) => {
     const match = String(fp.dosis || '').match(/^\s*([\d.,]+)\s*([a-zA-Z]+)?/)
@@ -281,6 +287,7 @@ export default function Fumigaciones() {
       producto_nombre: fp.producto_nombre || fp.productos?.nombre || '',
       cantidad: fp.cantidad ?? match?.[1] ?? '',
       unidad_uso: fp.unidad_uso || match?.[2] || unidadUsoDefault(fp.productos?.unidad),
+      libre: !fp.producto_id && Boolean(fp.producto_nombre),
     }
   }
 
@@ -301,11 +308,11 @@ export default function Fumigaciones() {
       tanque_litros: fumigacion.tanque_litros || '',
       productos_form: (fumigacion.fumigacion_productos || []).length
         ? fumigacion.fumigacion_productos.map(fp => parseProductoForm(fp, fumigacion.tipo || 'fumigacion'))
-        : [{ categoria_nombre:'', producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
+        : [productoVacio()],
       notas: fumigacion.notas || '',
     })
     setDetalle(null)
-    setPasoForm(1)
+    setAjusteFino(false)
     setModal(true)
   }
 
@@ -326,28 +333,67 @@ export default function Fumigaciones() {
       tanque_litros: fumigacion.tanque_litros || '',
       productos_form: (fumigacion.fumigacion_productos || []).length
         ? fumigacion.fumigacion_productos.map(fp => parseProductoForm(fp, fumigacion.tipo || 'fumigacion'))
-        : [{ categoria_nombre:'', producto_id:'', producto_nombre:'', cantidad:'', unidad_uso:'g' }],
+        : [productoVacio()],
       notas: fumigacion.notas || '',
     })
     setFormError('')
     setDetalle(null)
-    setPasoForm(1)
+    setAjusteFino(false)
     setModal(true)
   }
 
-  const avanzarPaso = () => {
+  // Validación previa al guardado (antes se hacía al pasar del paso 1 al 2 del asistente).
+  const intentarGuardar = () => {
     setFormError('')
-    if (pasoForm === 1) {
-      if (!form.fecha) return setFormError('Elegí la fecha de la aplicación.')
-      if (!form.campo_id) return setFormError('Elegí el campo donde se realizó el trabajo.')
-      if (!form.bloques_ids.length) return setFormError('Seleccioná al menos un bloque.')
-    }
-    setPasoForm(paso => Math.min(4, paso + 1))
+    if (!form.fecha) return setFormError('Elegí la fecha de la aplicación.')
+    if (!form.campo_id) return setFormError('Elegí el campo donde se realizó el trabajo.')
+    if (!form.bloques_ids.length) return setFormError('Seleccioná al menos un bloque.')
+    guardar()
   }
 
-  const retrocederPaso = () => {
-    setFormError('')
-    setPasoForm(paso => Math.max(1, paso - 1))
+  const cambiarTipo = (tipo) => setForm(f => f.tipo === tipo ? f : ({ ...f, tipo, productos_form:f.productos_form.map(p => ({ ...p, categoria_nombre:'', producto_id:'', producto_nombre:p.producto_id ? '' : p.producto_nombre })) }))
+
+  const cambiarCampo = (campoId) => {
+    setForm(f => ({ ...f, campo_id:campoId, bloques_ids:[], bloques_tanques:{}, bloques_litros:{} }))
+    setBloques([])
+    if (campoId) fetchBloques(campoId)
+  }
+
+  const cambiarDistribucion = (valor) => setForm(f => valor === 'compartido' ? { ...f, distribucion:'compartido', tanques_cantidad:f.tanques_cantidad || '1' } : { ...f, distribucion:'por_bloque' })
+
+  const seleccionarBloques = (lista) => setForm(f => {
+    const ids = new Set(f.bloques_ids)
+    const bloques_tanques = { ...(f.bloques_tanques || {}) }
+    lista.forEach(b => { if (!ids.has(b.id)) { ids.add(b.id); bloques_tanques[b.id] = bloques_tanques[b.id] || f.tanques_cantidad || '1' } })
+    return { ...f, bloques_ids:[...ids], bloques_tanques }
+  })
+
+  const limpiarBloques = () => setForm(f => ({ ...f, bloques_ids:[], bloques_tanques:{}, bloques_litros:{} }))
+
+  const fijarTanquesTodos = (valor) => setForm(f => ({ ...f, bloques_tanques:Object.fromEntries(f.bloques_ids.map(id => [id, valor])) }))
+
+  const actualizarProducto = (indice, cambios) => setForm(f => ({ ...f, productos_form:f.productos_form.map((p, j) => j === indice ? { ...p, ...cambios } : p) }))
+
+  const elegirProducto = (indice, valor) => {
+    if (valor === OTRO_PRODUCTO) {
+      const actual = form.productos_form[indice]
+      return actualizarProducto(indice, { producto_id:'', producto_nombre:actual?.producto_id ? '' : (actual?.producto_nombre || ''), libre:true })
+    }
+    if (!valor) return actualizarProducto(indice, { producto_id:'', producto_nombre:'', libre:false })
+    const elegido = productos.find(p => p.id === valor)
+    actualizarProducto(indice, { producto_id:valor, producto_nombre:elegido?.nombre || '', unidad_uso:unidadUsoDefault(elegido?.unidad), libre:false, categoria_nombre:categoriaCanonica(elegido, form.tipo) })
+  }
+
+  const agregarProducto = () => setForm(f => ({ ...f, productos_form:[...f.productos_form, productoVacio()] }))
+  const quitarProducto = (indice) => setForm(f => ({ ...f, productos_form:f.productos_form.length > 1 ? f.productos_form.filter((_, j) => j !== indice) : [productoVacio()] }))
+
+  // Productos del inventario agrupados por categoría según el tipo de aplicación (más el elegido, si es de otra categoría).
+  const gruposDeProductos = (tipo, seleccionadoId) => {
+    const grupos = (CATEGORIAS_POR_TIPO[tipo] || []).map(categoria => ({ categoria, items:productos.filter(p => categoriaCanonica(p, tipo) === categoria) })).filter(g => g.items.length)
+    const enGrupo = new Set(grupos.flatMap(g => g.items.map(p => p.id)))
+    const extra = productos.find(p => p.id === seleccionadoId && !enGrupo.has(p.id))
+    if (extra) grupos.push({ categoria:'Otros', items:[extra] })
+    return grupos
   }
 
   const devolverStockFumigacion = async (id) => {
@@ -575,7 +621,9 @@ export default function Fumigaciones() {
         .filter(Boolean)
         .map(codigo => `Bloque ${codigo}`)
         .join(', ')
-      setMensajeExito(`${eraEdicion ? 'Fumigación actualizada' : 'Fumigación guardada'} y vinculada a ${codigos || `${bloquesGuardados.length} bloque(s)`}.${compartido ? ` Se repartieron ${fmtCantidad(litrosAsignados)} L y quedaron ${fmtCantidad(litrosSobrantes)} L sin asignar.` : ''}${faltantes.length ? ` ${textoFaltantes(faltantes, formatearStock)}` : ''}`)
+      setMensajeExito('')
+      toast.success(eraEdicion ? 'Aplicación actualizada' : 'Aplicación guardada', { description:`Vinculada a ${codigos || `${bloquesGuardados.length} bloque(s)`}.${compartido ? ` Se repartieron ${fmtCantidad(litrosAsignados)} L y quedaron ${fmtCantidad(litrosSobrantes)} L sin asignar.` : ''}` })
+      if (faltantes.length) toast.warning('Falta producto en el inventario', { description:textoFaltantes(faltantes, formatearStock), duration:12000 })
     } catch (error) {
       setFormError(`No se pudo completar la fumigación: ${error?.message || 'error desconocido'}`)
     } finally {
@@ -674,26 +722,24 @@ export default function Fumigaciones() {
     porFecha[f.fecha].push(f)
   })
   const fechasOrdenadas = Object.keys(porFecha).sort((a, b) => b.localeCompare(a))
-  const terminoBloque = busquedaBloque.trim().toLowerCase()
-  const bloquesVisibles = bloques.filter(bloque => {
-    const cultivo = getCultivoBloque(bloque)
-    const coincide = !terminoBloque || `${bloque.codigo} ${cultivo}`.toLowerCase().includes(terminoBloque)
-    return coincide && (!soloConCultivo || Boolean(cultivo))
-  })
-  const bloquesPorSector = bloquesVisibles.reduce((grupos, bloque) => {
-    const sector = String(bloque.codigo || 'Otros').split('-')[0] || 'Otros'
-    if (!grupos[sector]) grupos[sector] = []
-    grupos[sector].push(bloque)
-    return grupos
-  }, {})
-  const bloquesSeleccionados = form.bloques_ids.map(id => bloques.find(b => b.id === id)).filter(Boolean)
-  const campoSeleccionado = campos.find(campo => campo.id === form.campo_id)
-  const pasosRegistro = [
-    ['Ubicación', 'Dónde se aplicó'],
-    ['Preparación', 'Mezcla y operarios'],
-    ['Productos', 'Insumos utilizados'],
-    ['Revisión', 'Confirmar registro'],
-  ]
+  const operariosElegidos = form.operarios_nombres?.length ? form.operarios_nombres : normalizarOperarios(form.operario)
+  const compartidoActivo = !form.id && form.distribucion === 'compartido'
+  const litrosTanqueForm = Number(String(form.tanque_litros || '').replace(',', '.')) || 0
+  const litrosAsignadosForm = form.bloques_ids.reduce((total, id) => total + (Number(String(form.bloques_litros?.[id] || '').replace(',', '.')) || 0), 0)
+  const tanquesSumados = form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0)
+  const totalTanquesForm = compartidoActivo ? litrosAsignadosForm / (litrosTanqueForm || 1) : tanquesSumados
+  const valoresTanques = [...new Set(form.bloques_ids.map(id => form.bloques_tanques?.[id] ?? ''))]
+  const tanquesComunes = valoresTanques.length === 1 ? valoresTanques[0] : ''
+  const resumenMezcla = (() => {
+    if (!form.bloques_ids.length || !litrosTanqueForm) return null
+    if (compartidoActivo) {
+      const preparados = (Number(String(form.tanques_cantidad || '').replace(',', '.')) || 0) * litrosTanqueForm
+      const sobrante = preparados - litrosAsignadosForm
+      return { exceso:sobrante < 0, texto:`Preparados: ${fmtCantidad(preparados)} L · Asignados: ${fmtCantidad(litrosAsignadosForm)} L · ${sobrante >= 0 ? `Sin asignar: ${fmtCantidad(sobrante)} L` : `Exceso: ${fmtCantidad(Math.abs(sobrante))} L`}` }
+    }
+    if (!tanquesSumados) return null
+    return { exceso:false, texto:`Total: ${fmtCantidad(tanquesSumados)} tanques · ${fmtCantidad(tanquesSumados * litrosTanqueForm)} L preparados` }
+  })()
 
   return (
     <div className="ag-page phytosanitary-page ui-c1c124">
@@ -850,175 +896,144 @@ export default function Fumigaciones() {
         </Modal>
       )}
 
-      {/* Modal nuevo */}
-      {modal && (
-        <Modal busy={saving} onClose={cerrarModal} label="Registrar aplicación" className="fum-workspace-overlay" style={{
-          position:'fixed',
-          top:0,
-          left:0,
-          right:0,
-          bottom:0,
-          background:'rgba(0,0,0,0.4)',
-          zIndex:100,
-          display:'flex',
-          alignItems: isDesktop ? 'center' : 'flex-end',
-          justifyContent:'center',
-          padding: isDesktop ? '24px' : 0,
-          overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
-        }}>
-          <div className="ui-0cdbc3 fum-workspace" style={{ borderRadius: isDesktop ? 24 : '24px 24px 0 0', maxHeight: isDesktop ? 'calc(100dvh - 64px)' : 'calc(100dvh - 8px)', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <header className="fum-workspace__header">
-              <div className="fum-workspace__mark" aria-hidden="true"><i className={`ti ${TIPOS[form.tipo]?.icon || 'ti-spray'}`} /></div>
-              <div><p>{form.id ? 'Editar registro' : 'Nueva aplicación'}</p><h2>{form.id ? 'Actualizar aplicación' : 'Registrar aplicación'}</h2><span>{pasosRegistro[pasoForm - 1][1]}</span></div>
-              <button type="button" className="fum-workspace__close ag-close-btn" aria-label="Cerrar" onClick={cerrarModal} disabled={saving}><i className="ti ti-x" aria-hidden="true" /></button>
-            </header>
-            <div className="fum-mobile-progress" aria-hidden="true">{pasosRegistro.map((_, indice) => <span key={indice} className={indice < pasoForm ? 'is-active' : ''} />)}</div>
-            <nav className="fum-workspace__steps" aria-label="Progreso del registro">{pasosRegistro.map(([titulo, detalle], indice) => { const numero=indice+1; return <button type="button" key={titulo} className={numero===pasoForm?'is-active':numero<pasoForm?'is-complete':''} onClick={()=>numero<pasoForm&&setPasoForm(numero)} aria-current={numero===pasoForm?'step':undefined}><span>{numero<pasoForm?<i className="ti ti-check" aria-hidden="true"/>:numero}</span><div><strong>{titulo}</strong><small>{detalle}</small></div></button> })}</nav>
-            <main className="fum-workspace__body">
-            <Notice tone="error">{formError}</Notice>
-            {pasoForm === 1 && <section className="fum-step"><div className="fum-step__heading"><span>Paso 1 de 4</span><h3>¿Dónde vas a trabajar?</h3><p>Elegí el tipo, la fecha, el campo y los bloques.</p></div>
-            <div className="ui-74cc19">Tipo</div>
-            <div className="ui-62b09f">
-              {Object.entries(TIPOS).map(([k,v]) => (
-                <button type="button" className="ag-small-action ui-371bfd" aria-pressed={form.tipo===k} key={k} onClick={() => setForm(f=>f.tipo === k ? f : ({...f,tipo:k,productos_form:f.productos_form.map(p => ({ ...p, categoria_nombre:'', producto_id:'', producto_nombre:p.producto_id ? '' : p.producto_nombre }))}))}><i className={`ti ${v.icon}`} aria-hidden="true" />{v.label}</button>
-              ))}
-            </div>
-            <label className="ag-field-label ui-74cc19">Fecha *
-            <input className="ui-8dcd88" type="date" value={form.fecha} onChange={e=>setForm(f=>({...f,fecha:e.target.value}))}/></label>
-            <label className="ag-field-label ui-74cc19">Campo
-            <select className="ui-2c08cb" value={form.campo_id} onChange={e=>{setForm(f=>({...f,campo_id:e.target.value,bloques_ids:[],bloques_tanques:{},bloques_litros:{}}));fetchBloques(e.target.value)}}>
-              <option value="">Selecciona campo...</option>
-              {campos.map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select></label>
-            {bloques.length > 0 && <>
-              <div className="ui-74cc19">Bloques tratados *</div>
-              <div className="fum-block-tools"><label><i className="ti ti-search" aria-hidden="true" /><span className="ag-sr-only">Buscar bloque o cultivo</span><input value={busquedaBloque} onChange={e=>setBusquedaBloque(e.target.value)} placeholder="Buscar bloque o cultivo" /></label><button type="button" aria-pressed={soloConCultivo} onClick={()=>setSoloConCultivo(v=>!v)}><i className="ti ti-leaf" aria-hidden="true" />Con cultivo</button><strong>{form.bloques_ids.length} seleccionados</strong></div>
-              <div className="ui-1e850e fum-block-grid">
-                {bloquesVisibles.map(b=>{
-                  const cultivo = getCultivoBloque(b)
-                  const activo = form.bloques_ids.includes(b.id)
-                  return (
-                    <div className="ui-ed8e79 fum-block-option" role="checkbox" aria-checked={activo} tabIndex={0} key={b.id} onClick={()=>toggleBloque(b.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBloque(b.id) } }}>
-                      <div>{b.codigo}{activo && <i className="ti ti-check" aria-hidden="true" />}</div>
-                      <div className="ui-c0a65d" style={{ opacity: activo ? 0.78 : 0.7 }}>{cultivo || 'Sin cultivo'}</div>
-                    </div>
-                  )
-                })}
-              </div>
-            </>}
-            </section>}
-            {pasoForm === 2 && <section className="fum-step"><div className="fum-step__heading"><span>Paso 2 de 4</span><h3>¿Cómo preparaste la aplicación?</h3><p>Indicá la mezcla, el volumen y quién realizó el trabajo.</p></div>
-              {!form.id && form.bloques_ids.length > 1 && <div className="ui-afd779"><strong>¿Cómo se repartió la mezcla?</strong><div className="ui-62b09f"><button type="button" className="ag-small-action ui-371bfd" aria-pressed={form.distribucion !== 'compartido'} onClick={() => setForm(f => ({...f, distribucion:'por_bloque'}))}>Tanques separados por bloque</button><button type="button" className="ag-small-action ui-371bfd" aria-pressed={form.distribucion === 'compartido'} onClick={() => setForm(f => ({...f, distribucion:'compartido', tanques_cantidad:f.tanques_cantidad || '1'}))}>Tanque compartido</button></div><div className="ui-315e0e">Usá “tanque compartido” cuando una misma preparación alcanzó para varios bloques.</div></div>}
-              {form.bloques_ids.length > 0 && form.distribucion !== 'compartido' && (
-                <div className="ui-afd779">
-                  <strong>Tanques por bloque</strong>
-                  <div className="ui-180a1c">
-                    {form.bloques_ids.map(bloqueId => {
-                      const bloque = bloques.find(b => b.id === bloqueId)
-                      return (
-                        <label className="ag-field-label ui-74cc19" key={bloqueId}>
-                          Bloque {bloque?.codigo || ''}
-                          <input className="ui-2720fa" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.bloques_tanques?.[bloqueId] || ''} onChange={e=>actualizarTanquesBloque(bloqueId, e.target.value)} placeholder="Ej: 4" />
-                        </label>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-              {form.bloques_ids.length > 0 && form.distribucion === 'compartido' && (
-                <div className="ui-afd779">
-                  <strong>Litros aplicados por bloque</strong>
-                  <div className="ui-180a1c">
-                    {form.bloques_ids.map(bloqueId => { const bloque=bloques.find(b => b.id === bloqueId); return <label className="ag-field-label ui-74cc19" key={bloqueId}>Bloque {bloque?.codigo || ''}<input className="ui-2720fa" type="text" inputMode="decimal" value={form.bloques_litros?.[bloqueId] || ''} onChange={e => actualizarLitrosBloque(bloqueId, e.target.value)} placeholder="Ej: 120" /></label> })}
-                  </div>
-                </div>
-              )}
-            {operarios.length > 0 && <>
-              <div className="ui-74cc19">Operarios</div>
-              <div className="ui-cddf61">
-                {operarios.map(o => {
-                  const activo = form.operarios_nombres?.includes(o.nombre) || normalizarOperarios(form.operario).includes(o.nombre)
-                  return (
-                    <button className="ag-small-action ui-a61bd8" key={o.id} type="button" aria-pressed={activo} onClick={() => toggleOperario(o.nombre)}>
-                      {o.nombre}
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="ui-315e0e">Podes seleccionar uno o varios.</div>
-            </>}
-            <FormHeading number="02" detail="Volumen preparado para esta aplicación">Preparación</FormHeading>
-            <div className="ui-180a1c">
-              {form.distribucion === 'compartido' && <div><label className="ag-field-label ui-74cc19">Tanques preparados<input className="ui-2720fa" type="text" inputMode="decimal" value={form.tanques_cantidad} onChange={e=>setForm(f=>({...f,tanques_cantidad:e.target.value.replace(/[^0-9.,]/g, '')}))} placeholder="Ej: 1" /></label></div>}
-              <div>
-                <label className="ag-field-label ui-74cc19">Litros por tanque
-                <input className="ui-2720fa" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros} onChange={e=>setForm(f=>({...f,tanque_litros:e.target.value.replace(/[^0-9]/g, '')}))} placeholder="Ej: 20"/></label>
-              </div>
-            </div>
-            {form.bloques_ids.length > 0 && form.tanque_litros && form.distribucion !== 'compartido' && (
-              <div className="ui-afd779">
-                Total: {fmtCantidad(form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0))} tanques · {fmtCantidad(form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0) * (Number(form.tanque_litros) || 0))} L preparados
-              </div>
+      {/* Registrar o editar una aplicación: una sola pantalla */}
+      <UnifiedFormModal
+        open={modal}
+        tone="alerta"
+        icon={TIPOS[form.tipo]?.icon || 'ti-spray'}
+        eyebrow={form.id ? 'Editar registro' : 'Nueva aplicación'}
+        title={form.id ? 'Actualizar aplicación' : 'Registrar aplicación'}
+        label="Registrar aplicación"
+        busy={saving}
+        onClose={cerrarModal}
+        onSubmit={intentarGuardar}
+        submitLabel={form.id ? 'Guardar cambios' : 'Guardar registro'}
+        error={formError}
+        summary={resumenPie([
+          { n: form.bloques_ids.length, texto: 'bloques', uno: 'bloque' },
+          { n: form.productos_form.filter(p => p.producto_id || p.producto_nombre?.trim()).length, texto: 'productos', uno: 'producto' },
+          { n: totalTanquesForm, texto: 'tanques', uno: 'tanque' },
+        ]) || 'Elegí los bloques para empezar'}
+      >{() => <>
+        <ModalSection title="Dónde y cuándo" icon="ti-map-pin">
+          <ModalGroup label="Tipo de aplicación">
+            <ChoiceChips label="Tipo de aplicación" value={form.tipo} onChange={cambiarTipo} options={Object.entries(TIPOS).map(([value, t]) => ({ value, label: t.label, icon: t.icon }))} />
+          </ModalGroup>
+          <ModalGrid>
+            <DateQuickField label="Fecha" required value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
+            <ModalField label="Campo">
+              <select className="apple-control" value={form.campo_id} onChange={e => cambiarCampo(e.target.value)}>
+                {!form.campo_id && <option value="">Elegí el campo…</option>}
+                {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </ModalField>
+          </ModalGrid>
+          <BlockChips
+            bloques={bloques}
+            seleccionados={form.bloques_ids}
+            cargando={cargandoBloques}
+            cultivoDe={getCultivoBloque}
+            onToggle={toggleBloque}
+            onSelectAll={seleccionarBloques}
+            onClear={limpiarBloques}
+            vacio={form.campo_id ? 'Este campo no tiene bloques cargados.' : 'Elegí un campo para ver sus bloques.'}
+          />
+        </ModalSection>
+
+        <ModalSection title="Mezcla e insumos" icon="ti-flask">
+          {!form.id && form.bloques_ids.length > 1 && (
+            <ModalGroup label="¿Cómo se repartió la mezcla?">
+              <ChoiceChips label="Reparto de la mezcla" value={form.distribucion === 'compartido' ? 'compartido' : 'por_bloque'} onChange={cambiarDistribucion} options={[{ value:'por_bloque', label:'Por bloque', icon:'ti-layout-grid' }, { value:'compartido', label:'Compartido', icon:'ti-share' }]} />
+              {form.distribucion === 'compartido' && <small className="apple-field__hint">Una misma preparación alcanzó para varios bloques: indicá los litros que recibió cada uno.</small>}
+            </ModalGroup>
+          )}
+          <ModalGrid>
+            <ModalField label="Litros por tanque">
+              <input className="apple-control apple-control--num" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value.replace(/[^0-9]/g, '') }))} placeholder="Ej: 200" />
+            </ModalField>
+            {form.distribucion === 'compartido' && !form.id ? (
+              <ModalField label="Tanques preparados">
+                <input className="apple-control apple-control--num" type="text" inputMode="decimal" enterKeyHint="next" value={form.tanques_cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="Ej: 2" />
+              </ModalField>
+            ) : (
+              <ModalField label={form.bloques_ids.length > 1 ? 'Tanques en cada bloque' : 'Tanques usados'}>
+                <input className="apple-control apple-control--num" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={tanquesComunes} onWheel={e => e.currentTarget.blur()} onChange={e => fijarTanquesTodos(e.target.value.replace(/[^0-9]/g, ''))} placeholder={form.bloques_ids.length > 1 && tanquesComunes === '' && form.bloques_ids.some(id => form.bloques_tanques?.[id]) ? 'Varía' : 'Ej: 4'} disabled={!form.bloques_ids.length} />
+              </ModalField>
             )}
-            {form.bloques_ids.length > 0 && form.tanque_litros && form.distribucion === 'compartido' && (() => { const preparados=(Number(String(form.tanques_cantidad || '').replace(',', '.')) || 0) * (Number(form.tanque_litros) || 0); const asignados=form.bloques_ids.reduce((total,id) => total + (Number(String(form.bloques_litros?.[id] || '').replace(',', '.')) || 0),0); const sobrante=preparados-asignados; return <div className="ui-afd779" style={{ color:sobrante < 0 ? '#c84040' : 'inherit' }}>Preparados: {fmtCantidad(preparados)} L · Asignados: {fmtCantidad(asignados)} L · {sobrante >= 0 ? `Sin asignar: ${fmtCantidad(sobrante)} L` : `Exceso: ${fmtCantidad(Math.abs(sobrante))} L`}</div> })()}
-            </section>}
-            {pasoForm === 3 && <section className="fum-step"><div className="fum-step__heading"><span>Paso 3 de 4</span><h3>¿Qué productos utilizaste?</h3><p>Agregá la dosis por tanque y revisá el efecto sobre el inventario.</p></div>
-            <FormHeading number="03" detail="Cantidad, unidad y efecto sobre el stock">Productos utilizados</FormHeading>
-            <div className="ui-74cc19">Productos <span className="ui-d6202d">(primero elegí la categoría)</span></div>
-            {form.productos_form.map((pf,i)=>{
-              const prod = productos.find(p=>p.id===pf.producto_id)
-              const totalTanques = form.distribucion === 'compartido' ? form.bloques_ids.reduce((total,id) => total + (Number(String(form.bloques_litros?.[id] || '').replace(',', '.')) || 0), 0) / (Number(form.tanque_litros) || 1) : form.bloques_ids.reduce((total, id) => total + (Number(form.bloques_tanques?.[id]) || 0), 0)
-              const descuento = prod ? calcularDescuentoStock(pf, prod, totalTanques) : 0
-              return (
-                <div className="ui-d51702" key={i}>
-                  <div className="ag-product-row ui-820f1c">
-                    <div className="ui-d40836">
-                      <label className="ag-field-label">Categoría
-                      <select className="ui-ed7c13" value={pf.categoria_nombre || ''} onChange={e=>{const np=[...form.productos_form];np[i].categoria_nombre=e.target.value;np[i].producto_id='';np[i].producto_nombre='';setForm(f=>({...f,productos_form:np}))}}>
-                        <option value="">Elegir categoría</option>
-                        {(CATEGORIAS_POR_TIPO[form.tipo] || []).map(categoria=><option key={categoria} value={categoria}>{categoria}</option>)}
-                      </select></label>
-                      <label className="ag-field-label">Producto
-                      <select className="ui-ed7c13" value={pf.producto_id} disabled={!pf.categoria_nombre} onChange={e=>{const prodSel=productos.find(p=>p.id===e.target.value); const np=[...form.productos_form];np[i].producto_id=e.target.value;np[i].producto_nombre=prodSel?.nombre || '';np[i].unidad_uso=unidadUsoDefault(prodSel?.unidad);setForm(f=>({...f,productos_form:np}))}}>
-                        <option value="">{pf.categoria_nombre ? 'Sin inventario / escribir otro' : 'Primero elegí la categoría'}</option>
-                        {incluirSeleccionados(productos, p => categoriaProducto(p) === String(pf.categoria_nombre || '').toLowerCase(), [pf.producto_id]).map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
-                      </select></label>
-                      {pf.categoria_nombre && productos.filter(p => categoriaProducto(p) === pf.categoria_nombre.toLowerCase()).length === 0 && !pf.producto_id && <div className="ui-6d5651">No hay productos en esta categoría. Podés escribir uno o cargarlo primero en Inventario.</div>}
-                      {pf.categoria_nombre && !pf.producto_id && <input className="ui-6f9704" value={pf.producto_nombre || ''} onChange={e=>{const np=[...form.productos_form];np[i].producto_nombre=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder={`Escribir ${pf.categoria_nombre.toLowerCase()}`} />}
+          </ModalGrid>
+          {form.bloques_ids.length > 1 && (
+            <button type="button" className="apple-link" onClick={() => setAjusteFino(v => !v)} aria-expanded={ajusteFino}>{ajusteFino ? 'Ocultar el detalle por bloque' : form.distribucion === 'compartido' && !form.id ? 'Litros que recibió cada bloque' : 'Ajustar tanques bloque por bloque'}</button>
+          )}
+          {(ajusteFino || (form.distribucion === 'compartido' && !form.id)) && form.bloques_ids.length > 1 && (
+            <div className="apple-mini-grid">
+              {form.bloques_ids.map(bloqueId => {
+                const bloque = bloques.find(b => b.id === bloqueId)
+                const compartido = form.distribucion === 'compartido' && !form.id
+                return <label className="apple-mini" key={bloqueId}>
+                  <b title={bloque?.codigo || ''}>{bloque?.codigo || '—'}</b>
+                  <input className="apple-bare" type="text" inputMode={compartido ? 'decimal' : 'numeric'} enterKeyHint="next" aria-label={`${compartido ? 'Litros' : 'Tanques'} del bloque ${bloque?.codigo || ''}`} value={(compartido ? form.bloques_litros?.[bloqueId] : form.bloques_tanques?.[bloqueId]) || ''} onWheel={e => e.currentTarget.blur()} onChange={e => compartido ? actualizarLitrosBloque(bloqueId, e.target.value) : actualizarTanquesBloque(bloqueId, e.target.value)} placeholder={compartido ? 'L' : '0'} />
+                </label>
+              })}
+            </div>
+          )}
+          {resumenMezcla && <p className={`apple-note${resumenMezcla.exceso ? ' is-danger' : ''}`}>{resumenMezcla.texto}</p>}
+
+          <ModalGroup label="Productos" aside={<span className="apple-field__hint">Dosis por tanque</span>}>
+            <div className="apple-rows">
+              {form.productos_form.map((pf, i) => {
+                const prod = productos.find(p => p.id === pf.producto_id)
+                const descuento = prod ? calcularDescuentoStock(pf, prod, totalTanquesForm) : 0
+                const libre = Boolean(pf.libre || (!pf.producto_id && pf.producto_nombre))
+                const grupos = gruposDeProductos(form.tipo, pf.producto_id)
+                return (
+                  <div className="apple-row" key={i}>
+                    <div className="apple-row__name">
+                      <select className="apple-control" aria-label={`Producto ${i + 1}`} value={pf.producto_id || (libre ? OTRO_PRODUCTO : '')} onChange={e => elegirProducto(i, e.target.value)}>
+                        <option value="">Elegir producto…</option>
+                        {grupos.map(g => <optgroup key={g.categoria} label={g.categoria}>{g.items.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</optgroup>)}
+                        <option value={OTRO_PRODUCTO}>Otro (sin inventario)…</option>
+                      </select>
+                      {libre && <input className="apple-control" aria-label="Nombre del producto" value={pf.producto_nombre || ''} onChange={e => actualizarProducto(i, { producto_nombre:e.target.value })} placeholder="Nombre del producto" />}
                     </div>
-                    <input className="ui-ed7c13" value={pf.cantidad} onChange={e=>{const np=[...form.productos_form];np[i].cantidad=e.target.value;setForm(f=>({...f,productos_form:np}))}} placeholder="Cant." inputMode="decimal"/>
-                    <select className="ui-e2752f" value={pf.unidad_uso} onChange={e=>{const np=[...form.productos_form];np[i].unidad_uso=e.target.value;setForm(f=>({...f,productos_form:np}))}}>
+                    <input className="apple-control apple-control--num" aria-label="Dosis por tanque" value={pf.cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => actualizarProducto(i, { cantidad:e.target.value.replace(/[^0-9.,]/g, '') })} placeholder="Dosis" inputMode="decimal" enterKeyHint="next" />
+                    <select className="apple-control" aria-label="Unidad de la dosis" value={pf.unidad_uso} onChange={e => actualizarProducto(i, { unidad_uso:e.target.value })}>
                       {UNIDADES_USO.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
+                    <button type="button" className="apple-row__remove" aria-label={`Quitar producto ${i + 1}`} onClick={() => quitarProducto(i)} disabled={form.productos_form.length === 1 && !pf.producto_id && !pf.producto_nombre && !pf.cantidad}><i className="ti ti-x" aria-hidden="true" /></button>
+                    {prod && <div className={`apple-row__info${Number(prod.stock_actual) <= Number(prod.stock_minimo) ? ' is-low' : ''}`}>
+                      Stock: <b>{formatearStock(prod.stock_actual, prod.unidad)}</b>
+                      {descuento === null ? ' · medida incompatible con el stock' : descuento > 0 ? <> · descuenta <b>{formatearStock(descuento, prod.unidad)}</b></> : ''}
+                      {prod.carencia_dias > 0 ? ` · ${prod.carencia_dias} d de carencia` : ''}
+                    </div>}
+                    {!form.id && prod && descuento > 0 && descuento > Number(prod.stock_actual || 0) + 1e-9 && <div className="apple-row__alert" role="status"><i className="ti ti-alert-triangle" aria-hidden="true" /><span>Falta producto: hay {formatearStock(prod.stock_actual, prod.unidad)} y esta aplicación usa {formatearStock(descuento, prod.unidad)}. Se guardará igual, el stock quedará en 0 y te avisaremos para registrar la compra pendiente.</span></div>}
                   </div>
-                  {prod && <div className="ui-d57e4f" style={{ color: prod.stock_actual<=prod.stock_minimo?'#e07b00':'#0F3923' }}>
-                    Stock: {formatearStock(prod.stock_actual, prod.unidad)}
-                    {descuento === null ? ' · medida incompatible con el stock' : descuento > 0 ? ` · descuenta ${formatearStock(descuento, prod.unidad)}` : ''}
-                    {prod.carencia_dias>0?` · ${prod.carencia_dias}d carencia`:''}
-                  </div>}
-                  {!form.id && prod && descuento > 0 && descuento > Number(prod.stock_actual || 0) + 1e-9 && <div className="ag-stock-aviso" role="status"><i className="ti ti-alert-triangle" aria-hidden="true" /><span>Falta producto: hay {formatearStock(prod.stock_actual, prod.unidad)} y esta aplicación usa {formatearStock(descuento, prod.unidad)}. Se guardará igual, el stock quedará en 0 y te avisaremos para registrar la compra pendiente.</span></div>}
-                </div>
-              )
-            })}
-            <button className="ag-small-action ui-a0449e" onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{categoria_nombre:'',producto_id:'',producto_nombre:'',cantidad:'',unidad_uso:'g'}]}))}>+ Agregar producto</button>
-            <label className="ag-field-label ui-74cc19">Notas
-            <textarea className="ui-641669" value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/></label>
-            </section>}
-            {pasoForm === 4 && <section className="fum-step fum-review"><div className="fum-step__heading"><span>Paso 4 de 4</span><h3>Revisá antes de registrar</h3><p>Confirmá que los datos sean correctos. Después de guardar se actualizará el inventario.</p></div>
-              <div className="fum-review__grid">
-                <article><i className="ti ti-map-pin" aria-hidden="true"/><div><span>Ubicación</span><strong>{campoSeleccionado?.nombre || 'Sin campo'}</strong><p>{bloquesSeleccionados.map(b=>b.codigo).join(' · ') || 'Sin bloques'}</p></div><button type="button" onClick={()=>setPasoForm(1)}>Editar</button></article>
-                <article><i className="ti ti-flask" aria-hidden="true"/><div><span>Preparación</span><strong>{form.distribucion==='compartido'?'Tanque compartido':'Separada por bloque'}</strong><p>{form.tanque_litros ? `${form.tanque_litros} L por tanque` : 'Sin volumen indicado'}</p></div><button type="button" onClick={()=>setPasoForm(2)}>Editar</button></article>
-                <article><i className="ti ti-package" aria-hidden="true"/><div><span>Productos</span><strong>{form.productos_form.filter(p=>p.producto_id||p.producto_nombre).length} cargados</strong><p>{form.productos_form.map(p=>p.producto_nombre).filter(Boolean).join(' · ') || 'Sin productos'}</p></div><button type="button" onClick={()=>setPasoForm(3)}>Editar</button></article>
+                )
+              })}
+            </div>
+            <button type="button" className="apple-add" onClick={agregarProducto}><i className="ti ti-plus" aria-hidden="true" />Agregar producto</button>
+          </ModalGroup>
+        </ModalSection>
+
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(form.id && (form.operario || form.notas))} badge={[operariosElegidos.length ? `${operariosElegidos.length} operario${operariosElegidos.length === 1 ? '' : 's'}` : '', form.notas ? 'nota' : ''].filter(Boolean).join(' · ')}>
+          {operarios.length > 0 && (
+            <ModalGroup label="Operarios">
+              <div className="apple-person">
+                {operarios.map(o => <button type="button" key={o.id} className="apple-chip" aria-pressed={operariosElegidos.includes(o.nombre)} onClick={() => toggleOperario(o.nombre)}>{o.nombre}</button>)}
               </div>
-              {!form.id && <div className="fum-plan-option"><i className="ti ti-calendar-plus" aria-hidden="true"/><div><strong>¿Todavía no se realizó?</strong><p>Guardalo en Agenda sin descontar inventario.</p></div><button type="button" onClick={guardarPlan} disabled={saving}>Guardar como plan</button></div>}
-            </section>}
-            </main>
-            <aside className="fum-workspace__summary"><span>Selección actual</span><strong>{form.bloques_ids.length} bloque{form.bloques_ids.length===1?'':'s'}</strong><div>{bloquesSeleccionados.map(b=><button type="button" key={b.id} onClick={()=>toggleBloque(b.id)} aria-label={`Quitar bloque ${b.codigo}`}>{b.codigo}<i className="ti ti-x" aria-hidden="true"/></button>)}</div><dl><dt>Campo</dt><dd>{campoSeleccionado?.nombre || 'Sin elegir'}</dd><dt>Tipo</dt><dd>{TIPOS[form.tipo]?.label}</dd><dt>Fecha</dt><dd>{form.fecha ? new Date(`${form.fecha}T00:00:00`).toLocaleDateString('es-PY') : 'Sin elegir'}</dd></dl><p><i className="ti ti-info-circle" aria-hidden="true"/>Podés cambiar estos datos antes de registrar.</p></aside>
-            <div className="fum-mobile-selection"><i className="ti ti-layers-subtract" aria-hidden="true"/><strong>{bloquesSeleccionados.map(b=>b.codigo).join(' · ') || 'Sin bloques seleccionados'}</strong>{form.bloques_ids.length>0&&<button type="button" onClick={()=>setPasoForm(1)}>Editar</button>}</div>
-            <footer className="fum-workspace__footer"><button type="button" className="fum-footer-cancel" onClick={cerrarModal} disabled={saving}>Cancelar</button><div>{pasoForm>1&&<button type="button" className="fum-footer-back" onClick={retrocederPaso} disabled={saving}><i className="ti ti-arrow-left" aria-hidden="true"/>Atrás</button>}{pasoForm<4?<button type="button" className="fum-footer-next" onClick={avanzarPaso}>Continuar<i className="ti ti-arrow-right" aria-hidden="true"/></button>:<button type="button" className="fum-footer-next" onClick={guardar} disabled={saving}>{saving?'Guardando...':form.id?'Guardar cambios':'Registrar aplicación'}<i className="ti ti-check" aria-hidden="true"/></button>}</div></footer>
-          </div>
-        </Modal>
-      )}
+            </ModalGroup>
+          )}
+          <ModalField label="Notas">
+            <textarea className="apple-control" value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones: clima, plaga, repetir en…" />
+          </ModalField>
+          {!form.id && (
+            <div className="apple-plan">
+              <i className="ti ti-calendar-plus" aria-hidden="true" />
+              <div><strong>¿Todavía no se realizó?</strong><p>Guardalo en la Agenda sin descontar inventario.</p></div>
+              <button type="button" className="apple-btn apple-btn--soft" onClick={guardarPlan} disabled={saving}>Guardar como plan</button>
+            </div>
+          )}
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </div>
   )
 }

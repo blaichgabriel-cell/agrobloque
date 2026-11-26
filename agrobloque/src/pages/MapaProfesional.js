@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Modal, Notice } from '../components/UI'
+import { Notice } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, ChoiceChips, fechaIso } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
 
-const hoy = () => new Date().toISOString().slice(0, 10)
+const hoy = () => fechaIso(0)
 const diasDesde = fecha => fecha ? Math.max(0, Math.floor((new Date(`${hoy()}T12:00:00`) - new Date(`${String(fecha).slice(0, 10)}T12:00:00`)) / 86400000)) : null
 const numero = valor => Number(valor || 0).toLocaleString('es-PY')
 const fechaCorta = valor => valor ? new Date(`${String(valor).slice(0, 10)}T12:00:00`).toLocaleDateString('es-PY', { day:'numeric', month:'short' }) : 'Sin fecha'
@@ -24,7 +26,6 @@ export default function MapaProfesional({ campoActivo }) {
   const [vista, setVista] = useState('tarjetas')
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(vacio)
-  const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
 
   const cargar = async () => {
@@ -90,7 +91,7 @@ export default function MapaProfesional({ campoActivo }) {
     setSaving(true); setError('')
     const { data:nuevo, error:guardarError } = await supabase.from('bloques').insert({ campo_id:campoActivo.id, codigo, tipo:form.tipo, activo:true }).select('id').single()
     if (guardarError) setError(`No se pudo crear el bloque: ${guardarError.message}`)
-    else { await registrarAuditoria({ accion:'Registro bloque', modulo:'Mapa', tabla:'bloques', registroId:nuevo?.id || '', detalle:`Bloque ${codigo}` }); setModal(false); setForm(vacio); setSuccess(`Bloque ${codigo} creado correctamente.`); await cargar() }
+    else { await registrarAuditoria({ accion:'Registro bloque', modulo:'Mapa', tabla:'bloques', registroId:nuevo?.id || '', detalle:`Bloque ${codigo}` }); setModal(false); setForm(vacio); toast.success('Bloque creado', { description:`Bloque ${codigo} agregado a ${campoActivo.nombre}.` }); await cargar() }
     setSaving(false)
   }
 
@@ -99,7 +100,6 @@ export default function MapaProfesional({ campoActivo }) {
   return <div className="ab-map-page">
     <header className="ab-map-header"><div><span>CAMPO ACTIVO</span><h1>Bloques del campo</h1><p>{campoActivo.nombre} · Cultivos y seguimiento</p></div>{can.create && <button aria-label="Nuevo bloque" className="ab-new-block" onClick={() => { setError(''); setModal(true) }}><i className="ti ti-plus" />Nuevo bloque</button>}</header>
     <Notice tone="error">{error}</Notice>
-    <Notice>{success}</Notice>
     <section className="ab-map-kpis" aria-busy={loading}>
       <Kpi tone="bloques" icon="ti-layout-grid" value={loading ? '—' : resumen.total} label="Bloques" />
       <Kpi tone="bloques" icon="ti-leaf" value={loading ? '—' : resumen.produccion} label="En producción" />
@@ -115,7 +115,36 @@ export default function MapaProfesional({ campoActivo }) {
     </section>
     {loading ? <div className="ab-block-skeletons" role="status" aria-label="Cargando bloques">{Array.from({length:8}).map((_,i) => <div key={i} />)}</div> : !filtrados.length ? <div className="ab-empty">No hay bloques que coincidan con los filtros.</div> : vista === 'tarjetas' ? <div className="ab-block-grid">{filtrados.map(r => <BlockCard key={r.id} item={r} maxDias={maxDias} campo={campoActivo.nombre} onOpen={() => navigate(`/bloque/${r.id}`)} />)}</div> : <div className="ab-field-map">{hileras.map(([letra, items]) => <section className="ab-field-row" key={letra} aria-label={`Hilera ${letra}`}><span className="ab-field-letter">{letra}</span><div>{items.map(r => <BlockTile key={r.id} item={r} onOpen={() => navigate(`/bloque/${r.id}`)} />)}</div></section>)}</div>}
     <NotasPanel modulo="mapa" titulo="Notas de bloques y mapa" />
-    {modal && <Modal label="Agregar bloque al campo" busy={saving} onClose={() => setModal(false)} className="ab-modal-backdrop" onClick={e => e.target === e.currentTarget && setModal(false)}><div className="ab-modal"><div className="ab-modal-title"><div><span>NUEVO BLOQUE</span><h2>Agregar al campo</h2></div><button aria-label="Cerrar" disabled={saving} onClick={() => setModal(false)}><i className="ti ti-x" /></button></div><div className="ab-form-two"><label>Letra<input value={form.letra} maxLength={3} onChange={e => setForm(f => ({...f, letra:e.target.value.toUpperCase().replace(/[^A-Z]/g,'')}))} /></label><label>Número<input inputMode="numeric" value={form.numero} onChange={e => setForm(f => ({...f, numero:e.target.value.replace(/[^0-9]/g,'')}))} /></label></div><label className="ab-field-label">Tipo<select value={form.tipo} onChange={e => setForm(f => ({...f, tipo:e.target.value}))}><option value="invernadero">Invernadero</option><option value="campo_abierto">Campo abierto</option></select></label><div className="ab-preview"><span>Vista previa</span><strong>{form.letra || 'A'}-{form.numero || '?'}</strong></div><Notice tone="error">{error}</Notice><button className="ab-save" onClick={guardarBloque} disabled={saving}>{saving ? 'Guardando…' : 'Guardar bloque'}</button></div></Modal>}
+    <UnifiedFormModal
+      open={modal}
+      tone="bloques"
+      icon="ti-layout-grid-add"
+      eyebrow="Nuevo bloque"
+      title="Agregar al campo"
+      subtitle={campoActivo.nombre}
+      label="Agregar bloque al campo"
+      busy={saving}
+      onClose={() => setModal(false)}
+      onSubmit={guardarBloque}
+      submitLabel="Guardar bloque"
+      error={modal ? error : ''}
+      summary={<><b>{form.letra || 'A'}-{form.numero || '?'}</b> · {form.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto'}</>}
+    >{() => (
+      <ModalSection title="Identificación" icon="ti-tag">
+        <ModalGrid>
+          <ModalField label="Letra" hint="Hilera o sector: A, B, C…">
+            <input className="apple-control apple-control--code" value={form.letra} maxLength={3} autoCapitalize="characters" onChange={e => setForm(f => ({ ...f, letra:e.target.value.toUpperCase().replace(/[^A-Z]/g, '') }))} />
+          </ModalField>
+          <ModalField label="Número" hint="Posición dentro de la hilera">
+            <input className="apple-control apple-control--code" data-autofocus type="text" inputMode="numeric" pattern="[0-9]*" value={form.numero} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, numero:e.target.value.replace(/[^0-9]/g, '') }))} placeholder="Ej: 7" />
+          </ModalField>
+        </ModalGrid>
+        <ModalGroup label="Tipo">
+          <ChoiceChips label="Tipo de bloque" value={form.tipo} onChange={tipo => setForm(f => ({ ...f, tipo }))} options={[{ value:'invernadero', label:'Invernadero', icon:'ti-building-cottage' }, { value:'campo_abierto', label:'Campo abierto', icon:'ti-sun' }]} />
+        </ModalGroup>
+        <div className="apple-preview" aria-live="polite"><span>Vista previa</span><strong>{form.letra || 'A'}-{form.numero || '?'}</strong></div>
+      </ModalSection>
+    )}</UnifiedFormModal>
   </div>
 }
 

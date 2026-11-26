@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Skeleton, Modal } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, BlockChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 import QRCode from 'qrcode'
 import { esAdministradorGeneral } from '../lib/plataforma'
 import { supabase } from '../lib/supabase'
@@ -90,7 +92,7 @@ export default function FichaBloque() {
   const [showAplicarPlan, setShowAplicarPlan] = useState(false)
   const [showNuevaFertilizacion, setShowNuevaFertilizacion] = useState(false)
   const [formFert, setFormFert] = useState({
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: fechaIso(0),
     bloques_ids: [],
     notas: '',
     soluciones: [
@@ -99,7 +101,7 @@ export default function FichaBloque() {
   })
   const [formPlan, setFormPlan] = useState({
     nombre: 'Plan semanal',
-    fecha_inicio: new Date().toISOString().split('T')[0],
+    fecha_inicio: fechaIso(0),
     litros_preparados: '',
     notas: '',
     soluciones: [
@@ -107,7 +109,7 @@ export default function FichaBloque() {
     ],
   })
   const [formAplicacionPlan, setFormAplicacionPlan] = useState({
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: fechaIso(0),
     litros_aplicados: '',
     responsable: '',
     notas: '',
@@ -137,6 +139,7 @@ export default function FichaBloque() {
   const [cultivoRapidoError, setCultivoRapidoError] = useState('')
   const [cultivosLoading, setCultivosLoading] = useState(false)
   const [plantacionFormError, setPlantacionFormError] = useState('')
+  const [errorMuerte, setErrorMuerte] = useState('')
   const [nuevoAbonoNombre, setNuevoAbonoNombre] = useState('')
   const [abonoRapidoError, setAbonoRapidoError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -646,16 +649,18 @@ export default function FichaBloque() {
   }
 
   const guardarMuerte = async () => {
-    if (!parseLocaleInteger(formMuerte.cantidad, null)) return
+    if (!parseLocaleInteger(formMuerte.cantidad, null)) { setErrorMuerte('Indicá cuántas plantas murieron.'); return }
+    setErrorMuerte('')
     setSaving(true)
     await supabase.from('muertes_plantas').insert({
       bloque_id: id, plantacion_id: plantacionActiva?.id,
       cantidad: parseLocaleInteger(formMuerte.cantidad, null),
       causa: formMuerte.causa,
       descripcion: formMuerte.descripcion || null,
-      fecha: new Date().toISOString().split('T')[0]
+      fecha: fechaIso(0)
     })
     setSaving(false); setShowMuerte(false)
+    toast.success('Muerte de plantas registrada', { description:`${formMuerte.cantidad} plantas · ${formMuerte.causa}` })
     setFormMuerte({ cantidad:'', causa:'Enfermedad', descripcion:'' })
     fetchData()
   }
@@ -698,7 +703,7 @@ export default function FichaBloque() {
 
   const abrirNuevaFertilizacion = () => {
     setFormFert({
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: fechaIso(0),
       bloques_ids: [id],
       notas: '',
       soluciones: [{ nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }],
@@ -790,7 +795,7 @@ export default function FichaBloque() {
       setFormPlan({
         id: planSemanal.id,
         nombre: planSemanal.nombre || 'Plan semanal',
-        fecha_inicio: planSemanal.fecha_inicio || new Date().toISOString().split('T')[0],
+        fecha_inicio: planSemanal.fecha_inicio || fechaIso(0),
         litros_preparados: planSemanal.litros_preparados || '',
         notas: planSemanal.notas || '',
         soluciones: Array.isArray(planSemanal.soluciones) && planSemanal.soluciones.length > 0
@@ -800,7 +805,7 @@ export default function FichaBloque() {
     } else {
       setFormPlan({
         nombre: 'Plan semanal',
-        fecha_inicio: new Date().toISOString().split('T')[0],
+        fecha_inicio: fechaIso(0),
         litros_preparados: '',
         notas: '',
         soluciones: [{ nombre: 'A', productos: [{ nombre: '', cantidad: '', unidad: 'kg' }] }],
@@ -838,7 +843,7 @@ export default function FichaBloque() {
 
   const abrirAplicarPlan = () => {
     setFormAplicacionPlan({
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: fechaIso(0),
       litros_aplicados: '',
       responsable: '',
       notas: '',
@@ -892,7 +897,7 @@ export default function FichaBloque() {
       .filter(Boolean)
       .map(codigo => `Bloque ${codigo}`)
       .join(', ')
-    setMensajeExito(`Fertilización guardada y vinculada a ${codigos || `${bloquesDestino.length} bloque(s)`}. También aparece en Fertilizaciones generales.`)
+    toast.success('Fertilización guardada', { description:`Vinculada a ${codigos || `${bloquesDestino.length} bloque(s)`}. También aparece en Fertilizaciones generales.` })
     fetchData()
   }
 
@@ -1106,7 +1111,6 @@ export default function FichaBloque() {
     : null
   const totalMuertes = muertes.reduce((s, m) => s + Number(m.cantidad), 0)
 
-  const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:10, boxSizing:'border-box' }
 
   if (!bloque) return (
     <div className="ag-page ui-44f558">
@@ -1285,7 +1289,7 @@ export default function FichaBloque() {
   return (
     <div className="ag-page block-detail-modern ui-c1c124">
       {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-      {showEditarNombre && <Modal busy={saving} onClose={() => setShowEditarNombre(false)} label="Editar nombre del bloque" style={{ position:'fixed', inset:0, zIndex:220, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface ui-211525" style={{ width:'min(430px, 100%)' }}><div className="ui-3e43be">Editar nombre del bloque</div><div className="ui-01159a">Este nombre se actualizará en mapas, aplicaciones, costos e historiales vinculados.</div>{nombreBloqueError && <div className="ag-feedback ag-feedback-error" role="alert">{nombreBloqueError}</div>}<label className="ag-field-label">Nombre<input className="bl-input" autoFocus value={nombreBloque} onChange={e => setNombreBloque(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') guardarNombreBloque() }} maxLength={50} placeholder="Ej: A-1" /></label><div className="ui-9c6869"><button className="ag-small-action ui-395a62" onClick={() => setShowEditarNombre(false)} disabled={saving}>Cancelar</button><button className="ag-small-action ui-f5f413" onClick={guardarNombreBloque} disabled={saving}>{saving ? 'Guardando…' : 'Guardar nombre'}</button></div></div></Modal>}
+
       {detalleCostos && <Modal onClose={() => setDetalleCostos(null)} label="Detalle de costos" style={{ position:'fixed', inset:0, zIndex:225, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface block-cost-detail"><div className="block-cost-detail__head"><div><small>HISTORIAL DEL CICLO</small><h2>{detalleCostos === 'fumigaciones' ? 'Fumigaciones' : detalleCostos === 'fertilizaciones' ? 'Fertilizaciones' : 'Gastos directos'}</h2></div><button className="ag-small-action" onClick={() => setDetalleCostos(null)} aria-label="Cerrar"><i className="ti ti-x" /></button></div><CostDetailList tipo={detalleCostos} costos={costosCiclo} /></div></Modal>}
       {showInformeOpciones && <Modal busy={exportandoPdf} onClose={() => !exportandoPdf && setShowInformeOpciones(false)} label="Elegir informe" style={{ position:'fixed', inset:0, zIndex:228, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface block-report-picker"><div className="block-report-picker__head"><div><small>DESCARGAR DATOS DEL BLOQUE</small><h2>¿Qué informe necesitás?</h2><p>Elegí la ficha técnica para compartir con el ingeniero o el informe completo para administración.</p></div><button type="button" className="ag-small-action" aria-label="Cerrar" onClick={() => setShowInformeOpciones(false)} disabled={exportandoPdf}><i className="ti ti-x" /></button></div>{pdfError && <div className="ag-feedback ag-feedback-error" role="alert">{pdfError}</div>}<label className="block-report-observation"><span>Estado actual / observaciones <em>Opcional</em></span><textarea value={estadoInforme} onChange={event => setEstadoInforme(event.target.value)} maxLength={700} placeholder="Ej: Cultivo con buen vigor, floración uniforme y sin incidencia visible de plagas." /><small>Solo aparecerá en el PDF si escribís algo. AgroBloque no genera recomendaciones automáticamente.</small></label><div className="block-report-picker__options"><button type="button" className="is-recommended" onClick={descargarFichaTecnica} disabled={exportandoPdf}><span><i className="ti ti-plant-2" /></span><div><strong>Ficha técnica para el ingeniero</strong><em>Recomendado</em><p>Plantas, variedad, siembra, días en campo, base, fertilizaciones y fumigaciones. Sin precios ni costos.</p></div><i className="ti ti-download" /></button><button type="button" onClick={descargarInformeBloque} disabled={exportandoPdf || costosCiclo.loading}><span><i className="ti ti-file-description" /></span><div><strong>Informe completo del bloque</strong><p>Incluye también costos, cosechas, notas e historial administrativo.</p></div><i className="ti ti-download" /></button></div>{exportandoPdf && <div className="block-report-picker__loading"><i className="ti ti-loader-2" />Preparando el PDF…</div>}</div></Modal>}
 
@@ -1446,7 +1450,7 @@ export default function FichaBloque() {
                    >
                     Nueva plantación
                   </button>}
-                  {can.create && <button className="ag-small-action ui-d4abad" onClick={() => setShowMuerte(true)}
+                  {can.create && <button className="ag-small-action ui-d4abad" onClick={() => { setErrorMuerte(''); setShowMuerte(true) }}
                    >
                     + Muerte de plantas
                   </button>}
@@ -1710,207 +1714,270 @@ export default function FichaBloque() {
         )}
       </div>
 
-      {/* Modal nueva/editar plantacion */}
-      {(showNuevaPlantacion || showEditarPlantacion) && (
-        <div className="ui-66d878" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end' }}>
-          <div className="ui-7dd37e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-c7b1b6">{showEditarPlantacion ? 'Editar plantación' : 'Nueva plantación'}</div>
-
-            <label className="ag-field-label ui-74cc19">Cultivo *
-            <select style={inpStyle} value={form.cultivo_id} disabled={cultivosLoading} onChange={e => setForm(f => ({...f, cultivo_id:e.target.value}))}>
-              <option value="">{cultivosLoading ? 'Cargando cultivos...' : cultivos.length ? 'Selecciona cultivo...' : 'Todavía no hay cultivos'}</option>
-              {cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select></label>
-            {!cultivosLoading && cultivos.length === 0 && !cultivoRapidoError && (
-              <div style={{ background:'#f2f8f4', border:'1px solid #d9e9df', borderRadius:'var(--ag-radius)', padding:'11px 12px', margin:'-2px 0 10px', color:'#315344', fontSize:12, lineHeight:1.45 }}>
-                Esta empresa todavía no tiene cultivos. Creá el primero abajo; quedará guardado y seleccionado automáticamente.
-              </div>
-            )}
-            <div className="ui-74cc19" style={{ marginBottom:6 }}>Agregar un cultivo al catálogo</div>
-            <div className="ui-16e267">
-              <input className="ui-e7ec54"
-                style={{ ...inpStyle }}
-                type="text"
-                value={nuevoCultivoNombre}
-                onChange={e => setNuevoCultivoNombre(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarCultivoRapido() } }}
-                placeholder="Ej: Tomate, locote, pepino..."
-              />
-              <button className="ag-small-action ui-c1563e"
-                type="button"
-                onClick={() => agregarCultivoRapido()}
-                disabled={!nuevoCultivoNombre.trim()}
-              >
-                Agregar
-              </button>
+      {/* Nueva o editar plantación */}
+      <UnifiedFormModal
+        open={showNuevaPlantacion || showEditarPlantacion}
+        tone="bloques"
+        icon="ti-seeding"
+        eyebrow={`Bloque ${bloque?.codigo || ''}`}
+        title={showEditarPlantacion ? 'Editar plantación' : 'Nueva plantación'}
+        label={showEditarPlantacion ? 'Editar plantación' : 'Nueva plantación'}
+        busy={saving}
+        onClose={() => { setShowNuevaPlantacion(false); setShowEditarPlantacion(false) }}
+        onSubmit={showEditarPlantacion ? guardarEditarPlantacion : guardarNuevaPlantacion}
+        submitLabel={showEditarPlantacion ? 'Guardar cambios' : 'Guardar plantación'}
+        error={plantacionFormError}
+        summary={resumenPie([
+          { solo: cultivos.find(c => c.id === form.cultivo_id)?.nombre || '' },
+          { n: parseLocaleInteger(form.cantidad_plantas, 0) || '', texto: 'plantas', uno: 'planta' },
+          { n: form.abonos_ids.length, texto: 'abonos', uno: 'abono' },
+        ]) || 'Elegí el cultivo y la fecha de siembra'}
+      >{() => <>
+        <ModalSection title="Qué se planta" icon="ti-seeding">
+          <ModalGrid>
+            <ModalField label="Cultivo *">
+              <select className="apple-control" value={form.cultivo_id} disabled={cultivosLoading} onChange={e => setForm(f => ({ ...f, cultivo_id:e.target.value }))}>
+                <option value="">{cultivosLoading ? 'Cargando cultivos…' : cultivos.length ? 'Elegí el cultivo…' : 'Todavía no hay cultivos'}</option>
+                {cultivos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </ModalField>
+            <ModalField label="Variedad">
+              <input className="apple-control" type="text" value={form.variedad_texto} onChange={e => setForm(f => ({ ...f, variedad_texto:e.target.value }))} placeholder="Ej: Rojo, Lamuyo…" />
+            </ModalField>
+          </ModalGrid>
+          <ModalGrid>
+            <DateQuickField label="Fecha de siembra" required value={form.fecha_siembra} onChange={fecha_siembra => setForm(f => ({ ...f, fecha_siembra }))} />
+            <ModalField label="Cantidad de plantas">
+              <input className="apple-control apple-control--num" type="text" inputMode="numeric" autoComplete="off" value={form.cantidad_plantas} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, cantidad_plantas:e.target.value.replace(/[^0-9.,\s]/g, '') }))} onBlur={() => setForm(f => ({ ...f, cantidad_plantas:formatLocaleInteger(f.cantidad_plantas) }))} placeholder="Ej: 41.497" />
+            </ModalField>
+          </ModalGrid>
+          {!cultivosLoading && cultivos.length === 0 && !cultivoRapidoError && <p className="apple-note">Esta empresa todavía no tiene cultivos. Creá el primero abajo; quedará guardado y seleccionado.</p>}
+          <ModalGroup label="¿No está en la lista? Agregá un cultivo">
+            <div className="apple-inline-add">
+              <input className="apple-control" type="text" aria-label="Nuevo cultivo" value={nuevoCultivoNombre} onChange={e => setNuevoCultivoNombre(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarCultivoRapido() } }} placeholder="Ej: Tomate, locote, pepino…" />
+              <button type="button" className="apple-btn apple-btn--soft" onClick={() => agregarCultivoRapido()} disabled={!nuevoCultivoNombre.trim()}>Agregar</button>
             </div>
-            {cultivoRapidoError && (
-              <div className="ui-9614e6">
-                {cultivoRapidoError}
-              </div>
-            )}
+            {cultivoRapidoError && <small className="apple-field__hint is-error" role="alert">{cultivoRapidoError}</small>}
+          </ModalGroup>
+        </ModalSection>
 
-            <label className="ag-field-label ui-74cc19">Variedad
-            <input style={inpStyle} type="text" value={form.variedad_texto} onChange={e => setForm(f => ({...f, variedad_texto:e.target.value}))} placeholder="Ej: Rojo, Lamuyo..."/></label>
-
-            <label className="ag-field-label ui-74cc19">Fecha de siembra *
-            <input style={inpStyle} type="date" value={form.fecha_siembra} onChange={e => setForm(f => ({...f, fecha_siembra:e.target.value}))}/></label>
-
-            <label className="ag-field-label ui-74cc19">Cantidad de plantas
-            <input style={inpStyle} type="text" inputMode="numeric" value={form.cantidad_plantas} onChange={e => setForm(f => ({...f, cantidad_plantas:e.target.value.replace(/[^0-9.,\s]/g, '')}))} onBlur={() => setForm(f => ({...f, cantidad_plantas:formatLocaleInteger(f.cantidad_plantas)}))} placeholder="Ej: 41.497" autoComplete="off"/></label>
-
-            <div className="ui-9546b4">Abonos de base (podés agregar varios)</div>
-            <div className="ui-711010">
-              <input className="ui-d8b4c5" style={{ ...inpStyle }} type="text" value={nuevoAbonoNombre} onChange={e => setNuevoAbonoNombre(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarAbonoRapido() } }} placeholder="Escribí un abono y agregalo" />
-              <button className="ag-small-action ui-2082ce" type="button" onClick={() => agregarAbonoRapido()} disabled={!nuevoAbonoNombre.trim()}>Agregar</button>
+        <ModalSection title="Abonos de base" icon="ti-garden-cart" collapsible defaultOpen={form.abonos_ids.length > 0 || abonos.length > 0} badge={form.abonos_ids.length ? `${form.abonos_ids.length} elegidos` : 'opcional'}>
+          <ModalGroup label="Agregar un abono">
+            <div className="apple-inline-add">
+              <input className="apple-control" type="text" aria-label="Nuevo abono" value={nuevoAbonoNombre} onChange={e => setNuevoAbonoNombre(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarAbonoRapido() } }} placeholder="Escribí un abono y agregalo" />
+              <button type="button" className="apple-btn apple-btn--soft" onClick={() => agregarAbonoRapido()} disabled={!nuevoAbonoNombre.trim()}>Agregar</button>
             </div>
-            <div className="ui-59f8a7">Agregá uno, completá su cantidad y repetí para sumar todos los que uses. No hace falta cargarlos previamente en inventario.</div>
-            {abonoRapidoError && <div className="ui-9614e6">{abonoRapidoError}</div>}
-            {form.abonos_ids.length > 0 && <div style={{ fontSize:12, fontWeight:700, color:'#315344', margin:'8px 0 6px' }}>Abonos agregados: {form.abonos_ids.length}</div>}
-            {abonos.map(a => (
-              <div className="ui-d51702" key={a.id}>
-                <div className="ui-bfa195" role="checkbox" tabIndex={0} aria-checked={form.abonos_ids.includes(a.id)} onClick={() => toggleAbono(a.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAbono(a.id) } }}
-                  style={{ background: form.abonos_ids.includes(a.id) ? '#0F3923' : '#fff', marginBottom: form.abonos_ids.includes(a.id) ? 6 : 0 }}>
-                  <div className="ui-7b138e" style={{ border: form.abonos_ids.includes(a.id) ? 'none' : '1.5px solid #d0d0d0', background: form.abonos_ids.includes(a.id) ? '#fff' : 'transparent' }}>
-                    {form.abonos_ids.includes(a.id) && <i className="ti ti-check ui-aa481a" aria-hidden="true"></i>}
+            <small className="apple-field__hint">Agregá uno, completá su cantidad y repetí para sumar todos los que uses. No hace falta cargarlos antes en inventario.</small>
+            {abonoRapidoError && <small className="apple-field__hint is-error" role="alert">{abonoRapidoError}</small>}
+          </ModalGroup>
+          {abonos.length > 0 && (
+            <div className="apple-rows">
+              {abonos.map(a => {
+                const activo = form.abonos_ids.includes(a.id)
+                return (
+                  <div className="apple-abono" key={a.id}>
+                    <button type="button" className="apple-chip apple-chip--lg apple-abono__name" aria-pressed={activo} onClick={() => toggleAbono(a.id)}>{activo && <i className="ti ti-check" aria-hidden="true" />}<span>{a.nombre}</span></button>
+                    {activo && (
+                      <div className="apple-abono__dose">
+                        <input className="apple-control apple-control--num" aria-label={`Cantidad de ${a.nombre}`} type="text" inputMode="decimal" placeholder="Cantidad" value={form.abonos_cantidades[a.id] || ''} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, abonos_cantidades:{ ...f.abonos_cantidades, [a.id]:e.target.value } }))} />
+                        <select className="apple-control" aria-label="Unidad" value={form.abonos_cantidades[a.id + '_unidad'] || 'kg'} onChange={e => setForm(f => ({ ...f, abonos_cantidades:{ ...f.abonos_cantidades, [a.id + '_unidad']:e.target.value } }))}>
+                          <option value="kg">kg</option><option value="g">g</option><option value="ton">ton</option>
+                        </select>
+                        <select className="apple-control" aria-label="Alcance" value={form.abonos_cantidades[a.id + '_alcance'] || 'total'} onChange={e => setForm(f => ({ ...f, abonos_cantidades:{ ...f.abonos_cantidades, [a.id + '_alcance']:e.target.value } }))}>
+                          <option value="total">Total</option><option value="por_tablon">Por tablón</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
-                  <span className="ui-3044b6" style={{ color: form.abonos_ids.includes(a.id) ? '#fff' : 'var(--text-primary)' }}>{a.nombre}</span>
+                )
+              })}
+            </div>
+          )}
+        </ModalSection>
+      </>}</UnifiedFormModal>
+
+      {/* Editar el nombre del bloque */}
+      <UnifiedFormModal
+        open={showEditarNombre}
+        tone="bloques"
+        icon="ti-pencil"
+        eyebrow="Bloque"
+        title="Editar nombre del bloque"
+        subtitle="Este nombre se actualizará en mapas, aplicaciones, costos e historiales vinculados."
+        busy={saving}
+        onClose={() => setShowEditarNombre(false)}
+        onSubmit={guardarNombreBloque}
+        submitLabel="Guardar nombre"
+        error={nombreBloqueError}
+        summary={nombreBloque.trim() ? <><b>{nombreBloque.trim()}</b></> : null}
+      >{() => (
+        <ModalSection title="Nombre" icon="ti-tag">
+          <ModalField label="Nombre del bloque">
+            <input className="apple-control apple-control--code" data-autofocus value={nombreBloque} onChange={e => setNombreBloque(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) guardarNombreBloque() }} maxLength={50} placeholder="Ej: A-1" />
+          </ModalField>
+        </ModalSection>
+      )}</UnifiedFormModal>
+
+      {/* Muerte de plantas */}
+      <UnifiedFormModal
+        open={showMuerte}
+        tone="alerta"
+        icon="ti-leaf-off"
+        eyebrow={`Bloque ${bloque?.codigo || ''}`}
+        title="Registrar muerte de plantas"
+        label="Registrar muerte de plantas"
+        busy={saving}
+        onClose={() => setShowMuerte(false)}
+        onSubmit={guardarMuerte}
+        submitLabel="Registrar"
+        error={errorMuerte}
+        summary={resumenPie([
+          { n: parseLocaleInteger(formMuerte.cantidad, 0) || '', texto: 'plantas', uno: 'planta' },
+          { solo: formMuerte.causa },
+        ]) || 'Cantidad de plantas y causa'}
+      >{() => <>
+        <ModalSection title="Qué pasó" icon="ti-alert-triangle">
+          <ModalField label="Cantidad de plantas *">
+            <input className="apple-control apple-control--num" type="text" inputMode="numeric" autoComplete="off" value={formMuerte.cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => setFormMuerte(f => ({ ...f, cantidad:e.target.value.replace(/[^0-9.,\s]/g, '') }))} onBlur={() => setFormMuerte(f => ({ ...f, cantidad:formatLocaleInteger(f.cantidad) }))} placeholder="Ej: 5" />
+          </ModalField>
+          <ModalGroup label="Causa">
+            <ChoiceChips wrap label="Causa" value={formMuerte.causa} onChange={causa => setFormMuerte(f => ({ ...f, causa }))} options={CAUSAS_MUERTE.map(c => ({ value:c, label:c }))} />
+          </ModalGroup>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={false}>
+          <ModalField label="Descripción"><textarea className="apple-control" value={formMuerte.descripcion} onChange={e => setFormMuerte(f => ({ ...f, descripcion:e.target.value }))} placeholder="Detalles adicionales…" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
+
+      {/* Plan semanal del bloque */}
+      <UnifiedFormModal
+        open={showPlanSemanal}
+        tone="agua"
+        icon="ti-calendar-week"
+        eyebrow={`Bloque ${bloque?.codigo || ''}`}
+        title={formPlan.id ? 'Editar plan semanal' : 'Nuevo plan semanal'}
+        subtitle="Usalo solo en los bloques donde preparás fertilización para varios días."
+        label="Plan semanal"
+        busy={savingFert}
+        onClose={() => setShowPlanSemanal(false)}
+        onSubmit={guardarPlanSemanal}
+        submitLabel="Guardar plan semanal"
+        summary={resumenPie([
+          { n: formPlan.soluciones.length, texto: 'soluciones', uno: 'solución' },
+          { n: formPlan.litros_preparados || '', texto: 'L' },
+        ])}
+      >{() => <>
+        <ModalSection title="Plan" icon="ti-calendar-week">
+          <ModalField label="Nombre"><input className="apple-control" value={formPlan.nombre} onChange={e => setFormPlan(f => ({ ...f, nombre:e.target.value }))} /></ModalField>
+          <ModalGrid>
+            <DateQuickField label="Fecha de inicio" value={formPlan.fecha_inicio} onChange={fecha_inicio => setFormPlan(f => ({ ...f, fecha_inicio }))} />
+            <ModalField label="Litros preparados"><input className="apple-control apple-control--num" value={formPlan.litros_preparados} onWheel={e => e.currentTarget.blur()} onChange={e => setFormPlan(f => ({ ...f, litros_preparados:e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.') }))} placeholder="Ej: 200" inputMode="decimal" /></ModalField>
+          </ModalGrid>
+        </ModalSection>
+        <ModalSection title="Soluciones" icon="ti-flask">
+          {formPlan.soluciones.map((sol, si) => (
+            <div className="apple-solution apple-solution--card" key={si}>
+              <div className="apple-solution__head">
+                <strong>Solución {sol.nombre}</strong>
+                {formPlan.soluciones.length > 1 && <button type="button" className="apple-row__remove" aria-label={`Eliminar la solución ${sol.nombre}`} onClick={() => eliminarSolucionPlan(si)}><i className="ti ti-trash" aria-hidden="true" /></button>}
+              </div>
+              {(sol.productos || []).map((prod, pi) => (
+                <div className="apple-row" key={pi}>
+                  <div className="apple-row__name"><input className="apple-control" aria-label={`Producto ${pi + 1}`} value={prod.nombre} onChange={e => actualizarProductoPlan(si, pi, 'nombre', e.target.value)} placeholder="Producto" /></div>
+                  <input className="apple-control apple-control--num" aria-label="Cantidad" value={prod.cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => actualizarProductoPlan(si, pi, 'cantidad', e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.'))} placeholder="Cantidad" inputMode="decimal" />
+                  <select className="apple-control" aria-label="Unidad" value={prod.unidad} onChange={e => actualizarProductoPlan(si, pi, 'unidad', e.target.value)}>{UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}</select>
+                  <button type="button" className="apple-row__remove" aria-label={`Quitar producto ${pi + 1}`} onClick={() => eliminarProductoPlan(si, pi)}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
-                {form.abonos_ids.includes(a.id) && (
-                  <div className="ui-da683d">
-                    <input className="ui-0b58f7"
-                      type="text" placeholder="Cantidad (ej: 50)"
-                      value={form.abonos_cantidades[a.id] || ''}
-                      onChange={e => setForm(f => ({...f, abonos_cantidades:{...f.abonos_cantidades, [a.id]:e.target.value}}))}/>
-                    <select className="ui-59c31d"
-                      value={(form.abonos_cantidades[a.id+'_unidad']) || 'kg'}
-                      onChange={e => setForm(f => ({...f, abonos_cantidades:{...f.abonos_cantidades, [a.id+'_unidad']:e.target.value}}))}>
-                      <option value="kg">kg</option>
-                      <option value="g">g</option>
-                      <option value="ton">ton</option>
-                    </select>
-                    <select className="ui-170849"
-                      value={(form.abonos_cantidades[a.id+'_alcance']) || 'total'}
-                      onChange={e => setForm(f => ({...f, abonos_cantidades:{...f.abonos_cantidades, [a.id+'_alcance']:e.target.value}}))}>
-                      <option value="total">Total</option>
-                      <option value="por_tablon">Por tablon</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {plantacionFormError && <div className="ui-9614e6" role="alert">{plantacionFormError}</div>}
-
-            <button className="ag-small-action ui-ae1eb0" style={{ background: saving ? '#888' : '#0F3923' }}
-              onClick={showEditarPlantacion ? guardarEditarPlantacion : guardarNuevaPlantacion} disabled={saving}>
-              {saving ? 'Guardando...' : showEditarPlantacion ? 'Guardar cambios' : 'Guardar plantación'}
-            </button>
-            <button className="ag-small-action ui-9d2a4a"
-              onClick={() => { setShowNuevaPlantacion(false); setShowEditarPlantacion(false) }}>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal muerte de plantas */}
-      {showMuerte && (
-        <Modal onClose={() => setShowMuerte(false)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div className="ui-72e3b5" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0' }}>
-            <div className="ui-c7b1b6">Registrar muerte de plantas</div>
-
-            <label className="ag-field-label ui-74cc19">Cantidad de plantas *
-            <input style={inpStyle} type="text" inputMode="numeric" autoComplete="off" value={formMuerte.cantidad} onChange={e => setFormMuerte(f => ({...f, cantidad:e.target.value.replace(/[^0-9.,\s]/g, '')}))} onBlur={() => setFormMuerte(f => ({...f, cantidad:formatLocaleInteger(f.cantidad)}))} placeholder="Ej: 5"/></label>
-
-            <div className="ui-74cc19">Causa</div>
-            <div className="ui-1e850e">
-              {CAUSAS_MUERTE.map(c => (
-                <button className="ag-small-action ui-e36b2f" key={c} onClick={() => setFormMuerte(f => ({...f, causa:c}))}
-                  style={{ background: formMuerte.causa===c ? '#c84040' : '#fff', color: formMuerte.causa===c ? '#fff' : '#555' }}>
-                  {c}
-                </button>
               ))}
+              <button type="button" className="apple-add" onClick={() => agregarProductoPlan(si)}><i className="ti ti-plus" aria-hidden="true" />Agregar producto</button>
             </div>
+          ))}
+          <button type="button" className="apple-link" onClick={agregarSolucionPlan}>+ Agregar otra solución</button>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(formPlan.notas)}>
+          <ModalField label="Notas del plan"><textarea className="apple-control" value={formPlan.notas} onChange={e => setFormPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas del plan" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
 
-            <label className="ag-field-label ui-74cc19">Descripción (opcional)
-            <textarea className="ui-dc8f36" style={{ ...inpStyle }} value={formMuerte.descripcion} onChange={e => setFormMuerte(f => ({...f, descripcion:e.target.value}))} placeholder="Detalles adicionales..."/></label>
+      {/* Aplicar el plan semanal */}
+      <UnifiedFormModal
+        open={showAplicarPlan}
+        tone="agua"
+        icon="ti-droplet-check"
+        eyebrow={`Bloque ${bloque?.codigo || ''}`}
+        title="Aplicar plan semanal"
+        label="Aplicar plan semanal"
+        busy={savingFert}
+        onClose={() => setShowAplicarPlan(false)}
+        onSubmit={guardarAplicacionPlan}
+        submitLabel="Guardar aplicación"
+        summary={resumenPie([{ n: formAplicacionPlan.litros_aplicados || '', texto: 'L aplicados' }])}
+      >{() => <>
+        <ModalSection title="Aplicación" icon="ti-droplet">
+          <ModalGrid>
+            <DateQuickField label="Fecha" value={formAplicacionPlan.fecha} onChange={fecha => setFormAplicacionPlan(f => ({ ...f, fecha }))} />
+            <ModalField label="Litros aplicados"><input className="apple-control apple-control--num" value={formAplicacionPlan.litros_aplicados} onWheel={e => e.currentTarget.blur()} onChange={e => setFormAplicacionPlan(f => ({ ...f, litros_aplicados:e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.') }))} placeholder="Ej: 40" inputMode="decimal" /></ModalField>
+          </ModalGrid>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(formAplicacionPlan.responsable || formAplicacionPlan.notas)}>
+          <ModalField label="Responsable"><input className="apple-control" value={formAplicacionPlan.responsable} onChange={e => setFormAplicacionPlan(f => ({ ...f, responsable:e.target.value }))} placeholder="Opcional" /></ModalField>
+          <ModalField label="Notas"><textarea className="apple-control" value={formAplicacionPlan.notas} onChange={e => setFormAplicacionPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
 
-            <button className="ag-small-action ui-9002be" onClick={guardarMuerte} disabled={saving}>{saving ? 'Guardando...' : 'Registrar'}</button>
-            <button className="ag-small-action ui-9d2a4a" onClick={() => setShowMuerte(false)}>Cancelar</button>
-          </div>
-        </Modal>
-      )}
-
-      {/* Modal nueva fertilizacion */}
-      {showPlanSemanal && (
-        <Modal onClose={() => setShowPlanSemanal(false)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}
-          onClick={e => e.target===e.currentTarget && setShowPlanSemanal(false)}>
-          <div className="ui-fda65b" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-99efa8">{formPlan.id ? 'Editar plan semanal' : 'Nuevo plan semanal'}</div>
-            <div className="ui-7d5827">Usalo solo en los bloques donde preparas fertilización para varios días.</div>
-
-            <label className="ag-field-label ui-74cc19">Nombre
-            <input style={inpStyle} value={formPlan.nombre} onChange={e => setFormPlan(f => ({ ...f, nombre:e.target.value }))} /></label>
-            <div className="ui-f56ef1">
-              <div>
-                <label className="ag-field-label ui-74cc19">Fecha inicio
-                <input type="date" style={inpStyle} value={formPlan.fecha_inicio} onChange={e => setFormPlan(f => ({ ...f, fecha_inicio:e.target.value }))} /></label>
+      {/* Fertilización puntual */}
+      <UnifiedFormModal
+        open={showNuevaFertilizacion}
+        tone="agua"
+        icon="ti-leaf"
+        eyebrow="Aplicación puntual"
+        title="Nueva fertilización"
+        subtitle="Registrá la mezcla aplicada y vinculala a uno o varios bloques."
+        label="Nueva fertilización"
+        busy={savingFert}
+        onClose={() => setShowNuevaFertilizacion(false)}
+        onSubmit={guardarFertilizacion}
+        submitLabel="Guardar fertilización"
+        summary={resumenPie([
+          { n: (formFert.bloques_ids || []).length, texto: 'bloques', uno: 'bloque' },
+          { n: formFert.soluciones.reduce((total, sol) => total + sol.productos.filter(p => p.nombre.trim()).length, 0), texto: 'productos', uno: 'producto' },
+        ]) || 'Elegí los bloques para empezar'}
+      >{() => <>
+        <ModalSection title="Dónde y cuándo" icon="ti-map-pin">
+          <DateQuickField label="Fecha de aplicación" required value={formFert.fecha} onChange={fecha => setFormFert(f => ({ ...f, fecha }))} />
+          <BlockChips
+            bloques={bloquesCampo.length ? bloquesCampo : [{ id, codigo: bloque.codigo }]}
+            seleccionados={formFert.bloques_ids || []}
+            cultivoDe={b => b.plantaciones?.find(p => p.activa)?.cultivos?.nombre || ''}
+            onToggle={alternarBloqueFertilizacion}
+            onSelectAll={lista => setFormFert(f => ({ ...f, bloques_ids:[...new Set([...(f.bloques_ids || []), ...lista.map(b => b.id)])] }))}
+            onClear={() => setFormFert(f => ({ ...f, bloques_ids:[] }))}
+          />
+        </ModalSection>
+        <ModalSection title="Mezcla aplicada" icon="ti-flask">
+          {formFert.soluciones.map((sol, si) => (
+            <div className="apple-solution apple-solution--card" key={si}>
+              <div className="apple-solution__head">
+                <input className="apple-control" aria-label="Nombre de la solución" value={sol.nombre} onChange={e => setFormFert(f => ({ ...f, soluciones:f.soluciones.map((s, i) => i === si ? { ...s, nombre:e.target.value } : s) }))} placeholder="Ej: Solución A" />
+                {formFert.soluciones.length > 1 && <button type="button" className="apple-row__remove" aria-label="Eliminar solución" onClick={() => eliminarSolucion(si)}><i className="ti ti-trash" aria-hidden="true" /></button>}
               </div>
-              <div>
-                <label className="ag-field-label ui-74cc19">Litros preparados
-                <input style={inpStyle} value={formPlan.litros_preparados} onChange={e => setFormPlan(f => ({ ...f, litros_preparados:e.target.value.replace(',', '.') }))} placeholder="Ej: 200" inputMode="decimal" /></label>
-              </div>
-            </div>
-
-            {formPlan.soluciones.map((sol, si) => (
-              <div className="ag-surface ui-7fff2b" key={si}>
-                <div className="ui-b3c308">
-                  <div className="ui-515b34">Solución {sol.nombre}</div>
-                  {formPlan.soluciones.length > 1 && <button className="ui-6ae6fb" onClick={() => eliminarSolucionPlan(si)}>Eliminar</button>}
+              {sol.productos.map((prod, pi) => (
+                <div className="apple-row" key={pi}>
+                  <div className="apple-row__name"><input className="apple-control" aria-label={`Producto ${pi + 1}`} type="text" placeholder="Producto (ej: KCL)" value={prod.nombre} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} /></div>
+                  <input className="apple-control apple-control--num" aria-label="Cantidad" type="text" inputMode="decimal" placeholder="Cantidad" value={prod.cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value.replace(/[^0-9.,]/g, ''))} />
+                  <select className="apple-control" aria-label="Unidad" value={prod.unidad} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)}>{UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}</select>
+                  <button type="button" className="apple-row__remove" aria-label={`Quitar producto ${pi + 1}`} onClick={() => eliminarProducto(si, pi)} disabled={sol.productos.length === 1}><i className="ti ti-x" aria-hidden="true" /></button>
                 </div>
-                {(sol.productos || []).map((prod, pi) => (
-                  <div className="ag-product-row ui-964def" key={pi}>
-                    <input className="ui-e7ec54" style={{ ...inpStyle }} value={prod.nombre} onChange={e => actualizarProductoPlan(si, pi, 'nombre', e.target.value)} placeholder="Producto"/>
-                    <input className="ui-e7ec54" style={{ ...inpStyle }} value={prod.cantidad} onChange={e => actualizarProductoPlan(si, pi, 'cantidad', e.target.value.replace(',', '.'))} placeholder="Cant." inputMode="decimal"/>
-                    <select className="ui-e7ec54" style={{ ...inpStyle }} value={prod.unidad} onChange={e => actualizarProductoPlan(si, pi, 'unidad', e.target.value)}>
-                      {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
-                    </select>
-                    <button className="ui-b58c47" onClick={() => eliminarProductoPlan(si, pi)}>x</button>
-                  </div>
-                ))}
-                <button className="ag-small-action ui-0a1d4e" onClick={() => agregarProductoPlan(si)}>+ Producto</button>
-              </div>
-            ))}
-            <button className="ag-small-action ui-b987ad" onClick={agregarSolucionPlan}>+ Agregar solución</button>
-            <textarea className="ui-3d581a" style={{ ...inpStyle }} value={formPlan.notas} onChange={e => setFormPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas del plan"/>
-            <button className="ag-small-action ui-08c1f7" onClick={guardarPlanSemanal} disabled={savingFert}>
-              {savingFert ? 'Guardando...' : 'Guardar plan semanal'}
-            </button>
-            <button className="ag-small-action ui-51b9ff" onClick={() => setShowPlanSemanal(false)}>Cancelar</button>
-          </div>
-        </Modal>
-      )}
-
-      {showAplicarPlan && (
-        <Modal onClose={() => setShowAplicarPlan(false)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}
-          onClick={e => e.target===e.currentTarget && setShowAplicarPlan(false)}>
-          <div className="ui-72e3b5" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0' }}>
-            <div className="ui-606db8">Aplicar plan semanal</div>
-            <label className="ag-field-label ui-74cc19">Fecha
-            <input type="date" style={inpStyle} value={formAplicacionPlan.fecha} onChange={e => setFormAplicacionPlan(f => ({ ...f, fecha:e.target.value }))} /></label>
-            <label className="ag-field-label ui-74cc19">Litros aplicados
-            <input style={inpStyle} value={formAplicacionPlan.litros_aplicados} onChange={e => setFormAplicacionPlan(f => ({ ...f, litros_aplicados:e.target.value.replace(',', '.') }))} placeholder="Ej: 40" inputMode="decimal" /></label>
-            <label className="ag-field-label ui-74cc19">Responsable
-            <input style={inpStyle} value={formAplicacionPlan.responsable} onChange={e => setFormAplicacionPlan(f => ({ ...f, responsable:e.target.value }))} placeholder="Opcional" /></label>
-            <textarea className="ui-3d581a" style={{ ...inpStyle }} value={formAplicacionPlan.notas} onChange={e => setFormAplicacionPlan(f => ({ ...f, notas:e.target.value }))} placeholder="Notas"/>
-            <button className="ag-small-action ui-08c1f7" onClick={guardarAplicacionPlan} disabled={savingFert}>
-              {savingFert ? 'Guardando...' : 'Guardar aplicación'}
-            </button>
-            <button className="ag-small-action ui-51b9ff" onClick={() => setShowAplicarPlan(false)}>Cancelar</button>
-          </div>
-        </Modal>
-      )}
+              ))}
+              <button type="button" className="apple-add" onClick={() => agregarProducto(si)}><i className="ti ti-plus" aria-hidden="true" />Agregar producto</button>
+            </div>
+          ))}
+          <button type="button" className="apple-link" onClick={agregarSolucion}>+ Agregar otra solución</button>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(formFert.notas)}>
+          <ModalField label="Notas"><textarea className="apple-control" value={formFert.notas} onChange={e => setFormFert(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones, ajustes del ingeniero…" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
 
       {incidenciaDetalle && (
         <Modal onClose={() => setIncidenciaDetalle(null)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:130, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center', padding: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : 0 }}
@@ -1973,121 +2040,6 @@ export default function FichaBloque() {
                 <div className="ui-3e9bfb">{incidenciaDetalle.notas}</div>
               </div>
             )}
-          </div>
-        </Modal>
-      )}
-
-      {showNuevaFertilizacion && (
-        <Modal onClose={() => setShowNuevaFertilizacion(false)} busy={savingFert} label="Nueva fertilización" className="fert-quick-modal"
-          onClick={e => e.target===e.currentTarget && setShowNuevaFertilizacion(false)}>
-          <div className="fert-dialog">
-            <header className="fert-dialog__header">
-              <span className="fert-dialog__icon"><i className="ti ti-leaf" aria-hidden="true" /></span>
-              <div><span>Aplicación puntual</span><h2>Nueva fertilización</h2><p>Registrá la mezcla aplicada y vinculala a uno o varios bloques.</p></div>
-              <button type="button" className="fert-dialog__close ag-close-btn" aria-label="Cerrar" onClick={() => setShowNuevaFertilizacion(false)}><i className="ti ti-x" aria-hidden="true" /></button>
-            </header>
-
-            <div className="fert-dialog__body">
-            <label className="fert-field">Fecha de aplicación *
-            <input className="fert-control" type="date" value={formFert.fecha} onChange={e => setFormFert(f => ({...f, fecha:e.target.value}))}/></label>
-
-            <fieldset className="fert-block-picker">
-              <legend>Bloques tratados *</legend>
-              <div className="fert-block-picker__grid">
-                {(bloquesCampo.length ? bloquesCampo : [{ id, codigo: bloque.codigo }]).map(b => {
-                  const seleccionado = (formFert.bloques_ids || []).includes(b.id)
-                  const cultivo = b.plantaciones?.find(p => p.activa)?.cultivos?.nombre
-                  return (
-                    <button className="fert-block-option" data-selected={seleccionado || undefined} aria-pressed={seleccionado} key={b.id} type="button" onClick={() => alternarBloqueFertilizacion(b.id)}>
-                      <i className={`ti ${seleccionado ? 'ti-circle-check-filled' : 'ti-circle'}`} aria-hidden="true" /><span><strong>Bloque {b.codigo}</strong>{cultivo && <small>{cultivo}</small>}</span>
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="fert-block-picker__summary">
-                {(formFert.bloques_ids || []).length || 0} bloque{(formFert.bloques_ids || []).length === 1 ? '' : 's'} seleccionado{(formFert.bloques_ids || []).length === 1 ? '' : 's'}
-              </div>
-            </fieldset>
-
-            {/* Soluciones */}
-            {formFert.soluciones.map((sol, si) => (
-              <section className="fert-solution-card" key={si}>
-                <div className="fert-solution-card__head">
-                  <span className="fert-solution-card__badge">{si + 1}</span>
-                  <label>Nombre de la solución<input className="fert-control"
-                     
-                      value={sol.nombre}
-                      onChange={e => {
-                        const sols = [...formFert.soluciones]
-                        sols[si] = { ...sols[si], nombre: e.target.value }
-                        setFormFert(f => ({ ...f, soluciones: sols }))
-                      }}
-                      placeholder="Ej: Solución A"
-                    /></label>
-                  {formFert.soluciones.length > 1 && (
-                    <button type="button" aria-label="Eliminar solución" className="fert-icon-action" onClick={() => eliminarSolucion(si)}
-                     >
-                      <i className="ti ti-trash" aria-hidden="true"></i>
-                    </button>
-                  )}
-                </div>
-
-                {sol.productos.map((prod, pi) => (
-                  <div className="fert-product-row" key={pi}>
-                    <label className="fert-product-row__name">Producto<input className="fert-control"
-                     
-                      type="text" placeholder="Ej: KCL"
-                      value={prod.nombre}
-                      onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)}
-                    /></label>
-                    <label>Cantidad<input className="fert-control numeric-data"
-                     
-                      type="text" inputMode="decimal" placeholder="0"
-                      value={prod.cantidad}
-                      onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value)}
-                    /></label>
-                    <label>Unidad<select className="fert-control"
-                     
-                      value={prod.unidad}
-                      onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)}>
-                      {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
-                    </select></label>
-                    {sol.productos.length > 1 && (
-                      <button type="button" aria-label="Quitar producto" className="fert-icon-action fert-product-row__remove" onClick={() => eliminarProducto(si, pi)}
-                       >
-                        <i className="ti ti-x" aria-hidden="true"></i>
-                      </button>
-                    )}
-                  </div>
-                ))}
-
-                <button type="button" className="fert-add-row" onClick={() => agregarProducto(si)}
-                 >
-                  <i className="ti ti-plus" aria-hidden="true" /> Agregar producto
-                </button>
-              </section>
-            ))}
-
-            <button type="button" className="fert-add-solution" onClick={agregarSolucion}
-             >
-              <i className="ti ti-layers-subtract" aria-hidden="true" /> Agregar otra solución
-            </button>
-
-            <label className="fert-field">Notas (opcional)
-            <textarea className="fert-control fert-textarea"
-              value={formFert.notas}
-              onChange={e => setFormFert(f => ({...f, notas:e.target.value}))}
-              placeholder="Observaciones, ajustes del ingeniero..."/></label>
-            </div>
-
-            <footer className="fert-dialog__footer">
-            <button type="button" className="fert-dialog__cancel"
-              onClick={() => setShowNuevaFertilizacion(false)} disabled={savingFert}>Cancelar</button>
-            <button type="button" className="fert-dialog__save"
-              onClick={guardarFertilizacion} disabled={savingFert}>
-              {savingFert ? <><i className="ti ti-loader-2" aria-hidden="true" /> Guardando...</> : <><i className="ti ti-check" aria-hidden="true" /> Guardar fertilización</>}
-            </button>
-            </footer>
           </div>
         </Modal>
       )}

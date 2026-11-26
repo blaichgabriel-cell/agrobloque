@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { descargarCsv, imprimirHtml } from '../lib/exporters'
 import { useCan } from '../lib/RoleContext'
-import { CerrarX } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 
 const meses = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -15,7 +16,7 @@ const categoriasCompra = ['Insumos', 'Mercaderia', 'Sueldos', 'Servicios', 'Repa
 const categoriasVenta = ['Verduras', 'Plantines', 'Servicios', 'Otros']
 const mediosPago = ['Efectivo', 'Transferencia', 'Cheque', 'Tarjeta', 'Otro']
 
-const hoy = () => new Date().toISOString().split('T')[0]
+const hoy = () => fechaIso(0)
 const anhoActual = () => new Date().getFullYear()
 const mesActual = () => new Date().getMonth()
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
@@ -157,7 +158,8 @@ export default function Contabilidad() {
 
   const guardar = async () => {
     const monto = parseGs(form.monto)
-    if (!form.fecha || !form.descripcion.trim() || monto <= 0) return
+    if (!form.fecha || !form.descripcion.trim() || monto <= 0) { setError('Completá el monto y la descripción del movimiento.'); return }
+    setError('')
     setSaving(true)
     const payload = {
       fecha: form.fecha,
@@ -178,6 +180,7 @@ export default function Contabilidad() {
     if (res.error) setError('No se pudo guardar. Revisa si ejecutaste el SQL de contabilidad.')
     else {
       setModal(false)
+      toast.success(form.id ? 'Movimiento actualizado' : 'Movimiento guardado', { description:`${form.tipo === 'venta' ? 'Venta' : 'Compra'} · Gs. ${fmtGs(monto)}` })
       await fetchMovimientos()
     }
     setSaving(false)
@@ -363,36 +366,61 @@ export default function Contabilidad() {
         <NotasPanel modulo="contabilidad" titulo="Bloc de notas de contabilidad" />
       </div>
 
-      {modal && (
-        <div style={overlay}>
-          <div style={sheet}>
-            <CerrarX onClose={() => setModal(false)} disabled={saving} />
-            <div className="ui-d5c0da">
-              {form.id ? 'Editar movimiento' : 'Nuevo movimiento'}
-            </div>
+      <UnifiedFormModal
+        open={modal}
+        tone="finanzas"
+        icon={form.tipo === 'venta' ? 'ti-arrow-up-right' : 'ti-arrow-down-left'}
+        eyebrow={form.id ? 'Editar movimiento' : 'Nuevo movimiento'}
+        title={form.tipo === 'venta' ? 'Registrar venta' : 'Registrar compra'}
+        label={form.id ? 'Editar movimiento' : 'Nuevo movimiento'}
+        busy={saving}
+        onClose={() => setModal(false)}
+        onSubmit={guardar}
+        submitLabel={form.id ? 'Guardar cambios' : 'Guardar registro'}
+        error={modal ? error : ''}
+        summary={resumenPie([
+          { solo: form.tipo === 'venta' ? 'Venta' : 'Compra' },
+          { solo: parseGs(form.monto) > 0 ? `Gs. ${fmtGs(parseGs(form.monto))}` : '' },
+          { solo: form.categoria || '' },
+        ])}
+      >{() => <>
+        <ModalSection title="Movimiento" icon="ti-receipt">
+          <ModalGroup label="Tipo">
+            <ChoiceChips label="Tipo de movimiento" value={form.tipo} onChange={setTipo} options={[{ value:'compra', label:'Compra', icon:'ti-arrow-down-left' }, { value:'venta', label:'Venta', icon:'ti-arrow-up-right' }]} />
+          </ModalGroup>
+          <ModalGrid>
+            <ModalField label="Monto (Gs.) *">
+              <input className="apple-control apple-control--num" data-autofocus type="text" inputMode="numeric" value={form.monto || ''} onWheel={e => e.currentTarget.blur()} onChange={e => { const n = parseGs(e.target.value); setForm(f => ({ ...f, monto:n ? fmtGs(n) : '' })) }} placeholder="Ej: 150.000" />
+            </ModalField>
+            <DateQuickField label="Fecha" required value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
+          </ModalGrid>
+          <ModalField label="Descripción *">
+            <input className="apple-control" value={form.descripcion || ''} onChange={e => setForm(f => ({ ...f, descripcion:e.target.value }))} placeholder="Ej: compra de insumos / venta de tomate" />
+          </ModalField>
+          <ModalGroup label="Categoría">
+            <ChoiceChips wrap label="Categoría" value={form.categoria} onChange={categoria => setForm(f => ({ ...f, categoria }))} options={categorias.map(c => ({ value:c, label:c }))} />
+          </ModalGroup>
+        </ModalSection>
 
-            <div className="ui-1a76a0">
-              <button onClick={() => setTipo('compra')} style={form.tipo === 'compra' ? tipoActiveRed : tipoBtn}>Compra</button>
-              <button onClick={() => setTipo('venta')} style={form.tipo === 'venta' ? tipoActiveGreen : tipoBtn}>Venta</button>
-            </div>
-
-            <Field label="Fecha *" type="date" value={form.fecha} onChange={v => setForm(f => ({ ...f, fecha:v }))} />
-            <Field label="Monto (Gs.) *" value={form.monto} inputMode="numeric" onChange={v => {
-              const n = parseGs(v)
-              setForm(f => ({ ...f, monto:n ? fmtGs(n) : '' }))
-            }} placeholder="Ej: 150.000" />
-            <Field label="Descripción *" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion:v }))} placeholder="Ej: compra de insumos / venta de tomate" />
-            <Select label="Categoría" value={form.categoria} onChange={v => setForm(f => ({ ...f, categoria:v }))} options={categorias} />
-            <Field label={form.tipo === 'venta' ? 'Cliente' : 'Proveedor'} value={form.contraparte} onChange={v => setForm(f => ({ ...f, contraparte:v }))} placeholder="Nombre opcional" />
-            <Select label="Medio de pago" value={form.medio_pago} onChange={v => setForm(f => ({ ...f, medio_pago:v }))} options={mediosPago} />
-            <Field label="Comprobante" value={form.comprobante} onChange={v => setForm(f => ({ ...f, comprobante:v }))} placeholder="Factura, recibo, transferencia..." />
-            <Field label="Notas" textarea value={form.notas} onChange={v => setForm(f => ({ ...f, notas:v }))} />
-
-            <button onClick={guardar} disabled={saving} style={primaryBtn}>{saving ? 'Guardando...' : 'Guardar'}</button>
-            <button onClick={() => setModal(false)} style={secondaryBtn}>Cancelar</button>
-          </div>
-        </div>
-      )}
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(form.id)} badge={form.id ? '' : 'proveedor, medio de pago, comprobante'}>
+          <ModalGrid>
+            <ModalField label={form.tipo === 'venta' ? 'Cliente' : 'Proveedor'}>
+              <input className="apple-control" value={form.contraparte || ''} onChange={e => setForm(f => ({ ...f, contraparte:e.target.value }))} placeholder="Nombre opcional" />
+            </ModalField>
+            <ModalField label="Medio de pago">
+              <select className="apple-control" value={form.medio_pago || ''} onChange={e => setForm(f => ({ ...f, medio_pago:e.target.value }))}>
+                {mediosPago.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+            </ModalField>
+          </ModalGrid>
+          <ModalField label="Comprobante">
+            <input className="apple-control" value={form.comprobante || ''} onChange={e => setForm(f => ({ ...f, comprobante:e.target.value }))} placeholder="Factura, recibo, transferencia…" />
+          </ModalField>
+          <ModalField label="Notas">
+            <textarea className="apple-control" value={form.notas || ''} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} />
+          </ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </div>
   )
 }
@@ -434,30 +462,6 @@ function Movimiento({ mov, onEdit, onDelete }) {
         </div>}
       </div>
     </div>
-  )
-}
-
-function Field({ label, value, onChange, type = 'text', placeholder = '', textarea, inputMode }) {
-  return (
-    <label className="ui-fa9aec">
-      <div style={labelStyle}>{label}</div>
-      {textarea ? (
-        <textarea className="ui-135d49" value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ ...inputStyle }} />
-      ) : (
-        <input type={type} inputMode={inputMode} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
-      )}
-    </label>
-  )
-}
-
-function Select({ label, value, onChange, options }) {
-  return (
-    <label className="ui-fa9aec">
-      <div style={labelStyle}>{label}</div>
-      <select value={value || ''} onChange={e => onChange(e.target.value)} style={inputStyle}>
-        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-    </label>
   )
 }
 
@@ -538,32 +542,4 @@ const miniBtn = {
   cursor:'pointer',
 }
 
-const overlay = {
-  position:'fixed',
-  inset:0,
-  background:'rgba(0,0,0,0.42)',
-  zIndex:100,
-  display:'flex',
-  alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end',
-  justifyContent:'center',
-}
-
-const sheet = {
-  width:'100%',
-  maxWidth:520,
-  maxHeight:'88vh',
-  overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
-  background:"#f6f8f7",
-  borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0',
-  padding:'24px 20px 40px',
-  boxSizing:'border-box',
-}
-
-const labelStyle = { fontSize:10, color:'#8a918b', marginBottom:6, fontWeight:700, textTransform:'uppercase' }
-const inputStyle = { width:'100%', boxSizing:'border-box', border:'1px solid #e1e5e1', borderRadius:8, padding:'11px 13px', fontSize:13, color:'#111611', background:'#fff', marginBottom:12 }
-const primaryBtn = { width:'100%', border:'none', borderRadius:8, background:'#161a16', color:'#fff', padding:14, fontSize:14, fontWeight:700, cursor:'pointer', marginTop:4 }
-const secondaryBtn = { width:'100%', border:'1px solid #dfe4df', borderRadius:8, background:'transparent', color:'#69706a', padding:12, fontSize:13, fontWeight:700, cursor:'pointer', marginTop:8 }
-const tipoBtn = { border:'1px solid #e1e5e1', borderRadius:8, background:'#fff', padding:12, fontSize:13, fontWeight:700, cursor:'pointer', color:'#4f5650' }
-const tipoActiveRed = { ...tipoBtn, background:'#c84040', borderColor:'#c84040', color:'#fff' }
-const tipoActiveGreen = { ...tipoBtn, background:"#08603f", borderColor:"#08603f", color:'#fff' }
 const errorBox = { background:'#fff3e8', color:'#a35f00', border:'1px solid #ffdda8', fontSize:12, padding:'9px 12px', borderRadius:8, marginBottom:12 }

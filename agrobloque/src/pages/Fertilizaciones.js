@@ -1,4 +1,6 @@
-import { Modal, FormHeading, Notice, Skeleton } from '../components/UI'
+import { Modal, Skeleton } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, DateQuickField, BlockChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from '../lib/audit'
@@ -9,7 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAccionNueva } from '../lib/useAccionNueva'
 
 const UNIDADES = ['kg', 'g', 'cc', 'ml', 'L', 'unidad']
-const hoy = () => new Date().toISOString().split('T')[0]
+const hoy = () => fechaIso(0)
 const fmtNum = (n) => Number(n || 0).toLocaleString('es-PY')
 const fmtFecha = (fecha) => fecha ? new Date(`${fecha}T00:00:00`).toLocaleDateString('es-PY') : '-'
 const fmtFechaLista = (fecha) => fecha
@@ -138,11 +140,11 @@ const resumenSoluciones = (soluciones = []) => soluciones
   .filter(Boolean)
   .join(' | ')
 
-function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave, saving, error }) {
-  const width = useViewportWidth()
-  const isMobile = width < 720
+// Cuerpo del formulario: se monta solo mientras la ventana está abierta, así que su estado (modo avanzado) empieza limpio cada vez.
+function CuerpoFertilizacion({ bloques, productos, form, setForm }) {
   const esSemana = form.tipo === 'plan' || form.es_semanal
   const [avanzado, setAvanzado] = useState(esSemana || Boolean(form.plan_id || form.edit_grupo || form.edit_plan_id))
+  const seleccionados = form.bloques_ids || []
   const alternarBloque = (bloqueId) => {
     setForm(f => {
       const actuales = new Set(f.bloques_ids || [])
@@ -151,6 +153,8 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
       return { ...f, bloques_ids: Array.from(actuales) }
     })
   }
+  const seleccionarBloques = (lista) => setForm(f => ({ ...f, bloques_ids: [...new Set([...(f.bloques_ids || []), ...lista.map(b => b.id)])] }))
+  const limpiarBloques = () => setForm(f => ({ ...f, bloques_ids: [] }))
 
   const agregarSolucion = () => {
     const letras = ['A', 'B', 'C', 'D', 'E', 'F']
@@ -211,111 +215,140 @@ function ModalFertilizacion({ bloques, productos, form, setForm, onClose, onSave
     })
   }
 
+  const fertilizantes = productos.filter(esProductoFertilizacion)
+  const plantasTotales = seleccionados.reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0)
+  const volumenTotal = Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0)
+  const camposPreparacion = (
+    <>
+      <ModalGrid>
+        <ModalField label="Litros por tanque">
+          <input className="apple-control apple-control--num" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros || ''} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value.replace(/[^0-9]/g, '') }))} placeholder="Ej: 200" />
+        </ModalField>
+        <ModalField label="Cantidad de tanques">
+          <input className="apple-control apple-control--num" type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanques_cantidad || ''} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value.replace(/[^0-9]/g, '') }))} placeholder="Ej: 1" />
+        </ModalField>
+      </ModalGrid>
+      {volumenTotal > 0 && <p className="apple-note">Volumen total: <b>{fmtNum(volumenTotal)} L</b></p>}
+      <ModalField label="Etapa fenológica">
+        <input className="apple-control" value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" />
+      </ModalField>
+      <ModalField label="Notas">
+        <textarea className="apple-control" value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicación por goteo, lote completo, observaciones…" />
+      </ModalField>
+    </>
+  )
+
   return (
-    <Modal busy={saving} onClose={onClose} label="Registrar fertilización" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:250, display:'flex', justifyContent:'center', alignItems:'flex-start', padding:'34px 16px', overflowY:'auto' }}>
-      <div className="ui-eab8be">
-        <div className="ui-dcfe72">
-          <div>
-            <div className="ui-5e0192">{esSemana ? 'Programación por bloques' : form.plan_id ? 'Aplicación del plan' : 'Fuera del plan'}</div>
-            <h2 className="ui-944434">{esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar plan semanal' : 'Nuevo plan semanal') : form.edit_grupo ? 'Corregir aplicación' : form.plan_id ? 'Registrar aplicación del plan' : 'Aplicación puntual del día'}</h2>
-          </div>
-          <button className="ui-358cf9 ag-close-btn" aria-label="Cerrar" onClick={onClose}>
-            <i className="ti ti-x ui-e5e6f8" />
-          </button>
-        </div>
+    <>
+      {!esSemana && !form.plan_id && <p className="apple-note"><i className="ti ti-bolt" aria-hidden="true" /> <strong>Registro rápido:</strong> elegí los bloques, el producto y la cantidad usada. Al guardar se descuenta del inventario.</p>}
 
-        <Notice tone="error">{error}</Notice>
-        {!esSemana && !form.plan_id && <div className="fert-ad-hoc-note"><i className="ti ti-bolt" /><div><strong>Registro rápido</strong><span>Elegí el bloque, el producto y la cantidad usada. Al guardar se descuenta automáticamente del inventario.</span></div></div>}
-        <FormHeading number="01" detail="Fecha y bloques donde se aplicó">Datos de la aplicación</FormHeading>
-        <div className="ui-c66208" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, 1fr)' }}>
-          {esSemana && <label className="ui-e22579" style={{ gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Nombre de la semana<input value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" className="bl-input" /></label>}
-          <label className="ui-e22579">
-            {esSemana ? 'Inicio de la semana' : 'Fecha'}
-            <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(e.target.value, 6) } : {}) }))} className="bl-input" />
-          </label>
-          {esSemana && <label className="ui-e22579">Fin de la semana<input type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} className="bl-input" /></label>}
-          {avanzado && <label className="ui-e22579">Litros por tanque<input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanque_litros || ''} onChange={e => setForm(f => ({ ...f, tanque_litros:e.target.value.replace(/[^0-9]/g, '') }))} className="bl-input" /></label>}
-          {avanzado && <label className="ui-e22579">Cantidad de tanques<input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={form.tanques_cantidad || ''} onChange={e => setForm(f => ({ ...f, tanques_cantidad:e.target.value.replace(/[^0-9]/g, '') }))} className="bl-input" /></label>}
-          {form.plan_id && <label className="ui-e22579">Resultado<select value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))} className="bl-input"><option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option></select></label>}
-          {avanzado && <label className="ui-e22579" style={{ gridColumn:isMobile ? '1 / -1' : 'span 2' }}>Etapa fenológica<input value={form.etapa_fenologica || ''} onChange={e => setForm(f => ({ ...f, etapa_fenologica:e.target.value }))} placeholder="Ej: trasplante, crecimiento, floración o cosecha" className="bl-input" /></label>}
-          {avanzado && <div className="ui-7f9aff"><span className="ui-93a7e1">VOLUMEN TOTAL</span><strong className="ui-b45e7d">{fmtNum(Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0))} L</strong></div>}
-          <div className="ui-5cb862">
-            <div className="ui-19585d">Bloques</div>
-            <div className="ui-180d23">
-              {bloques.map(b => {
-                const activo = (form.bloques_ids || []).includes(b.id)
-                const cultivo = b.plantaciones?.find?.(p => p.activa)?.cultivos?.nombre
-                return (
-                  <button className="ag-small-action ui-6c1dd7" key={b.id} onClick={() => alternarBloque(b.id)} style={{ border: activo ? '1px solid #1f1f1f' : '1px solid #e3e0db', background: activo ? '#1f1f1f' : '#fff', color: activo ? '#fff' : '#343a36' }}>
-                    {b.codigo}{cultivo ? ` - ${cultivo}` : ''}{plantasDelBloque(b) ? ` · ${fmtNum(plantasDelBloque(b))} plantas` : ''}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="ui-5e0192">{(form.bloques_ids || []).length} bloques seleccionados. {esSemana ? 'Al guardar, la semana queda registrada en el historial de cada bloque.' : 'Se guarda un registro por bloque.'}</div>
-          </div>
-        </div>
+      <ModalSection title="Dónde y cuándo" icon="ti-map-pin">
+        {esSemana && (
+          <ModalField label="Nombre de la semana">
+            <input className="apple-control" value={form.nombre_plan || ''} onChange={e => setForm(f => ({ ...f, nombre_plan:e.target.value }))} placeholder="Ej: Fertilización tomate · semana 3" />
+          </ModalField>
+        )}
+        <ModalGrid>
+          <DateQuickField label={esSemana ? 'Inicio de la semana' : 'Fecha'} required value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(fecha, 6) } : {}) }))} />
+          {esSemana ? (
+            <ModalField label="Fin de la semana">
+              <input className="apple-control" type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} />
+            </ModalField>
+          ) : form.plan_id ? (
+            <ModalField label="Resultado">
+              <select className="apple-control" value={form.estado || 'completa'} onChange={e => setForm(f => ({ ...f, estado:e.target.value }))}>
+                <option value="completa">Completa</option><option value="parcial">Parcial</option><option value="suspendida">Suspendida</option>
+              </select>
+            </ModalField>
+          ) : null}
+        </ModalGrid>
+        <BlockChips
+          bloques={bloques}
+          seleccionados={seleccionados}
+          cultivoDe={b => b.plantaciones?.find?.(p => p.activa)?.cultivos?.nombre || ''}
+          onToggle={alternarBloque}
+          onSelectAll={seleccionarBloques}
+          onClear={limpiarBloques}
+          vacio="No hay bloques cargados en este campo."
+        />
+        <small className="apple-field__hint">{esSemana ? 'Al guardar, la semana queda registrada en el historial de cada bloque.' : 'Se guarda un registro por bloque.'}</small>
+      </ModalSection>
 
-        {!esSemana && <button type="button" className="ag-small-action" onClick={() => setAvanzado(valor => !valor)} style={{ margin:'18px 0 4px', width:'100%', justifyContent:'space-between' }}><span><i className="ti ti-adjustments-horizontal" /> Opciones avanzadas</span><i className={`ti ti-chevron-${avanzado ? 'up' : 'down'}`} /></button>}
-
-        <FormHeading number="02" detail={avanzado ? 'Fórmula, dosis y forma de aplicación' : 'Producto y cantidad realmente utilizada'}>Productos aplicados</FormHeading>
-        {avanzado && <div className="ui-93fd8e">Las cantidades siguientes son por cada tanque, salvo que elijas dosis por planta.</div>}
-        <div className="ui-3dee6e">
+      <ModalSection title="Productos aplicados" icon="ti-flask" aside={avanzado ? <span className="apple-field__hint">Cantidades por tanque, salvo dosis por planta</span> : null}>
+        <div className="apple-rows">
           {form.soluciones.map((sol, si) => (
-            <div key={si} className="bl-card ui-acd88b">
-              {avanzado && <div className="ui-4c2683">
-                <input value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solución A" className="bl-input ui-df86fd" />
-                {form.soluciones.length > 1 && (
-                  <button className="ag-small-action ui-9f7e00" onClick={() => eliminarSolucion(si)}>Eliminar</button>
-                )}
-              </div>}
-              <div className="ui-b1b744">
-                {sol.productos.map((p, pi) => (
-                  <div className="ui-0c313e" key={pi} style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : '1fr 138px 120px 94px 38px' }}>
-                    <div className="ui-16eb64">
-                      <select value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)} className="bl-input">
-                        <option value="">Sin inventario</option>
-                        {incluirSeleccionados(productos, esProductoFertilizacion, [p.producto_id]).map(prod => <option key={prod.id} value={prod.id}>{prod.nombre} - stock {fmtNum(prod.stock_actual)} {prod.unidad || ''}</option>)}
-                      </select>
-                      {productos.filter(esProductoFertilizacion).length === 0 && !p.producto_id && <div className="ui-6d5651">No hay fertilizantes clasificados. Revisá la categoría del producto en Inventario.</div>}
-                      {!p.producto_id && <input value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Escribir producto" className="bl-input ui-b6bf8d" />}
-                    </div>
-                    {avanzado && <select value={p.modo || 'por_tanque'} onChange={e => actualizarProducto(si, pi, 'modo', e.target.value)} className="bl-input">
+            <div className={`apple-solution${avanzado ? ' apple-solution--card' : ''}`} key={si}>
+              {avanzado && (
+                <div className="apple-solution__head">
+                  <input className="apple-control" aria-label="Nombre de la solución" value={sol.nombre} onChange={e => actualizarSolucion(si, 'nombre', e.target.value)} placeholder="Solución A" />
+                  {form.soluciones.length > 1 && <button type="button" className="apple-row__remove" aria-label={`Eliminar la solución ${sol.nombre || si + 1}`} onClick={() => eliminarSolucion(si)}><i className="ti ti-trash" aria-hidden="true" /></button>}
+                </div>
+              )}
+              {sol.productos.map((p, pi) => (
+                <div className={`apple-row${avanzado ? ' apple-row--modo' : ''}`} key={pi}>
+                  <div className="apple-row__name">
+                    <select className="apple-control" aria-label={`Producto ${pi + 1}`} value={p.producto_id || ''} onChange={e => actualizarProducto(si, pi, 'producto_id', e.target.value)}>
+                      <option value="">Sin inventario (escribir)…</option>
+                      {incluirSeleccionados(productos, esProductoFertilizacion, [p.producto_id]).map(prod => <option key={prod.id} value={prod.id}>{prod.nombre} · stock {fmtNum(prod.stock_actual)} {prod.unidad || ''}</option>)}
+                    </select>
+                    {!p.producto_id && <input className="apple-control" aria-label="Nombre del producto" value={p.nombre || ''} onChange={e => actualizarProducto(si, pi, 'nombre', e.target.value)} placeholder="Nombre del producto" />}
+                  </div>
+                  {avanzado && (
+                    <select className="apple-control apple-row__modo" aria-label="Forma de dosis" value={p.modo || 'por_tanque'} onChange={e => actualizarProducto(si, pi, 'modo', e.target.value)}>
                       <option value="por_tanque">Por tanque</option>
                       <option value="por_planta">Por planta</option>
-                    </select>}
-                    <input value={p.cantidad} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value.replace(',', '.'))} placeholder={p.modo === 'por_planta' ? 'Dosis/planta' : 'Cantidad'} type="text" inputMode="decimal" className="bl-input" />
-                    <select value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)} className="bl-input">
-                      {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
-                    <button className="ui-b4e2f5" aria-label="Eliminar" onClick={() => eliminarProducto(si, pi)} disabled={sol.productos.length === 1} style={{ cursor: sol.productos.length === 1 ? 'not-allowed' : 'pointer' }}>
-                      <i className="ti ti-trash" />
-                    </button>
-                    {p.modo === 'por_planta' && <div className="ui-0c6c90">
-                      <strong>Total calculado:</strong> {fmtNum((form.bloques_ids || []).reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0) * Number(p.cantidad || 0))} {p.unidad || 'g'} para {fmtNum((form.bloques_ids || []).reduce((total, id) => total + plantasDelBloque(bloques.find(b => b.id === id)), 0))} plantas.
-                    </div>}
-                  </div>
-                ))}
-              </div>
-              <button className="ag-small-action ui-69d9b0" onClick={() => agregarProducto(si)}>+ Producto</button>
+                  )}
+                  <input className="apple-control apple-control--num" aria-label={p.modo === 'por_planta' ? 'Dosis por planta' : 'Cantidad'} value={p.cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => actualizarProducto(si, pi, 'cantidad', e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.'))} placeholder={p.modo === 'por_planta' ? 'Dosis/planta' : 'Cantidad'} type="text" inputMode="decimal" enterKeyHint="next" />
+                  <select className="apple-control" aria-label="Unidad" value={p.unidad || 'kg'} onChange={e => actualizarProducto(si, pi, 'unidad', e.target.value)}>
+                    {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                  <button type="button" className="apple-row__remove" aria-label={`Quitar producto ${pi + 1}`} onClick={() => eliminarProducto(si, pi)} disabled={sol.productos.length === 1}><i className="ti ti-x" aria-hidden="true" /></button>
+                  {p.modo === 'por_planta' && <div className="apple-row__info">Total calculado: <b>{fmtNum(plantasTotales * Number(p.cantidad || 0))} {p.unidad || 'g'}</b> para <b>{fmtNum(plantasTotales)}</b> plantas.</div>}
+                </div>
+              ))}
+              <button type="button" className="apple-add" onClick={() => agregarProducto(si)}><i className="ti ti-plus" aria-hidden="true" />Agregar producto</button>
             </div>
           ))}
         </div>
+        {fertilizantes.length === 0 && <p className="apple-note is-warn">No hay fertilizantes clasificados. Revisá la categoría del producto en Inventario o escribí el nombre.</p>}
+        {avanzado && <button type="button" className="apple-link" onClick={agregarSolucion}>+ Agregar otra solución (B, C…)</button>}
+        {!esSemana && form.estado !== 'suspendida' && !form.edit_grupo && productosQueNoAlcanzan(form, productos, bloques).map(({ prod, usado }) => <div className="apple-row__alert" role="status" key={prod.id}><i className="ti ti-alert-triangle" aria-hidden="true" /><span>Falta producto: de {prod.nombre} hay {fmtNum(prod.stock_actual)} {prod.unidad || ''} y esta aplicación usa {fmtNum(usado)} {prod.unidad || ''}. Se guardará igual, el stock quedará en 0 y te avisaremos para registrar la compra pendiente.</span></div>)}
+      </ModalSection>
 
-        {avanzado && <button className="ag-small-action ui-b2096e" onClick={agregarSolucion}>+ Solución</button>}
+      {esSemana ? (
+        <ModalSection title="Preparación y detalles" icon="ti-adjustments-horizontal">{camposPreparacion}</ModalSection>
+      ) : (
+        <ModalSection title="Opciones avanzadas" icon="ti-adjustments-horizontal" collapsible open={avanzado} onToggle={() => setAvanzado(v => !v)} badge={avanzado ? '' : 'tanques, dosis por planta, notas'}>{camposPreparacion}</ModalSection>
+      )}
+    </>
+  )
+}
 
-        {avanzado && <label className="ui-410276">
-          Notas
-          <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Ej: aplicación por goteo, lote completo, observaciones..." className="bl-input ui-c1d38e" />
-        </label>}
-
-        {!esSemana && form.estado !== 'suspendida' && !form.edit_grupo && productosQueNoAlcanzan(form, productos, bloques).map(({ prod, usado }) => <div className="ag-stock-aviso" role="status" key={prod.id}><i className="ti ti-alert-triangle" aria-hidden="true" /><span>Falta producto: de {prod.nombre} hay {fmtNum(prod.stock_actual)} {prod.unidad || ''} y esta aplicación usa {fmtNum(usado)} {prod.unidad || ''}. Se guardará igual, el stock quedará en 0 y te avisaremos para registrar la compra pendiente.</span></div>)}
-        <div className="ui-b691ec">
-          <button className="ag-small-action ui-accd8b" onClick={onClose}>Cancelar</button>
-          <button onClick={onSave} disabled={saving} className="bl-btn-solid" style={{ opacity:saving ? 0.7 : 1 }}>{saving ? 'Guardando...' : esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios de la semana' : 'Guardar semana en los bloques') : form.edit_grupo ? 'Guardar corrección' : 'Guardar aplicación'}</button>
-        </div>
-      </div>
-    </Modal>
+function ModalFertilizacion({ open = true, bloques, productos, form, setForm, onClose, onSave, saving, error }) {
+  const esSemana = form.tipo === 'plan' || form.es_semanal
+  const titulo = esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar plan semanal' : 'Nuevo plan semanal') : form.edit_grupo ? 'Corregir aplicación' : form.plan_id ? 'Registrar aplicación del plan' : 'Aplicación puntual del día'
+  const volumen = Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0)
+  const nProductos = (form.soluciones || []).reduce((total, sol) => total + (sol.productos || []).filter(p => p.producto_id || p.nombre).length, 0)
+  return (
+    <UnifiedFormModal
+      open={open}
+      tone="agua"
+      icon={esSemana ? 'ti-calendar-week' : 'ti-droplet'}
+      eyebrow={esSemana ? 'Programación por bloques' : form.plan_id ? 'Aplicación del plan' : 'Fuera del plan'}
+      title={titulo}
+      label="Registrar fertilización"
+      busy={saving}
+      onClose={onClose}
+      onSubmit={onSave}
+      submitLabel={esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios' : 'Guardar semana') : form.edit_grupo ? 'Guardar corrección' : 'Guardar registro'}
+      error={error}
+      summary={resumenPie([
+        { n: (form.bloques_ids || []).length, texto: 'bloques', uno: 'bloque' },
+        { n: nProductos, texto: 'productos', uno: 'producto' },
+        { n: volumen > 0 ? fmtNum(volumen) : '', texto: 'L' },
+      ]) || 'Elegí los bloques para empezar'}
+    >{() => <CuerpoFertilizacion bloques={bloques} productos={productos} form={form} setForm={setForm} />}</UnifiedFormModal>
   )
 }
 
@@ -675,9 +708,8 @@ export default function Fertilizaciones({ campoActivo }) {
       await registrarAuditoria({ accion:'Creo plan semanal de fertilizacion', modulo:'Fertilizaciones', tabla:'fertilizacion_planes', registroId:planesCreados[0]?.id || '', detalle:`${bloquesDestino.length} bloques · ${form.fecha} a ${form.fecha_fin}` })
       setSaving(false)
       setModal(false)
-      setSuccess(tareasError
-        ? `El plan semanal quedó guardado, pero no se pudieron crear sus tareas: ${tareasError.message}`
-        : `Plan semanal guardado. Se agregaron ${tareasPlan.length} tarea${tareasPlan.length === 1 ? '' : 's'} al calendario. El inventario se descontará al registrar cada aplicación.`)
+      if (tareasError) toast.warning('Plan semanal guardado sin tareas', { description:`No se pudieron crear sus tareas: ${tareasError.message}`, duration:12000 })
+      else toast.success('Plan semanal guardado', { description:`Se agregaron ${tareasPlan.length} tarea${tareasPlan.length === 1 ? '' : 's'} al calendario. El inventario se descontará al registrar cada aplicación.` })
       await cargarDatos()
       return
     }
@@ -841,7 +873,8 @@ export default function Fertilizaciones({ campoActivo }) {
 
     setModal(false)
     const mensajeGuardado = form.edit_grupo ? (form.es_semanal ? 'Fertilización semanal actualizada en todos sus bloques.' : 'Fertilización corregida correctamente.') : form.plan_id ? 'Aplicación del plan registrada correctamente.' : 'Fertilización guardada correctamente.'
-    setSuccess(faltantes.length ? `${mensajeGuardado} ${textoFaltantes(faltantes, (cantidad, unidad) => `${fmtNum(cantidad)}${unidad ? ` ${unidad}` : ''}`)}` : mensajeGuardado)
+    toast.success(mensajeGuardado.replace(/\.$/, ''))
+    if (faltantes.length) toast.warning('Falta producto en el inventario', { description:textoFaltantes(faltantes, (cantidad, unidad) => `${fmtNum(cantidad)}${unidad ? ` ${unidad}` : ''}`), duration:12000 })
     cargarDatos()
   }
 
@@ -1001,8 +1034,8 @@ export default function Fertilizaciones({ campoActivo }) {
         </section>
       </div>
 
-      {modal && (
-        <ModalFertilizacion
+      <ModalFertilizacion
+          open={modal}
           bloques={bloques}
           productos={productos}
           form={form}
@@ -1012,7 +1045,6 @@ export default function Fertilizaciones({ campoActivo }) {
           saving={saving}
           error={error}
         />
-      )}
       {detalle && (
         <Modal onClose={() => setDetalle(null)} label="Fertilizaciones" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:260, display:'grid', placeItems:'center', padding:16 }} onClick={() => setDetalle(null)}>
           <div className="ag-surface ui-3e70e0" onClick={e => e.stopPropagation()}>

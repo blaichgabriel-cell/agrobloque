@@ -1,4 +1,5 @@
-import { Modal, FormHeading, Notice, Skeleton } from '../components/UI'
+import { Modal, Notice, Skeleton } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, BlockChips, resumenPie } from '../components/UnifiedFormModal'
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
@@ -45,7 +46,7 @@ export default function Agenda() {
   const [mesVisible, setMesVisible] = useState(() => { const fecha = new Date(); fecha.setDate(1); return fecha })
   const [modal, setModal] = useState(false)
   const [confirmar, setConfirmar] = useState(null)
-  const vacio = { id:'', tipo:'fumigacion', descripcion:'', fecha_programada:'', hora_programada:'', campo_id:'', bloque_id:'', prioridad:'normal', responsable:'' }
+  const vacio = { id:'', tipo:'fumigacion', descripcion:'', fecha_programada:fechaLocal(new Date()), hora_programada:'', campo_id:'', bloque_id:'', prioridad:'normal', responsable:'' }
   const [form, setForm] = useState(vacio)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -255,37 +256,58 @@ export default function Agenda() {
         )}
       </div>
 
-      {modal && (
-        <Modal busy={saving} onClose={() => setModal(false)} label="Registro de tarea" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div className="ui-526967" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-c7b1b6">{form.id ? 'Editar tarea' : 'Nueva tarea'}</div>
-            <label className="ag-field-label ui-74cc19">Tipo
-            <select className="ui-2c08cb" value={form.tipo} onChange={e => setForm(f => ({...f, tipo:e.target.value}))}>
-              {Object.entries(TIPOS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select></label>
-            <label className="ag-field-label ui-74cc19">Descripción *
-            <textarea className="ui-260cff" value={form.descripcion} onChange={e => setForm(f => ({...f, descripcion:e.target.value}))} placeholder="Ej: Fumigar bloques A-2 y A-3"/></label>
-            <div className="agenda-date-grid"><label className="ag-field-label">Fecha objetivo *<input type="date" value={form.fecha_programada} onChange={e => setForm(f => ({...f, fecha_programada:e.target.value}))}/></label><label className="ag-field-label">Hora objetivo<input type="time" value={form.hora_programada || ''} onChange={e => setForm(f => ({...f, hora_programada:e.target.value}))}/></label></div>
-            <div className="ui-eba032"><div><label className="ag-field-label ui-74cc19">Prioridad<select className="ui-f9a767" value={form.prioridad || 'normal'} onChange={e => setForm(f => ({...f, prioridad:e.target.value}))}><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option></select></label></div><div><label className="ag-field-label ui-74cc19">Responsable<input className="ui-90f37f" value={form.responsable || ''} onChange={e => setForm(f => ({...f, responsable:e.target.value}))} placeholder="Opcional" /></label></div></div>
-            <label className="ag-field-label ui-74cc19">Campo (opcional)
-            <select className="ui-2c08cb" value={form.campo_id} onChange={e => { setForm(f => ({...f, campo_id:e.target.value, bloque_id:''})); if(e.target.value) fetchBloques(e.target.value) }}>
-              <option value="">Todos los campos</option>
-              {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select></label>
-            {form.campo_id && bloques.length > 0 && <>
-              <div className="ui-74cc19">Bloque (opcional)</div>
-              <select className="ui-2c08cb" value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
-                <option value="">Todos los bloques</option>
-                {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
+      <UnifiedFormModal
+        open={modal}
+        tone="bloques"
+        icon={TIPOS[form.tipo]?.icon || 'ti-calendar-event'}
+        eyebrow={form.id ? 'Editar tarea' : 'Nueva tarea'}
+        title={form.id ? 'Editar tarea' : 'Programar tarea'}
+        label="Registro de tarea"
+        busy={saving}
+        onClose={() => setModal(false)}
+        onSubmit={guardarTarea}
+        submitLabel={form.id ? 'Guardar cambios' : 'Guardar tarea'}
+        error={modal ? error : ''}
+        summary={resumenPie([
+          { solo: TIPOS[form.tipo]?.label || '' },
+          { solo: form.fecha_programada ? new Date(`${form.fecha_programada}T12:00:00`).toLocaleDateString('es-PY', { weekday:'short', day:'numeric', month:'short' }) + (form.hora_programada ? ` · ${form.hora_programada}` : '') : '' },
+        ]) || 'Elegí qué hay que hacer y cuándo'}
+      >{() => <>
+        <ModalSection title="Qué y cuándo" icon="ti-calendar-event">
+          <ModalGroup label="Tipo de tarea">
+            <ChoiceChips label="Tipo de tarea" value={form.tipo} onChange={tipo => setForm(f => ({ ...f, tipo }))} options={Object.entries(TIPOS).map(([value, t]) => ({ value, label: t.label, icon: t.icon }))} />
+          </ModalGroup>
+          <ModalField label="Descripción *">
+            <textarea className="apple-control" data-autofocus value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion:e.target.value }))} placeholder="Ej: Fumigar bloques A-2 y A-3" />
+          </ModalField>
+          <ModalGrid>
+            <DateQuickField label="Fecha objetivo" required value={form.fecha_programada} onChange={fecha_programada => setForm(f => ({ ...f, fecha_programada }))} />
+            <ModalField label="Hora objetivo">
+              <input className="apple-control" type="time" value={form.hora_programada || ''} onChange={e => setForm(f => ({ ...f, hora_programada:e.target.value }))} />
+            </ModalField>
+          </ModalGrid>
+          <ModalGroup label="Prioridad">
+            <ChoiceChips label="Prioridad" value={form.prioridad || 'normal'} onChange={prioridad => setForm(f => ({ ...f, prioridad }))} options={[{ value:'baja', label:'Baja' }, { value:'normal', label:'Normal' }, { value:'alta', label:'Alta', icon:'ti-flame' }]} />
+          </ModalGroup>
+        </ModalSection>
+
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(form.id && (form.campo_id || form.responsable))} badge={[form.campo_id ? 'campo' : '', form.bloque_id ? 'bloque' : '', form.responsable ? 'responsable' : ''].filter(Boolean).join(' · ')}>
+          <ModalGrid>
+            <ModalField label="Campo">
+              <select className="apple-control" value={form.campo_id} onChange={e => { setForm(f => ({ ...f, campo_id:e.target.value, bloque_id:'' })); setBloques([]); if (e.target.value) fetchBloques(e.target.value) }}>
+                <option value="">Todos los campos</option>
+                {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
-            </>}
-            <button className="ag-small-action ui-17d991" onClick={guardarTarea} disabled={saving}>
-              {saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar tarea'}
-            </button>
-            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(false)}>Cancelar</button>
-          </div>
-        </Modal>
-      )}
+            </ModalField>
+            <ModalField label="Responsable">
+              <input className="apple-control" value={form.responsable || ''} onChange={e => setForm(f => ({ ...f, responsable:e.target.value }))} placeholder="Opcional" />
+            </ModalField>
+          </ModalGrid>
+          {form.campo_id && bloques.length > 0 && (
+            <BlockChips single label="Bloque (opcional)" required={false} bloques={bloques} seleccionados={form.bloque_id ? [form.bloque_id] : []} onToggle={id => setForm(f => ({ ...f, bloque_id:f.bloque_id === id ? '' : id }))} />
+          )}
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </div>
   )
 }

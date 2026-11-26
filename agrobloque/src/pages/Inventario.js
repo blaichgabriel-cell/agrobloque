@@ -1,4 +1,6 @@
 import { CerrarX, Modal } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
@@ -66,7 +68,7 @@ const unidadesMinimo = unidadProducto => {
   return ['unidades']
 }
 
-const hoy = () => new Date().toISOString().slice(0, 10)
+const hoy = () => fechaIso(0)
 const notasCompra = (proveedor, grupo, notas) => [`[Proveedor: ${String(proveedor || 'Sin especificar').trim()}]`, grupo ? `[Compra: ${grupo}]` : '', String(notas || '').trim()].filter(Boolean).join(' ')
 const proveedorCompra = notas => String(notas || '').match(/\[Proveedor:\s*([^\]]+)\]/i)?.[1]?.trim() || 'Sin proveedor'
 
@@ -255,6 +257,7 @@ export default function Inventario() {
     else {
       await registrarAuditoria({ accion:'Registro compra de inventario', modulo:'Inventario', tabla:'inventario_compras', registroId:data || '', detalle:`${producto.nombre} - Gs. ${precioTotal.toLocaleString('es-PY')}` })
       setModal(null)
+      toast.success('Compra registrada', { description:`${producto.nombre} · Gs. ${precioTotal.toLocaleString('es-PY')}` })
       await Promise.all([fetchProductos(), fetchMovimientos(), fetchCompras()])
     }
     setSaving(false)
@@ -294,6 +297,7 @@ export default function Inventario() {
       }
       await registrarAuditoria({ accion:'Registro compra con varios productos', modulo:'Inventario', tabla:'inventario_compras', registroId:creadas[0] || '', detalle:`${compraMultiple.proveedor} · ${items.length} productos · Gs. ${items.reduce((s, item) => s + item.precioTotal, 0).toLocaleString('es-PY')}` })
       setModal(null)
+      toast.success('Compra registrada', { description:`${compraMultiple.proveedor} · ${items.length} productos · Gs. ${items.reduce((s, item) => s + item.precioTotal, 0).toLocaleString('es-PY')}` })
       await Promise.all([fetchProductos(), fetchMovimientos(), fetchCompras()])
     } catch (e) {
       const reversionesFallidas = []
@@ -330,7 +334,7 @@ export default function Inventario() {
 
 
   const guardar = async () => {
-    if (!form.nombre) return
+    if (!form.nombre) { setError('Escribí el nombre del producto.'); return }
     const cantidadInicial = Number(String(form.stock_actual || '').replace(',', '.')) || 0
     const precioInicial = Number(String(form.precio_total || '').replace(/\./g, '')) || 0
     const stockMinimoNormalizado = cantidadAStock(form.stock_minimo, form.stock_minimo_unidad || form.unidad, form.unidad)
@@ -397,6 +401,7 @@ export default function Inventario() {
         detalle: `${payload.nombre} - stock ${form.id ? payload.stock_actual : cantidadInicial}`,
       })
       await Promise.all([fetchProductos(), fetchMovimientos(), fetchCompras()]); setSaving(false); setModal(null)
+      toast.success(form.id ? 'Producto actualizado' : 'Producto guardado', { description:payload.nombre })
       setForm({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', stock_minimo_unidad:'kg', carencia_dias:'', notas:'' })
     } catch (e) { setError('Error: ' + e.message); setSaving(false) }
   }
@@ -426,7 +431,7 @@ export default function Inventario() {
   const getStockBg = (p) => p.stock_actual <= 0 ? '#fff0f0' : p.stock_actual <= p.stock_minimo ? '#fff3e8' : '#eeeeee'
   const getStockPct = (p) => p.stock_minimo > 0 ? Math.min(100, Math.round((p.stock_actual / (p.stock_minimo * 3)) * 100)) : p.stock_actual > 0 ? 100 : 0
 
-  const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
+  const totalCompraMultiple = compraMultiple.items.reduce((s, item) => s + (Number(String(item.precio_total || '').replace(/\./g, '')) || 0), 0)
   const catActInfo = PRODUCT_CATEGORIES.find(c => c.key === categoriaActiva)
   const productosCat = categoriaActiva ? getProductosCat(categoriaActiva).filter(p => `${p.nombre} ${p.principio_activo || ''}`.toLowerCase().includes(busqueda.toLowerCase())) : []
   const bajoStockTotal = productos.filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
@@ -574,113 +579,152 @@ export default function Inventario() {
         <NotasPanel modulo="inventario" titulo="Notas del inventario" />
       </div>
 
-      {/* Modal producto */}
-      {modal === 'form' && (
-        <div className="ui-66d878" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end' }}>
-          <div className="ui-7dd37e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <CerrarX onClose={() => setModal(null)} disabled={saving} />
-            <div className="ui-c7b1b6">{form.id ? 'Editar producto' : 'Nuevo producto'}</div>
-            {error && <div className="ui-e136cb">{error}</div>}
+      {/* Producto: nuevo o edición */}
+      <UnifiedFormModal
+        open={modal === 'form'}
+        tone={INVENTORY_TONES[form.categoria_nombre] || 'neutral'}
+        icon={PRODUCT_CATEGORIES.find(c => c.key === form.categoria_nombre)?.icon || 'ti-package'}
+        eyebrow={form.id ? 'Editar producto' : 'Nuevo producto'}
+        title={form.id ? (form.nombre || 'Editar producto') : 'Registrar producto'}
+        label={form.id ? 'Editar producto' : 'Nuevo producto'}
+        busy={saving}
+        onClose={() => setModal(null)}
+        onSubmit={guardar}
+        submitLabel={form.id ? 'Guardar cambios' : 'Guardar producto'}
+        error={modal === 'form' ? error : ''}
+        summary={resumenPie([
+          { solo: PRODUCT_CATEGORIES.find(c => c.key === form.categoria_nombre)?.label || '' },
+          { n: Number(String(form.stock_actual || '').replace(',', '.')) > 0 ? fmtNumero(Number(String(form.stock_actual).replace(',', '.'))) : '', texto: normalizarUnidad(form.unidad) },
+        ]) || 'Elegí la categoría y escribí el nombre'}
+      >{() => <>
+        <ModalSection title="Producto" icon="ti-package">
+          <ModalGroup label="Categoría">
+            <ChoiceChips wrap label="Categoría" value={form.categoria_nombre} onChange={categoria_nombre => setForm(f => ({ ...f, categoria_nombre }))} options={PRODUCT_CATEGORIES.map(c => ({ value:c.key, label:c.label, icon:c.icon }))} />
+          </ModalGroup>
+          <ModalGrid>
+            <ModalField label="Nombre *"><input className="apple-control" data-autofocus value={form.nombre || ''} onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Acetamix" /></ModalField>
+            <ModalField label="Principio activo"><input className="apple-control" value={form.principio_activo || ''} onChange={e => setForm(f => ({ ...f, principio_activo:e.target.value }))} placeholder="Ej: Acetamiprid" /></ModalField>
+          </ModalGrid>
+          <ModalGroup label="Unidad">
+            <ChoiceChips wrap label="Unidad del producto" value={form.unidad} onChange={u => setForm(f => ({ ...f, unidad:u, stock_minimo_unidad:normalizarUnidad(u), stock_minimo:'' }))} options={['kg', 'gramos', 'litros', 'cc', 'unidades'].map(u => ({ value:u, label:u }))} />
+          </ModalGroup>
+        </ModalSection>
 
-            <div className="ui-74cc19">Categoría</div>
-            <div className="ui-395b5b">
-              {PRODUCT_CATEGORIES.map(cat => (
-                <button className="ag-small-action ui-e36b2f" key={cat.key} onClick={() => setForm(f => ({...f, categoria_nombre:cat.key}))}
-                  style={{ background: form.categoria_nombre===cat.key ? '#212121' : '#fff', color: form.categoria_nombre===cat.key ? '#fff' : '#555' }}>
-                  {cat.label}
-                </button>
-              ))}
-            </div>
+        <ModalSection title={form.id ? 'Stock' : 'Compra inicial'} icon="ti-scale">
+          <ModalGrid>
+            <ModalField label={form.id ? 'Stock actual' : 'Cantidad comprada'}>
+              <input className="apple-control apple-control--num" type="text" inputMode="decimal" value={form.stock_actual || ''} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, stock_actual:e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="0" />
+            </ModalField>
+            {!form.id && (
+              <ModalField label="Precio total pagado (Gs.)">
+                <input className="apple-control apple-control--num" type="text" inputMode="numeric" value={form.precio_total || ''} onWheel={e => e.currentTarget.blur()} onChange={e => { const n = e.target.value.replace(/[^0-9]/g, ''); setForm(f => ({ ...f, precio_total:n ? Number(n).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 50.000" />
+              </ModalField>
+            )}
+          </ModalGrid>
+          {!form.id && <DateQuickField label="Fecha de compra" value={form.fecha_compra || hoy()} onChange={fecha_compra => setForm(f => ({ ...f, fecha_compra }))} />}
+          {!form.id && <p className="apple-note">La cantidad y el precio registran la compra inicial del producto.</p>}
+        </ModalSection>
 
-            {[
-              ['Nombre *', 'nombre', 'text', 'Ej: Acetamix'],
-              ['Principio activo', 'principio_activo', 'text', 'Ej: Acetamiprid'],
-              [form.id ? 'Stock actual' : 'Cantidad comprada', 'stock_actual', 'number', '0'],
-              ['Días de carencia', 'carencia_dias', 'number', 'Ej: 7'],
-              ['Notas', 'notas', 'text', 'Opcional'],
-            ].map(([lbl, key, type, ph]) => (
-              <div key={key}>
-                <label className="ag-field-label ui-74cc19">{lbl}
-                <input style={inpStyle} type={type} value={form[key]||''} onChange={e => setForm(f => ({...f, [key]:e.target.value}))} placeholder={ph}/></label>
-              </div>
-            ))}
-
-            <div className="ui-74cc19">Unidad</div>
-            <div className="ui-1e69e2">
-              {['kg','gramos','litros','cc','unidades'].map(u => (
-                <button className="ag-small-action ui-45ba57" key={u} onClick={() => setForm(f => ({...f, unidad:u, stock_minimo_unidad:normalizarUnidad(u), stock_minimo:''}))}
-                  style={{ background: form.unidad===u ? '#212121' : '#fff', color: form.unidad===u ? '#fff' : '#555' }}>
-                  {u}
-                </button>
-              ))}
-            </div>
-
-            <div className="ui-74cc19">Stock mínimo para alerta</div>
-            <div className="ui-180a1c">
-              <input style={inpStyle} type="text" inputMode="decimal" value={form.stock_minimo || ''} onChange={e => setForm(f => ({...f, stock_minimo:e.target.value.replace(/[^0-9.,]/g,'')}))} placeholder="Ej: 100" />
-              <select style={inpStyle} value={form.stock_minimo_unidad || normalizarUnidad(form.unidad)} onChange={e => setForm(f => ({...f, stock_minimo_unidad:e.target.value}))}>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(form.id)} badge={form.id ? '' : 'stock mínimo, carencia, notas'}>
+          <ModalGroup label="Stock mínimo para alerta">
+            <ModalGrid>
+              <input className="apple-control apple-control--num" aria-label="Stock mínimo" type="text" inputMode="decimal" value={form.stock_minimo || ''} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, stock_minimo:e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="Ej: 100" />
+              <select className="apple-control" aria-label="Unidad del stock mínimo" value={form.stock_minimo_unidad || normalizarUnidad(form.unidad)} onChange={e => setForm(f => ({ ...f, stock_minimo_unidad:e.target.value }))}>
                 {unidadesMinimo(form.unidad).map(unidad => <option key={unidad} value={unidad}>{unidad}</option>)}
               </select>
-            </div>
-            {form.stock_minimo && cantidadAStock(form.stock_minimo, form.stock_minimo_unidad, form.unidad) !== null && <div className="ui-50089c">Equivale a {fmtNumero(cantidadAStock(form.stock_minimo, form.stock_minimo_unidad, form.unidad))} {normalizarUnidad(form.unidad)} para comparar el stock.</div>}
+            </ModalGrid>
+            {form.stock_minimo && cantidadAStock(form.stock_minimo, form.stock_minimo_unidad, form.unidad) !== null && <small className="apple-field__hint">Equivale a {fmtNumero(cantidadAStock(form.stock_minimo, form.stock_minimo_unidad, form.unidad))} {normalizarUnidad(form.unidad)} para comparar el stock.</small>}
+          </ModalGroup>
+          <ModalGrid>
+            <ModalField label="Días de carencia"><input className="apple-control apple-control--num" type="text" inputMode="numeric" pattern="[0-9]*" value={form.carencia_dias || ''} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, carencia_dias:e.target.value.replace(/[^0-9]/g, '') }))} placeholder="Ej: 7" /></ModalField>
+            <ModalField label="Notas"><input className="apple-control" value={form.notas || ''} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Opcional" /></ModalField>
+          </ModalGrid>
+        </ModalSection>
+      </>}</UnifiedFormModal>
 
-            {!form.id && <>
-              <div className="ui-50089c">La cantidad y el precio registran la compra inicial del producto.</div>
-              <label className="ag-field-label ui-74cc19">Fecha de compra
-                <input style={inpStyle} type="date" value={form.fecha_compra || hoy()} onChange={e => setForm(f => ({...f, fecha_compra:e.target.value}))}/>
-              </label>
-              <label className="ag-field-label ui-74cc19">Precio total pagado (Gs.)
-                <input style={inpStyle} inputMode="numeric" value={form.precio_total || ''} onChange={e => { const n=e.target.value.replace(/[^0-9]/g,''); setForm(f => ({...f,precio_total:n?Number(n).toLocaleString('es-PY'):''})) }} placeholder="Ej: 50.000"/>
-              </label>
-            </>}
+      {/* Compra de un producto */}
+      <UnifiedFormModal
+        open={modal === 'compra'}
+        tone="finanzas"
+        icon="ti-shopping-cart"
+        eyebrow="Compra"
+        title="Registrar compra"
+        subtitle={productos.find(p => p.id === compra.producto_id)?.nombre || ''}
+        busy={saving}
+        onClose={() => setModal(null)}
+        onSubmit={registrarCompra}
+        submitLabel="Guardar compra"
+        error={modal === 'compra' ? error : ''}
+        summary={resumenPie([
+          { n: compra.cantidad ? `${compra.cantidad}` : '', texto: compra.unidad },
+          { solo: compra.precio_total ? `Gs. ${compra.precio_total}` : '' },
+        ]) || 'Cantidad y precio total pagado'}
+      >{() => <>
+        <ModalSection title="Qué compraste" icon="ti-shopping-cart">
+          <ModalGrid>
+            <ModalField label="Proveedor"><input className="apple-control" value={compra.proveedor} onChange={e => setCompra(c => ({ ...c, proveedor:e.target.value }))} placeholder="Nombre del proveedor" /></ModalField>
+            <DateQuickField label="Fecha" value={compra.fecha} onChange={fecha => setCompra(c => ({ ...c, fecha }))} />
+          </ModalGrid>
+          <ModalGrid>
+            <ModalField label="Cantidad comprada"><input className="apple-control apple-control--num" type="text" inputMode="decimal" value={compra.cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => setCompra(c => ({ ...c, cantidad:e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="Ej: 1" /></ModalField>
+            <ModalField label="Unidad"><select className="apple-control" value={compra.unidad} onChange={e => setCompra(c => ({ ...c, unidad:e.target.value }))}>{['kg', 'g', 'L', 'cc', 'unidades'].map(u => <option key={u}>{u}</option>)}</select></ModalField>
+          </ModalGrid>
+          <ModalField label="Precio total pagado (Gs.)"><input className="apple-control apple-control--num" type="text" inputMode="numeric" value={compra.precio_total} onWheel={e => e.currentTarget.blur()} onChange={e => { const n = e.target.value.replace(/[^0-9]/g, ''); setCompra(c => ({ ...c, precio_total:n ? Number(n).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 50.000" /></ModalField>
+          <p className="apple-note">El stock anterior seguirá sin precio. Esta compra comienza la valorización del producto.</p>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={false}>
+          <ModalField label="Nota"><input className="apple-control" value={compra.notas} onChange={e => setCompra(c => ({ ...c, notas:e.target.value }))} placeholder="Opcional" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
 
-            <button className="ag-small-action ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
-            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(null)}>Cancelar</button>
+      {/* Compra con varios productos */}
+      <UnifiedFormModal
+        open={modal === 'compra-multiple'}
+        tone="finanzas"
+        icon="ti-shopping-cart-plus"
+        eyebrow="Compra con varios productos"
+        title="Nueva compra"
+        subtitle="Cargá una sola vez el proveedor y agregá todos los productos."
+        busy={saving}
+        onClose={() => setModal(null)}
+        onSubmit={registrarCompraMultiple}
+        submitLabel="Guardar compra completa"
+        error={modal === 'compra-multiple' ? error : ''}
+        summary={resumenPie([
+          { n: compraMultiple.items.filter(i => i.producto_id).length, texto: 'productos', uno: 'producto' },
+          { solo: totalCompraMultiple > 0 ? `Gs. ${totalCompraMultiple.toLocaleString('es-PY')}` : '' },
+        ]) || 'Proveedor y productos de la compra'}
+      >{() => <>
+        <ModalSection title="Proveedor y fecha" icon="ti-building-store">
+          <ModalGrid>
+            <ModalField label="Proveedor *"><input className="apple-control" value={compraMultiple.proveedor} onChange={e => setCompraMultiple(c => ({ ...c, proveedor:e.target.value }))} placeholder="Nombre del proveedor" /></ModalField>
+            <DateQuickField label="Fecha" value={compraMultiple.fecha} onChange={fecha => setCompraMultiple(c => ({ ...c, fecha }))} />
+          </ModalGrid>
+        </ModalSection>
+        <ModalSection title="Productos" icon="ti-package">
+          <div className="apple-rows">
+            {compraMultiple.items.map((item, indice) => (
+              <div className="apple-row apple-row--compra" key={indice}>
+                <div className="apple-row__name">
+                  <select className="apple-control" aria-label={`Producto ${indice + 1}`} value={item.producto_id} onChange={e => { const producto = productos.find(p => p.id === e.target.value); actualizarItemCompra(indice, { producto_id:e.target.value, unidad:normalizarUnidad(producto?.unidad) }) }}>
+                    <option value="">Elegir producto…</option>
+                    {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
+                </div>
+                <input className="apple-control apple-control--num" aria-label="Cantidad" type="text" inputMode="decimal" value={item.cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => actualizarItemCompra(indice, { cantidad:e.target.value.replace(/[^0-9.,]/g, '') })} placeholder="Cantidad" />
+                <select className="apple-control" aria-label="Unidad" value={item.unidad} onChange={e => actualizarItemCompra(indice, { unidad:e.target.value })}>{['kg', 'g', 'L', 'cc', 'unidades'].map(u => <option key={u} value={u}>{u}</option>)}</select>
+                <input className="apple-control apple-control--num apple-row__precio" aria-label="Precio total pagado en guaraníes" type="text" inputMode="numeric" value={item.precio_total} onWheel={e => e.currentTarget.blur()} onChange={e => { const n = e.target.value.replace(/[^0-9]/g, ''); actualizarItemCompra(indice, { precio_total:n ? Number(n).toLocaleString('es-PY') : '' }) }} placeholder="Gs. total" />
+                <button type="button" className="apple-row__remove" aria-label={`Quitar producto ${indice + 1}`} onClick={() => quitarItemCompra(indice)} disabled={compraMultiple.items.length === 1}><i className="ti ti-x" aria-hidden="true" /></button>
+              </div>
+            ))}
           </div>
-        </div>
-      )}
-
-      {modal === 'compra' && (
-        <Modal busy={saving} onClose={() => setModal(null)} label="Registrar compra" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:220, display:'flex', alignItems:isDesktop?'center':'flex-end', justifyContent:'center', padding:isDesktop?24:0 }}>
-          <div className="ui-7dd37e" style={{ borderRadius:isDesktop?24:'24px 24px 0 0' }}>
-            <div className="ui-c7b1b6">Registrar compra</div>
-            {error && <div className="ui-e136cb">{error}</div>}
-            <div className="ui-50089c">El stock anterior seguirá sin precio. Esta compra comienza la valorización del producto.</div>
-            <label className="ag-field-label ui-74cc19">Proveedor<input style={inpStyle} value={compra.proveedor} onChange={e => setCompra(c => ({...c,proveedor:e.target.value}))} placeholder="Nombre del proveedor" /></label>
-            <label className="ag-field-label ui-74cc19">Fecha<input style={inpStyle} type="date" value={compra.fecha} onChange={e => setCompra(c => ({...c,fecha:e.target.value}))}/></label>
-            <label className="ag-field-label ui-74cc19">Cantidad comprada<input style={inpStyle} inputMode="decimal" value={compra.cantidad} onChange={e => setCompra(c => ({...c,cantidad:e.target.value}))} placeholder="Ej: 1"/></label>
-            <label className="ag-field-label ui-74cc19">Unidad<select style={inpStyle} value={compra.unidad} onChange={e => setCompra(c => ({...c,unidad:e.target.value}))}>{['kg','g','L','cc','unidades'].map(u => <option key={u}>{u}</option>)}</select></label>
-            <label className="ag-field-label ui-74cc19">Precio total pagado (Gs.)<input style={inpStyle} inputMode="numeric" value={compra.precio_total} onChange={e => { const n=e.target.value.replace(/[^0-9]/g,''); setCompra(c => ({...c,precio_total:n?Number(n).toLocaleString('es-PY'):''})) }} placeholder="Ej: 50.000"/></label>
-            <label className="ag-field-label ui-74cc19">Nota opcional<input style={inpStyle} value={compra.notas} onChange={e => setCompra(c => ({...c,notas:e.target.value}))}/></label>
-            <button className="ag-small-action ui-17d991" onClick={registrarCompra} disabled={saving}>{saving?'Guardando...':'Guardar compra'}</button>
-            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(null)}>Cancelar</button>
-          </div>
-        </Modal>
-      )}
-
-      {modal === 'compra-multiple' && (
-        <Modal busy={saving} onClose={() => setModal(null)} label="Nueva compra" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:230, display:'flex', alignItems:isDesktop?'center':'flex-end', justifyContent:'center', padding:isDesktop?24:0 }}>
-          <div className="ui-7dd37e" style={{ borderRadius:isDesktop?24:'24px 24px 0 0', maxHeight:'90vh', overflowY:'auto' }}>
-            <CerrarX onClose={() => setModal(null)} disabled={saving} />
-            <div className="ui-c7b1b6">Nueva compra</div>
-            <div className="ui-50089c">Cargá una sola vez el proveedor y agregá todos los productos de la compra.</div>
-            {error && <div className="ui-e136cb">{error}</div>}
-            <label className="ag-field-label ui-74cc19">Proveedor *<input style={inpStyle} value={compraMultiple.proveedor} onChange={e => setCompraMultiple(c => ({...c,proveedor:e.target.value}))} placeholder="Nombre del proveedor" /></label>
-            <label className="ag-field-label ui-74cc19">Fecha<input style={inpStyle} type="date" value={compraMultiple.fecha} onChange={e => setCompraMultiple(c => ({...c,fecha:e.target.value}))} /></label>
-            {compraMultiple.items.map((item, indice) => <div key={indice} className="ag-surface" style={{ padding:12, marginBottom:10 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}><strong>Producto {indice + 1}</strong>{compraMultiple.items.length > 1 && <button className="ag-small-action ui-14c146" onClick={() => quitarItemCompra(indice)}>Quitar</button>}</div>
-              <select style={inpStyle} value={item.producto_id} onChange={e => { const producto=productos.find(p => p.id === e.target.value); actualizarItemCompra(indice,{ producto_id:e.target.value, unidad:normalizarUnidad(producto?.unidad) }) }}><option value="">Elegir producto</option>{productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}><input style={inpStyle} inputMode="decimal" value={item.cantidad} onChange={e => actualizarItemCompra(indice,{ cantidad:e.target.value })} placeholder="Cantidad" /><select style={inpStyle} value={item.unidad} onChange={e => actualizarItemCompra(indice,{ unidad:e.target.value })}>{['kg','g','L','cc','unidades'].map(u => <option key={u}>{u}</option>)}</select></div>
-              <input style={inpStyle} inputMode="numeric" value={item.precio_total} onChange={e => { const n=e.target.value.replace(/[^0-9]/g,''); actualizarItemCompra(indice,{ precio_total:n?Number(n).toLocaleString('es-PY'):'' }) }} placeholder="Precio total pagado (Gs.)" />
-            </div>)}
-            <button className="ag-small-action" onClick={agregarItemCompra}><i className="ti ti-plus" /> Agregar otro producto</button>
-            <label className="ag-field-label ui-74cc19" style={{ marginTop:12 }}>Nota opcional<input style={inpStyle} value={compraMultiple.notas} onChange={e => setCompraMultiple(c => ({...c,notas:e.target.value}))} /></label>
-            <div className="ui-50089c">Total de la compra: Gs. {compraMultiple.items.reduce((s,item) => s + (Number(String(item.precio_total || '').replace(/\./g,'')) || 0),0).toLocaleString('es-PY')}</div>
-            <button className="ag-small-action ui-17d991" onClick={registrarCompraMultiple} disabled={saving}>{saving?'Guardando toda la compra...':'Guardar compra completa'}</button>
-          </div>
-        </Modal>
-      )}
-
+          <button type="button" className="apple-add" onClick={agregarItemCompra}><i className="ti ti-plus" aria-hidden="true" />Agregar otro producto</button>
+          <p className="apple-note">Total de la compra: <b>Gs. {totalCompraMultiple.toLocaleString('es-PY')}</b></p>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={false}>
+          <ModalField label="Nota"><input className="apple-control" value={compraMultiple.notas} onChange={e => setCompraMultiple(c => ({ ...c, notas:e.target.value }))} placeholder="Opcional" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
       {modal === 'historial-precios' && productoHistorial && (
         <Modal onClose={() => setModal(null)} label="Historial de precios" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:230, display:'flex', alignItems:isDesktop?'center':'flex-end', justifyContent:'center', padding:isDesktop?24:0 }}>
           <div className="ui-7dd37e" style={{ borderRadius:isDesktop?24:'24px 24px 0 0' }}><CerrarX onClose={() => setModal(null)} /><div className="ui-c7b1b6">Precios de {productoHistorial.nombre}</div>

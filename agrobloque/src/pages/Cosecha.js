@@ -1,11 +1,12 @@
-import { Modal, FormHeading, Notice, Skeleton } from '../components/UI'
+import { Modal, Skeleton } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, BlockChips, resumenPie } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
 import { useAccionNueva } from '../lib/useAccionNueva'
-import ChipsTactiles, { useEsTelefono } from '../components/ChipsTactiles'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const fmtGs = (n) => Math.round(Number(n) || 0).toLocaleString('es-PY')
@@ -129,9 +130,10 @@ function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
   )
 }
 
-export default function Cosecha() {
+const CALIDADES = [{ value:'primera', etiqueta:'1ra' }, { value:'segunda', etiqueta:'2da' }, { value:'mixta', etiqueta:'Mixta' }]
+
+export default function Cosecha({ campoActivo = null }) {
   const can = useCan('cosecha')
-  const esTelefono = useEsTelefono()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [cosechas, setCosechas] = useState([])
   const [campos, setCampos] = useState([])
@@ -145,7 +147,7 @@ export default function Cosecha() {
   const [saving, setSaving] = useState(false)
   const [campoFiltro, setCampoFiltro] = useState(null)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [cargandoBloques, setCargandoBloques] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { fetchCampos(); fetchCosechas() }, [])
@@ -159,7 +161,7 @@ export default function Cosecha() {
       const campoQr = params?.get('campo') || ''
       const bloqueQr = params?.get('bloque') || ''
       const abrirQr = params?.get('nuevo') === '1' && campoQr && bloqueQr
-      const campoInicial = abrirQr && data.some(c => c.id === campoQr) ? campoQr : data[0].id
+      const campoInicial = abrirQr && data.some(c => c.id === campoQr) ? campoQr : (data.find(c => c.id === campoActivo?.id)?.id || data[0].id)
       setCampoFiltro(campoInicial)
       if (abrirQr) {
         await fetchBloques(campoInicial)
@@ -180,11 +182,13 @@ export default function Cosecha() {
     setLoading(false)
   }
   const fetchBloques = async (campo_id) => {
+    setCargandoBloques(true)
     const { data } = await supabase.from('bloques')
       .select('*, plantaciones(cultivos(nombre), activa, created_at, fecha_siembra)')
       .eq('campo_id', campo_id)
       .order('codigo')
     setBloques(data || [])
+    setCargandoBloques(false)
   }
   const crearFilaCosecha = () => ({ bloque_id:'', kg_total:'', calidad:'primera', notas:'' })
   const limpiarForm = () => {
@@ -257,7 +261,7 @@ export default function Cosecha() {
       await fetchCosechas()
       setModal(false)
       setModoMultiple(false)
-      setSuccess('Lote de cosechas guardado correctamente.')
+      toast.success('Lote de cosechas guardado', { description:`${filasValidas.length} cosecha${filasValidas.length === 1 ? '' : 's'} · ${fmtKg(filasValidas.reduce((total, f) => total + f.kg_total, 0))} kg` })
       limpiarForm()
     } catch (e) {
       setError('Error al guardar lote: ' + e.message)
@@ -294,7 +298,7 @@ export default function Cosecha() {
         registroId: form.id || '',
         detalle: `${payload.kg_total} kg cosechados`,
       })
-      await fetchCosechas(); setModal(false); setSuccess('Cosecha guardada correctamente.')
+      await fetchCosechas(); setModal(false); toast.success(form.id ? 'Cosecha actualizada' : 'Cosecha guardada', { description:`${fmtKg(payload.kg_total)} kg · Bloque ${bloqueSeleccionado?.codigo || ''}` })
       limpiarForm()
     } catch (e) {
       setError('Error al guardar: ' + e.message)
@@ -315,8 +319,6 @@ export default function Cosecha() {
   const bloqueSeleccionado = bloques.find(b => b.id === form.bloque_id)
   const cultivoSeleccionado = getCultivoBloque(bloqueSeleccionado, form.fecha)
   const totalKgMultiple = filasCosecha.reduce((sum, fila) => sum + parsearKg(fila.kg_total), 0)
-
-  const inp = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
 
   return (
     <div className="ag-page ui-c1c124">
@@ -350,7 +352,6 @@ export default function Cosecha() {
         </div>
       </div>
 
-      <Notice>{success}</Notice>
       <div className="ag-page-body" style={{ padding: isDesktop ? '8px 36px 100px' : '8px 14px 100px' }}>
         {loading ? <Skeleton rows={4} label="Cargando cosechas" /> : cosechas.length === 0 ? (
           <div className="ui-5baa7a">Sin registros de cosecha</div>
@@ -439,120 +440,91 @@ export default function Cosecha() {
         <NotasPanel modulo="cosecha" titulo="Bloc de notas de cosecha" />
       </div>
 
-      {modal && (
-        <Modal busy={saving} onClose={() => setModal(false)} label="Registrar cosecha" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div className="ui-7dd37e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-c7b1b6">{form.id ? 'Editar cosecha' : 'Registrar cosecha'}</div>
-            {error && <div className="ui-e136cb">{error}</div>}
+      <UnifiedFormModal
+        open={modal}
+        tone="bloques"
+        icon="ti-basket"
+        eyebrow={form.id ? 'Editar registro' : 'Nueva cosecha'}
+        title={form.id ? 'Editar cosecha' : 'Registrar cosecha'}
+        label="Registrar cosecha"
+        busy={saving}
+        onClose={() => setModal(false)}
+        onSubmit={guardar}
+        submitLabel={form.id ? 'Guardar cambios' : modoMultiple ? 'Guardar lote' : 'Guardar registro'}
+        error={error}
+        summary={resumenPie(modoMultiple && !form.id ? [
+          { n: filasCosecha.filter(f => f.bloque_id && parsearKg(f.kg_total) > 0).length, texto: 'cosechas', uno: 'cosecha' },
+          { n: totalKgMultiple > 0 ? fmtKg(totalKgMultiple) : '', texto: 'kg' },
+        ] : [
+          { n: bloqueSeleccionado?.codigo || '', texto: '' },
+          { n: parsearKg(form.kg_total) > 0 ? fmtKg(parsearKg(form.kg_total)) : '', texto: 'kg' },
+          { solo: form.kg_total || form.bloque_id ? CALIDADES.find(q => q.value === form.calidad)?.etiqueta : '' },
+        ]) || 'Elegí el bloque y cargá los kilos'}
+      >{() => <>
+        <ModalSection title="Dónde y cuándo" icon="ti-map-pin">
+          {!form.id && (
+            <ModalGroup label="¿Cuántas cosechas cargás?">
+              <ChoiceChips label="Modo de carga" value={modoMultiple ? 'varias' : 'una'} onChange={v => setModoMultiple(v === 'varias')} options={[{ value:'una', label:'Una cosecha', icon:'ti-basket' }, { value:'varias', label:'Varias juntas', icon:'ti-stack-2' }]} />
+            </ModalGroup>
+          )}
+          <ModalGrid>
+            <DateQuickField label="Fecha" required value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
+            <ModalField label="Campo">
+              <select className="apple-control" value={campoFiltro || ''} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({ ...f, bloque_id:'' })); setFilasCosecha(fs => fs.map(fila => ({ ...fila, bloque_id:'' }))) }}>
+                {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </ModalField>
+          </ModalGrid>
+          {(!modoMultiple || form.id) && (
+            <BlockChips single label="Bloque" bloques={bloques} seleccionados={form.bloque_id ? [form.bloque_id] : []} cargando={cargandoBloques} cultivoDe={b => getCultivoBloque(b, form.fecha)} onToggle={id => setForm(f => ({ ...f, bloque_id:id }))} vacio="Este campo no tiene bloques." />
+          )}
+          {(!modoMultiple || form.id) && form.bloque_id && <p className="apple-note">Producto / cultivo: <b>{cultivoSeleccionado || 'Sin plantación activa registrada'}</b></p>}
+        </ModalSection>
 
-            {!form.id && (
-              <div className="ui-e960d5">
-                <button className="ag-small-action ui-3a5af5" type="button" onClick={() => setModoMultiple(false)} style={{ background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777' }}>
-                  Una cosecha
-                </button>
-                <button className="ag-small-action ui-3a5af5" type="button" onClick={() => setModoMultiple(true)} style={{ background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777' }}>
-                  Varias juntas
-                </button>
-              </div>
-            )}
-
-            <FormHeading number="01" detail="Ubicación y fecha del registro">Origen de la cosecha</FormHeading>
-            <label className="ag-field-label ui-74cc19">Campo
-            <select style={inp} value={campoFiltro||''} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({...f, bloque_id:''})) }}>
-              {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select></label>
-
-            {(!modoMultiple || form.id) && (
-              <>
-            <div className="ui-74cc19" id="cosecha-bloque">Bloque *</div>
-            {esTelefono ? <ChipsTactiles etiqueta="Bloque" opciones={bloques.map(b => ({ valor:b.id, etiqueta:b.codigo }))} valor={form.bloque_id} onCambiar={id => setForm(f => ({...f, bloque_id:id}))} vacio="Este campo no tiene bloques." />
-            : <select style={inp} aria-labelledby="cosecha-bloque" value={form.bloque_id} onChange={e => setForm(f => ({...f, bloque_id:e.target.value}))}>
-              <option value="">Seleccioná bloque...</option>
-              {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
-            </select>}
-
-            {form.bloque_id && (
-              <div className="ui-154470">
-                Producto/cultivo: {cultivoSeleccionado || 'Sin plantación activa registrada'}
-              </div>
-            )}
-              </>
-            )}
-
-            <label className="ag-field-label ui-74cc19">Fecha *
-            <input style={inp} type="date" value={form.fecha} onChange={e => setForm(f => ({...f, fecha:e.target.value}))}/></label>
-
-            {(!modoMultiple || form.id) ? (
-              <>
-            <div className="ui-74cc19">Kg cosechados * (admite decimales, ej: 1.5)</div>
-            <input style={inp} type="text" inputMode="decimal" value={form.kg_total}
-              onChange={e => setForm(f => ({...f, kg_total: e.target.value}))}
-              placeholder="Ej: 150 o 1.5"/>
-
-            <div className="ui-74cc19">Calidad</div>
-            <div className="ui-60e304">
-              {['primera','segunda','mixta'].map(q => (
-                <button className="ag-small-action ui-949013" key={q} onClick={() => setForm(f => ({...f, calidad:q}))} style={{ background: form.calidad===q ? '#212121' : '#fff', color: form.calidad===q ? '#fff' : '#555' }}>
-                  {q === 'primera' ? '1ra' : q === 'segunda' ? '2da' : 'Mixta'}
-                </button>
-              ))}
-            </div>
-
-            <div className="ui-74cc19">Notas (opcional)</div>
-            <textarea className="ui-dc8f36" style={{ ...inp }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
-              </>
-            ) : (
-              <>
-                <div className="ui-9546b4">Cosechas del lote</div>
-                <div className="ui-c0b83a">
-                  {filasCosecha.map((fila, idx) => {
-                    const bloqueFila = bloques.find(b => b.id === fila.bloque_id)
-                    const cultivoFila = getCultivoBloque(bloqueFila, form.fecha)
-                    return (
-                      <div className="ag-surface ui-a1c79b" key={idx}>
-                        <div className="ui-b3c308">
-                          <strong className="ui-3044b6">Cosecha {idx + 1}</strong>
-                          {filasCosecha.length > 1 && (
-                            <button className="ag-small-action ui-bf3abc" type="button" onClick={() => quitarFilaCosecha(idx)}>Quitar</button>
-                          )}
-                        </div>
-                        <select style={inp} value={fila.bloque_id} onChange={e => actualizarFilaCosecha(idx, 'bloque_id', e.target.value)}>
-                          <option value="">Bloque...</option>
+        <ModalSection title={modoMultiple && !form.id ? 'Cosechas del lote' : 'Kilos y calidad'} icon="ti-scale">
+          {(!modoMultiple || form.id) ? (
+            <>
+              <ModalField label="Kilos cosechados *" hint="Admite decimales: 150 o 1,5">
+                <input className="apple-control apple-control--num" type="text" inputMode="decimal" enterKeyHint="done" value={form.kg_total} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, kg_total:e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="Ej: 150" />
+              </ModalField>
+              <ModalGroup label="Calidad">
+                <ChoiceChips label="Calidad" value={form.calidad} onChange={calidad => setForm(f => ({ ...f, calidad }))} options={CALIDADES.map(q => ({ value:q.value, label:q.etiqueta }))} />
+              </ModalGroup>
+            </>
+          ) : (
+            <>
+              <div className="apple-rows">
+                {filasCosecha.map((fila, idx) => {
+                  const cultivoFila = getCultivoBloque(bloques.find(b => b.id === fila.bloque_id), form.fecha)
+                  return (
+                    <div className="apple-row apple-row--cosecha" key={idx}>
+                      <div className="apple-row__name">
+                        <select className="apple-control" aria-label={`Bloque de la cosecha ${idx + 1}`} value={fila.bloque_id} onChange={e => actualizarFilaCosecha(idx, 'bloque_id', e.target.value)}>
+                          <option value="">Bloque…</option>
                           {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
                         </select>
-                        {fila.bloque_id && (
-                          <div className="ui-96f18a">
-                            {cultivoFila || 'Sin plantación activa registrada'}
-                          </div>
-                        )}
-                        <input style={inp} type="text" inputMode="decimal" value={fila.kg_total} onChange={e => actualizarFilaCosecha(idx, 'kg_total', e.target.value)} placeholder="Kg cosechados"/>
-                        <select style={inp} value={fila.calidad} onChange={e => actualizarFilaCosecha(idx, 'calidad', e.target.value)}>
-                          <option value="primera">1ra calidad</option>
-                          <option value="segunda">2da calidad</option>
-                          <option value="mixta">Mixta</option>
-                        </select>
-                        <input className="ui-e7ec54" style={{ ...inp }} value={fila.notas} onChange={e => actualizarFilaCosecha(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
                       </div>
-                    )
-                  })}
-                </div>
-                <button className="ag-small-action ui-f58cc5" type="button" onClick={agregarFilaCosecha}>
-                  + Agregar otra cosecha
-                </button>
-                {totalKgMultiple > 0 && (
-                  <div className="ui-dbf2aa">
-                    <span className="ui-aa481a">{fmtKg(totalKgMultiple)} kg en total</span>
-                    <span className="ui-398ec2">Producción</span>
-                  </div>
-                )}
-              </>
-            )}
+                      <input className="apple-control apple-control--num" type="text" inputMode="decimal" aria-label={`Kilos de la cosecha ${idx + 1}`} value={fila.kg_total} onWheel={e => e.currentTarget.blur()} onChange={e => actualizarFilaCosecha(idx, 'kg_total', e.target.value.replace(/[^0-9.,]/g, ''))} placeholder="Kg" />
+                      <select className="apple-control" aria-label={`Calidad de la cosecha ${idx + 1}`} value={fila.calidad} onChange={e => actualizarFilaCosecha(idx, 'calidad', e.target.value)}>
+                        {CALIDADES.map(q => <option key={q.value} value={q.value}>{q.etiqueta}</option>)}
+                      </select>
+                      <button type="button" className="apple-row__remove" aria-label={`Quitar cosecha ${idx + 1}`} onClick={() => quitarFilaCosecha(idx)} disabled={filasCosecha.length === 1}><i className="ti ti-x" aria-hidden="true" /></button>
+                      {fila.bloque_id && <div className="apple-row__info">{cultivoFila || 'Sin plantación activa registrada'}</div>}
+                    </div>
+                  )
+                })}
+              </div>
+              <button type="button" className="apple-add" onClick={agregarFilaCosecha}><i className="ti ti-plus" aria-hidden="true" />Agregar otra cosecha</button>
+            </>
+          )}
+        </ModalSection>
 
-            <button className="ag-form-submit ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : modoMultiple ? 'Guardar lote de cosechas' : 'Guardar cosecha'}</button>
-            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(false)}>Cancelar</button>
-          </div>
-        </Modal>
-      )}
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(form.notas)} badge={form.notas ? 'nota' : ''}>
+          <ModalField label="Notas" hint={modoMultiple && !form.id ? 'Se agrega a todas las cosechas del lote.' : ''}>
+            <textarea className="apple-control" value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones: lluvia, personal, destino…" />
+          </ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </div>
   )
 }

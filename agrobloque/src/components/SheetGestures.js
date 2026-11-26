@@ -37,7 +37,7 @@ const GUARDAR = /^(guardar|registrar|crear|actualizar|confirmar|agregar|guardand
 const pinSave = () => {
   if (!window.matchMedia('(max-width:767px)').matches) return
   document.querySelectorAll(SHEET).forEach(sheet => {
-    if (sheet.matches('.ag-more-menu,.ag-quick-sheet')) return
+    if (sheet.matches('.ag-more-menu,.ag-quick-sheet,.apple-modal')) return
     const botones = Array.from(sheet.querySelectorAll('button')).filter(b => b.getClientRects().length)
     const guardar = botones.filter(b => GUARDAR.test((b.textContent || '').trim())).pop()
     if (!guardar || guardar.closest('[data-sheet-save]')) return

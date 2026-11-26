@@ -375,10 +375,10 @@ function AppLayout({ campoActivo, setCampoActivo, isGuest = false, role, organiz
             <Route path="/calendario" element={<ProtectedRoute role={effectiveRole} moduleKey="agenda"><Calendario/></ProtectedRoute>}/>
             <Route path="/vivero" element={<ProtectedRoute role={effectiveRole} moduleKey="vivero"><Vivero/></ProtectedRoute>}/>
             <Route path="/asistencia" element={isGuest ? <Navigate to="/"/> : <ProtectedRoute role={effectiveRole} moduleKey="asistencia"><Asistencia/></ProtectedRoute>}/>
-            <Route path="/cosecha" element={<ProtectedRoute role={effectiveRole} moduleKey="cosecha"><Cosecha/></ProtectedRoute>}/>
+            <Route path="/cosecha" element={<ProtectedRoute role={effectiveRole} moduleKey="cosecha"><Cosecha campoActivo={campoActivo}/></ProtectedRoute>}/>
             <Route path="/ventas" element={<ProtectedRoute role={effectiveRole} moduleKey="ventas"><Ventas/></ProtectedRoute>}/>
             <Route path="/inventario" element={<ProtectedRoute role={effectiveRole} moduleKey="inventario"><Inventario/></ProtectedRoute>}/>
-            <Route path="/fumigaciones" element={<ProtectedRoute role={effectiveRole} moduleKey="fumigaciones"><Fumigaciones/></ProtectedRoute>}/>
+            <Route path="/fumigaciones" element={<ProtectedRoute role={effectiveRole} moduleKey="fumigaciones"><Fumigaciones campoActivo={campoActivo}/></ProtectedRoute>}/>
             <Route path="/fertilizaciones" element={<ProtectedRoute role={effectiveRole} moduleKey="plan_nutricional"><Fertilizaciones campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
             <Route path="/plan-nutricional" element={<Navigate to="/fertilizaciones"/>}/>
             <Route path="/costos" element={<ProtectedRoute role={effectiveRole} moduleKey="costos"><Costos campoActivo={campoActivo} isGuest={isGuest}/></ProtectedRoute>}/>
