@@ -259,7 +259,7 @@ function CuerpoFertilizacion({ bloques, productos, form, setForm }) {
           </button>
           <button type="button" role="radio" aria-checked={esSemana} className="apple-mode apple-mode--plan" onClick={() => cambiarModo('plan')}>
             <span className="apple-mode__icon" aria-hidden="true"><i className="ti ti-calendar-event" /></span>
-            <span className="apple-mode__text"><strong>Preparar plan a futuro</strong><small>Programar para más adelante. Se guarda como pendiente y avisa en Agenda.</small></span>
+            <span className="apple-mode__text"><strong>Preparar plan semanal</strong><small>Programar para más adelante. Se guarda como pendiente y avisa en Agenda.</small></span>
             <i className="ti ti-circle-check-filled apple-mode__check" aria-hidden="true" />
           </button>
         </div>
@@ -356,7 +356,7 @@ function CuerpoFertilizacion({ bloques, productos, form, setForm }) {
 
 function ModalFertilizacion({ open = true, bloques, productos, form, setForm, onClose, onSave, saving, error }) {
   const esSemana = form.tipo === 'plan' || form.es_semanal
-  const titulo = esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar plan semanal' : 'Preparar plan a futuro') : form.edit_grupo ? 'Corregir aplicación' : form.plan_id ? 'Registrar aplicación del plan' : 'Registrar aplicación realizada'
+  const titulo = esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar plan semanal' : 'Preparar plan semanal') : form.edit_grupo ? 'Corregir aplicación' : form.plan_id ? 'Registrar aplicación del plan' : 'Registrar aplicación realizada'
   const volumen = Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0)
   const nProductos = (form.soluciones || []).reduce((total, sol) => total + (sol.productos || []).filter(p => p.producto_id || p.nombre).length, 0)
   return (
@@ -364,7 +364,7 @@ function ModalFertilizacion({ open = true, bloques, productos, form, setForm, on
       open={open}
       tone={esSemana ? 'plan' : 'aplicada'}
       icon={esSemana ? 'ti-calendar-event' : 'ti-droplet-filled'}
-      eyebrow={esSemana ? 'Plan a futuro' : form.plan_id ? 'Aplicación del plan' : 'Aplicación realizada'}
+      eyebrow={esSemana ? 'Plan semanal' : form.plan_id ? 'Aplicación del plan' : 'Aplicación realizada'}
       title={titulo}
       label="Registrar fertilización"
       busy={saving}
@@ -992,7 +992,7 @@ export default function Fertilizaciones({ campoActivo }) {
             {schemaPlanesDisponible && (
               <button type="button" className="fert-mode fert-mode--plan" onClick={() => abrirModal('plan')}>
                 <span className="fert-mode__icon" aria-hidden="true"><i className="ti ti-calendar-event" /></span>
-                <span className="fert-mode__text"><strong>Preparar plan a futuro</strong><small>Programar para más adelante. Se guarda como pendiente y avisa en Agenda.</small></span>
+                <span className="fert-mode__text"><strong>Preparar plan semanal</strong><small>Programar para más adelante. Se guarda como pendiente y avisa en Agenda.</small></span>
                 <i className="ti ti-arrow-right fert-mode__go" aria-hidden="true" />
               </button>
             )}
