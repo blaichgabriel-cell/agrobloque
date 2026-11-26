@@ -4,7 +4,8 @@ import NotasPanel from '../components/NotasPanel'
 import { descargarCsv } from '../lib/exporters'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
-import { CerrarX } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, BlockChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 
 const TIPOS_COSTO = [
   { key:'insumos',              label:'Insumos',              icon:'ti-seeding',     color:"#124e38", bg:'#eeeeee' },
@@ -28,7 +29,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
   const [costosManuales, setCostosManuales] = useState([])
   const [comprasInsumos, setComprasInsumos] = useState([])
   const [modal, setModal] = useState(false)
-  const [form, setForm] = useState({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'', plantacion_id:'' })
+  const [form, setForm] = useState({ tipo:'insumos', descripcion:'', monto:'', fecha: fechaIso(0), bloque_id:'', plantacion_id:'' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [periodo, setPeriodo] = useState('mes')
@@ -66,20 +67,22 @@ export default function Costos({ campoActivo, isGuest = false }) {
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
   }
 
-  const formVacio = () => ({ tipo:'insumos', descripcion:'', monto:'', fecha: new Date().toISOString().split('T')[0], bloque_id:'', plantacion_id:'' })
+  const formVacio = () => ({ tipo:'insumos', descripcion:'', monto:'', fecha: fechaIso(0), bloque_id:'', plantacion_id:'' })
 
   const abrirNuevo = () => {
+    setError('')
     setForm(formVacio())
     setModal(true)
   }
 
   const abrirEditar = (costo) => {
+    setError('')
     setForm({
       id: costo.id,
       tipo: costo.tipo || 'insumos',
       descripcion: costo.descripcion || '',
       monto: costo.monto ? fmtGs(costo.monto) : '',
-      fecha: costo.fecha || new Date().toISOString().split('T')[0],
+      fecha: costo.fecha || fechaIso(0),
       bloque_id: costo.bloque_id || '',
       plantacion_id: costo.plantacion_id || '',
     })
@@ -118,7 +121,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
   }
 
   const guardar = async () => {
-    if (!form.monto || !form.fecha) return
+    if (!parsearGs(form.monto) || !form.fecha) { setError('Cargá el monto y la fecha del costo.'); return }
     setSaving(true); setError('')
     const payload = {
       tipo: form.tipo, descripcion: form.descripcion || null,
@@ -137,6 +140,7 @@ export default function Costos({ campoActivo, isGuest = false }) {
       detalle: `${payload.descripcion || payload.tipo} - Gs. ${payload.monto}`,
     })
     await fetchCostos(); setSaving(false); cerrarModal()
+    toast.success(form.id ? 'Costo actualizado' : 'Costo registrado', { description: `${payload.descripcion || TIPOS_COSTO.find(t => t.key === payload.tipo)?.label || ''} · Gs. ${fmtGs(payload.monto)}` })
   }
 
   const eliminar = async (id) => {
@@ -145,6 +149,12 @@ export default function Costos({ campoActivo, isGuest = false }) {
     if (anularError) { setError(`No se pudo anular el costo: ${anularError.message || 'revisá la conexión.'}`); return }
     await registrarAuditoria({ accion:'Anulo costo manual', modulo:'Costos', tabla:'costos', registroId:id })
     fetchCostos()
+  }
+
+  const cultivoActivoDe = (bloque) => bloque?.plantaciones?.find(p => p.activa)?.cultivos?.nombre || ''
+  const elegirBloque = (id) => {
+    const bloque = bloques.find(b => b.id === id)
+    setForm(f => ({ ...f, bloque_id: id, plantacion_id: bloque?.plantaciones?.find(p => p.activa)?.id || '' }))
   }
 
   const totalManuales = costosManuales.reduce((s, c) => s + Number(c.monto), 0)
@@ -286,50 +296,47 @@ export default function Costos({ campoActivo, isGuest = false }) {
         <NotasPanel modulo="costos" titulo="Bloc de notas de costos" />
       </div>
 
-      {modal && (
-        <div className="ui-66d878" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end' }}>
-          <div className="ui-526967" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <CerrarX onClose={cerrarModal} disabled={saving} />
-            <div className="ui-c7b1b6">{form.id ? 'Editar costo' : 'Nuevo costo'}</div>
-            {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
-            <div className="ui-ad3529">Tipo</div>
-            <div className="ui-06c66f">
-              {TIPOS_COSTO.map(t => (
-                <button className="ui-5430d5" key={t.key} onClick={() => setForm(f => ({...f, tipo:t.key}))} style={{ background: form.tipo===t.key ? '#0F3923' : '#fff', color: form.tipo===t.key ? '#fff' : '#555' }}>
-                  <i className={`${`ti ${t.icon}`} ui-2592cc`} aria-hidden="true"></i>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <div className="ui-524895">Monto (Gs.) *</div>
-            <input className="ui-57fcbe"
-              type="text" inputMode="numeric" value={form.monto}
-              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setForm(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
-              placeholder="Ej: 150.000"/>
-            <div className="ui-524895">Descripción (opcional)</div>
-            <input className="ui-57fcbe"
-              type="text" value={form.descripcion} onChange={e => setForm(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Compra de plantines"/>
-            <div className="ui-524895">Fecha</div>
-            <input className="ui-57fcbe"
-              type="date" value={form.fecha} onChange={e => setForm(f=>({...f,fecha:e.target.value}))}/>
-            <div className="ui-524895">Bloque (opcional)</div>
-            <select className="ui-b5e991"
-              value={form.bloque_id} onChange={e => { const bloque=bloques.find(b=>b.id===e.target.value); setForm(f=>({...f,bloque_id:e.target.value,plantacion_id:bloque?.plantaciones?.find(p=>p.activa)?.id || ''})) }}>
-              <option value="">Sin bloque especifico</option>
-              {bloques.map(b => <option key={b.id} value={b.id}>{b.codigo}</option>)}
-            </select>
-            {form.bloque_id && <>
-              <div className="ui-524895">Plantación</div>
-              <select className="ui-b5e991" value={form.plantacion_id} onChange={e=>setForm(f=>({...f,plantacion_id:e.target.value}))}>
+      <UnifiedFormModal
+        open={modal}
+        tone="finanzas"
+        icon="ti-cash-banknote"
+        eyebrow={form.id ? 'Editar costo' : 'Gastos'}
+        title={form.id ? 'Editar costo' : 'Nuevo costo'}
+        label={form.id ? 'Editar costo' : 'Nuevo costo'}
+        busy={saving}
+        onClose={cerrarModal}
+        onSubmit={guardar}
+        submitLabel={form.id ? 'Guardar cambios' : 'Guardar costo'}
+        error={modal ? error : ''}
+        summary={resumenPie([
+          { solo: TIPOS_COSTO.find(t => t.key === form.tipo)?.label || '' },
+          { solo: parsearGs(form.monto) > 0 ? `Gs. ${fmtGs(parsearGs(form.monto))}` : '' },
+          { solo: bloques.find(b => b.id === form.bloque_id)?.codigo ? `Bloque ${bloques.find(b => b.id === form.bloque_id).codigo}` : '' },
+        ]) || 'Tipo y monto del gasto'}
+      >{() => <>
+        <ModalSection title="Gasto" icon="ti-cash-banknote">
+          <ModalGroup label="Tipo">
+            <ChoiceChips wrap label="Tipo de costo" value={form.tipo} onChange={tipo => setForm(f => ({ ...f, tipo }))} options={TIPOS_COSTO.map(t => ({ value:t.key, label:t.label, icon:t.icon }))} />
+          </ModalGroup>
+          <ModalGrid>
+            <ModalField label="Monto (Gs.) *"><input className="apple-control apple-control--num" data-autofocus type="text" inputMode="numeric" value={form.monto} onWheel={e => e.currentTarget.blur()} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setForm(f => ({ ...f, monto:r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 150.000" /></ModalField>
+            <DateQuickField label="Fecha" required value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
+          </ModalGrid>
+          <ModalField label="Descripción"><input className="apple-control" type="text" value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion:e.target.value }))} placeholder="Ej: Compra de plantines (opcional)" /></ModalField>
+        </ModalSection>
+
+        <ModalSection title="Bloque (opcional)" icon="ti-layout-grid" collapsible defaultOpen={Boolean(form.bloque_id)} badge={form.bloque_id ? '' : 'asignar a un bloque'}>
+          <BlockChips single required={false} label="Bloque" bloques={bloques} seleccionados={form.bloque_id ? [form.bloque_id] : []} cultivoDe={cultivoActivoDe} vacio="Este campo no tiene bloques cargados." onToggle={id => elegirBloque(id === form.bloque_id ? '' : id)} />
+          {form.bloque_id && (
+            <ModalField label="Plantación">
+              <select className="apple-control" value={form.plantacion_id} onChange={e => setForm(f => ({ ...f, plantacion_id:e.target.value }))}>
                 <option value="">Sin plantación específica</option>
-                {(bloques.find(b=>b.id===form.bloque_id)?.plantaciones || []).map(p=><option key={p.id} value={p.id}>{p.cultivos?.nombre || 'Cultivo'} · {p.fecha_siembra}{p.activa?' · activa':''}</option>)}
+                {(bloques.find(b => b.id === form.bloque_id)?.plantaciones || []).map(p => <option key={p.id} value={p.id}>{p.cultivos?.nombre || 'Cultivo'} · {p.fecha_siembra}{p.activa ? ' · activa' : ''}</option>)}
               </select>
-            </>}
-            <button className="ui-ae772b" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar costo'}</button>
-            <button className="ui-3f3807" onClick={cerrarModal}>Cancelar</button>
-          </div>
-        </div>
-      )}
+            </ModalField>
+          )}
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </div>
   )
 }

@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
-import { CerrarX } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const parsearKg = (v) => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? 0 : n }
@@ -18,6 +19,8 @@ const fechaLocal = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+const FORMAS_PAGO = ['Efectivo', 'Transferencia', 'Cheque']
 
 const estadoLabel = {
   pagado: 'Pagado',
@@ -259,12 +262,14 @@ export default function Ventas() {
   }
 
   const abrirNueva = () => {
+    setError('')
     limpiarForm()
     setModoMultiple(false)
     setModal(true)
   }
 
   const abrirEditar = (venta) => {
+    setError('')
     setCampoFiltro('')
     setForm({
       id: venta.id,
@@ -362,6 +367,7 @@ export default function Ventas() {
       setModal(false)
       setModoMultiple(false)
       limpiarForm()
+      toast.success('Venta registrada', { description: `${payload.length} productos · Gs. ${fmtGs(totalVenta)}` })
     } catch (e) {
       setError('Error al guardar venta multiple: ' + e.message)
     }
@@ -417,6 +423,7 @@ export default function Ventas() {
       await fetchVentas()
       setModal(false)
       limpiarForm()
+      toast.success(form.id ? 'Venta actualizada' : 'Venta registrada', { description: `${payload.producto} · ${fmtKg(payload.kg_total)} kg · Gs. ${fmtGs(payload.total)}` })
     } catch (e) {
       setError('Error al guardar venta: ' + e.message)
     }
@@ -440,6 +447,8 @@ export default function Ventas() {
   const kgVendidos = ventas.reduce((s, v) => s + (Number(v.kg_total) || 0), 0)
   const ventaTotalForm = parsearKg(form.kg_total) * parsearGs(form.precio_kg)
   const ventaTotalMultiple = lineasVenta.reduce((s, linea) => s + (parsearKg(linea.kg_total) * parsearGs(linea.precio_kg)), 0)
+  const esMultiple = modoMultiple && !form.id
+  const ventaTotalMostrada = esMultiple ? ventaTotalMultiple : ventaTotalForm
   const bloqueSeleccionado = bloques.find(b => b.id === form.bloque_id)
   const bloquesVisibles = campoFiltro
     ? bloques.filter(b => b.campo_id === campoFiltro)
@@ -467,8 +476,6 @@ export default function Ventas() {
     acc[key].kg += Number(v.kg_total) || 0
     return acc
   }, {}))
-  const inp = { width:'100%', padding:'11px 14px', borderRadius:8, border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12, boxSizing:'border-box' }
-  const label = { fontSize:10, color:"#697970", marginBottom:6, display:'block', fontWeight:700 }
 
   return (
     <div className="ui-c1c124">
@@ -584,143 +591,138 @@ export default function Ventas() {
         <NotasPanel modulo="ventas" titulo="Bloc de notas de ventas" />
       </div>
 
-      {modal && (
-        <div className="ui-8b7442" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end' }}>
-          <div className="ui-44a917" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <CerrarX onClose={() => setModal(false)} disabled={saving} />
-            <div className="ui-c7b1b6">{form.id ? 'Editar venta' : 'Registrar venta'}</div>
-            {error && <div className="ui-fb48d7">{error}</div>}
+      <UnifiedFormModal
+        open={modal}
+        tone="finanzas"
+        icon="ti-receipt"
+        eyebrow={form.id ? 'Editar venta' : 'Comercial'}
+        title={form.id ? 'Editar venta' : 'Registrar venta'}
+        label={form.id ? 'Editar venta' : 'Registrar venta'}
+        busy={saving}
+        onClose={() => setModal(false)}
+        onSubmit={guardar}
+        submitLabel={modoMultiple && !form.id ? 'Guardar venta completa' : 'Guardar venta'}
+        error={modal ? error : ''}
+        summary={resumenPie(esMultiple ? [
+          { n: lineasVenta.filter(l => String(l.producto || '').trim()).length, texto: 'productos', uno: 'producto' },
+          { solo: ventaTotalMostrada > 0 ? `Gs. ${fmtGs(ventaTotalMostrada)}` : '' },
+          { solo: estadoLabel[form.estado_cobro] },
+        ] : [
+          { n: parsearKg(form.kg_total) > 0 ? fmtKg(parsearKg(form.kg_total)) : '', texto: 'kg' },
+          { solo: ventaTotalMostrada > 0 ? `Gs. ${fmtGs(ventaTotalMostrada)}` : '' },
+          { solo: estadoLabel[form.estado_cobro] },
+        ]) || 'Comprador, producto, kilos y precio'}
+      >{() => <>
+        <ModalSection title="Venta" icon="ti-receipt">
+          {!form.id && (
+            <ModalGroup label="Tipo de venta">
+              <ChoiceChips label="Tipo de venta" value={modoMultiple ? 'varios' : 'uno'} onChange={v => setModoMultiple(v === 'varios')} options={[{ value:'uno', label:'Un producto', icon:'ti-package' }, { value:'varios', label:'Varios productos', icon:'ti-packages' }]} />
+            </ModalGroup>
+          )}
+          <ModalGrid>
+            <ModalField label="Comprador *" hint={compradores.length === 0 ? 'Todavía no hay compradores cargados.' : ''}>
+              <select className="apple-control" data-autofocus value={form.comprador_id} onChange={e => setForm(f => ({ ...f, comprador_id:e.target.value }))}>
+                <option value="">Elegir comprador…</option>
+                {compradores.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </ModalField>
+            <DateQuickField label="Fecha" required value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
+          </ModalGrid>
+        </ModalSection>
 
-            {!form.id && (
-              <div className="ui-796353">
-                <button className="ui-cada8c" type="button" onClick={() => setModoMultiple(false)} style={{ background: !modoMultiple ? '#212121' : 'transparent', color: !modoMultiple ? '#fff' : '#777' }}>
-                  Un producto
-                </button>
-                <button className="ui-cada8c" type="button" onClick={() => setModoMultiple(true)} style={{ background: modoMultiple ? '#212121' : 'transparent', color: modoMultiple ? '#fff' : '#777' }}>
-                  Varios productos
-                </button>
-              </div>
-            )}
-
-            <label style={label}>Fecha *</label>
-            <input style={inp} type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha:e.target.value }))} />
-
-            <label style={label}>Comprador *</label>
-            <select style={inp} value={form.comprador_id} onChange={e => setForm(f => ({ ...f, comprador_id:e.target.value }))}>
-              <option value="">Selecciona comprador...</option>
-              {compradores.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
-
-            {(!modoMultiple || form.id) ? (
-              <>
-                <label style={label}>Producto *</label>
-                <input style={inp} value={form.producto} onChange={e => setForm(f => ({ ...f, producto:e.target.value }))} placeholder="Ej: Tomate, pepino, morron" />
-
-                <div className="ui-f56ef1">
-                  <div>
-                    <label style={label}>Kilos *</label>
-                    <input style={inp} type="text" inputMode="decimal" value={form.kg_total} onChange={e => setForm(f => ({ ...f, kg_total:e.target.value }))} placeholder="Ej: 150" />
+        {!esMultiple ? (
+          <>
+            <ModalSection title="Producto" icon="ti-package">
+              <ModalField label="Producto *"><input className="apple-control" value={form.producto} onChange={e => setForm(f => ({ ...f, producto:e.target.value }))} placeholder="Ej: Tomate, pepino, morrón" /></ModalField>
+              <ModalGrid>
+                <ModalField label="Kilos *"><input className="apple-control apple-control--num" type="text" inputMode="decimal" value={form.kg_total} onWheel={e => e.currentTarget.blur()} onChange={e => setForm(f => ({ ...f, kg_total:e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="Ej: 150" /></ModalField>
+                <ModalField label="Precio por kg (Gs.) *"><input className="apple-control apple-control--num" type="text" inputMode="numeric" value={form.precio_kg} onWheel={e => e.currentTarget.blur()} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setForm(f => ({ ...f, precio_kg:r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 5.000" /></ModalField>
+              </ModalGrid>
+              {ventaTotalForm > 0 && <p className="apple-note">Total de la venta: <b>Gs. {fmtGs(ventaTotalForm)}</b></p>}
+            </ModalSection>
+            <ModalSection title="Origen (opcional)" icon="ti-map-pin" collapsible defaultOpen={Boolean(form.bloque_id)} badge={form.bloque_id ? '' : 'campo y bloque'}>
+              <ModalGrid>
+                <ModalField label="Campo">
+                  <select className="apple-control" value={campoFiltro} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({ ...f, bloque_id:'' })) }}>
+                    <option value="">Todos los campos</option>
+                    {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
+                </ModalField>
+                <ModalField label="Bloque" hint={cultivoSugerido ? `Cultivo sugerido: ${cultivoSugerido}` : ''}>
+                  <select className="apple-control" value={form.bloque_id} onChange={e => {
+                    const bloque = bloques.find(b => b.id === e.target.value)
+                    const cultivo = getCultivoBloque(bloque)
+                    setForm(f => ({ ...f, bloque_id:e.target.value, producto: f.producto || cultivo }))
+                  }}>
+                    <option value="">Venta sin bloque específico</option>
+                    {bloquesVisibles.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
+                  </select>
+                </ModalField>
+              </ModalGrid>
+            </ModalSection>
+          </>
+        ) : (
+          <ModalSection title="Productos" icon="ti-packages">
+            <ModalField label="Campo para sugerir bloques">
+              <select className="apple-control" value={campoFiltro} onChange={e => setCampoFiltro(e.target.value)}>
+                <option value="">Todos los campos</option>
+                {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </ModalField>
+            <div className="apple-rows">
+              {lineasVenta.map((linea, idx) => {
+                const bloqueLinea = bloques.find(b => b.id === linea.bloque_id)
+                const cultivoLinea = getCultivoBloque(bloqueLinea)
+                const totalLinea = parsearKg(linea.kg_total) * parsearGs(linea.precio_kg)
+                return (
+                  <div className="apple-solution apple-solution--card" key={idx}>
+                    <div className="apple-solution__head">
+                      <input className="apple-control" aria-label={`Producto ${idx + 1}`} value={linea.producto} onChange={e => actualizarLineaVenta(idx, 'producto', e.target.value)} placeholder={`Producto ${idx + 1}`} />
+                      <button type="button" className="apple-row__remove" aria-label={`Quitar producto ${idx + 1}`} onClick={() => quitarLineaVenta(idx)} disabled={lineasVenta.length === 1}><i className="ti ti-x" aria-hidden="true" /></button>
+                    </div>
+                    <ModalGrid>
+                      <input className="apple-control apple-control--num" aria-label="Kilos" type="text" inputMode="decimal" value={linea.kg_total} onWheel={e => e.currentTarget.blur()} onChange={e => actualizarLineaVenta(idx, 'kg_total', e.target.value.replace(/[^0-9.,]/g, ''))} placeholder="Kilos" />
+                      <input className="apple-control apple-control--num" aria-label="Precio por kg en guaraníes" type="text" inputMode="numeric" value={linea.precio_kg} onWheel={e => e.currentTarget.blur()} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); actualizarLineaVenta(idx, 'precio_kg', r ? parseInt(r, 10).toLocaleString('es-PY') : '') }} placeholder="Gs. por kg" />
+                    </ModalGrid>
+                    <select className="apple-control" aria-label={`Bloque de origen del producto ${idx + 1}`} value={linea.bloque_id} onChange={e => {
+                      const bloque = bloques.find(b => b.id === e.target.value)
+                      const cultivo = getCultivoBloque(bloque)
+                      actualizarLineaVenta(idx, 'bloque_id', e.target.value)
+                      if (!linea.producto && cultivo) actualizarLineaVenta(idx, 'producto', cultivo)
+                    }}>
+                      <option value="">Sin bloque específico</option>
+                      {bloquesVisibles.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
+                    </select>
+                    <input className="apple-control" aria-label={`Nota del producto ${idx + 1}`} value={linea.notas} onChange={e => actualizarLineaVenta(idx, 'notas', e.target.value)} placeholder="Nota opcional" />
+                    {(cultivoLinea || totalLinea > 0) && <small className="apple-field__hint">{cultivoLinea ? `Cultivo: ${cultivoLinea}` : ''}{cultivoLinea && totalLinea > 0 ? ' · ' : ''}{totalLinea > 0 ? `Subtotal: Gs. ${fmtGs(totalLinea)}` : ''}</small>}
                   </div>
-                  <div>
-                    <label style={label}>Precio por kg *</label>
-                    <input style={inp} type="text" inputMode="numeric" value={form.precio_kg} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setForm(f => ({ ...f, precio_kg:r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 5.000" />
-                  </div>
-                </div>
-
-                <label style={label}>Campo/bloque origen (opcional)</label>
-                <select style={inp} value={campoFiltro} onChange={e => { setCampoFiltro(e.target.value); setForm(f => ({ ...f, bloque_id:'' })) }}>
-                  <option value="">Todos los campos</option>
-                  {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
-                <select style={inp} value={form.bloque_id} onChange={e => {
-                  const bloque = bloques.find(b => b.id === e.target.value)
-                  const cultivo = getCultivoBloque(bloque)
-                  setForm(f => ({ ...f, bloque_id:e.target.value, producto: f.producto || cultivo }))
-                }}>
-                  <option value="">Venta sin bloque especifico</option>
-                  {bloquesVisibles.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
-                </select>
-                {cultivoSugerido && <div className="ui-99850b">Cultivo sugerido: {cultivoSugerido}</div>}
-              </>
-            ) : (
-              <>
-                <label style={label}>Campo para sugerir bloques</label>
-                <select style={inp} value={campoFiltro} onChange={e => setCampoFiltro(e.target.value)}>
-                  <option value="">Todos los campos</option>
-                  {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
-                <div className="ui-c0b83a">
-                  {lineasVenta.map((linea, idx) => {
-                    const bloqueLinea = bloques.find(b => b.id === linea.bloque_id)
-                    const cultivoLinea = getCultivoBloque(bloqueLinea)
-                    const totalLinea = parsearKg(linea.kg_total) * parsearGs(linea.precio_kg)
-                    return (
-                      <div className="ui-ac8a4c" key={idx}>
-                        <div className="ui-b3c308">
-                          <strong className="ui-3044b6">Producto {idx + 1}</strong>
-                          {lineasVenta.length > 1 && (
-                            <button className="ui-375820" type="button" onClick={() => quitarLineaVenta(idx)}>Quitar</button>
-                          )}
-                        </div>
-                        <input style={inp} value={linea.producto} onChange={e => actualizarLineaVenta(idx, 'producto', e.target.value)} placeholder="Producto"/>
-                        <div className="ui-f56ef1">
-                          <input style={inp} type="text" inputMode="decimal" value={linea.kg_total} onChange={e => actualizarLineaVenta(idx, 'kg_total', e.target.value)} placeholder="Kg"/>
-                          <input style={inp} type="text" inputMode="numeric" value={linea.precio_kg} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); actualizarLineaVenta(idx, 'precio_kg', r ? parseInt(r, 10).toLocaleString('es-PY') : '') }} placeholder="Gs/kg"/>
-                        </div>
-                        <select style={inp} value={linea.bloque_id} onChange={e => {
-                          const bloque = bloques.find(b => b.id === e.target.value)
-                          const cultivo = getCultivoBloque(bloque)
-                          actualizarLineaVenta(idx, 'bloque_id', e.target.value)
-                          if (!linea.producto && cultivo) actualizarLineaVenta(idx, 'producto', cultivo)
-                        }}>
-                          <option value="">Sin bloque especifico</option>
-                          {bloquesVisibles.map(b => <option key={b.id} value={b.id}>{getEtiquetaBloque(b)}</option>)}
-                        </select>
-                        {cultivoLinea && <div className="ui-9af458">{cultivoLinea}</div>}
-                        <input className="ui-e7ec54" style={{ ...inp }} value={linea.notas} onChange={e => actualizarLineaVenta(idx, 'notas', e.target.value)} placeholder="Nota opcional"/>
-                        {totalLinea > 0 && <div className="ui-be0b54">Subtotal: Gs. {fmtGs(totalLinea)}</div>}
-                      </div>
-                    )
-                  })}
-                </div>
-                <button className="ui-f8cb2b" type="button" onClick={agregarLineaVenta}>
-                  + Agregar otro producto
-                </button>
-              </>
-            )}
-
-            <label style={label}>Estado de cobro</label>
-            <div className="ui-60e304">
-              {['pagado', 'pendiente', 'parcial'].map(e => (
-                <button className="ui-eb3cc9" key={e} onClick={() => setForm(f => ({ ...f, estado_cobro:e, monto_cobrado: e === 'parcial' ? f.monto_cobrado : '' }))} style={{ background: form.estado_cobro === e ? '#212121' : '#fff', color: form.estado_cobro === e ? '#fff' : '#555' }}>{estadoLabel[e]}</button>
-              ))}
+                )
+              })}
             </div>
+            <button type="button" className="apple-add" onClick={agregarLineaVenta}><i className="ti ti-plus" aria-hidden="true" />Agregar otro producto</button>
+            {ventaTotalMultiple > 0 && <p className="apple-note">Total de la venta: <b>Gs. {fmtGs(ventaTotalMultiple)}</b></p>}
+          </ModalSection>
+        )}
 
-            {form.estado_cobro === 'parcial' && (
-              <>
-                <label style={label}>Monto cobrado</label>
-                <input style={inp} type="text" inputMode="numeric" value={form.monto_cobrado} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setForm(f => ({ ...f, monto_cobrado:r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 500.000" />
-              </>
-            )}
+        <ModalSection title="Cobro" icon="ti-coin">
+          <ModalGroup label="Estado de cobro">
+            <ChoiceChips label="Estado de cobro" value={form.estado_cobro} onChange={e => setForm(f => ({ ...f, estado_cobro:e, monto_cobrado: e === 'parcial' ? f.monto_cobrado : '' }))} options={[{ value:'pagado', label:'Pagado', icon:'ti-circle-check' }, { value:'pendiente', label:'Pendiente', icon:'ti-hourglass' }, { value:'parcial', label:'Parcial', icon:'ti-coin' }]} />
+          </ModalGroup>
+          {form.estado_cobro === 'parcial' && (
+            <ModalField label="Monto cobrado (Gs.)" hint={ventaTotalMostrada > 0 ? `Saldo pendiente: Gs. ${fmtGs(Math.max(0, ventaTotalMostrada - parsearGs(form.monto_cobrado)))}` : ''}>
+              <input className="apple-control apple-control--num" type="text" inputMode="numeric" value={form.monto_cobrado} onWheel={e => e.currentTarget.blur()} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setForm(f => ({ ...f, monto_cobrado:r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 500.000" />
+            </ModalField>
+          )}
+          <ModalGroup label="Forma de pago">
+            <ChoiceChips wrap label="Forma de pago" value={FORMAS_PAGO.includes(form.forma_pago) ? form.forma_pago : 'otra'} onChange={v => setForm(f => ({ ...f, forma_pago: v === 'otra' ? (FORMAS_PAGO.includes(f.forma_pago) ? '' : f.forma_pago) : v }))} options={[...FORMAS_PAGO.map(f => ({ value:f, label:f })), { value:'otra', label:'Otra' }]} />
+            {!FORMAS_PAGO.includes(form.forma_pago) && <input className="apple-control" aria-label="Otra forma de pago" value={form.forma_pago} onChange={e => setForm(f => ({ ...f, forma_pago:e.target.value }))} placeholder="Ej: Giro, tarjeta, canje…" />}
+          </ModalGroup>
+        </ModalSection>
 
-            <label style={label}>Forma de pago</label>
-            <input style={inp} value={form.forma_pago} onChange={e => setForm(f => ({ ...f, forma_pago:e.target.value }))} placeholder="Efectivo, transferencia, cheque..." />
-
-            <label style={label}>Notas</label>
-            <textarea className="ui-d303ae" style={{ ...inp }} value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones..." />
-
-            {((!modoMultiple || form.id) ? ventaTotalForm : ventaTotalMultiple) > 0 && (
-              <div className="ui-a11ccd">
-                <span className="ui-aa481a">Total venta</span>
-                <span className="ui-398ec2">Gs. {fmtGs((!modoMultiple || form.id) ? ventaTotalForm : ventaTotalMultiple)}</span>
-              </div>
-            )}
-
-            <button className="ui-ae772b" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : modoMultiple && !form.id ? 'Guardar venta con productos' : 'Guardar venta'}</button>
-            <button className="ui-3f3807" onClick={() => setModal(false)}>Cancelar</button>
-          </div>
-        </div>
-      )}
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(form.notas)} badge={form.notas ? '' : 'notas'}>
+          <ModalField label="Notas"><textarea className="apple-control" value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones…" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </div>
   )
 }
