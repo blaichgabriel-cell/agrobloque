@@ -1243,10 +1243,7 @@ export default function FichaBloque() {
             </CycleSection>
 
             <CycleSection icon="ti-leaf" title="Fertilizaciones" count={fertilizacionesHistoricas.length} empty="No se registraron fertilizaciones en este ciclo.">
-              {fertilizacionesHistoricas.map(fertilizacion => {
-                const productos = (fertilizacion.soluciones || []).map(solucion => `${solucion.nombre ? `Sol. ${solucion.nombre}: ` : ''}${(solucion.productos || []).map(producto => `${producto.nombre || 'Producto'} ${producto.cantidad || ''} ${producto.unidad || ''}`.trim()).join(' + ')}`).join(' · ')
-                return <CycleRow key={fertilizacion.id} date={fertilizacion.fecha} title={productos || 'Fertilización registrada'} detail={notasFertilizacionVisibles(fertilizacion.notas)} />
-              })}
+              {agruparFertilizaciones(fertilizacionesHistoricas).map(grupo => <FertGrupoFecha key={grupo.fecha} grupo={grupo} />)}
             </CycleSection>
 
             <CycleSection icon="ti-chart-line" title="Ventas y costos" count={ventasHistoricas.length + costosHistoricos.length} empty="No se registraron ventas ni costos directos en este ciclo.">
@@ -1539,71 +1536,8 @@ export default function FichaBloque() {
               </div>
             ) : (
               <>
-                {/* Fertilizacion actual */}
-                {fertilizaciones[0] && (
-                  <>
-                    <div className="ui-4192ca">Fertilización actual</div>
-                    <div className="ui-2e75cf" role="button" tabIndex={0} onClick={() => setFertDetalle(fertilizaciones[0])} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFertDetalle(fertilizaciones[0]) } }}
-                     >
-                      <div className="ui-5ad71a">
-                        <div className="ui-659921">{rangoFertilizacion(fertilizaciones[0])}</div>
-                        <i className="ti ti-chevron-right ui-77746e" aria-hidden="true"></i>
-                      </div>
-                      {(fertilizaciones[0].soluciones || []).map((sol, si) => (
-                        <div className="ui-2937bf" key={si}>
-                          <div className="ui-627852">SOL. {sol.nombre}</div>
-                          <div className="ui-d76068">
-                            {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join('  -  ')}
-                          </div>
-                        </div>
-                      ))}
-                      {notasFertilizacionVisibles(fertilizaciones[0].notas) && (
-                        <div className="ui-80cec8">{notasFertilizacionVisibles(fertilizaciones[0].notas)}</div>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                {/* Fertilizacion anterior */}
-                {fertilizaciones[1] && (
-                  <>
-                    <div className="ui-4899be">Fertilización anterior</div>
-                    <div className="ag-surface ui-fe238f" role="button" tabIndex={0} onClick={() => setFertDetalle(fertilizaciones[1])} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFertDetalle(fertilizaciones[1]) } }}
-                     >
-                      <div className="ui-5ad71a">
-                        <div className="ui-62e15c">{rangoFertilizacion(fertilizaciones[1])}</div>
-                        <i className="ti ti-chevron-right ui-d63ae8" aria-hidden="true"></i>
-                      </div>
-                      {(fertilizaciones[1].soluciones || []).map((sol, si) => (
-                        <div className="ui-2937bf" key={si}>
-                          <div className="ui-63459e">SOL. {sol.nombre}</div>
-                          <div className="ui-93a7e1">
-                            {(sol.productos || []).map(p => `${p.nombre} ${p.cantidad}${p.unidad}`).filter(x=>x.trim()).join('  -  ')}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {/* Historial de fertilizaciones */}
-                {fertilizaciones.length > 2 && (
-                  <>
-                    <div className="ui-4899be">Historial</div>
-                    {fertilizaciones.slice(2).map(fert => (
-                      <div className="ag-surface ui-652941" role="button" tabIndex={0} key={fert.id} onClick={() => setFertDetalle(fert)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFertDetalle(fert) } }}
-                       >
-                        <div className="ui-da5cd6">
-                          <div className="ui-076bb2">{rangoFertilizacion(fert)}</div>
-                          <div className="ui-a8f171">
-                            {(fert.soluciones || []).length} solución{(fert.soluciones || []).length !== 1 ? 'es' : ''}  -  {(fert.soluciones || []).reduce((s,sol) => s + (sol.productos||[]).length, 0)} productos
-                          </div>
-                        </div>
-                        <i className="ti ti-chevron-right ui-d63ae8" aria-hidden="true"></i>
-                      </div>
-                    ))}
-                  </>
-                )}
+                <div className="ui-4192ca">Aplicaciones por fecha</div>
+                {agruparFertilizaciones(fertilizaciones).map((grupo, i) => <FertGrupoFecha key={grupo.fecha} grupo={grupo} etiqueta={i === 0 ? 'Última' : ''} onDetalle={setFertDetalle} />)}
               </>
             )}
           </>
@@ -2086,6 +2020,57 @@ function CycleRow({ date, title, detail }) {
     <article className="cycle-history-row">
       <time>{date || '-'}</time>
       <div><strong>{title}</strong>{detail && <p>{detail}</p>}</div>
+    </article>
+  )
+}
+
+// Fertilizaciones del bloque agrupadas por fecha: varias aplicaciones del mismo día se leen en una sola tarjeta.
+const diaDe = (fecha) => String(fecha || '').slice(0, 10)
+const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+const fechaGrupo = (fecha) => {
+  const [anio, mes, dia] = diaDe(fecha).split('-')
+  return anio && mes && dia ? `${Number(dia)} ${MESES_CORTOS[Number(mes) - 1] || ''} ${anio}` : 'Sin fecha'
+}
+
+function agruparFertilizaciones(lista = []) {
+  const mapa = new Map()
+  ;[...lista].sort((a, b) => diaDe(b.fecha).localeCompare(diaDe(a.fecha))).forEach(registro => {
+    const clave = diaDe(registro.fecha) || 'sin-fecha'
+    if (!mapa.has(clave)) mapa.set(clave, { fecha:clave, registros:[] })
+    mapa.get(clave).registros.push(registro)
+  })
+  return [...mapa.values()]
+}
+
+function FertGrupoFecha({ grupo, onDetalle, etiqueta = '' }) {
+  const productos = grupo.registros.flatMap(registro => (registro.soluciones || []).flatMap(solucion => (solucion.productos || [])
+    .filter(p => p.nombre || p.cantidad)
+    .map(p => ({ nombre:p.nombre || 'Producto', dosis:`${p.cantidad || ''} ${p.unidad || ''}${p.modo === 'por_planta' ? '/planta' : ''}`.trim() }))))
+  const tipos = [...new Set(grupo.registros.map(r => r.plan_id ? 'Plan semanal' : 'Fertilización'))]
+  const rango = grupo.registros.find(r => r.plan_id) ? rangoFertilizacion(grupo.registros.find(r => r.plan_id)) : ''
+  const notas = [...new Set(grupo.registros.map(r => notasFertilizacionVisibles(r.notas)).filter(Boolean))]
+  const tanques = [...new Set(grupo.registros.filter(r => r.tanque_litros).map(r => `${r.tanques_cantidad || 1} ${Number(r.tanques_cantidad || 1) === 1 ? 'tanque' : 'tanques'} × ${Number(r.tanque_litros).toLocaleString('es-PY')} L`))]
+  const pie = [...tanques, ...notas]
+  return (
+    <article className="cycle-fert-date-group">
+      <header className="cycle-fert-date-group__head">
+        <span className="cycle-fert-date-group__date"><i className="ti ti-calendar-event" aria-hidden="true" /><time dateTime={diaDe(grupo.fecha)}>{fechaGrupo(grupo.fecha)}</time></span>
+        <span className="cycle-fert-date-group__type">{etiqueta ? `${etiqueta} · ` : ''}{tipos.join(' + ')}{rango ? ` · ${rango}` : ''}</span>
+        <span className="cycle-fert-date-group__count">{productos.length} producto{productos.length === 1 ? '' : 's'}</span>
+      </header>
+      {productos.length === 0 ? <p className="cycle-fert-date-group__empty">Fertilización registrada sin productos detallados.</p> : (
+        <ul className="cycle-fert-date-group__list">
+          {productos.map((p, i) => (
+            <li key={`${p.nombre}-${i}`}><span className="cycle-fert-date-group__name">{p.nombre}</span>{p.dosis && <b className="cycle-fert-date-group__dose">{p.dosis}</b>}</li>
+          ))}
+        </ul>
+      )}
+      {(pie.length > 0 || onDetalle) && (
+        <footer className="cycle-fert-date-group__foot">
+          {pie.length > 0 && <p>{pie.join(' · ')}</p>}
+          {onDetalle && <div className="cycle-fert-date-group__actions">{grupo.registros.map((registro, i) => <button type="button" key={registro.id || i} onClick={() => onDetalle(registro)}>{grupo.registros.length === 1 ? 'Ver detalle' : `Aplicación ${i + 1}`}<i className="ti ti-chevron-right" aria-hidden="true" /></button>)}</div>}
+        </footer>
+      )}
     </article>
   )
 }

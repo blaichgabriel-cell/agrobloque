@@ -145,6 +145,16 @@ function CuerpoFertilizacion({ bloques, productos, form, setForm }) {
   const esSemana = form.tipo === 'plan' || form.es_semanal
   const [avanzado, setAvanzado] = useState(esSemana || Boolean(form.plan_id || form.edit_grupo || form.edit_plan_id))
   const seleccionados = form.bloques_ids || []
+  // El selector de modo solo aparece al crear: al corregir una aplicación, aplicar un plan o editarlo el modo ya está definido.
+  const puedeElegirModo = !(form.edit_grupo || form.plan_id || form.edit_plan_id || form.edit_plan_ids?.length || form.es_semanal)
+  const cambiarModo = (modo) => {
+    if (modo === 'plan') setAvanzado(true)
+    setForm(f => {
+      if ((f.tipo === 'plan') === (modo === 'plan')) return f
+      if (modo === 'plan') { const fecha = fechaIso(1); return { ...f, tipo:'plan', fecha, fecha_fin:sumarDias(fecha, 6), recordatorio:true } }
+      return { ...f, tipo:'aplicacion', fecha:fechaIso(0), estado:'completa' }
+    })
+  }
   const alternarBloque = (bloqueId) => {
     setForm(f => {
       const actuales = new Set(f.bloques_ids || [])
@@ -240,7 +250,20 @@ function CuerpoFertilizacion({ bloques, productos, form, setForm }) {
 
   return (
     <>
-      {!esSemana && !form.plan_id && <p className="apple-note"><i className="ti ti-bolt" aria-hidden="true" /> <strong>Registro rápido:</strong> elegí los bloques, el producto y la cantidad usada. Al guardar se descuenta del inventario.</p>}
+      {puedeElegirModo && (
+        <div className="apple-modes" role="radiogroup" aria-label="¿Qué querés hacer?">
+          <button type="button" role="radio" aria-checked={!esSemana} className="apple-mode apple-mode--done" onClick={() => cambiarModo('aplicacion')}>
+            <span className="apple-mode__icon" aria-hidden="true"><i className="ti ti-droplet-filled" /></span>
+            <span className="apple-mode__text"><strong>Registrar aplicación realizada</strong><small>Ya se aplicó en el campo. Descuenta stock y suma al historial del bloque.</small></span>
+            <i className="ti ti-circle-check-filled apple-mode__check" aria-hidden="true" />
+          </button>
+          <button type="button" role="radio" aria-checked={esSemana} className="apple-mode apple-mode--plan" onClick={() => cambiarModo('plan')}>
+            <span className="apple-mode__icon" aria-hidden="true"><i className="ti ti-calendar-event" /></span>
+            <span className="apple-mode__text"><strong>Preparar plan a futuro</strong><small>Programar para más adelante. Se guarda como pendiente y avisa en Agenda.</small></span>
+            <i className="ti ti-circle-check-filled apple-mode__check" aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       <ModalSection title="Dónde y cuándo" icon="ti-map-pin">
         {esSemana && (
@@ -249,10 +272,10 @@ function CuerpoFertilizacion({ bloques, productos, form, setForm }) {
           </ModalField>
         )}
         <ModalGrid>
-          <DateQuickField label={esSemana ? 'Inicio de la semana' : 'Fecha'} required value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(fecha, 6) } : {}) }))} />
+          <DateQuickField label={esSemana ? 'Fecha programada (inicio)' : 'Fecha'} required destacada={esSemana} atajos={esSemana ? [{ etiqueta:'Mañana', dias:1 }, { etiqueta:'En 1 semana', dias:7 }] : undefined} min={esSemana && puedeElegirModo ? fechaIso(0) : undefined} max={esSemana ? fechaIso(365) : undefined} value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha, ...(f.tipo === 'plan' ? { fecha_fin:sumarDias(fecha, 6) } : {}) }))} />
           {esSemana ? (
             <ModalField label="Fin de la semana">
-              <input className="apple-control" type="date" min={form.fecha} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} />
+              <input className="apple-control" type="date" min={form.fecha} max={fechaIso(400)} value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin:e.target.value }))} />
             </ModalField>
           ) : form.plan_id ? (
             <ModalField label="Resultado">
@@ -262,6 +285,12 @@ function CuerpoFertilizacion({ bloques, productos, form, setForm }) {
             </ModalField>
           ) : null}
         </ModalGrid>
+        {esSemana && (
+          <label className="apple-check apple-check--card">
+            <input type="checkbox" checked={form.recordatorio !== false} onChange={e => setForm(f => ({ ...f, recordatorio:e.target.checked }))} />
+            <span><strong>Recordarme en la Agenda</strong><small>Crea una tarea pendiente por cada día programado. El inventario se descuenta al marcar el plan como aplicado.</small></span>
+          </label>
+        )}
         <BlockChips
           bloques={bloques}
           seleccionados={seleccionados}
@@ -327,21 +356,21 @@ function CuerpoFertilizacion({ bloques, productos, form, setForm }) {
 
 function ModalFertilizacion({ open = true, bloques, productos, form, setForm, onClose, onSave, saving, error }) {
   const esSemana = form.tipo === 'plan' || form.es_semanal
-  const titulo = esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar plan semanal' : 'Nuevo plan semanal') : form.edit_grupo ? 'Corregir aplicación' : form.plan_id ? 'Registrar aplicación del plan' : 'Aplicación puntual del día'
+  const titulo = esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Editar plan semanal' : 'Preparar plan a futuro') : form.edit_grupo ? 'Corregir aplicación' : form.plan_id ? 'Registrar aplicación del plan' : 'Registrar aplicación realizada'
   const volumen = Number(form.tanque_litros || 0) * Number(form.tanques_cantidad || 0)
   const nProductos = (form.soluciones || []).reduce((total, sol) => total + (sol.productos || []).filter(p => p.producto_id || p.nombre).length, 0)
   return (
     <UnifiedFormModal
       open={open}
-      tone="agua"
-      icon={esSemana ? 'ti-calendar-week' : 'ti-droplet'}
-      eyebrow={esSemana ? 'Programación por bloques' : form.plan_id ? 'Aplicación del plan' : 'Fuera del plan'}
+      tone={esSemana ? 'plan' : 'aplicada'}
+      icon={esSemana ? 'ti-calendar-event' : 'ti-droplet-filled'}
+      eyebrow={esSemana ? 'Plan a futuro' : form.plan_id ? 'Aplicación del plan' : 'Aplicación realizada'}
       title={titulo}
       label="Registrar fertilización"
       busy={saving}
       onClose={onClose}
       onSubmit={onSave}
-      submitLabel={esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios' : 'Guardar semana') : form.edit_grupo ? 'Guardar corrección' : 'Guardar registro'}
+      submitLabel={esSemana ? (form.edit_grupo || form.edit_plan_id ? 'Guardar cambios' : 'Guardar plan programado') : form.edit_grupo ? 'Guardar corrección' : 'Registrar aplicación'}
       error={error}
       summary={resumenPie([
         { n: (form.bloques_ids || []).length, texto: 'bloques', uno: 'bloque' },
@@ -482,13 +511,22 @@ export default function Fertilizaciones({ campoActivo }) {
     return Array.from(recetas.values())
   }, [planes])
 
+  const planesOrdenados = useMemo(() => [...planesVigentes].sort((a, b) => String(a.fecha_inicio || '').localeCompare(String(b.fecha_inicio || ''))), [planesVigentes])
+  const estadoDelPlan = (plan) => {
+    const hoyIso = hoy()
+    if ((plan.fecha_inicio || '') > hoyIso) return ['Próximo', 'proximo']
+    if (plan.fecha_fin && plan.fecha_fin < hoyIso) return ['Vencido', 'vencido']
+    return ['En curso', 'curso']
+  }
+
   const abrirModal = (tipo = 'aplicacion') => {
     setForm({
       tipo,
       plan_id: '',
       estado: 'completa',
-      fecha: hoy(),
-      fecha_fin: sumarDias(hoy(), 6),
+      fecha: tipo === 'plan' ? sumarDias(hoy(), 1) : hoy(),
+      fecha_fin: sumarDias(tipo === 'plan' ? sumarDias(hoy(), 1) : hoy(), 6),
+      recordatorio: true,
       nombre_plan: '',
       frecuencia: 'semanal',
       dia_semana: '1',
@@ -692,7 +730,7 @@ export default function Fertilizaciones({ campoActivo }) {
       if (planError) { setSaving(false); return setError(`No se pudo guardar la semana: ${planError.message}`) }
       const planesCreados = planesGuardados || []
       await Promise.all(planesCreados.map(plan => supabase.from('tareas').update({ anulada:true, cancelada:true, anulada_motivo:'Plan reprogramado', updated_at:new Date().toISOString() }).eq('origen_tipo', 'fertilizacion_plan').eq('origen_id', plan.id).eq('completada', false)))
-      const tareasPlan = planesCreados.flatMap(plan => fechasDelPlan(plan.fecha_inicio, plan.fecha_fin, plan.frecuencia, plan.dia_semana).map(fecha => ({
+      const tareasPlan = form.recordatorio === false ? [] : planesCreados.flatMap(plan => fechasDelPlan(plan.fecha_inicio, plan.fecha_fin, plan.frecuencia, plan.dia_semana).map(fecha => ({
         tipo:'fertiriego',
         descripcion:`Fertilización planificada · ${plan.nombre}`,
         fecha_programada:fecha,
@@ -709,7 +747,7 @@ export default function Fertilizaciones({ campoActivo }) {
       setSaving(false)
       setModal(false)
       if (tareasError) toast.warning('Plan semanal guardado sin tareas', { description:`No se pudieron crear sus tareas: ${tareasError.message}`, duration:12000 })
-      else toast.success('Plan semanal guardado', { description:`Se agregaron ${tareasPlan.length} tarea${tareasPlan.length === 1 ? '' : 's'} al calendario. El inventario se descontará al registrar cada aplicación.` })
+      else toast.success('Plan programado guardado', { description:tareasPlan.length ? `Se agregaron ${tareasPlan.length} tarea${tareasPlan.length === 1 ? '' : 's'} a la Agenda. El inventario se descontará al marcarlo como aplicado.` : 'Guardado sin recordatorios en la Agenda. El inventario se descontará al marcarlo como aplicado.' })
       await cargarDatos()
       return
     }
@@ -938,17 +976,28 @@ export default function Fertilizaciones({ campoActivo }) {
             <div className="ui-35a79d">Aplicaciones reales</div>
             <h1 className="ui-118f2f">Fertilizaciones</h1>
           </div>
-          {can.create && <button type="button" className="bl-btn-solid" onClick={() => abrirModal('aplicacion')}><i className="ti ti-check" /> Registrar aplicación realizada</button>}
         </div>
 
         {error && <div className="ui-173cc6">{error}</div>}
         {success && <div className="ui-fb7aa5">{success}</div>}
         {!schemaPlanesDisponible && <div className="ui-9536bb">Los planes diarios y semanales se habilitaran después de ejecutar el SQL preparado para Supabase.</div>}
 
-        {can.create && schemaPlanesDisponible && <details className="bl-card" style={{ marginBottom:18 }}>
-          <summary style={{ cursor:'pointer', padding:16, fontWeight:700 }}><i className="ti ti-calendar-week" /> Preparar un plan para más adelante</summary>
-          <div style={{ padding:'0 16px 16px' }}><p style={{ margin:'0 0 12px', color:'#667069' }}>El plan queda anotado y crea recordatorios. No descuenta inventario ni figura como realizado hasta que pulses “Aplicar hoy”.</p><button type="button" className="ag-small-action" onClick={() => abrirModal('plan')}>Preparar plan semanal</button></div>
-        </details>}
+        {can.create && (
+          <section className="fert-modes" aria-label="¿Qué querés hacer?">
+            <button type="button" className="fert-mode fert-mode--done" onClick={() => abrirModal('aplicacion')}>
+              <span className="fert-mode__icon" aria-hidden="true"><i className="ti ti-droplet-filled" /></span>
+              <span className="fert-mode__text"><strong>Registrar aplicación realizada</strong><small>Ya se aplicó en el campo. Descuenta stock y suma al historial del bloque.</small></span>
+              <i className="ti ti-arrow-right fert-mode__go" aria-hidden="true" />
+            </button>
+            {schemaPlanesDisponible && (
+              <button type="button" className="fert-mode fert-mode--plan" onClick={() => abrirModal('plan')}>
+                <span className="fert-mode__icon" aria-hidden="true"><i className="ti ti-calendar-event" /></span>
+                <span className="fert-mode__text"><strong>Preparar plan a futuro</strong><small>Programar para más adelante. Se guarda como pendiente y avisa en Agenda.</small></span>
+                <i className="ti ti-arrow-right fert-mode__go" aria-hidden="true" />
+              </button>
+            )}
+          </section>
+        )}
 
         <div className="ui-9e5e94" style={{ gridTemplateColumns:isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))' }}>
           <div className="nutrition-card ui-9128d9" style={{ ...card }}>
@@ -974,15 +1023,36 @@ export default function Fertilizaciones({ campoActivo }) {
         </div>
 
         {schemaPlanesDisponible && (
-          <div className="bl-card ui-7997ad">
-            <div className="ui-fbf92c"><div><div className="ui-f8b0a0">RECETAS REUTILIZABLES</div><h2 className="ui-41629d">Planes semanales guardados</h2></div><span className="ui-e2090b">{planesVigentes.length}</span></div>
-            {planesVigentes.length === 0 ? <div className="ui-10861c">Todavia no hay planes semanales guardados.</div> : planesVigentes.map((plan, index) => {
-              const tanques = Number(plan.tanques_cantidad) || 1
-              const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
-              const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los días' : `Cada ${['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][Number(plan.dia_semana)] || 'semana'}`
-              return <div className="ui-8e6c1c" key={plan.id} style={{ gridTemplateColumns:isMobile ? '1fr' : '1.2fr 1fr auto', borderTop:index === 0 ? 'none' : '1px solid #f0ede8' }}><div><strong className="ui-0cf08e">{plan.nombre}</strong><div className="ui-8174dd">{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</div><div className="ui-72210b">{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</div></div><div><strong className="ui-7b5575">{frecuencia}</strong><div className="ui-8174dd">{fmtNum(tanques)} tanque{tanques === 1 ? '' : 's'} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</div></div><div className="ui-19255d">{can.create && <button className="ag-small-action ui-e6110d" onClick={() => aplicarPlanHoy(plan)} disabled={saving} style={{ ...btnNegro }}>Aplicar hoy</button>}{can.create && <button className="ag-small-action ui-51b96d" onClick={() => registrarDesdePlan(plan)}>Repetir semana</button>}{can.edit && <button className="ag-small-action ui-51b96d" onClick={() => abrirEditarPlan(plan)}>Editar plan</button>}</div></div>
-            })}
-          </div>
+          <section className="fert-plans" aria-label="Planes programados">
+            <div className="fert-section-head"><div><span>PLANES PROGRAMADOS</span><h2>Próximos</h2></div><b className="fert-count">{planesOrdenados.length}</b></div>
+            {planesOrdenados.length === 0 ? (
+              <div className="fert-empty"><i className="ti ti-calendar-event" aria-hidden="true" /><p>Todavía no hay planes programados. Preparalos con anticipación y marcalos como aplicados cuando se hagan.</p></div>
+            ) : (
+              <div className="fert-plans__list">
+                {planesOrdenados.map(plan => {
+                  const tanques = Number(plan.tanques_cantidad) || 1
+                  const litros = Number(plan.tanque_litros) || ((Number(plan.litros_preparados) || 0) / tanques)
+                  const frecuencia = plan.frecuencia === 'diaria' ? 'Todos los días' : `Cada ${['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][Number(plan.dia_semana)] || 'semana'}`
+                  const [estadoTexto, estadoClave] = estadoDelPlan(plan)
+                  return (
+                    <article className="fert-plan" key={plan.id}>
+                      <div className="fert-plan__main">
+                        <div className="fert-plan__top"><strong title={plan.nombre}>{plan.nombre}</strong><span className={`fert-plan__state is-${estadoClave}`}>{estadoTexto}</span></div>
+                        <span className="fert-plan__where">{plan.bloques?.codigo || 'Sin bloque'}{plan.plantaciones?.cultivos?.nombre ? ` · ${plan.plantaciones.cultivos.nombre}` : ''}</span>
+                        <span className="fert-plan__dates"><i className="ti ti-calendar-event" aria-hidden="true" />{fmtFecha(plan.fecha_inicio)} → {plan.fecha_fin ? fmtFecha(plan.fecha_fin) : 'Sin fecha final'}</span>
+                      </div>
+                      <div className="fert-plan__meta"><span>{frecuencia}</span><b>{fmtNum(tanques)} × {fmtNum(litros)} L = {fmtNum(tanques * litros)} L</b></div>
+                      <div className="fert-plan__actions">
+                        {can.create && <button type="button" className="fert-plan__apply" onClick={() => aplicarPlanHoy(plan)} disabled={saving}>Marcar como aplicada<i className="ti ti-arrow-right" aria-hidden="true" /></button>}
+                        {can.create && <button type="button" className="fert-plan__ghost" onClick={() => registrarDesdePlan(plan)}>Repetir semana</button>}
+                        {can.edit && <button type="button" className="fert-plan__ghost" onClick={() => abrirEditarPlan(plan)}>Editar plan</button>}
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            )}
+          </section>
         )}
 
         <section className="fert-history" aria-label="Historial de fertilizaciones">

@@ -1,7 +1,7 @@
 import { CerrarX, Modal } from '../components/UI'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { registrarAuditoria } from '../lib/audit'
@@ -10,6 +10,7 @@ import { useCan } from '../lib/RoleContext'
 import { categoriaProducto } from '../lib/productCategories'
 
 const ABONO_BASE_CATEGORIA = 'Abono de base'
+const PRODUCTO_NUEVO = '__nuevo'
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
 const fmtNumero = (n, decimales = 3) => (Number(n) || 0).toLocaleString('es-PY', { maximumFractionDigits: decimales })
 
@@ -19,7 +20,8 @@ const normalizarUnidad = (unidad = '') => {
   if (['g', 'gr', 'gramo', 'gramos'].includes(u)) return 'g'
   if (['l', 'lt', 'lts', 'litro', 'litros'].includes(u)) return 'L'
   if (['cc', 'ml'].includes(u)) return 'cc'
-  if (['unidad', 'unidades', 'u'].includes(u)) return 'unidades'
+  if (['unidad', 'unidades', 'unid', 'u'].includes(u)) return 'unidades'
+  if (['sobre', 'sobres'].includes(u)) return 'sobres'
   return u || 'unidades'
 }
 
@@ -65,7 +67,7 @@ const unidadesMinimo = unidadProducto => {
   const unidad = normalizarUnidad(unidadProducto)
   if (['kg','g'].includes(unidad)) return ['kg','g']
   if (['L','cc'].includes(unidad)) return ['L','cc']
-  return ['unidades']
+  return [unidad]
 }
 
 const hoy = () => fechaIso(0)
@@ -107,6 +109,66 @@ function ModalConfirm({ mensaje, onConfirm, onCancel }) {
   )
 }
 
+// Alta rápida de un producto dentro de la compra: tarjeta anidada que se despliega en la propia fila, sin cerrar la compra.
+const GRUPOS_CATEGORIA = [
+  { label:'Semillas y plantines', keys:['Semillas', 'Plantines'] },
+  { label:'Fertilizantes y nutrientes', keys:['Fertilizante', 'Foliar', 'Hidrosoluble', 'Abono de base'] },
+  { label:'Agroquímicos', keys:['Fungicida', 'Insecticida', 'Herbicida', 'Coadyuvante'] },
+  { label:'Insumos y herramientas', keys:['Herramientas', 'Otro'] },
+]
+// `guardar` es el valor que se guarda en el producto (el mismo vocabulario que el formulario de producto).
+const UNIDADES_NUEVO = [
+  { valor:'kg', etiqueta:'kg', guardar:'kg' }, { valor:'L', etiqueta:'L', guardar:'litros' }, { valor:'g', etiqueta:'g', guardar:'gramos' },
+  { valor:'ml', etiqueta:'ml', guardar:'cc' }, { valor:'unid', etiqueta:'unid', guardar:'unidades' }, { valor:'sobres', etiqueta:'sobres', guardar:'sobres' },
+]
+
+function NuevoProductoInline({ estado, onChange, onCancel, onSave }) {
+  const raiz = useRef(null)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const reducir = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      raiz.current?.scrollIntoView({ block:'nearest', behavior:reducir ? 'auto' : 'smooth' })
+      if (window.matchMedia?.('(pointer: fine)').matches) raiz.current?.querySelector('input')?.focus({ preventScroll:true })
+    }, 120)
+    return () => window.clearTimeout(t)
+  }, [])
+  // Ctrl/Cmd + Enter dentro de la tarjeta guarda el producto, no la compra entera.
+  const alTeclear = (event) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.stopPropagation(); if (!estado.saving) onSave() }
+  }
+  const unidad = UNIDADES_NUEVO.find(u => u.valor === estado.unidad) || UNIDADES_NUEVO[0]
+  return (
+    <div className="apple-subpanel" data-tone="bloques" ref={raiz} onKeyDown={alTeclear} role="group" aria-label="Nuevo producto">
+      <div className="apple-subpanel__head">
+        <span className="apple-subpanel__icon" aria-hidden="true"><i className="ti ti-package-import" /></span>
+        <div><strong>Nuevo producto</strong><small>Se agrega al inventario y queda elegido en esta compra.</small></div>
+      </div>
+      <ModalField label="Nombre *"><input className="apple-control" value={estado.nombre} onChange={e => onChange({ nombre:e.target.value, error:'' })} placeholder="Ej: Nitrato de potasio" maxLength={120} /></ModalField>
+      <ModalGrid>
+        <ModalField label="Categoría *">
+          <select className="apple-control" value={estado.categoria_nombre} onChange={e => onChange({ categoria_nombre:e.target.value, error:'' })}>
+            <option value="">Elegir categoría…</option>
+            {GRUPOS_CATEGORIA.map(g => <optgroup key={g.label} label={g.label}>{g.keys.map(k => <option key={k} value={k}>{PRODUCT_CATEGORIES.find(c => c.key === k)?.label || k}</option>)}</optgroup>)}
+          </select>
+        </ModalField>
+        <ModalField label={`Stock mínimo (${unidad.etiqueta})`} hint="Opcional: avisa cuando quede poco.">
+          <input className="apple-control apple-control--num" type="text" inputMode="decimal" value={estado.stock_minimo} onWheel={e => e.currentTarget.blur()} onChange={e => onChange({ stock_minimo:e.target.value.replace(/[^0-9.,]/g, ''), error:'' })} placeholder="Ej: 10" />
+        </ModalField>
+      </ModalGrid>
+      <ModalGroup label="Unidad de medida">
+        <ChoiceChips wrap label="Unidad de medida" value={estado.unidad} onChange={u => onChange({ unidad:u })} options={UNIDADES_NUEVO.map(u => ({ value:u.valor, label:u.etiqueta }))} />
+      </ModalGroup>
+      {estado.error && <p className="apple-note is-danger" role="alert">{estado.error}</p>}
+      <div className="apple-subpanel__actions">
+        <button type="button" className="apple-btn apple-btn--ghost" onClick={onCancel} disabled={estado.saving}>Cancelar</button>
+        <button type="button" className="apple-btn apple-btn--primary" onClick={onSave} disabled={estado.saving} aria-busy={estado.saving || undefined}>
+          {estado.saving && <span className="apple-spinner" aria-hidden="true" />}<span>{estado.saving ? 'Guardando…' : 'Guardar y seleccionar'}</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Inventario() {
   const can = useCan('inventario')
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
@@ -121,6 +183,7 @@ export default function Inventario() {
   const [compra, setCompra] = useState({ producto_id:'', fecha:hoy(), cantidad:'', unidad:'kg', precio_total:'', proveedor:'', notas:'' })
   const [compraMultiple, setCompraMultiple] = useState({ fecha:hoy(), proveedor:'', notas:'', items:[{ producto_id:'', cantidad:'', unidad:'kg', precio_total:'' }] })
   const [productoHistorial, setProductoHistorial] = useState(null)
+  const [nuevoProd, setNuevoProd] = useState(null)
   const [saving, setSaving] = useState(false)
   const [sincronizandoAbonos, setSincronizandoAbonos] = useState(false)
   const [error, setError] = useState('')
@@ -266,12 +329,46 @@ export default function Inventario() {
   const abrirCompraMultiple = () => {
     setError('')
     setCompraMultiple({ fecha:hoy(), proveedor:'', notas:'', items:[{ producto_id:'', cantidad:'', unidad:'kg', precio_total:'' }] })
+    setNuevoProd(null)
     setModal('compra-multiple')
   }
 
   const actualizarItemCompra = (indice, cambios) => setCompraMultiple(actual => ({ ...actual, items:actual.items.map((item, i) => i === indice ? { ...item, ...cambios } : item) }))
   const agregarItemCompra = () => setCompraMultiple(actual => ({ ...actual, items:[...actual.items, { producto_id:'', cantidad:'', unidad:'kg', precio_total:'' }] }))
-  const quitarItemCompra = indice => setCompraMultiple(actual => ({ ...actual, items:actual.items.filter((_, i) => i !== indice) }))
+  const quitarItemCompra = indice => { setNuevoProd(null); setCompraMultiple(actual => ({ ...actual, items:actual.items.filter((_, i) => i !== indice) })) }
+
+  // Crea un producto desde la compra (misma forma de guardar que el formulario de producto) y lo deja elegido en la fila.
+  const crearProductoRapido = async () => {
+    const estado = nuevoProd
+    if (!estado || estado.saving) return
+    const nombre = estado.nombre.trim()
+    const actualizar = cambios => setNuevoProd(actual => actual ? { ...actual, ...cambios } : actual)
+    if (!nombre) return actualizar({ error:'Escribí el nombre del producto.' })
+    if (!estado.categoria_nombre) return actualizar({ error:'Elegí la categoría.' })
+    if (productos.some(p => normalizarNombre(p.nombre) === normalizarNombre(nombre))) return actualizar({ error:`Ya existe «${nombre}» en el inventario: elegilo de la lista.` })
+    const unidad = UNIDADES_NUEVO.find(u => u.valor === estado.unidad) || UNIDADES_NUEVO[0]
+    const minimo = Number(String(estado.stock_minimo || '').replace(',', '.')) || 0
+    actualizar({ saving:true, error:'' })
+    try {
+      let categoria_id = categorias.find(c => c.nombre === estado.categoria_nombre)?.id || null
+      if (!categoria_id) {
+        const { data:nuevaCategoria } = await supabase.from('categorias_producto').insert({ nombre:estado.categoria_nombre }).select().single()
+        if (nuevaCategoria) { categoria_id = nuevaCategoria.id; await fetchCategorias() }
+      }
+      const { data:creado, error:productoError } = await supabase.from('productos')
+        .insert({ nombre, categoria_id, principio_activo:null, unidad:unidad.guardar, stock_actual:0, stock_minimo:minimo, carencia_dias:0, notas:null })
+        .select('id').single()
+      if (productoError || !creado) throw productoError || new Error('No se pudo crear el producto.')
+      await sincronizarAbonoBase(nombre, estado.categoria_nombre)
+      await registrarAuditoria({ accion:'Registro producto', modulo:'Inventario', tabla:'productos', registroId:creado.id, detalle:`${nombre} - creado desde una compra` })
+      await fetchProductos()
+      actualizarItemCompra(estado.fila, { producto_id:creado.id, unidad:normalizarUnidad(unidad.guardar) })
+      setNuevoProd(null)
+      toast.success('Producto creado y elegido', { description:nombre })
+    } catch (e) {
+      actualizar({ saving:false, error:`No se pudo crear el producto: ${e.message || 'error desconocido'}` })
+    }
+  }
 
   const registrarCompraMultiple = async () => {
     const items = compraMultiple.items.map(item => {
@@ -606,7 +703,7 @@ export default function Inventario() {
             <ModalField label="Principio activo"><input className="apple-control" value={form.principio_activo || ''} onChange={e => setForm(f => ({ ...f, principio_activo:e.target.value }))} placeholder="Ej: Acetamiprid" /></ModalField>
           </ModalGrid>
           <ModalGroup label="Unidad">
-            <ChoiceChips wrap label="Unidad del producto" value={form.unidad} onChange={u => setForm(f => ({ ...f, unidad:u, stock_minimo_unidad:normalizarUnidad(u), stock_minimo:'' }))} options={['kg', 'gramos', 'litros', 'cc', 'unidades'].map(u => ({ value:u, label:u }))} />
+            <ChoiceChips wrap label="Unidad del producto" value={form.unidad} onChange={u => setForm(f => ({ ...f, unidad:u, stock_minimo_unidad:normalizarUnidad(u), stock_minimo:'' }))} options={['kg', 'gramos', 'litros', 'cc', 'unidades', 'sobres'].map(u => ({ value:u, label:u }))} />
           </ModalGroup>
         </ModalSection>
 
@@ -667,7 +764,7 @@ export default function Inventario() {
           </ModalGrid>
           <ModalGrid>
             <ModalField label="Cantidad comprada"><input className="apple-control apple-control--num" type="text" inputMode="decimal" value={compra.cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => setCompra(c => ({ ...c, cantidad:e.target.value.replace(/[^0-9.,]/g, '') }))} placeholder="Ej: 1" /></ModalField>
-            <ModalField label="Unidad"><select className="apple-control" value={compra.unidad} onChange={e => setCompra(c => ({ ...c, unidad:e.target.value }))}>{['kg', 'g', 'L', 'cc', 'unidades'].map(u => <option key={u}>{u}</option>)}</select></ModalField>
+            <ModalField label="Unidad"><select className="apple-control" value={compra.unidad} onChange={e => setCompra(c => ({ ...c, unidad:e.target.value }))}>{['kg', 'g', 'L', 'cc', 'unidades', 'sobres'].map(u => <option key={u}>{u}</option>)}</select></ModalField>
           </ModalGrid>
           <ModalField label="Precio total pagado (Gs.)"><input className="apple-control apple-control--num" type="text" inputMode="numeric" value={compra.precio_total} onWheel={e => e.currentTarget.blur()} onChange={e => { const n = e.target.value.replace(/[^0-9]/g, ''); setCompra(c => ({ ...c, precio_total:n ? Number(n).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 50.000" /></ModalField>
           <p className="apple-note">El stock anterior seguirá sin precio. Esta compra comienza la valorización del producto.</p>
@@ -706,15 +803,23 @@ export default function Inventario() {
             {compraMultiple.items.map((item, indice) => (
               <div className="apple-row apple-row--compra" key={indice}>
                 <div className="apple-row__name">
-                  <select className="apple-control" aria-label={`Producto ${indice + 1}`} value={item.producto_id} onChange={e => { const producto = productos.find(p => p.id === e.target.value); actualizarItemCompra(indice, { producto_id:e.target.value, unidad:normalizarUnidad(producto?.unidad) }) }}>
+                  <select className="apple-control" aria-label={`Producto ${indice + 1}`} value={item.producto_id} onChange={e => {
+                    if (e.target.value === PRODUCTO_NUEVO) { setNuevoProd({ fila:indice, nombre:'', categoria_nombre:'', unidad:'kg', stock_minimo:'', error:'', saving:false }); return }
+                    const producto = productos.find(p => p.id === e.target.value)
+                    if (nuevoProd?.fila === indice) setNuevoProd(null)
+                    actualizarItemCompra(indice, { producto_id:e.target.value, unidad:normalizarUnidad(producto?.unidad) })
+                  }}>
                     <option value="">Elegir producto…</option>
                     {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                    <option value={PRODUCTO_NUEVO}>+ Crear nuevo producto</option>
                   </select>
+                  {!item.producto_id && nuevoProd?.fila !== indice && <button type="button" className="apple-newprod" onClick={() => setNuevoProd({ fila:indice, nombre:'', categoria_nombre:'', unidad:'kg', stock_minimo:'', error:'', saving:false })}><i className="ti ti-plus" aria-hidden="true" />Crear nuevo producto</button>}
                 </div>
                 <input className="apple-control apple-control--num" aria-label="Cantidad" type="text" inputMode="decimal" value={item.cantidad} onWheel={e => e.currentTarget.blur()} onChange={e => actualizarItemCompra(indice, { cantidad:e.target.value.replace(/[^0-9.,]/g, '') })} placeholder="Cantidad" />
-                <select className="apple-control" aria-label="Unidad" value={item.unidad} onChange={e => actualizarItemCompra(indice, { unidad:e.target.value })}>{['kg', 'g', 'L', 'cc', 'unidades'].map(u => <option key={u} value={u}>{u}</option>)}</select>
+                <select className="apple-control" aria-label="Unidad" value={item.unidad} onChange={e => actualizarItemCompra(indice, { unidad:e.target.value })}>{['kg', 'g', 'L', 'cc', 'unidades', 'sobres'].map(u => <option key={u} value={u}>{u}</option>)}</select>
                 <input className="apple-control apple-control--num apple-row__precio" aria-label="Precio total pagado en guaraníes" type="text" inputMode="numeric" value={item.precio_total} onWheel={e => e.currentTarget.blur()} onChange={e => { const n = e.target.value.replace(/[^0-9]/g, ''); actualizarItemCompra(indice, { precio_total:n ? Number(n).toLocaleString('es-PY') : '' }) }} placeholder="Gs. total" />
                 <button type="button" className="apple-row__remove" aria-label={`Quitar producto ${indice + 1}`} onClick={() => quitarItemCompra(indice)} disabled={compraMultiple.items.length === 1}><i className="ti ti-x" aria-hidden="true" /></button>
+                {nuevoProd?.fila === indice && <NuevoProductoInline estado={nuevoProd} onChange={cambios => setNuevoProd(actual => actual ? { ...actual, ...cambios } : actual)} onCancel={() => setNuevoProd(null)} onSave={crearProductoRapido} />}
               </div>
             ))}
           </div>

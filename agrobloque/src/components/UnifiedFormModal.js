@@ -149,19 +149,17 @@ export function ModalGroup({ label, aside = null, children, className = '' }) {
   </div>
 }
 
-// Fecha con atajos «Hoy» y «Ayer» además del calendario.
-export function DateQuickField({ label = 'Fecha', value, onChange, required = false, id = 'apple-fecha' }) {
-  const hoy = fechaIso(0)
-  const ayer = fechaIso(-1)
-  return <div className="apple-field">
+// Fecha con atajos («Hoy» y «Ayer» por defecto) además del calendario. `atajos` = [{ etiqueta, dias }].
+export function DateQuickField({ label = 'Fecha', value, onChange, required = false, id = 'apple-fecha', atajos, min, max, destacada = false }) {
+  const lista = (atajos || [{ etiqueta:'Hoy', dias:0 }, { etiqueta:'Ayer', dias:-1 }]).map(a => ({ ...a, fecha:fechaIso(a.dias) }))
+  return <div className={`apple-field${destacada ? ' apple-field--hl' : ''}`}>
     <div className="apple-field__head">
       <label className="apple-field__label" htmlFor={id}>{label}{required ? ' *' : ''}</label>
       <div className="apple-chips apple-chips--mini" role="group" aria-label="Fecha rápida">
-        <button type="button" className="apple-chip" aria-pressed={value === hoy} onClick={() => onChange(hoy)}>Hoy</button>
-        <button type="button" className="apple-chip" aria-pressed={value === ayer} onClick={() => onChange(ayer)}>Ayer</button>
+        {lista.map(a => <button type="button" key={a.etiqueta} className="apple-chip" aria-pressed={value === a.fecha} onClick={() => onChange(a.fecha)}>{a.etiqueta}</button>)}
       </div>
     </div>
-    <input id={id} className="apple-control" type="date" value={value || ''} max={fechaIso(30)} onChange={e => onChange(e.target.value)} />
+    <input id={id} className="apple-control" type="date" value={value || ''} min={min} max={max || fechaIso(30)} onChange={e => onChange(e.target.value)} />
   </div>
 }
 
