@@ -163,6 +163,9 @@ export default function Fumigaciones() {
   const [mensajeExito, setMensajeExito] = useState('')
   const [formError, setFormError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [pasoForm, setPasoForm] = useState(1)
+  const [busquedaBloque, setBusquedaBloque] = useState('')
+  const [soloConCultivo, setSoloConCultivo] = useState(false)
   const isGuest = Boolean(guestToken)
 
   useEffect(() => { fetchFumigaciones(); fetchCampos(); fetchProductos() }, [])
@@ -256,11 +259,18 @@ export default function Fumigaciones() {
   const cerrarModal = () => {
     setModal(false)
     setForm(formVacio())
+    setPasoForm(1)
+    setBusquedaBloque('')
+    setSoloConCultivo(false)
+    setFormError('')
   }
 
   const abrirNuevo = () => {
     setDetalle(null)
     setForm(formVacio())
+    setPasoForm(1)
+    setBusquedaBloque('')
+    setSoloConCultivo(false)
     setModal(true)
   }
   const parseProductoForm = (fp, tipo) => {
@@ -295,6 +305,7 @@ export default function Fumigaciones() {
       notas: fumigacion.notas || '',
     })
     setDetalle(null)
+    setPasoForm(1)
     setModal(true)
   }
 
@@ -320,7 +331,23 @@ export default function Fumigaciones() {
     })
     setFormError('')
     setDetalle(null)
+    setPasoForm(1)
     setModal(true)
+  }
+
+  const avanzarPaso = () => {
+    setFormError('')
+    if (pasoForm === 1) {
+      if (!form.fecha) return setFormError('Elegí la fecha de la aplicación.')
+      if (!form.campo_id) return setFormError('Elegí el campo donde se realizó el trabajo.')
+      if (!form.bloques_ids.length) return setFormError('Seleccioná al menos un bloque.')
+    }
+    setPasoForm(paso => Math.min(4, paso + 1))
+  }
+
+  const retrocederPaso = () => {
+    setFormError('')
+    setPasoForm(paso => Math.max(1, paso - 1))
   }
 
   const devolverStockFumigacion = async (id) => {
@@ -647,6 +674,26 @@ export default function Fumigaciones() {
     porFecha[f.fecha].push(f)
   })
   const fechasOrdenadas = Object.keys(porFecha).sort((a, b) => b.localeCompare(a))
+  const terminoBloque = busquedaBloque.trim().toLowerCase()
+  const bloquesVisibles = bloques.filter(bloque => {
+    const cultivo = getCultivoBloque(bloque)
+    const coincide = !terminoBloque || `${bloque.codigo} ${cultivo}`.toLowerCase().includes(terminoBloque)
+    return coincide && (!soloConCultivo || Boolean(cultivo))
+  })
+  const bloquesPorSector = bloquesVisibles.reduce((grupos, bloque) => {
+    const sector = String(bloque.codigo || 'Otros').split('-')[0] || 'Otros'
+    if (!grupos[sector]) grupos[sector] = []
+    grupos[sector].push(bloque)
+    return grupos
+  }, {})
+  const bloquesSeleccionados = form.bloques_ids.map(id => bloques.find(b => b.id === id)).filter(Boolean)
+  const campoSeleccionado = campos.find(campo => campo.id === form.campo_id)
+  const pasosRegistro = [
+    ['Ubicación', 'Dónde se aplicó'],
+    ['Preparación', 'Mezcla y operarios'],
+    ['Productos', 'Insumos utilizados'],
+    ['Revisión', 'Confirmar registro'],
+  ]
 
   return (
     <div className="ag-page phytosanitary-page ui-c1c124">
@@ -805,7 +852,7 @@ export default function Fumigaciones() {
 
       {/* Modal nuevo */}
       {modal && (
-        <Modal busy={saving} onClose={cerrarModal} label="Registrar aplicación" style={{
+        <Modal busy={saving} onClose={cerrarModal} label="Registrar aplicación" className="fum-workspace-overlay" style={{
           position:'fixed',
           top:0,
           left:0,
@@ -819,13 +866,21 @@ export default function Fumigaciones() {
           padding: isDesktop ? '24px' : 0,
           overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
         }}>
-          <div className="ui-0cdbc3" style={{ borderRadius: isDesktop ? 24 : '24px 24px 0 0', maxHeight: isDesktop ? 'calc(100dvh - 96px)' : '90dvh', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-c7b1b6">{form.id ? 'Editar registro' : 'Nuevo registro'}</div>
-            <Notice tone="error">{formError}</Notice><FormHeading number="01" detail="Tipo de trabajo y ubicación">Aplicación</FormHeading>
+          <div className="ui-0cdbc3 fum-workspace" style={{ borderRadius: isDesktop ? 24 : '24px 24px 0 0', maxHeight: isDesktop ? 'calc(100dvh - 64px)' : 'calc(100dvh - 8px)', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
+            <header className="fum-workspace__header">
+              <div className="fum-workspace__mark" aria-hidden="true"><i className={`ti ${TIPOS[form.tipo]?.icon || 'ti-spray'}`} /></div>
+              <div><p>{form.id ? 'Editar registro' : 'Nueva aplicación'}</p><h2>{form.id ? 'Actualizar aplicación' : 'Registrar aplicación'}</h2><span>{pasosRegistro[pasoForm - 1][1]}</span></div>
+              <button type="button" className="fum-workspace__close ag-close-btn" aria-label="Cerrar" onClick={cerrarModal} disabled={saving}><i className="ti ti-x" aria-hidden="true" /></button>
+            </header>
+            <div className="fum-mobile-progress" aria-hidden="true">{pasosRegistro.map((_, indice) => <span key={indice} className={indice < pasoForm ? 'is-active' : ''} />)}</div>
+            <nav className="fum-workspace__steps" aria-label="Progreso del registro">{pasosRegistro.map(([titulo, detalle], indice) => { const numero=indice+1; return <button type="button" key={titulo} className={numero===pasoForm?'is-active':numero<pasoForm?'is-complete':''} onClick={()=>numero<pasoForm&&setPasoForm(numero)} aria-current={numero===pasoForm?'step':undefined}><span>{numero<pasoForm?<i className="ti ti-check" aria-hidden="true"/>:numero}</span><div><strong>{titulo}</strong><small>{detalle}</small></div></button> })}</nav>
+            <main className="fum-workspace__body">
+            <Notice tone="error">{formError}</Notice>
+            {pasoForm === 1 && <section className="fum-step"><div className="fum-step__heading"><span>Paso 1 de 4</span><h3>¿Dónde vas a trabajar?</h3><p>Elegí el tipo, la fecha, el campo y los bloques.</p></div>
             <div className="ui-74cc19">Tipo</div>
             <div className="ui-62b09f">
               {Object.entries(TIPOS).map(([k,v]) => (
-                <button className="ag-small-action ui-371bfd" key={k} onClick={() => setForm(f=>f.tipo === k ? f : ({...f,tipo:k,productos_form:f.productos_form.map(p => ({ ...p, categoria_nombre:'', producto_id:'', producto_nombre:p.producto_id ? '' : p.producto_nombre }))}))} style={{ background: form.tipo===k ? '#0F3923' : '#fff', color: form.tipo===k ? '#fff' : '#555' }}>{v.label}</button>
+                <button type="button" className="ag-small-action ui-371bfd" aria-pressed={form.tipo===k} key={k} onClick={() => setForm(f=>f.tipo === k ? f : ({...f,tipo:k,productos_form:f.productos_form.map(p => ({ ...p, categoria_nombre:'', producto_id:'', producto_nombre:p.producto_id ? '' : p.producto_nombre }))}))}><i className={`ti ${v.icon}`} aria-hidden="true" />{v.label}</button>
               ))}
             </div>
             <label className="ag-field-label ui-74cc19">Fecha *
@@ -837,19 +892,23 @@ export default function Fumigaciones() {
             </select></label>
             {bloques.length > 0 && <>
               <div className="ui-74cc19">Bloques tratados *</div>
-              <div className="ui-1e850e">
-                {bloques.map(b=>{
+              <div className="fum-block-tools"><label><i className="ti ti-search" aria-hidden="true" /><span className="ag-sr-only">Buscar bloque o cultivo</span><input value={busquedaBloque} onChange={e=>setBusquedaBloque(e.target.value)} placeholder="Buscar bloque o cultivo" /></label><button type="button" aria-pressed={soloConCultivo} onClick={()=>setSoloConCultivo(v=>!v)}><i className="ti ti-leaf" aria-hidden="true" />Con cultivo</button><strong>{form.bloques_ids.length} seleccionados</strong></div>
+              <div className="ui-1e850e fum-block-grid">
+                {bloquesVisibles.map(b=>{
                   const cultivo = getCultivoBloque(b)
                   const activo = form.bloques_ids.includes(b.id)
                   return (
-                    <div className="ui-ed8e79" role="checkbox" aria-checked={activo} tabIndex={0} key={b.id} onClick={()=>toggleBloque(b.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBloque(b.id) } }} style={{ background: activo ? '#0F3923' : '#fff', color: activo ? '#fff' : '#555' }}>
-                      <div>{b.codigo}</div>
+                    <div className="ui-ed8e79 fum-block-option" role="checkbox" aria-checked={activo} tabIndex={0} key={b.id} onClick={()=>toggleBloque(b.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBloque(b.id) } }}>
+                      <div>{b.codigo}{activo && <i className="ti ti-check" aria-hidden="true" />}</div>
                       <div className="ui-c0a65d" style={{ opacity: activo ? 0.78 : 0.7 }}>{cultivo || 'Sin cultivo'}</div>
                     </div>
                   )
                 })}
               </div>
-              {!form.id && form.bloques_ids.length > 1 && <div className="ui-afd779"><strong>¿Cómo se repartió la mezcla?</strong><div className="ui-62b09f"><button type="button" className="ag-small-action ui-371bfd" onClick={() => setForm(f => ({...f, distribucion:'por_bloque'}))} style={{ background:form.distribucion !== 'compartido' ? '#0F3923' : '#fff', color:form.distribucion !== 'compartido' ? '#fff' : '#555' }}>Tanques separados por bloque</button><button type="button" className="ag-small-action ui-371bfd" onClick={() => setForm(f => ({...f, distribucion:'compartido', tanques_cantidad:f.tanques_cantidad || '1'}))} style={{ background:form.distribucion === 'compartido' ? '#0F3923' : '#fff', color:form.distribucion === 'compartido' ? '#fff' : '#555' }}>Tanque compartido</button></div><div className="ui-315e0e">Usá “tanque compartido” cuando una misma preparación alcanzó para varios bloques.</div></div>}
+            </>}
+            </section>}
+            {pasoForm === 2 && <section className="fum-step"><div className="fum-step__heading"><span>Paso 2 de 4</span><h3>¿Cómo preparaste la aplicación?</h3><p>Indicá la mezcla, el volumen y quién realizó el trabajo.</p></div>
+              {!form.id && form.bloques_ids.length > 1 && <div className="ui-afd779"><strong>¿Cómo se repartió la mezcla?</strong><div className="ui-62b09f"><button type="button" className="ag-small-action ui-371bfd" aria-pressed={form.distribucion !== 'compartido'} onClick={() => setForm(f => ({...f, distribucion:'por_bloque'}))}>Tanques separados por bloque</button><button type="button" className="ag-small-action ui-371bfd" aria-pressed={form.distribucion === 'compartido'} onClick={() => setForm(f => ({...f, distribucion:'compartido', tanques_cantidad:f.tanques_cantidad || '1'}))}>Tanque compartido</button></div><div className="ui-315e0e">Usá “tanque compartido” cuando una misma preparación alcanzó para varios bloques.</div></div>}
               {form.bloques_ids.length > 0 && form.distribucion !== 'compartido' && (
                 <div className="ui-afd779">
                   <strong>Tanques por bloque</strong>
@@ -874,14 +933,13 @@ export default function Fumigaciones() {
                   </div>
                 </div>
               )}
-            </>}
             {operarios.length > 0 && <>
               <div className="ui-74cc19">Operarios</div>
               <div className="ui-cddf61">
                 {operarios.map(o => {
                   const activo = form.operarios_nombres?.includes(o.nombre) || normalizarOperarios(form.operario).includes(o.nombre)
                   return (
-                    <button className="ag-small-action ui-a61bd8" key={o.id} type="button" onClick={() => toggleOperario(o.nombre)} style={{ background: activo ? '#0F3923' : '#fff', color: activo ? '#fff' : '#555' }}>
+                    <button className="ag-small-action ui-a61bd8" key={o.id} type="button" aria-pressed={activo} onClick={() => toggleOperario(o.nombre)}>
                       {o.nombre}
                     </button>
                   )
@@ -903,6 +961,8 @@ export default function Fumigaciones() {
               </div>
             )}
             {form.bloques_ids.length > 0 && form.tanque_litros && form.distribucion === 'compartido' && (() => { const preparados=(Number(String(form.tanques_cantidad || '').replace(',', '.')) || 0) * (Number(form.tanque_litros) || 0); const asignados=form.bloques_ids.reduce((total,id) => total + (Number(String(form.bloques_litros?.[id] || '').replace(',', '.')) || 0),0); const sobrante=preparados-asignados; return <div className="ui-afd779" style={{ color:sobrante < 0 ? '#c84040' : 'inherit' }}>Preparados: {fmtCantidad(preparados)} L · Asignados: {fmtCantidad(asignados)} L · {sobrante >= 0 ? `Sin asignar: ${fmtCantidad(sobrante)} L` : `Exceso: ${fmtCantidad(Math.abs(sobrante))} L`}</div> })()}
+            </section>}
+            {pasoForm === 3 && <section className="fum-step"><div className="fum-step__heading"><span>Paso 3 de 4</span><h3>¿Qué productos utilizaste?</h3><p>Agregá la dosis por tanque y revisá el efecto sobre el inventario.</p></div>
             <FormHeading number="03" detail="Cantidad, unidad y efecto sobre el stock">Productos utilizados</FormHeading>
             <div className="ui-74cc19">Productos <span className="ui-d6202d">(primero elegí la categoría)</span></div>
             {form.productos_form.map((pf,i)=>{
@@ -943,10 +1003,19 @@ export default function Fumigaciones() {
             <button className="ag-small-action ui-a0449e" onClick={()=>setForm(f=>({...f,productos_form:[...f.productos_form,{categoria_nombre:'',producto_id:'',producto_nombre:'',cantidad:'',unidad_uso:'g'}]}))}>+ Agregar producto</button>
             <label className="ag-field-label ui-74cc19">Notas
             <textarea className="ui-641669" value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Observaciones..."/></label>
-            {!form.id && <div className="ui-50089c">Elegí una opción: planificar solo lo deja anotado en Agenda; registrar aplicación descuenta inventario y entra al historial.</div>}
-            {!form.id && <button className="ag-small-action ui-9d2a4a" onClick={guardarPlan} disabled={saving}><i className="ti ti-calendar-plus" /> Guardar como plan (sin descontar stock)</button>}
-            <button className="ag-form-submit ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Registrar aplicación realizada'}</button>
-            <button className="ag-small-action ui-9d2a4a" onClick={cerrarModal}>Cancelar</button>
+            </section>}
+            {pasoForm === 4 && <section className="fum-step fum-review"><div className="fum-step__heading"><span>Paso 4 de 4</span><h3>Revisá antes de registrar</h3><p>Confirmá que los datos sean correctos. Después de guardar se actualizará el inventario.</p></div>
+              <div className="fum-review__grid">
+                <article><i className="ti ti-map-pin" aria-hidden="true"/><div><span>Ubicación</span><strong>{campoSeleccionado?.nombre || 'Sin campo'}</strong><p>{bloquesSeleccionados.map(b=>b.codigo).join(' · ') || 'Sin bloques'}</p></div><button type="button" onClick={()=>setPasoForm(1)}>Editar</button></article>
+                <article><i className="ti ti-flask" aria-hidden="true"/><div><span>Preparación</span><strong>{form.distribucion==='compartido'?'Tanque compartido':'Separada por bloque'}</strong><p>{form.tanque_litros ? `${form.tanque_litros} L por tanque` : 'Sin volumen indicado'}</p></div><button type="button" onClick={()=>setPasoForm(2)}>Editar</button></article>
+                <article><i className="ti ti-package" aria-hidden="true"/><div><span>Productos</span><strong>{form.productos_form.filter(p=>p.producto_id||p.producto_nombre).length} cargados</strong><p>{form.productos_form.map(p=>p.producto_nombre).filter(Boolean).join(' · ') || 'Sin productos'}</p></div><button type="button" onClick={()=>setPasoForm(3)}>Editar</button></article>
+              </div>
+              {!form.id && <div className="fum-plan-option"><i className="ti ti-calendar-plus" aria-hidden="true"/><div><strong>¿Todavía no se realizó?</strong><p>Guardalo en Agenda sin descontar inventario.</p></div><button type="button" onClick={guardarPlan} disabled={saving}>Guardar como plan</button></div>}
+            </section>}
+            </main>
+            <aside className="fum-workspace__summary"><span>Selección actual</span><strong>{form.bloques_ids.length} bloque{form.bloques_ids.length===1?'':'s'}</strong><div>{bloquesSeleccionados.map(b=><button type="button" key={b.id} onClick={()=>toggleBloque(b.id)} aria-label={`Quitar bloque ${b.codigo}`}>{b.codigo}<i className="ti ti-x" aria-hidden="true"/></button>)}</div><dl><dt>Campo</dt><dd>{campoSeleccionado?.nombre || 'Sin elegir'}</dd><dt>Tipo</dt><dd>{TIPOS[form.tipo]?.label}</dd><dt>Fecha</dt><dd>{form.fecha ? new Date(`${form.fecha}T00:00:00`).toLocaleDateString('es-PY') : 'Sin elegir'}</dd></dl><p><i className="ti ti-info-circle" aria-hidden="true"/>Podés cambiar estos datos antes de registrar.</p></aside>
+            <div className="fum-mobile-selection"><i className="ti ti-layers-subtract" aria-hidden="true"/><strong>{bloquesSeleccionados.map(b=>b.codigo).join(' · ') || 'Sin bloques seleccionados'}</strong>{form.bloques_ids.length>0&&<button type="button" onClick={()=>setPasoForm(1)}>Editar</button>}</div>
+            <footer className="fum-workspace__footer"><button type="button" className="fum-footer-cancel" onClick={cerrarModal} disabled={saving}>Cancelar</button><div>{pasoForm>1&&<button type="button" className="fum-footer-back" onClick={retrocederPaso} disabled={saving}><i className="ti ti-arrow-left" aria-hidden="true"/>Atrás</button>}{pasoForm<4?<button type="button" className="fum-footer-next" onClick={avanzarPaso}>Continuar<i className="ti ti-arrow-right" aria-hidden="true"/></button>:<button type="button" className="fum-footer-next" onClick={guardar} disabled={saving}>{saving?'Guardando...':form.id?'Guardar cambios':'Registrar aplicación'}<i className="ti ti-check" aria-hidden="true"/></button>}</div></footer>
           </div>
         </Modal>
       )}

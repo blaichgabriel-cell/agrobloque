@@ -1,3 +1,5 @@
+@import './fumigaciones-workspace.css';
+
 :root {
   --surface-canvas:#f2f5f3;
   --surface-glass:rgba(255,255,255,.72);
