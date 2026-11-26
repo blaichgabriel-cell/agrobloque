@@ -89,3 +89,46 @@
   .fum-workspace__footer { grid-column:1; grid-row:5; min-height:72px; padding:9px 14px calc(9px + env(safe-area-inset-bottom,0px)); }.fum-workspace__footer>div { flex:1; }.fum-workspace__footer>div button { flex:1; justify-content:center; }.fum-footer-cancel { padding:0 7px !important; }.fum-footer-next { min-width:0; }
   .fum-review__grid article { padding:12px 5px; }.fum-plan-option { grid-template-columns:32px 1fr; }.fum-plan-option button { grid-column:1/-1; }
 }
+
+/* Alineación con el sistema visual real de AgroBloque. */
+.fum-workspace-overlay { background:rgba(15,41,30,.42) !important; backdrop-filter:blur(10px) saturate(130%); }
+.fum-workspace-overlay>div.fum-workspace { border:var(--border-specular); border-radius:var(--radius-xl) !important; background:rgba(248,250,249,.96) !important; color:var(--slate-900); box-shadow:var(--shadow-float),0 0 0 1px rgba(15,41,30,.07) !important; }
+.fum-workspace__header { min-height:88px; border-bottom:var(--border-subtle); background:rgba(255,255,255,.78); backdrop-filter:blur(20px) saturate(160%); }
+.fum-workspace__header:after { display:none; }
+.fum-workspace__mark { background:var(--forest-800); color:#fff; box-shadow:0 6px 16px rgba(15,57,35,.2); }
+.fum-workspace__header>div:nth-child(2) { flex:1; }
+.fum-workspace__header p { color:var(--forest-600); }
+.fum-workspace__header h2 { color:var(--slate-900); font-family:inherit; font-size:23px; font-weight:750; letter-spacing:-.025em; }
+.fum-workspace__header span { color:var(--slate-500); }
+.fum-workspace__close { border:var(--border-specular); background:rgba(255,255,255,.76); color:var(--slate-700); box-shadow:0 0 0 1px rgba(15,41,30,.06); }
+.fum-workspace__steps { border-right:var(--border-subtle); background:rgba(242,245,243,.72); }
+.fum-workspace__steps button { color:#78877f; }
+.fum-workspace__steps button>span { border-color:rgba(15,41,30,.15); background:rgba(255,255,255,.82); }
+.fum-workspace__steps button.is-active { color:var(--forest-800); }
+.fum-workspace__steps button.is-active>span,.fum-workspace__steps button.is-complete>span { border-color:var(--forest-800); background:var(--forest-800); }
+.fum-workspace__body { background:rgba(255,255,255,.48); }
+.fum-step__heading>span { color:var(--forest-600); }
+.fum-step__heading h3 { color:var(--slate-900); font-family:inherit; font-size:23px; font-weight:750; }
+.fum-step__heading p { color:var(--ag-muted); }
+.fum-step .ui-62b09f>.ui-371bfd { border:var(--border-subtle) !important; background:rgba(255,255,255,.72) !important; color:var(--slate-700) !important; }
+.fum-step .ui-62b09f>.ui-371bfd[aria-pressed='true'] { border-color:var(--forest-800) !important; background:var(--forest-800) !important; color:#fff !important; box-shadow:0 5px 14px rgba(15,57,35,.18); }
+.fum-step input,.fum-step select,.fum-step textarea,.fum-block-tools label { background:#f8faf9 !important; }
+.fum-block-tools button { background:var(--surface-glass); color:var(--forest-700); }
+.fum-block-tools button[aria-pressed='true'] { border-color:rgba(23,112,68,.22); background:var(--sage-100); }
+.fum-block-option.ui-ed8e79 { background:rgba(255,255,255,.7) !important; color:var(--slate-700) !important; }
+.fum-block-option.ui-ed8e79[aria-checked='true'] { border-color:var(--forest-700) !important; background:var(--sage-100) !important; color:var(--forest-900) !important; box-shadow:0 4px 12px rgba(15,57,35,.08) !important; }
+.fum-step .ui-afd779,.fum-plan-option { background:rgba(242,245,243,.8) !important; }
+.fum-workspace__summary { border-left:var(--border-subtle); background:rgba(233,243,236,.68); }
+.fum-workspace__summary>strong { color:var(--forest-800); font-family:inherit; font-size:27px; font-weight:760; }
+.fum-workspace__summary>div button { background:rgba(255,255,255,.7); color:var(--forest-800); box-shadow:0 0 0 1px rgba(15,41,30,.07); }
+.fum-workspace__footer { border-top:var(--border-subtle); background:rgba(255,255,255,.82); backdrop-filter:blur(18px); }
+.fum-footer-back { background:rgba(255,255,255,.72); color:var(--forest-700); }
+.fum-footer-next { border-color:var(--forest-800); background:var(--forest-800); box-shadow:0 5px 14px rgba(15,57,35,.18); }
+
+@media (max-width:767px) {
+  .fum-workspace-overlay { background:var(--surface-canvas) !important; }
+  .fum-workspace-overlay>div.fum-workspace { background:var(--surface-canvas) !important; }
+  .fum-workspace__header { background:rgba(255,255,255,.78); }
+  .fum-workspace__body { background:transparent; }
+  .fum-mobile-selection { background:var(--sage-100); }
+}
