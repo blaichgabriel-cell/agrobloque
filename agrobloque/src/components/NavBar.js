@@ -102,6 +102,6 @@ export default function NavBar({ isGuest = false, role, modo = 'campo', isPlatfo
       {operaciones.length > 0 && tab('operacion', { icono: 'ti-tractor', etiqueta: 'Operación', activa: OPERACIONES.some(op => op.path === ruta), onClick: irOperacion })}
       {grupos.length > 0 && tab('modulos', { icono: showMore ? 'ti-x' : 'ti-grid-dots', etiqueta: 'Módulos', activa: showMore || enModulos, onClick: () => setShowMore(value => !value), extra: { 'aria-controls': 'ag-more-menu', 'aria-expanded': showMore } })}
     </nav>
-    {work && <WorkActions role={role} isGuest={isGuest} onClose={() => setWork(false)} />}
+    <WorkActions open={work} role={role} isGuest={isGuest} onClose={() => setWork(false)} />
   </>
 }

@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { canPerformAction } from '../lib/permissions'
+import UnifiedFormModal from './UnifiedFormModal'
 
 // Acción rápida universal (botón «+» de la barra inferior y «Registrar trabajo» del Inicio).
 // Los accesos con ?nuevo=1 abren directamente el alta; Fumigaciones primero muestra su resumen e historial.
@@ -14,21 +15,30 @@ export const workOptions = [
 ]
 export const availableWork = (role, isGuest) => isGuest ? [] : workOptions.filter(item => canPerformAction(role, item.key, 'create'))
 
-export default function WorkActions({ role, isGuest, onClose }) {
-  const dialog = useRef(null)
+export default function WorkActions({ open = true, role, isGuest, onClose }) {
   const navigate = useNavigate()
-  useEffect(() => {
-    const element = dialog.current
-    element.showModal()
-    return () => element.close()
-  }, [])
+  const opciones = availableWork(role, isGuest)
   const ir = path => { onClose(); navigate(path) }
-  return <dialog ref={dialog} className="ag-work-dialog ag-quick-sheet" onCancel={onClose} onClose={() => { if (!dialog.current?.open) onClose() }} onClick={e => { if (e.target === dialog.current) onClose() }} aria-labelledby="work-title">
-    <div className="ag-quick-sheet__head"><h2 id="work-title">¿Qué vas a registrar?</h2><button type="button" className="ag-icon-button" onClick={onClose} aria-label="Cerrar"><i className="ti ti-x" aria-hidden="true" /></button></div>
-    <div className="ag-quick-grid">{availableWork(role, isGuest).map(item => <button type="button" key={item.key} data-tone={item.tone} onClick={() => ir(item.path)}>
-      <span className="ag-quick-grid__icon" aria-hidden="true"><i className={`ti ${item.icon}`} /></span>
-      <strong>{item.label}</strong>
-      <small>{item.detail}</small>
-    </button>)}</div>
-  </dialog>
+  return (
+    <UnifiedFormModal
+      open={open}
+      tone="bloques"
+      icon="ti-plus"
+      eyebrow="Registrar"
+      title="¿Qué vas a registrar?"
+      subtitle="Elegí el trabajo y te llevamos directo al formulario."
+      label="Registrar trabajo"
+      onClose={onClose}
+      submitLabel={null}
+      cancelLabel="Cerrar"
+    >{() => opciones.length === 0
+      ? <p className="apple-empty">Tu usuario no tiene acciones de registro habilitadas.</p>
+      : <div className="apple-quick">{opciones.map((item, i) => (
+        <button type="button" className="apple-quick__item" key={item.key} data-tone={item.tone} data-autofocus={i === 0 ? '' : undefined} onClick={() => ir(item.path)}>
+          <span className="apple-quick__icon" aria-hidden="true"><i className={`ti ${item.icon}`} /></span>
+          <strong>{item.label}</strong>
+          <small>{item.detail}</small>
+        </button>
+      ))}</div>}</UnifiedFormModal>
+  )
 }
