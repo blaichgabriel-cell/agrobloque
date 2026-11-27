@@ -35,6 +35,7 @@ const FOTO_PERFIL_KEY = 'agrobloque-foto-perfil'
 const BACKUP_KEY = 'agrobloque-ultimo-backup'
 
 const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
+const cantidad = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`
 const esDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 1100
 
 function PermisosSelector({ permisos, onChange, ayuda }) {
@@ -590,23 +591,39 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     await fetchAll()
   }
 
-  const menuItems = [
-    { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email }) },
-    { icon:'ti-building-community', title:'Empresa', sub: organization?.nombre || 'Configurar identidad', color:'#176a45', bg:'#edf6ec', action: () => abrir('empresa', { ...organization }) },
-    { icon:'ti-building', title:'Campos', sub: campos.length + ' campos', action: () => abrir('campos') },
-    { icon:'ti-seeding', title:'Cultivos', sub: cultivos.length + ' cultivos', color:"#124e38", bg:'#eeeeee', action: () => abrir('cultivos') },
-    { icon:'ti-users', title:'Operarios', sub: operarios.length + ' personas', action: () => abrir('operarios') },
-    { icon:'ti-leaf', title:'Abonos de base', sub: abonos.length + ' abonos', color:"#124e38", bg:'#eeeeee', action: () => abrir('abonos') },
-    { icon:'ti-map', title:'Tipo de bloques', sub: 'Invernadero / campo abierto', color:"#124e38", bg:'#eeeeee', action: () => abrir('bloques') },
-    { icon:'ti-building-store', title:'Compradores', sub: compradores.length + ' compradores', color:'#185fa5', bg:'#e6f1fb', action: () => navigate('/compradores') },
-    { icon:'ti-receipt-2', title:'Cuentas a pagar', sub:'Créditos con proveedores', color:"#08603f", bg:'#edf6ec', action: () => navigate('/cuentas-pagar') },
-    { icon:'ti-link', title:'Invitados', sub: invitados.filter(i => i.activo).length + ' activos', color:"#08603f", bg:'#edf6ec', action: () => abrir('invitados', { nombre:'', campo_id:'', dias:'30', permisos: [] }) },
-    { icon:'ti-shield-lock', title:'Usuarios y permisos', sub: roles.length + ' registrados', color:"#08603f", bg:'#edf6ec', action: () => abrir('roles', { email:'', nombre:'', rol:'operador', activo:true, notas:'', permisos: [], acciones: {}, password:'', password_confirm:'', mostrar_password:false }) },
-    { icon:'ti-history', title:'Auditoria', sub: 'Ver movimientos', color:"#124e38", bg:'#eeeeee', action: () => navigate('/auditoria') },
-    { icon:'ti-download', title:'Backup de datos', sub: ultimoBackup ? `Último: ${String(ultimoBackup).slice(0,10)}${backupVencido() ? ' - recomendado' : ''}` : 'Recomendado ahora', color: backupVencido() ? '#e07b00' : '#176a25', bg: backupVencido() ? '#fff4e8' : '#edf6ec', action: descargarBackup },
-    { icon:'ti-circle-plus', title:'Nueva empresa', sub:'Dar de alta un nuevo cliente', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => abrir('nuevaEmpresa', { nombre:'', owner_email:'' }) },
-    { icon:'ti-presentation', title:'Vista nuevo cliente', sub:'Probar el primer ingreso sin guardar datos', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => navigate('/primeros-pasos') },
-  ].filter((item, index) => (esAdmin || index === 0) && (!item.platformOnly || isPlatformAdmin))
+  // Accesos de la pantalla, agrupados. `soloAdmin` (por defecto) oculta el acceso a quien no administra la empresa.
+  const GRUPOS = [
+    { clave: 'cuenta', titulo: 'Mi cuenta', sub: 'Tus datos y la identidad de la empresa', tone: 'neutral', items: [
+      { icon: 'ti-user', title: 'Cuenta', sub: perfil.nombre || perfil.email, soloAdmin: false, action: () => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email }) },
+      { icon: 'ti-building-community', title: 'Empresa', sub: organization?.nombre || 'Configurar identidad', action: () => abrir('empresa', { ...organization }) },
+    ] },
+    { clave: 'produccion', titulo: 'Producción', sub: 'Campos, cultivos y personal', tone: 'bloques', items: [
+      { icon: 'ti-building', title: 'Campos', sub: cantidad(campos.length, 'campo', 'campos'), action: () => abrir('campos') },
+      { icon: 'ti-seeding', title: 'Cultivos', sub: cantidad(cultivos.length, 'cultivo', 'cultivos'), action: () => abrir('cultivos') },
+      { icon: 'ti-users', title: 'Operarios', sub: cantidad(operarios.filter(o => o.activo !== false).length, 'persona', 'personas'), action: () => abrir('operarios') },
+      { icon: 'ti-leaf', title: 'Abonos de base', sub: cantidad(abonos.length, 'abono', 'abonos'), action: () => abrir('abonos') },
+      { icon: 'ti-map', title: 'Tipo de bloques', sub: 'Invernadero o campo abierto', action: () => abrir('bloques') },
+    ] },
+    { clave: 'comercial', titulo: 'Comercial y finanzas', sub: 'Quién te compra y a quién le debés', tone: 'finanzas', items: [
+      { icon: 'ti-building-store', title: 'Compradores', sub: cantidad(compradores.length, 'comprador', 'compradores'), action: () => navigate('/compradores') },
+      { icon: 'ti-receipt-2', title: 'Cuentas a pagar', sub: 'Créditos con proveedores', action: () => navigate('/cuentas-pagar') },
+    ] },
+    { clave: 'accesos', titulo: 'Accesos y seguridad', sub: 'Quién entra a AgroBloque y qué puede hacer', tone: 'agua', items: [
+      { icon: 'ti-shield-lock', title: 'Usuarios y permisos', sub: cantidad(roles.length, 'registrado', 'registrados'), action: () => abrir('roles', { email: '', nombre: '', rol: 'operador', activo: true, notas: '', permisos: [], acciones: {}, password: '', password_confirm: '', mostrar_password: false }) },
+      { icon: 'ti-link', title: 'Invitados', sub: cantidad(invitados.filter(i => i.activo).length, 'link activo', 'links activos'), action: () => abrir('invitados', { nombre: '', campo_id: '', dias: '30', permisos: [] }) },
+      { icon: 'ti-history', title: 'Auditoría', sub: 'Ver todos los movimientos', action: () => navigate('/auditoria') },
+    ] },
+    { clave: 'datos', titulo: 'Tus datos', sub: 'Una copia de seguridad te cuida de cualquier imprevisto', tone: backupVencido() ? 'alerta' : 'bloques', items: [
+      { icon: 'ti-download', title: 'Backup de datos', sub: ultimoBackup ? `Último: ${String(ultimoBackup).slice(0, 10)}` : 'Todavía no descargaste ninguno', aviso: backupVencido() ? 'Recomendado' : '', action: descargarBackup },
+    ] },
+    { clave: 'plataforma', titulo: 'Plataforma', sub: 'Solo para administradores generales', tone: 'finanzas', platformOnly: true, items: [
+      { icon: 'ti-circle-plus', title: 'Nueva empresa', sub: 'Dar de alta un nuevo cliente', action: () => abrir('nuevaEmpresa', { nombre: '', owner_email: '' }) },
+      { icon: 'ti-presentation', title: 'Vista nuevo cliente', sub: 'Probar el primer ingreso sin guardar datos', action: () => navigate('/primeros-pasos') },
+    ] },
+  ].filter(g => !g.platformOnly || isPlatformAdmin)
+    .map(g => ({ ...g, items: g.items.filter(it => esAdmin || it.soloAdmin === false) }))
+    .filter(g => g.items.length > 0)
+  const rolEtiqueta = role?.label || ({ admin: 'Administrador', operador: 'Operador', lectura: 'Solo lectura' }[role?.rol] || '')
 
   // --- Ventana unificada: cada «modal» es una vista con su título, cuerpo y acción principal.
   const fila = (clave, titulo, sub, acciones) => (
@@ -624,7 +641,6 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
       <input className="apple-control" data-autofocus value={form[clave] || ''} onChange={e => setForm(f => ({ ...f, [clave]: e.target.value }))} placeholder={placeholder} {...extra} />
     </ModalField>
   )
-  const cantidad = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`
 
   let vista = null
   switch (modal) {
@@ -896,45 +912,38 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
   }
 
   return (
-    <div className="ag-page ui-c1c124">
-      <input className="ui-cb4589" type="file" accept="image/*" ref={fotoRef} onChange={subirFotoPerfil} />
+    <div className="ag-page bl-module-page cfg-page">
+      <input hidden type="file" accept="image/*" ref={fotoRef} onChange={subirFotoPerfil} />
 
-      <div className="ui-327143">
-        <div className="ui-476525">Sistema</div>
-        <div className="ag-page-title ui-83e514">Configuración</div>
-        {error && !modal && <div className="ui-e136cb">{error}</div>}
-        {success && !modal && <div className="ui-c90154">{success}</div>}
-
-        {/* Tarjeta de perfil rapida */}
-        <div className="ui-528a72">
-          <div className="ui-e020d3">
-            {perfil.foto ? (
-              <img className="ui-ba97c6" src={perfil.foto} alt="perfil"
-               />
-            ) : (
-              <div className="ui-cb1feb">
-                <i className="ti ti-user ui-a1fcc8" aria-hidden="true"></i>
-              </div>
-            )}
-            <button aria-label="Cambiar foto" className="ag-small-action ui-3b8eb9" onClick={() => fotoRef.current?.click()}
-             >
-              <i className="ti ti-camera ui-aa481a" aria-hidden="true"></i>
-            </button>
-          </div>
-          <div className="ui-89bd09">
-            <div className="ui-3eb7c1">
-              {perfil.nombre || 'Sin nombre'}
-            </div>
-            <div className="ui-e571fd">{perfil.email}</div>
-          </div>
-          <button className="ag-small-action ui-6d9a58" onClick={() => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email })}
-           >
-            Editar
-          </button>
+      <header className="bl-page-head" data-tone="neutral">
+        <div className="bl-page-title">
+          <span className="bl-page-icon" aria-hidden="true"><i className="ti ti-settings" /></span>
+          <div><small>Sistema</small><h1 className="ag-page-title">Configuración</h1></div>
         </div>
-      </div>
+      </header>
 
-      <div className="ui-1a3247">
+      {error && !modal && <div className="cfg-banner is-error" role="alert"><i className="ti ti-alert-circle" aria-hidden="true" />{error}</div>}
+      {success && !modal && <div className="cfg-banner is-ok" role="status"><i className="ti ti-circle-check" aria-hidden="true" />{success}</div>}
+
+      <section className="cfg-hero" aria-label="Tu perfil">
+        <div className="cfg-hero__avatar">
+          {perfil.foto ? <img src={perfil.foto} alt="Foto de perfil" /> : <span aria-hidden="true"><i className="ti ti-user" /></span>}
+          <button type="button" aria-label="Cambiar foto" onClick={() => fotoRef.current?.click()}><i className="ti ti-camera" aria-hidden="true" /></button>
+        </div>
+        <div className="cfg-hero__copy">
+          <strong>{perfil.nombre || 'Sin nombre'}</strong>
+          <span>{perfil.email}</span>
+          {(rolEtiqueta || organization?.nombre) && (
+            <div className="cfg-hero__chips">
+              {rolEtiqueta && <em><i className="ti ti-shield-check" aria-hidden="true" />{rolEtiqueta}</em>}
+              {organization?.nombre && <em><i className="ti ti-building-community" aria-hidden="true" />{organization.nombre}</em>}
+            </div>
+          )}
+        </div>
+        <button type="button" className="cfg-hero__edit" onClick={() => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email })}><i className="ti ti-pencil" aria-hidden="true" />Editar perfil</button>
+      </section>
+
+      <div className="cfg-pair">
         <section className="ag-surface ag-appearance-setting" aria-labelledby="appearance-title">
           <div className="ag-appearance-setting__header">
             <span className="ag-theme-setting__icon" aria-hidden="true"><i className={`ti ${theme === 'dark' ? 'ti-moon-stars' : 'ti-sun'}`} /></span>
@@ -955,23 +964,26 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
           </div>
         </section>
         {(esAdmin || isPlatformAdmin) && <SeguridadDosFactores obligatorio={isPlatformAdmin} />}
-        {esAdmin && !isPlatformAdmin && <SoporteCliente />}
-        {menuItems.map((it, i) => (
-          <div className="ag-surface ui-f40337" role="button" tabIndex={0} key={i} onClick={it.action} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); it.action() } }}>
-            <div className="ui-3044e7" style={{ background: it.bg || '#f2f1ef' }}>
-              <i className={`${`ti ${it.icon}`} ui-bf83cf`} style={{ color: it.color || '#0a0a0a' }} aria-hidden="true"></i>
-            </div>
-            <div className="ui-da5cd6">
-              <div className="ui-451b76">{it.title}</div>
-              <div className="ui-2cf511">{it.sub}</div>
-            </div>
-            <i className="ti ti-chevron-right ui-d63ae8" aria-hidden="true"></i>
-          </div>
-        ))}
-        <div className="ag-surface ui-4000ee" role="button" tabIndex={0} onClick={() => forceLocalSignOut()} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); forceLocalSignOut() } }}>
-          <div className="ui-fce2c6">Cerrar sesión</div>
-        </div>
       </div>
+
+      {esAdmin && !isPlatformAdmin && <SoporteCliente />}
+
+      {GRUPOS.map(grupo => (
+        <section className="cfg-group" data-tone={grupo.tone} key={grupo.clave} aria-labelledby={`cfg-${grupo.clave}`}>
+          <header className="cfg-group__head"><h2 id={`cfg-${grupo.clave}`}>{grupo.titulo}</h2><p>{grupo.sub}</p></header>
+          <div className="cfg-cards">
+            {grupo.items.map(it => (
+              <button type="button" className="cfg-card" key={it.title} onClick={it.action} disabled={loading && it.title === 'Backup de datos'}>
+                <span className="cfg-card__icon" aria-hidden="true"><i className={`ti ${it.icon}`} /></span>
+                <span className="cfg-card__copy"><strong>{it.title}{it.aviso && <em>{it.aviso}</em>}</strong><small>{it.sub}</small></span>
+                <i className="ti ti-chevron-right cfg-card__go" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      <button type="button" className="cfg-logout" onClick={() => forceLocalSignOut()}><i className="ti ti-logout" aria-hidden="true" />Cerrar sesión</button>
 
       <UnifiedFormModal
         open={Boolean(vista)}
