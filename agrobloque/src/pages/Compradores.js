@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { useCan } from '../lib/RoleContext'
+import UnifiedFormModal, { ModalSection, ModalField, ModalGroup, ChoiceChips, resumenPie } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 
 const TIPOS = ['Mayorista','Mercado','Particular','Exportador','Otro']
 
@@ -59,7 +61,7 @@ export default function Compradores() {
   }
 
   const guardar = async () => {
-    if (!form.nombre.trim()) return
+    if (!form.nombre.trim()) { setError('Escribí el nombre del comprador.'); return }
     setSaving(true); setError('')
     const payload = { nombre:form.nombre.trim(), tipo:form.tipo, telefono:form.telefono||null, notas:form.notas||null }
     const { error:guardarError } = form.id
@@ -67,6 +69,7 @@ export default function Compradores() {
       : await supabase.from('compradores').insert(payload)
     if (guardarError) { setError(`No se pudo guardar el comprador: ${guardarError.message || 'revisá la conexión.'}`); setSaving(false); return }
     await fetchCompradores(); setSaving(false); setModal(false); setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' })
+    toast.success(form.id ? 'Comprador actualizado' : 'Comprador registrado', { description: payload.nombre })
   }
 
   const eliminar = (c) => {
@@ -87,9 +90,6 @@ export default function Compradores() {
     return { kg, ingresos, precioProm, operaciones: h.length }
   }
 
-  const inpStyle = { width:'100%', padding:'11px 14px', borderRadius:'var(--ag-radius)', border:"1px solid #e2e9e5", background:'#fff', fontSize:13, color:"#182c25", marginBottom:12 }
-  const lblStyle = { fontSize:12, color:"#697970", marginBottom:6, display:'block' }
-
   return (
     <div className="ag-page ui-c1c124">
       {confirmar && <ModalConfirm nombre={confirmar.nombre} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
@@ -101,7 +101,7 @@ export default function Compradores() {
             <div className="ui-476525">Ventas</div>
             <div className="ag-page-title ui-136b85">Compradores</div>
           </div>
-          {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' }); setModal(true) }}>
+          {can.create && <button className="ui-56054f" aria-label="Agregar registro" onClick={() => { setError(''); setForm({ nombre:'', tipo:'Mayorista', telefono:'', notas:'' }); setModal(true) }}>
             <i className="ti ti-plus ui-d0538c" aria-hidden="true"></i>
           </button>}
         </div>
@@ -174,7 +174,7 @@ export default function Compradores() {
                   })}
 
                   <div className="ui-c49781">
-                    {can.edit && <button className="ag-small-action ui-80b205" onClick={() => { setForm({...c}); setModal(true) }}>Editar</button>}
+                    {can.edit && <button className="ag-small-action ui-80b205" onClick={() => { setError(''); setForm({...c}); setModal(true) }}>Editar</button>}
                     {can.delete && <button className="ag-small-action ui-ea5cb1" onClick={() => eliminar(c)}>Eliminar</button>}
                   </div>
                 </div>
@@ -187,28 +187,34 @@ export default function Compradores() {
         <NotasPanel modulo="compradores" titulo="Bloc de notas de compradores" />
       </div>
 
-      {modal && (
-        <Modal onClose={() => setModal(false)} label="Compradores" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div className="ui-ab5655" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-c7b1b6">{form.id ? 'Editar comprador' : 'Nuevo comprador'}</div>
-            {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
-            <label style={lblStyle}>Nombre *</label>
-            <input style={inpStyle} value={form.nombre} onChange={e => setForm(f => ({...f, nombre:e.target.value}))} placeholder="Ej: Mercado Central"/>
-            <label style={lblStyle}>Tipo</label>
-            <div className="ui-1e850e">
-              {TIPOS.map(t => (
-                <button className="ag-small-action ui-0b12f2" key={t} onClick={() => setForm(f => ({...f, tipo:t}))} style={{ background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>{t}</button>
-              ))}
-            </div>
-            <label style={lblStyle}>Teléfono (opcional)</label>
-            <input style={inpStyle} value={form.telefono} onChange={e => setForm(f => ({...f, telefono:e.target.value}))} placeholder="Ej: 0981 000 000"/>
-            <label style={lblStyle}>Notas (opcional)</label>
-            <textarea className="ui-dc8f36" style={{ ...inpStyle }} value={form.notas} onChange={e => setForm(f => ({...f, notas:e.target.value}))} placeholder="Observaciones..."/>
-            <button className="ag-small-action ui-17d991" onClick={guardar} disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
-            <button className="ag-small-action ui-9d2a4a" onClick={() => setModal(false)}>Cancelar</button>
-          </div>
-        </Modal>
-      )}
+      <UnifiedFormModal
+        open={modal}
+        tone="finanzas"
+        icon="ti-building-store"
+        eyebrow={form.id ? 'Editar comprador' : 'Ventas'}
+        title={form.id ? 'Editar comprador' : 'Nuevo comprador'}
+        label={form.id ? 'Editar comprador' : 'Nuevo comprador'}
+        busy={saving}
+        onClose={() => setModal(false)}
+        onSubmit={guardar}
+        submitLabel={form.id ? 'Guardar cambios' : 'Guardar comprador'}
+        error={modal ? error : ''}
+        summary={resumenPie([
+          { solo: form.nombre.trim() },
+          { solo: form.tipo },
+        ]) || 'Escribí el nombre del comprador'}
+      >{() => <>
+        <ModalSection title="Comprador" icon="ti-building-store">
+          <ModalField label="Nombre *"><input className="apple-control" data-autofocus value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Mercado Central" /></ModalField>
+          <ModalGroup label="Tipo">
+            <ChoiceChips wrap label="Tipo de comprador" value={form.tipo} onChange={tipo => setForm(f => ({ ...f, tipo }))} options={TIPOS.map(t => ({ value:t, label:t }))} />
+          </ModalGroup>
+          <ModalField label="Teléfono"><input className="apple-control apple-control--num" type="tel" inputMode="tel" value={form.telefono || ''} onChange={e => setForm(f => ({ ...f, telefono:e.target.value }))} placeholder="Ej: 0981 000 000" /></ModalField>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(form.notas)} badge={form.notas ? '' : 'notas'}>
+          <ModalField label="Notas"><textarea className="apple-control" value={form.notas || ''} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones…" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </div>
   )
 }

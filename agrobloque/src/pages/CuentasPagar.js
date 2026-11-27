@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { imprimirHtml } from '../lib/exporters'
 import NotasPanel from '../components/NotasPanel'
-import { Modal as SharedModal } from '../components/UI'
 import { supabase } from '../lib/supabase'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 
 const tiposProveedor = ['Agropecuaria', 'Ferreteria', 'Transporte', 'Servicios', 'Otro']
 const categorias = ['Insumos', 'Fertilizantes', 'Agroquimicos', 'Semillas', 'Herramientas', 'Servicios', 'Combustible', 'Otros']
@@ -14,10 +15,12 @@ const tiposMovimiento = [
   { value: 'ajuste_resta', label: 'Descuento o ajuste a favor', signo: -1 },
 ]
 
-const hoy = () => new Date().toISOString().slice(0, 10)
+const hoy = () => fechaIso(0)
 const fmtGs = (n) => `Gs. ${Math.round(Number(n) || 0).toLocaleString('es-PY')}`
-const parseGs = (v) => Number(String(v || '').replace(/[^\d.-]/g, '')) || 0
+const parseGs = (v) => Number(String(v || '').replace(/[^\d]/g, '')) || 0
 const signoMovimiento = (tipo) => tiposMovimiento.find(t => t.value === tipo)?.signo || 1
+
+const ICONO_MOVIMIENTO = { compra_credito: 'ti-shopping-cart', pago: 'ti-cash', ajuste_suma: 'ti-plus', ajuste_resta: 'ti-minus' }
 
 const proveedorVacio = {
   nombre: '',
@@ -52,6 +55,7 @@ export default function CuentasPagar() {
   const [filtro, setFiltro] = useState('todos')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     cargarDatos()
@@ -109,8 +113,8 @@ export default function CuentasPagar() {
 
   const abrirMovimiento = (movimiento = null, proveedorId = '') => {
     setMovimientoForm(movimiento
-      ? { ...movimiento, monto: String(Math.round(Number(movimiento.monto || 0))) }
-      : { ...movimientoVacio, proveedor_id: proveedorId || proveedores[0]?.id || '' }
+      ? { ...movimiento, monto: Math.round(Number(movimiento.monto || 0)).toLocaleString('es-PY') }
+      : { ...movimientoVacio, fecha: hoy(), proveedor_id: proveedorId || proveedores[0]?.id || '' }
     )
     setModalMovimiento(true)
     setError('')
@@ -118,7 +122,7 @@ export default function CuentasPagar() {
 
   const guardarProveedor = async () => {
     if (!proveedorForm.nombre.trim()) {
-      setError('Escribi el nombre del proveedor.')
+      setError('Escribí el nombre del proveedor.')
       return
     }
 
@@ -132,22 +136,26 @@ export default function CuentasPagar() {
       activo: proveedorForm.activo !== false,
     }
 
+    setSaving(true)
+    setError('')
     const query = proveedorForm.id
       ? supabase.from('proveedores_credito').update(payload).eq('id', proveedorForm.id)
       : supabase.from('proveedores_credito').insert(payload)
     const { error } = await query
+    setSaving(false)
 
     if (error) setError('No se pudo guardar el proveedor.')
     else {
       setModalProveedor(false)
       setProveedorForm(proveedorVacio)
       await cargarDatos()
+      toast.success(proveedorForm.id ? 'Proveedor actualizado' : 'Proveedor registrado', { description: payload.nombre })
     }
   }
 
   const guardarMovimiento = async () => {
     if (!movimientoForm.proveedor_id || !movimientoForm.concepto.trim() || parseGs(movimientoForm.monto) <= 0) {
-      setError('Completa proveedor, concepto y monto.')
+      setError('Completá proveedor, concepto y monto.')
       return
     }
 
@@ -163,16 +171,20 @@ export default function CuentasPagar() {
       notas: movimientoForm.notas || null,
     }
 
+    setSaving(true)
+    setError('')
     const query = movimientoForm.id
       ? supabase.from('proveedor_movimientos').update(payload).eq('id', movimientoForm.id)
       : supabase.from('proveedor_movimientos').insert(payload)
     const { error } = await query
+    setSaving(false)
 
     if (error) setError('No se pudo guardar el movimiento.')
     else {
       setModalMovimiento(false)
       setMovimientoForm(movimientoVacio)
       await cargarDatos()
+      toast.success(movimientoForm.id ? 'Movimiento actualizado' : 'Movimiento registrado', { description: `${payload.concepto} · ${fmtGs(payload.monto)}` })
     }
   }
 
@@ -337,53 +349,96 @@ export default function CuentasPagar() {
         <NotasPanel modulo="cuentas_pagar" titulo="Bloc de notas de cuentas a pagar" />
       </div>
 
-      {modalProveedor && (
-        <Modal onClose={() => setModalProveedor(false)} title={proveedorForm.id ? 'Editar proveedor' : 'Nuevo proveedor'}>
-          <input style={input} placeholder="Nombre de la agropecuaria/proveedor" value={proveedorForm.nombre || ''} onChange={e => setProveedorForm(f => ({ ...f, nombre:e.target.value }))} />
-          <select style={input} value={proveedorForm.tipo || 'Agropecuaria'} onChange={e => setProveedorForm(f => ({ ...f, tipo:e.target.value }))}>
-            {tiposProveedor.map(t => <option key={t}>{t}</option>)}
-          </select>
-          <input style={input} placeholder="Contacto" value={proveedorForm.contacto || ''} onChange={e => setProveedorForm(f => ({ ...f, contacto:e.target.value }))} />
-          <input style={input} placeholder="Teléfono" value={proveedorForm.telefono || ''} onChange={e => setProveedorForm(f => ({ ...f, telefono:e.target.value }))} />
-          <input style={input} placeholder="Dirección" value={proveedorForm.direccion || ''} onChange={e => setProveedorForm(f => ({ ...f, direccion:e.target.value }))} />
-          <textarea className="ui-278063" style={{ ...input }} placeholder="Notas internas" value={proveedorForm.notas || ''} onChange={e => setProveedorForm(f => ({ ...f, notas:e.target.value }))} />
-          <label className="ui-0f0b58">
-            <input type="checkbox" checked={proveedorForm.activo !== false} onChange={e => setProveedorForm(f => ({ ...f, activo:e.target.checked }))} />
-            Proveedor activo
-          </label>
-          <button className="ui-6d5673" onClick={guardarProveedor} style={{ ...greenBtn }}>Guardar proveedor</button>
-        </Modal>
-      )}
+      <UnifiedFormModal
+        open={modalProveedor}
+        tone="finanzas"
+        icon="ti-building-store"
+        eyebrow={proveedorForm.id ? 'Editar proveedor' : 'Crédito con proveedores'}
+        title={proveedorForm.id ? 'Editar proveedor' : 'Nuevo proveedor'}
+        label={proveedorForm.id ? 'Editar proveedor' : 'Nuevo proveedor'}
+        busy={saving}
+        onClose={() => setModalProveedor(false)}
+        onSubmit={guardarProveedor}
+        submitLabel={proveedorForm.id ? 'Guardar cambios' : 'Guardar proveedor'}
+        error={modalProveedor ? error : ''}
+        summary={resumenPie([
+          { solo: (proveedorForm.nombre || '').trim() },
+          { solo: proveedorForm.tipo || '' },
+          { solo: proveedorForm.activo === false ? 'Inactivo' : '' },
+        ]) || 'Escribí el nombre del proveedor'}
+      >{() => <>
+        <ModalSection title="Proveedor" icon="ti-building-store">
+          <ModalField label="Nombre *"><input className="apple-control" data-autofocus value={proveedorForm.nombre || ''} onChange={e => setProveedorForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Agropecuaria San Juan" /></ModalField>
+          <ModalGroup label="Tipo">
+            <ChoiceChips wrap label="Tipo de proveedor" value={proveedorForm.tipo || 'Agropecuaria'} onChange={tipo => setProveedorForm(f => ({ ...f, tipo }))} options={tiposProveedor.map(t => ({ value:t, label:t }))} />
+          </ModalGroup>
+          {proveedorForm.id && (
+            <ModalGroup label="Estado">
+              <ChoiceChips label="Estado del proveedor" value={proveedorForm.activo === false ? 'inactivo' : 'activo'} onChange={v => setProveedorForm(f => ({ ...f, activo: v === 'activo' }))} options={[{ value:'activo', label:'Activo', icon:'ti-circle-check' }, { value:'inactivo', label:'Inactivo', icon:'ti-circle-off' }]} />
+            </ModalGroup>
+          )}
+        </ModalSection>
+        <ModalSection title="Contacto" icon="ti-phone">
+          <ModalGrid>
+            <ModalField label="Persona de contacto"><input className="apple-control" value={proveedorForm.contacto || ''} onChange={e => setProveedorForm(f => ({ ...f, contacto:e.target.value }))} placeholder="Opcional" /></ModalField>
+            <ModalField label="Teléfono"><input className="apple-control apple-control--num" type="tel" inputMode="tel" value={proveedorForm.telefono || ''} onChange={e => setProveedorForm(f => ({ ...f, telefono:e.target.value }))} placeholder="Ej: 0981 000 000" /></ModalField>
+          </ModalGrid>
+          <ModalField label="Dirección"><input className="apple-control" value={proveedorForm.direccion || ''} onChange={e => setProveedorForm(f => ({ ...f, direccion:e.target.value }))} placeholder="Opcional" /></ModalField>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(proveedorForm.notas)} badge={proveedorForm.notas ? '' : 'notas internas'}>
+          <ModalField label="Notas internas"><textarea className="apple-control" value={proveedorForm.notas || ''} onChange={e => setProveedorForm(f => ({ ...f, notas:e.target.value }))} placeholder="Condiciones de pago, observaciones…" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
 
-      {modalMovimiento && (
-        <Modal onClose={() => setModalMovimiento(false)} title={movimientoForm.id ? 'Editar movimiento' : 'Nuevo movimiento'}>
-          <select style={input} value={movimientoForm.proveedor_id || ''} onChange={e => setMovimientoForm(f => ({ ...f, proveedor_id:e.target.value }))}>
-            <option value="">Elegir proveedor</option>
-            {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select>
-          <div className="ui-eba032">
-            <input type="date" style={input} value={movimientoForm.fecha || hoy()} onChange={e => setMovimientoForm(f => ({ ...f, fecha:e.target.value }))} />
-            <select style={input} value={movimientoForm.tipo || 'compra_credito'} onChange={e => setMovimientoForm(f => ({ ...f, tipo:e.target.value }))}>
-              {tiposMovimiento.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+      <UnifiedFormModal
+        open={modalMovimiento}
+        tone="finanzas"
+        icon="ti-arrows-exchange"
+        eyebrow={movimientoForm.id ? 'Editar movimiento' : 'Crédito con proveedores'}
+        title={movimientoForm.id ? 'Editar movimiento' : 'Nuevo movimiento'}
+        label={movimientoForm.id ? 'Editar movimiento' : 'Nuevo movimiento'}
+        busy={saving}
+        onClose={() => setModalMovimiento(false)}
+        onSubmit={guardarMovimiento}
+        submitLabel={movimientoForm.id ? 'Guardar cambios' : 'Guardar movimiento'}
+        error={modalMovimiento ? error : ''}
+        summary={resumenPie([
+          { solo: tiposMovimiento.find(t => t.value === movimientoForm.tipo)?.label || '' },
+          { solo: parseGs(movimientoForm.monto) > 0 ? `${signoMovimiento(movimientoForm.tipo) > 0 ? '+' : '−'} ${fmtGs(parseGs(movimientoForm.monto))}` : '' },
+          { solo: proveedores.find(p => p.id === movimientoForm.proveedor_id)?.nombre || '' },
+        ]) || 'Proveedor, concepto y monto'}
+      >{() => <>
+        <ModalSection title="Movimiento" icon="ti-arrows-exchange">
+          <ModalField label="Proveedor *" hint={proveedores.length === 0 ? 'Primero cargá un proveedor.' : ''}>
+            <select className="apple-control" data-autofocus value={movimientoForm.proveedor_id || ''} onChange={e => setMovimientoForm(f => ({ ...f, proveedor_id:e.target.value }))}>
+              <option value="">Elegir proveedor…</option>
+              {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
-          </div>
-          <input style={input} placeholder="Concepto: fertilizante, semillas, pago parcial..." value={movimientoForm.concepto || ''} onChange={e => setMovimientoForm(f => ({ ...f, concepto:e.target.value }))} />
-          <div className="ui-eba032">
-            <select style={input} value={movimientoForm.categoria || 'Insumos'} onChange={e => setMovimientoForm(f => ({ ...f, categoria:e.target.value }))}>
+          </ModalField>
+          <ModalGroup label="Tipo">
+            <ChoiceChips wrap label="Tipo de movimiento" value={movimientoForm.tipo || 'compra_credito'} onChange={tipo => setMovimientoForm(f => ({ ...f, tipo }))} options={tiposMovimiento.map(t => ({ value:t.value, label:t.label, icon:ICONO_MOVIMIENTO[t.value] }))} />
+          </ModalGroup>
+          <ModalField label="Concepto *"><input className="apple-control" value={movimientoForm.concepto || ''} onChange={e => setMovimientoForm(f => ({ ...f, concepto:e.target.value }))} placeholder="Ej: Fertilizante, semillas, pago parcial" /></ModalField>
+          <ModalGrid>
+            <ModalField label="Monto (Gs.) *"><input className="apple-control apple-control--num" type="text" inputMode="numeric" value={movimientoForm.monto || ''} onWheel={e => e.currentTarget.blur()} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setMovimientoForm(f => ({ ...f, monto:r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 500.000" /></ModalField>
+            <DateQuickField label="Fecha" required value={movimientoForm.fecha || hoy()} onChange={fecha => setMovimientoForm(f => ({ ...f, fecha }))} />
+          </ModalGrid>
+        </ModalSection>
+        <ModalSection title="Categoría y pago" icon="ti-tag">
+          <ModalField label="Categoría">
+            <select className="apple-control" value={movimientoForm.categoria || 'Insumos'} onChange={e => setMovimientoForm(f => ({ ...f, categoria:e.target.value }))}>
               {categorias.map(c => <option key={c}>{c}</option>)}
             </select>
-            <input style={input} placeholder="Monto" value={movimientoForm.monto || ''} onChange={e => setMovimientoForm(f => ({ ...f, monto:e.target.value }))} />
-          </div>
-          <div className="ui-eba032">
-            <select style={input} value={movimientoForm.medio_pago || 'Transferencia'} onChange={e => setMovimientoForm(f => ({ ...f, medio_pago:e.target.value }))}>
-              {mediosPago.map(m => <option key={m}>{m}</option>)}
-            </select>
-            <input style={input} placeholder="Factura/comprobante" value={movimientoForm.comprobante || ''} onChange={e => setMovimientoForm(f => ({ ...f, comprobante:e.target.value }))} />
-          </div>
-          <textarea className="ui-278063" style={{ ...input }} placeholder="Notas" value={movimientoForm.notas || ''} onChange={e => setMovimientoForm(f => ({ ...f, notas:e.target.value }))} />
-          <button className="ui-6d5673" onClick={guardarMovimiento} style={{ ...greenBtn }}>Guardar movimiento</button>
-        </Modal>
-      )}
+          </ModalField>
+          <ModalGroup label="Medio de pago">
+            <ChoiceChips wrap label="Medio de pago" value={movimientoForm.medio_pago || 'Transferencia'} onChange={medio_pago => setMovimientoForm(f => ({ ...f, medio_pago }))} options={mediosPago.map(m => ({ value:m, label:m }))} />
+          </ModalGroup>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={Boolean(movimientoForm.comprobante || movimientoForm.notas)} badge={movimientoForm.comprobante || movimientoForm.notas ? '' : 'comprobante, notas'}>
+          <ModalField label="Factura o comprobante"><input className="apple-control apple-control--num" value={movimientoForm.comprobante || ''} onChange={e => setMovimientoForm(f => ({ ...f, comprobante:e.target.value }))} placeholder="Ej: 001-001-0001234" /></ModalField>
+          <ModalField label="Notas"><textarea className="apple-control" value={movimientoForm.notas || ''} onChange={e => setMovimientoForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones…" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </div>
   )
 }
@@ -404,20 +459,6 @@ function MiniTotal({ label, value }) {
       <div className="ui-f352e6">{label}</div>
       <strong className="ui-70c605">{value}</strong>
     </div>
-  )
-}
-
-function Modal({ title, children, onClose }) {
-  return (
-    <SharedModal label={title} onClose={onClose}>
-      <div className="ui-b344e7">
-        <div className="ui-57d669">
-          <h2 className="ui-8f657d">{title}</h2>
-          <button className="ui-685979" onClick={onClose} aria-label="Cerrar"><i className="ti ti-x" aria-hidden="true" /></button>
-        </div>
-        {children}
-      </div>
-    </SharedModal>
   )
 }
 
@@ -444,17 +485,6 @@ const iconPill = {
   display:'flex',
   alignItems:'center',
   justifyContent:'center',
-}
-
-const input = {
-  width:'100%',
-  border:'1px solid #e2e5df',
-  borderRadius:8,
-  padding:'12px 13px',
-  background:'#fff',
-  fontSize:14,
-  marginBottom:10,
-  boxSizing:'border-box',
 }
 
 const smallBtn = {
