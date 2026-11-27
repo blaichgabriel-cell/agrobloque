@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { leerFacturaPdf } from '../lib/facturaPdf'
 import { useCan } from '../lib/RoleContext'
-import { Modal } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 
-const hoy = () => new Date().toISOString().slice(0, 10)
+const hoy = () => fechaIso(0)
 const fmtGs = value => Math.round(Number(value) || 0).toLocaleString('es-PY')
 const parseGs = value => parseInt(String(value || '').replace(/[^0-9]/g, ''), 10) || 0
 const categorias = ['Insumos', 'Mercaderia', 'Servicios', 'Reparaciones', 'Combustible', 'Otros']
@@ -65,7 +66,7 @@ export default function FacturasRecibidas({ role }) {
     }
 
     setArchivo(file)
-    setForm({ ...inicial, descripcion: `Compra segun factura ${file.name}` })
+    setForm({ ...inicial, fecha: hoy(), descripcion: `Compra segun factura ${file.name}` })
     setEstado('Leyendo el PDF…')
     setError('')
     setModal(true)
@@ -140,6 +141,7 @@ export default function FacturasRecibidas({ role }) {
       setForm(inicial)
       setEstado('')
       await cargar()
+      toast.success('Factura guardada para revisar', { description: `${form.proveedor.trim()} · Gs. ${fmtGs(total)}` })
     } catch (saveError) {
       if (storagePath) await supabase.storage.from('facturas-contabilidad').remove([storagePath])
       setError(saveError.message || 'No se pudo guardar la factura.')
@@ -241,36 +243,51 @@ export default function FacturasRecibidas({ role }) {
         </section>
       </div>
 
-      {modal && (
-        <Modal label="Nueva factura" onClose={cerrar} busy={saving} onMouseDown={event => event.target === event.currentTarget && cerrar()}>
-          <section aria-labelledby="factura-title" style={sheet}>
-            <div className="ui-9bae07">
-              <div><div className="ui-51b095">Revisar lectura</div><h2 className="ui-aad0a1" id="factura-title">Nueva factura</h2></div>
-              <button className="ag-close-btn" onClick={cerrar} aria-label="Cerrar"><i className="ti ti-x" /></button>
-            </div>
-            <div style={fileSummary}><i className="ti ti-file-type-pdf" /><div className="ui-3f9f96"><strong className="ui-2fd49b">{archivo?.name}</strong><small>{estado}</small></div></div>
-            {error && <div className="ui-d8f2f7" role="alert" style={{ ...errorBox }}>{error}</div>}
-            <div className="ui-998b74" style={{ gridTemplateColumns:isDesktop ? '1fr 1fr' : '1fr', gap:isDesktop ? 10 : 0 }}>
-              <Field label="Fecha de factura" type="date" value={form.fecha} onChange={value => setForm(f => ({ ...f, fecha:value }))} />
-              <Field label="Proveedor" required value={form.proveedor} onChange={value => setForm(f => ({ ...f, proveedor:value }))} />
-              <Field label="RUC" value={form.ruc} onChange={value => setForm(f => ({ ...f, ruc:value }))} />
-              <Field label="Número de factura" value={form.comprobante} onChange={value => setForm(f => ({ ...f, comprobante:value }))} />
-              <Field label="Total en guaranies" required inputMode="numeric" value={form.total} onChange={value => setForm(f => ({ ...f, total:fmtGs(parseGs(value)) }))} />
-              <label style={fieldWrap}><span style={label}>Categoría</span><select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria:e.target.value }))} style={input}>{categorias.map(item => <option key={item}>{item}</option>)}</select></label>
-            </div>
-            <Field label="Descripción" value={form.descripcion} onChange={value => setForm(f => ({ ...f, descripcion:value }))} />
-            <Field label="Notas (opcional)" value={form.notas} onChange={value => setForm(f => ({ ...f, notas:value }))} />
-            <button className="ui-d6167d" onClick={guardarPendiente} disabled={saving} style={{ ...primaryButton, opacity:saving ? .65 : 1 }}>{saving ? 'Guardando…' : 'Guardar para revisar'}</button>
-            <button onClick={cerrar} disabled={saving} style={secondaryButton}>Cancelar</button>
-          </section>
-        </Modal>
-      )}
+      <UnifiedFormModal
+        open={modal}
+        tone="finanzas"
+        icon="ti-file-type-pdf"
+        eyebrow="Revisar lectura"
+        title="Nueva factura"
+        label="Nueva factura"
+        busy={saving}
+        onClose={cerrar}
+        onSubmit={guardarPendiente}
+        submitLabel="Guardar para revisar"
+        error={modal ? error : ''}
+        summary={resumenPie([
+          { solo: form.proveedor.trim() },
+          { solo: parseGs(form.total) > 0 ? `Gs. ${fmtGs(parseGs(form.total))}` : '' },
+          { solo: form.categoria },
+        ]) || 'Proveedor, fecha y total de la factura'}
+      >{() => <>
+        <div className="apple-list__row">
+          <span className="apple-subpanel__icon" aria-hidden="true"><i className="ti ti-file-type-pdf" /></span>
+          <div className="apple-list__main"><strong>{archivo?.name}</strong>{estado && <small aria-live="polite">{estado}</small>}</div>
+        </div>
+        <ModalSection title="Factura" icon="ti-file-invoice">
+          <ModalGrid>
+            <ModalField label="Proveedor *"><input className="apple-control" data-autofocus value={form.proveedor} onChange={e => setForm(f => ({ ...f, proveedor: e.target.value }))} placeholder="Nombre del proveedor" /></ModalField>
+            <DateQuickField label="Fecha de factura" required value={form.fecha} onChange={fecha => setForm(f => ({ ...f, fecha }))} />
+          </ModalGrid>
+          <ModalGrid>
+            <ModalField label="RUC"><input className="apple-control apple-control--num" value={form.ruc} onChange={e => setForm(f => ({ ...f, ruc: e.target.value }))} placeholder="Ej: 80012345-6" /></ModalField>
+            <ModalField label="Número de factura"><input className="apple-control apple-control--num" value={form.comprobante} onChange={e => setForm(f => ({ ...f, comprobante: e.target.value }))} placeholder="Ej: 001-001-0001234" /></ModalField>
+          </ModalGrid>
+        </ModalSection>
+        <ModalSection title="Importe y categoría" icon="ti-cash">
+          <ModalField label="Total en guaraníes *"><input className="apple-control apple-control--num" type="text" inputMode="numeric" value={form.total} onWheel={e => e.currentTarget.blur()} onChange={e => { const n = parseGs(e.target.value); setForm(f => ({ ...f, total: n ? fmtGs(n) : '' })) }} placeholder="Ej: 1.500.000" /></ModalField>
+          <ModalGroup label="Categoría">
+            <ChoiceChips wrap label="Categoría de la factura" value={form.categoria} onChange={categoria => setForm(f => ({ ...f, categoria }))} options={categorias.map(c => ({ value: c, label: c }))} />
+          </ModalGroup>
+        </ModalSection>
+        <ModalSection title="Detalles opcionales" icon="ti-adjustments-horizontal" collapsible defaultOpen={false} badge="descripción, notas">
+          <ModalField label="Descripción"><input className="apple-control" value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Ej: Compra de fertilizantes" /></ModalField>
+          <ModalField label="Notas"><input className="apple-control" value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))} placeholder="Opcional" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </main>
   )
-}
-
-function Field({ label: text, value, onChange, type = 'text', inputMode, required }) {
-  return <label style={fieldWrap}><span style={label}>{text}{required ? ' *' : ''}</span><input type={type} inputMode={inputMode} value={value || ''} onChange={e => onChange(e.target.value)} style={input} /></label>
 }
 
 function Empty({ icon, text }) {
@@ -289,12 +306,6 @@ const row = { display:'grid', gridTemplateColumns:'42px minmax(0, 1fr) auto', ga
 const documentIcon = { width:42, height:42, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', color:'#be3b32', fontSize:21 }
 const iconButton = { width:40, height:40, border:'1px solid #dfe5e0', borderRadius:8, background:'#fff', color:'#37423c', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0 }
 const primaryButton = { minHeight:42, border:'none', borderRadius:8, background:'#124e38', color:'#fff', padding:'0 14px', fontWeight:700, fontSize:12, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:7 }
-const secondaryButton = { width:'100%', marginTop:8, border:'1px solid #dde3de', borderRadius:8, background:'#fff', color:'#586159', padding:12, fontWeight:700, cursor:'pointer' }
 const miniButton = { width:31, height:31, border:'1px solid #dfe5e0', borderRadius:8, background:'#fff', color:'#4e5851', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center' }
 const tab = { border:'1px solid #dfe5e0', borderRadius:8, background:'#fff', color:'#667069', padding:'8px 11px', fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }
 const tabActive = { ...tab, background:'#182c25', borderColor:'#182c25', color:'#fff' }
-const sheet = { width:'100%', maxWidth:620, maxHeight:'92vh', overflowY:'auto', boxSizing:'border-box', padding:'22px 20px 28px', background:'#f7f9f7', borderRadius:typeof window !== 'undefined' && window.innerWidth >= 768 ? 16 : '18px 18px 0 0' }
-const fileSummary = { display:'grid', gridTemplateColumns:'28px minmax(0, 1fr)', gap:9, alignItems:'center', padding:11, marginBottom:14, border:'1px solid #e2e7e3', borderRadius:8, background:'#fff', color:'#314039', fontSize:12 }
-const fieldWrap = { display:'block', minWidth:0 }
-const label = { display:'block', margin:'0 0 5px', color:'#707970', fontSize:10, fontWeight:700, textTransform:'uppercase' }
-const input = { width:'100%', boxSizing:'border-box', border:'1px solid #dfe5e0', borderRadius:8, background:'#fff', color:'#18201b', padding:'11px 12px', fontSize:13, marginBottom:11 }
