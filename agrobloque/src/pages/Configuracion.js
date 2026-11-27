@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Modal } from '../components/UI'
 import { SoporteCliente } from '../components/Soporte'
 import { SeguridadDosFactores } from '../components/DosFactores'
 import { useNavigate } from 'react-router-dom'
 import { forceLocalSignOut, supabase } from '../lib/supabase'
 import { descargarJson } from '../lib/exporters'
 import { ACTIONS, DISABLED_MODULES } from '../lib/permissions'
+import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, ChoiceChips, resumenPie } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 const PERMISOS_MODULOS = [
   { key: 'buscar', label: 'Buscar' },
   { key: 'alertas', label: 'Alertas' },
@@ -36,34 +37,30 @@ const normalizarNombre = (valor) => String(valor || '').trim().toLowerCase()
 const esDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 1100
 
 function PermisosSelector({ permisos, onChange, ayuda }) {
+  const todos = !Array.isArray(permisos) || permisos.length === 0
   return (
-    <div className="ui-2bd9c0">
-      <div className="ui-704136">Modulos permitidos</div>
-      {ayuda && <div className="ui-a3bdd9">{ayuda}</div>}
-      <div className="ui-ffec37">
+    <div className="apple-field" role="group" aria-label="Módulos permitidos">
+      {ayuda && <small className="apple-field__hint">{ayuda}</small>}
+      <div className="apple-chips apple-chips--wrap">
         {PERMISOS_MODULOS.map(m => {
-          const checked = !Array.isArray(permisos) || permisos.length === 0 || permisos.includes(m.key)
+          const marcado = todos || permisos.includes(m.key)
           return (
-            <label className="ui-9d30ce" key={m.key}>
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={e => {
-                  const actual = Array.isArray(permisos) && permisos.length > 0
-                    ? permisos
-                    : PERMISOS_MODULOS.map(x => x.key)
-                  onChange(e.target.checked
-                    ? [...new Set([...actual, m.key])]
-                    : actual.filter(k => k !== m.key)
-                  )
-                }}
-              />
-              <span>{m.label}</span>
-            </label>
+            <button
+              type="button"
+              key={m.key}
+              className="apple-chip apple-chip--lg"
+              aria-pressed={marcado}
+              onClick={() => {
+                const actual = todos ? PERMISOS_MODULOS.map(x => x.key) : permisos
+                onChange(marcado ? actual.filter(k => k !== m.key) : [...new Set([...actual, m.key])])
+              }}
+            >
+              {marcado && <i className="ti ti-check" aria-hidden="true" />}<span>{m.label}</span>
+            </button>
           )
         })}
       </div>
-      <div className="ui-3421f7">Si desmarcas un modulo, no aparece en el menu ni en accesos.</div>
+      <small className="apple-field__hint">Si desmarcás un módulo, no aparece en el menú ni en los accesos.</small>
     </div>
   )
 }
@@ -79,32 +76,34 @@ function AccionesSelector({ permisos, acciones, rol, onChange }) {
       : ['view']
 
   return (
-    <div className="ag-surface ui-91fc48">
-      <div className="ui-704136">Acciones permitidas</div>
-      <div className="ui-a3bdd9">Define si este usuario puede ver, crear, editar o borrar en cada modulo permitido.</div>
-      <div className="ui-36396b">
+    <div className="apple-field">
+      <small className="apple-field__hint">Define si este usuario puede ver, crear, editar o borrar en cada módulo permitido.</small>
+      <div className="apple-perms">
         {modulosActivos.map(m => {
           const actuales = Array.isArray(acciones?.[m.key]) ? acciones[m.key] : defaults
           return (
-            <div className="ui-006580" key={m.key}>
-              <strong className="ui-cfbe51">{m.label}</strong>
-              {ACTIONS.map(a => (
-                <label className="ui-d74de0" key={a.key}>
-                  <input
-                    type="checkbox"
-                    checked={actuales.includes(a.key)}
+            <div className="apple-perm-row" key={m.key}>
+              <strong>{m.label}</strong>
+              <div className="apple-chips apple-chips--mini" role="group" aria-label={`Acciones en ${m.label}`}>
+                {ACTIONS.map(a => (
+                  <button
+                    type="button"
+                    key={a.key}
+                    className="apple-chip"
+                    aria-pressed={actuales.includes(a.key)}
                     disabled={a.key === 'view'}
-                    onChange={e => {
+                    onClick={() => {
                       const base = Array.isArray(acciones?.[m.key]) ? acciones[m.key] : defaults
-                      const nuevo = e.target.checked
-                        ? [...new Set([...base, a.key, 'view'])]
-                        : base.filter(k => k !== a.key)
+                      const nuevo = base.includes(a.key)
+                        ? base.filter(k => k !== a.key)
+                        : [...new Set([...base, a.key, 'view'])]
                       onChange({ ...(acciones || {}), [m.key]: nuevo })
                     }}
-                  />
-                  {a.label}
-                </label>
-              ))}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )
         })}
@@ -162,6 +161,11 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
       setUltimoBackup(window.localStorage.getItem(BACKUP_KEY) || '')
     }
   }, [])
+
+  // Los avisos de éxito con la ventana abierta salen como toast; sin ventana se muestran en la página.
+  useEffect(() => {
+    if (success && modal) { toast.success(success); setSuccess('') }
+  }, [success, modal])
 
   const backupVencido = () => {
     if (!ultimoBackup) return true
@@ -584,9 +588,6 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     await fetchAll()
   }
 
-  const listItem = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:"1px solid #f6f8f7" }
-  const addBtn = { width:'100%', padding:12, borderRadius:'var(--ag-radius)', border:'1px dashed #d4b89a', background:'#eeeeee', fontSize:13, color:"#124e38", cursor:'pointer', marginTop:8, fontWeight:500 }
-
   const menuItems = [
     { icon:'ti-user', title:'Cuenta', sub: perfil.nombre || perfil.email, action: () => abrir('cuenta', { nombre: perfil.nombre, email: perfil.email }) },
     { icon:'ti-building-community', title:'Empresa', sub: organization?.nombre || 'Configurar identidad', color:'#176a45', bg:'#edf6ec', action: () => abrir('empresa', { ...organization }) },
@@ -604,6 +605,293 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
     { icon:'ti-circle-plus', title:'Nueva empresa', sub:'Dar de alta un nuevo cliente', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => abrir('nuevaEmpresa', { nombre:'', owner_email:'' }) },
     { icon:'ti-presentation', title:'Vista nuevo cliente', sub:'Probar el primer ingreso sin guardar datos', color:'#176a45', bg:'#edf6ec', platformOnly:true, action: () => navigate('/primeros-pasos') },
   ].filter((item, index) => (esAdmin || index === 0) && (!item.platformOnly || isPlatformAdmin))
+
+  // --- Ventana unificada: cada «modal» es una vista con su título, cuerpo y acción principal.
+  const fila = (clave, titulo, sub, acciones) => (
+    <div className="apple-list__row" key={clave}>
+      <div className="apple-list__main"><strong>{titulo}</strong>{sub ? <small>{sub}</small> : null}</div>
+      {acciones ? <div className="apple-list__actions">{acciones}</div> : null}
+    </div>
+  )
+  const mini = (texto, alPulsar, variante = '') => (
+    <button type="button" className={`apple-mini-btn${variante ? ` apple-mini-btn--${variante}` : ''}`} onClick={alPulsar} disabled={loading}>{texto}</button>
+  )
+  const alInicio = () => document.querySelector('.apple-modal__body')?.scrollTo({ top: 0, behavior: 'smooth' })
+  const campoNombre = (clave, etiqueta, placeholder, extra = {}) => (
+    <ModalField label={etiqueta}>
+      <input className="apple-control" data-autofocus value={form[clave] || ''} onChange={e => setForm(f => ({ ...f, [clave]: e.target.value }))} placeholder={placeholder} {...extra} />
+    </ModalField>
+  )
+  const cantidad = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`
+
+  let vista = null
+  switch (modal) {
+    case 'empresa':
+      vista = {
+        icon: 'ti-building-community', title: 'Identidad de la empresa',
+        subtitle: 'Este nombre aparece en la barra lateral y en el acceso de invitados. AgroBloque sigue siendo la marca del producto.',
+        submit: guardarEmpresa, submitLabel: 'Guardar empresa', summary: form.nombre || 'Nombre comercial de la empresa',
+        body: <>
+          <ModalSection title="Datos de la empresa" icon="ti-building-community">
+            {campoNombre('nombre', 'Nombre comercial *', 'Ej: Horticultura San José', { maxLength: 100 })}
+            <ModalGrid>
+              <ModalField label="Email de la empresa"><input className="apple-control" type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="contacto@empresa.com" /></ModalField>
+              <ModalField label="Teléfono"><input className="apple-control apple-control--num" type="tel" inputMode="tel" value={form.telefono || ''} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} placeholder="+595 ..." /></ModalField>
+            </ModalGrid>
+            <ModalField label="URL del logotipo (opcional)"><input className="apple-control" type="url" value={form.logo_url || ''} onChange={e => setForm(f => ({ ...f, logo_url: e.target.value }))} placeholder="https://..." /></ModalField>
+            <ModalField label="Color principal">
+              <div className="apple-colorfield">
+                <input type="color" value={form.color_primario || '#0F3923'} onChange={e => setForm(f => ({ ...f, color_primario: e.target.value }))} aria-label="Color principal de la empresa" />
+                <input className="apple-control apple-control--code" value={form.color_primario || '#0F3923'} onChange={e => setForm(f => ({ ...f, color_primario: e.target.value }))} pattern="#[0-9A-Fa-f]{6}" placeholder="#0F3923" />
+              </div>
+            </ModalField>
+          </ModalSection>
+        </>,
+      }
+      break
+    case 'nuevaEmpresa':
+      vista = {
+        icon: 'ti-circle-plus', title: 'Nueva empresa cliente',
+        subtitle: 'Crea un espacio de datos aislado y envía al dueño un correo para definir su contraseña.',
+        submit: crearEmpresaCliente, submitLabel: 'Crear empresa y enviar invitación',
+        summary: resumenPie([{ solo: String(form.nombre || '').trim() }, { solo: String(form.owner_email || '').trim() }]) || 'Nombre de la empresa y correo del dueño',
+        body: <>
+          <ModalSection title="Empresa y dueño" icon="ti-building-community">
+            {campoNombre('nombre', 'Nombre comercial *', 'Ej: Horticultura San José', { maxLength: 100 })}
+            <ModalField label="Email del dueño *"><input className="apple-control" type="email" value={form.owner_email || ''} onChange={e => setForm(f => ({ ...f, owner_email: e.target.value }))} placeholder="dueno@empresa.com" /></ModalField>
+            <p className="apple-note" role="note"><i className="ti ti-shield-lock" aria-hidden="true" /> La nueva empresa no podrá ver datos de otros clientes. Su dueño será administrador únicamente de ese espacio.</p>
+          </ModalSection>
+        </>,
+      }
+      break
+    case 'invitados':
+      vista = {
+        icon: 'ti-link', title: 'Invitados de solo lectura', subtitle: 'El invitado entra con un link y no puede editar ni borrar datos.',
+        submit: crearInvitado, submitLabel: 'Crear acceso invitado',
+        summary: resumenPie([{ n: invitados.filter(i => i.activo).length, texto: 'links activos', uno: 'link activo' }]) || 'Todavía no hay links activos',
+        body: <>
+          <ModalSection title="Nuevo acceso" icon="ti-link">
+            {campoNombre('nombre', 'Nombre del invitado *', 'Ej: Contador, asesor técnico')}
+            <ModalGrid>
+              <ModalField label="Campo permitido">
+                <select className="apple-control" value={form.campo_id || ''} onChange={e => setForm(f => ({ ...f, campo_id: e.target.value }))}>
+                  <option value="">Todos los campos</option>
+                  {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              </ModalField>
+              <ModalField label="Vencimiento">
+                <select className="apple-control" value={form.dias || ''} onChange={e => setForm(f => ({ ...f, dias: e.target.value }))}>
+                  <option value="7">Vence en 7 días</option>
+                  <option value="30">Vence en 30 días</option>
+                  <option value="90">Vence en 90 días</option>
+                  <option value="">Sin vencimiento</option>
+                </select>
+              </ModalField>
+            </ModalGrid>
+          </ModalSection>
+          <ModalSection title="Módulos permitidos" icon="ti-lock-open" collapsible defaultOpen={false} badge={Array.isArray(form.permisos) && form.permisos.length ? cantidad(form.permisos.length, 'módulo', 'módulos') : 'todos'}>
+            <PermisosSelector permisos={form.permisos} ayuda="Elegí exactamente a qué apartados puede entrar este invitado." onChange={permisos => setForm(f => ({ ...f, permisos }))} />
+          </ModalSection>
+          {linkInvitado && (
+            <div className="apple-linkbox">
+              <strong>Link creado</strong>
+              <code>{linkInvitado}</code>
+              <button type="button" className="apple-btn apple-btn--primary" onClick={copiarLinkInvitado}><i className="ti ti-copy" aria-hidden="true" />Copiar link</button>
+            </div>
+          )}
+          <ModalSection title="Links creados" icon="ti-list">
+            {invitados.length === 0 ? <p className="apple-empty">Sin invitados creados.</p> : (
+              <div className="apple-list">
+                {invitados.map(inv => fila(
+                  inv.id, inv.nombre,
+                  `${inv.campos?.nombre || 'Todos los campos'} · ${inv.activo ? 'Activo' : 'Desactivado'}${inv.expires_at ? ` · vence ${String(inv.expires_at).slice(0, 10)}` : ''}`,
+                  inv.activo ? mini('Desactivar', () => desactivarInvitado(inv.id), 'danger') : null,
+                ))}
+              </div>
+            )}
+          </ModalSection>
+        </>,
+      }
+      break
+    case 'roles':
+      vista = {
+        icon: 'ti-shield-lock', title: 'Usuarios y permisos',
+        subtitle: 'Definí el correo y una contraseña inicial. Compartí esos datos con la persona por un canal privado.',
+        submit: guardarRol,
+        submitLabel: form.id ? ((form.password || form.password_confirm) ? 'Guardar y actualizar acceso' : 'Guardar cambios') : 'Crear usuario',
+        summary: resumenPie([{ solo: form.email || '' }, { solo: { admin: 'Admin', operador: 'Operador', lectura: 'Solo lectura' }[form.rol || 'operador'] }]) || 'Correo y rol del usuario',
+        body: <>
+          <ModalSection title={form.id ? 'Editar usuario' : 'Agregar usuario'} icon="ti-user-plus">
+            <ModalGrid>
+              <ModalField label="Correo *"><input className="apple-control" data-autofocus type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="correo@empresa.com" /></ModalField>
+              <ModalField label="Nombre"><input className="apple-control" value={form.nombre || ''} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Nombre" /></ModalField>
+            </ModalGrid>
+            <ModalGroup label="Rol">
+              <ChoiceChips label="Rol del usuario" value={form.rol || 'operador'} onChange={rol => setForm(f => ({ ...f, rol }))} options={[{ value: 'admin', label: 'Admin', icon: 'ti-shield-check' }, { value: 'operador', label: 'Operador', icon: 'ti-user-cog' }, { value: 'lectura', label: 'Solo lectura', icon: 'ti-eye' }]} />
+            </ModalGroup>
+          </ModalSection>
+          <ModalSection title="Contraseña" icon="ti-key">
+            <ModalGrid>
+              <ModalField label={form.id ? 'Nueva contraseña (opcional)' : 'Contraseña inicial *'}><input className="apple-control" type={form.mostrar_password ? 'text' : 'password'} value={form.password || ''} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 8 caracteres" minLength="8" autoComplete="new-password" /></ModalField>
+              <ModalField label={form.id ? 'Repetir nueva contraseña' : 'Repetir contraseña *'}><input className="apple-control" type={form.mostrar_password ? 'text' : 'password'} value={form.password_confirm || ''} onChange={e => setForm(f => ({ ...f, password_confirm: e.target.value }))} placeholder="Escribila nuevamente" minLength="8" autoComplete="new-password" /></ModalField>
+            </ModalGrid>
+            <div className="apple-chips"><button type="button" className="apple-chip" aria-pressed={Boolean(form.mostrar_password)} onClick={() => setForm(f => ({ ...f, mostrar_password: !f.mostrar_password }))}><i className={`ti ${form.mostrar_password ? 'ti-eye-off' : 'ti-eye'}`} aria-hidden="true" />Mostrar contraseña</button></div>
+            <p className="apple-note" role="note"><i className="ti ti-shield-lock" aria-hidden="true" /> AgroBloque no guarda esta contraseña en sus tablas. Supabase la protege y después no podrá mostrarse nuevamente.</p>
+          </ModalSection>
+          <ModalSection title="Módulos permitidos" icon="ti-lock-open" collapsible defaultOpen={false} badge={Array.isArray(form.permisos) && form.permisos.length ? cantidad(form.permisos.length, 'módulo', 'módulos') : 'todos'}>
+            <PermisosSelector permisos={form.permisos} ayuda="Elegí exactamente a qué apartados puede entrar este usuario." onChange={permisos => setForm(f => ({ ...f, permisos }))} />
+          </ModalSection>
+          <ModalSection title="Acciones permitidas" icon="ti-adjustments" collapsible defaultOpen={false} badge="ver, crear, editar, borrar">
+            <AccionesSelector permisos={form.permisos} acciones={form.acciones} rol={form.rol || 'operador'} onChange={acciones => setForm(f => ({ ...f, acciones }))} />
+          </ModalSection>
+          <ModalSection title="Notas internas" icon="ti-notes" collapsible defaultOpen={Boolean(form.notas)} badge={form.notas ? '' : 'opcional'}>
+            <ModalField label="Notas"><textarea className="apple-control" value={form.notas || ''} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))} placeholder="Notas internas" /></ModalField>
+          </ModalSection>
+          <ModalSection title="Registrados" icon="ti-users">
+            {roles.length === 0 ? <p className="apple-empty">Sin usuarios registrados.</p> : (
+              <div className="apple-list">
+                {roles.map(r => fila(r.id, r.nombre || r.email, `${r.email} · ${r.rol}`, <>
+                  {mini('Editar', () => { setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, password: '', password_confirm: '', mostrar_password: false }); alInicio() })}
+                  {mini('Borrar', () => eliminarRol(r.id), 'danger')}
+                </>))}
+              </div>
+            )}
+          </ModalSection>
+        </>,
+      }
+      break
+    case 'cuenta':
+      vista = {
+        icon: 'ti-user', title: 'Mi cuenta', subtitle: perfil.email, summary: perfil.nombre || perfil.email,
+        body: <>
+          <ModalSection title="Foto" icon="ti-camera">
+            <div className="apple-avatar">
+              <div className="apple-avatar__img">
+                {perfil.foto ? <img src={perfil.foto} alt="Foto de perfil" /> : <span aria-hidden="true"><i className="ti ti-user" /></span>}
+                <button type="button" aria-label="Cambiar foto" onClick={() => fotoRef.current?.click()}><i className="ti ti-camera" aria-hidden="true" /></button>
+              </div>
+              <small>Tocá la cámara para cambiar la foto. Se guarda solo en este dispositivo.</small>
+            </div>
+          </ModalSection>
+          <ModalSection title="Nombre" icon="ti-id">
+            <ModalField label="Nombre"><input className="apple-control" value={form.nombre || ''} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Tu nombre" /></ModalField>
+            <div className="apple-actionbar"><button type="button" className="apple-btn apple-btn--primary" onClick={guardarNombre} disabled={loading}>{loading ? 'Guardando…' : 'Guardar nombre'}</button></div>
+          </ModalSection>
+          <ModalSection title="Correo" icon="ti-mail">
+            <ModalField label="Email" hint="Si cambiás el email, vas a recibir un link de confirmación."><input className="apple-control" type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="nuevo@email.com" /></ModalField>
+            <div className="apple-actionbar"><button type="button" className="apple-btn apple-btn--primary" onClick={guardarEmail} disabled={loading}>{loading ? 'Guardando…' : 'Cambiar email'}</button></div>
+          </ModalSection>
+          <ModalSection title="Contraseña" icon="ti-key">
+            <ModalGrid>
+              <ModalField label="Nueva contraseña"><input className="apple-control" type="password" autoComplete="new-password" value={form.nueva || ''} onChange={e => setForm(f => ({ ...f, nueva: e.target.value }))} placeholder="Mínimo 6 caracteres" /></ModalField>
+              <ModalField label="Repetir contraseña"><input className="apple-control" type="password" autoComplete="new-password" value={form.repetir || ''} onChange={e => setForm(f => ({ ...f, repetir: e.target.value }))} placeholder="Repetir contraseña" /></ModalField>
+            </ModalGrid>
+            <div className="apple-actionbar"><button type="button" className="apple-btn apple-btn--danger" onClick={guardarContrasena} disabled={loading}>{loading ? 'Guardando…' : 'Cambiar contraseña'}</button></div>
+          </ModalSection>
+        </>,
+      }
+      break
+    case 'campos':
+      vista = {
+        icon: 'ti-map-pin', title: 'Campos', subtitle: 'Organizá los espacios productivos de tu empresa. Cada campo puede tener sus propios bloques.',
+        submit: () => abrir('editarCampo', { nombre: '' }), submitLabel: 'Crear campo', summary: cantidad(campos.length, 'campo registrado', 'campos registrados'),
+        body: campos.length === 0
+          ? <p className="apple-empty">Todavía no hay campos. Creá el primero para empezar a organizar tus bloques.</p>
+          : <div className="apple-list">{campos.map(c => {
+            const n = bloques.filter(b => b.campo_id === c.id).length
+            return fila(c.id, c.nombre, cantidad(n, 'bloque', 'bloques'), mini('Editar', () => abrir('editarCampo', { id: c.id, nombre: c.nombre })))
+          })}</div>,
+      }
+      break
+    case 'editarCampo':
+      vista = {
+        icon: form.id ? 'ti-edit' : 'ti-map-plus', title: form.id ? 'Editar campo' : 'Nuevo campo',
+        subtitle: form.id ? 'Cambiá el nombre sin afectar sus bloques ni registros.' : 'Después de crearlo podrás entrar en Bloques y cargar su distribución.',
+        submit: guardarCampo, submitDisabled: String(form.nombre || '').trim().length < 2, submitLabel: form.id ? 'Guardar cambios' : 'Crear campo',
+        cancelLabel: 'Volver', onCancel: () => abrir('campos'), summary: String(form.nombre || '').trim() || 'Nombre del campo',
+        body: campoNombre('nombre', 'Nombre del campo *', 'Ej: Campo Norte', { maxLength: 100, onKeyDown: e => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !loading) { e.preventDefault(); guardarCampo() } } }),
+      }
+      break
+    case 'cultivos':
+      vista = {
+        icon: 'ti-seeding', title: 'Cultivos', submit: () => abrir('editarCultivo', {}), submitLabel: 'Agregar cultivo', summary: cantidad(cultivos.length, 'cultivo', 'cultivos'),
+        body: cultivos.length === 0 ? <p className="apple-empty">Todavía no hay cultivos.</p> : <div className="apple-list">{cultivos.map(c => fila(c.id, c.nombre, null, <>
+          {mini('Editar', () => abrir('editarCultivo', { id: c.id, nombre: c.nombre }))}
+          {mini('Eliminar', () => eliminar('cultivos', c.id, 'cultivos'), 'danger')}
+        </>))}</div>,
+      }
+      break
+    case 'editarCultivo':
+      vista = {
+        icon: 'ti-seeding', title: form.id ? 'Editar cultivo' : 'Nuevo cultivo', submit: guardarCultivo, submitLabel: 'Guardar',
+        cancelLabel: 'Volver', onCancel: () => abrir('cultivos'), summary: String(form.nombre || '').trim() || 'Nombre del cultivo',
+        body: campoNombre('nombre', 'Nombre *', 'Ej: Morrón'),
+      }
+      break
+    case 'operarios':
+      vista = {
+        icon: 'ti-users', title: 'Operarios', summary: cantidad(operarios.filter(o => o.activo !== false).length, 'persona', 'personas'),
+        body: campos.length === 0 ? <p className="apple-empty">Primero creá un campo.</p> : <>{campos.map(campo => (
+          <ModalSection title={campo.nombre} icon="ti-map-pin" key={campo.id}>
+            {operarios.filter(o => o.campo_id === campo.id && o.activo !== false).length === 0 && <p className="apple-empty">Sin personal en este campo.</p>}
+            <div className="apple-list">{operarios.filter(o => o.campo_id === campo.id && o.activo !== false).map(o => fila(o.id, o.nombre, null, <>
+              {mini('Editar', () => abrir('editarOperario', { id: o.id, nombre: o.nombre, campo_id: o.campo_id }))}
+              {mini('Desactivar', () => eliminar('operarios', o.id, 'operarios'), 'danger')}
+            </>))}</div>
+            <button type="button" className="apple-add" onClick={() => abrir('editarOperario', { campo_id: campo.id })}><i className="ti ti-plus" aria-hidden="true" />Agregar a {campo.nombre}</button>
+          </ModalSection>
+        ))}</>,
+      }
+      break
+    case 'editarOperario':
+      vista = {
+        icon: 'ti-user', title: form.id ? 'Editar operario' : 'Nuevo operario', submit: guardarOperario, submitLabel: 'Guardar',
+        cancelLabel: 'Volver', onCancel: () => abrir('operarios'), summary: String(form.nombre || '').trim() || 'Nombre del operario',
+        body: campoNombre('nombre', 'Nombre *', 'Nombre del operario'),
+      }
+      break
+    case 'abonos':
+      vista = {
+        icon: 'ti-leaf', title: 'Abonos de base', submit: () => abrir('editarAbono', {}), submitLabel: 'Agregar abono', summary: cantidad(abonos.length, 'abono', 'abonos'),
+        body: abonos.length === 0 ? <p className="apple-empty">Todavía no hay abonos.</p> : <div className="apple-list">{abonos.map(a => fila(a.id, a.nombre, null, <>
+          {mini('Editar', () => abrir('editarAbono', { id: a.id, nombre: a.nombre }))}
+          {mini('Eliminar', () => eliminar('abonos', a.id, 'abonos'), 'danger')}
+        </>))}</div>,
+      }
+      break
+    case 'editarAbono':
+      vista = {
+        icon: 'ti-leaf', title: form.id ? 'Editar abono' : 'Nuevo abono', submit: guardarAbono, submitLabel: 'Guardar',
+        cancelLabel: 'Volver', onCancel: () => abrir('abonos'), summary: String(form.nombre || '').trim() || 'Nombre del abono',
+        body: campoNombre('nombre', 'Nombre *', 'Ej: 15-15-15'),
+      }
+      break
+    case 'bloques':
+      vista = {
+        icon: 'ti-map', title: 'Tipo de bloques', subtitle: 'Tocá un bloque para cambiar si es invernadero o campo abierto.', summary: cantidad(bloques.length, 'bloque', 'bloques'),
+        body: campos.length === 0 ? <p className="apple-empty">Primero creá un campo.</p> : <>{campos.map(campo => (
+          <ModalSection title={campo.nombre} icon="ti-map-pin" key={campo.id}>
+            <div className="apple-chips apple-chips--wrap">
+              {bloques.filter(b => b.campo_id === campo.id).map(b => (
+                <button type="button" key={b.id} className="apple-chip apple-chip--lg" aria-pressed={b.tipo === 'invernadero'} onClick={() => abrir('editarBloque', { id: b.id, codigo: b.codigo, tipo: b.tipo })}>
+                  <span>{b.codigo} · {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}</span>
+                </button>
+              ))}
+            </div>
+          </ModalSection>
+        ))}</>,
+      }
+      break
+    case 'editarBloque':
+      vista = {
+        icon: 'ti-map', title: `Bloque ${form.codigo || ''}`, subtitle: 'Seleccioná el tipo de este bloque.', submit: guardarBloque, submitLabel: 'Guardar',
+        cancelLabel: 'Volver', onCancel: () => abrir('bloques'), summary: form.tipo === 'invernadero' ? 'Invernadero' : 'Campo abierto',
+        body: <ModalGroup label="Tipo de bloque"><ChoiceChips label="Tipo de bloque" value={form.tipo} onChange={tipo => setForm(f => ({ ...f, tipo }))} options={[{ value: 'invernadero', label: 'Invernadero', icon: 'ti-building-warehouse' }, { value: 'campo_abierto', label: 'Campo abierto', icon: 'ti-plant-2' }]} /></ModalGroup>,
+      }
+      break
+    default:
+      break
+  }
 
   return (
     <div className="ag-page ui-c1c124">
@@ -683,404 +971,24 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
         </div>
       </div>
 
-      {modal && (
-        <Modal busy={loading} onClose={cerrar} label="Configuración" style={{
-          position:'fixed',
-          top:0,
-          left:0,
-          right:0,
-          bottom:0,
-          background:'rgba(0,0,0,0.4)',
-          zIndex:100,
-          display:'flex',
-          alignItems: esDesktop() ? 'center' : 'flex-end',
-          justifyContent:'center',
-          padding: esDesktop() ? 24 : 0,
-          boxSizing:'border-box',
-        }}>
-          <div className="ag-config-modal-card ui-70723f" style={{ borderRadius: esDesktop() ? 24 : '24px 24px 0 0', maxWidth: esDesktop() ? 620 : 480, maxHeight: esDesktop() ? '82vh' : '88vh', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none', boxShadow: esDesktop() ? '0 28px 70px rgba(0,0,0,0.28)' : 'none' }}>
-
-            <div className="ag-config-modal-toolbar">
-              <button
-                type="button"
-                className="ag-config-modal-close ag-close-btn"
-                onClick={cerrar}
-                disabled={loading}
-                aria-label="Cerrar configuración"
-                title="Cerrar"
-              >
-                <i className="ti ti-x" aria-hidden="true"></i>
-              </button>
-            </div>
-
-            {error && <div className="ui-e136cb">{error}</div>}
-            {success && <div className="ui-c90154">{success}</div>}
-
-            {modal === 'empresa' && <>
-              <div className="ui-c7b1b6">Identidad de la empresa</div>
-              <div className="ui-7d5827">Este nombre aparece en la barra lateral y en el acceso de invitados. AgroBloque sigue siendo la marca del producto.</div>
-              <div className="ag-surface ui-e446b2">
-                <label className="ag-field-label ui-486335">Nombre comercial
-                  <input className="bl-input" value={form.nombre || ''} maxLength="100" onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Horticultura San José" />
-                </label>
-                <label className="ag-field-label ui-486335">Email de la empresa
-                  <input className="bl-input" type="email" value={form.email || ''} onChange={e => setForm(f => ({ ...f, email:e.target.value }))} placeholder="contacto@empresa.com" />
-                </label>
-                <label className="ag-field-label ui-486335">Teléfono
-                  <input className="bl-input" type="tel" value={form.telefono || ''} onChange={e => setForm(f => ({ ...f, telefono:e.target.value }))} placeholder="+595 ..." />
-                </label>
-                <label className="ag-field-label ui-486335">URL del logotipo (opcional)
-                  <input className="bl-input" type="url" value={form.logo_url || ''} onChange={e => setForm(f => ({ ...f, logo_url:e.target.value }))} placeholder="https://..." />
-                </label>
-                <label className="ag-field-label ui-486335">Color principal
-                  <div className="organization-color-field">
-                    <input type="color" value={form.color_primario || '#0F3923'} onChange={e => setForm(f => ({ ...f, color_primario:e.target.value }))} aria-label="Color principal de la empresa" />
-                    <input className="bl-input" style={{ marginBottom:0 }} value={form.color_primario || '#0F3923'} onChange={e => setForm(f => ({ ...f, color_primario:e.target.value }))} pattern="#[0-9A-Fa-f]{6}" placeholder="#0F3923" />
-                  </div>
-                </label>
-                <button className="bl-btn bl-btn--primary" onClick={guardarEmpresa} disabled={loading}>{loading ? 'Guardando...' : 'Guardar empresa'}</button>
-              </div>
-              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'nuevaEmpresa' && <>
-              <div className="ui-c7b1b6">Nueva empresa cliente</div>
-              <div className="ui-7d5827">Crea un espacio de datos aislado y envía al dueño un correo para definir su contraseña.</div>
-              <div className="ag-surface ui-e446b2">
-                <label className="ag-field-label ui-486335">Nombre comercial
-                  <input className="bl-input" value={form.nombre || ''} maxLength="100" onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} placeholder="Ej: Horticultura San José" />
-                </label>
-                <label className="ag-field-label ui-486335">Email del dueño
-                  <input className="bl-input" type="email" value={form.owner_email || ''} onChange={e => setForm(f => ({ ...f, owner_email:e.target.value }))} placeholder="dueno@empresa.com" />
-                </label>
-                <div className="ui-ca26cd" role="note">
-                  <i className="ti ti-shield-lock ui-6f7515" aria-hidden="true" />
-                  <span>La nueva empresa no podrá ver datos de otros clientes. Su dueño será administrador únicamente de ese espacio.</span>
-                </div>
-                <button className="bl-btn bl-btn--primary" onClick={crearEmpresaCliente} disabled={loading}>{loading ? 'Creando...' : 'Crear empresa y enviar invitación'}</button>
-              </div>
-              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'invitados' && <>
-              <div className="ui-8decf3">Invitados de solo lectura</div>
-              <div className="ui-7d5827">El invitado entra con un link y no puede editar ni borrar datos.</div>
-
-              <div className="ag-surface ui-e446b2">
-                <label className="ag-field-label ui-486335">Crear link
-                <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del invitado"/></label>
-                <label className="ag-field-label ui-13e1ed">Campo permitido
-                <select className="bl-input" value={form.campo_id||''} onChange={e=>setForm(f=>({...f,campo_id:e.target.value}))}>
-                  <option value="">Todos los campos</option>
-                  {campos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select></label>
-                <select className="bl-input" value={form.dias||'30'} onChange={e=>setForm(f=>({...f,dias:e.target.value}))}>
-                  <option value="7">Vence en 7 días</option>
-                  <option value="30">Vence en 30 días</option>
-                  <option value="90">Vence en 90 días</option>
-                  <option value="">Sin vencimiento</option>
-                </select>
-                <PermisosSelector
-                  permisos={form.permisos}
-                  ayuda="Elegí exactamente a que apartados puede entrar este invitado."
-                  onChange={permisos => setForm(f => ({ ...f, permisos }))}
-                />
-                <button className="bl-btn bl-btn--primary" onClick={crearInvitado} disabled={loading}>{loading ? 'Creando...' : 'Crear acceso invitado'}</button>
-              </div>
-
-              {linkInvitado && (
-                <div className="ui-b7f0a4">
-                  <div className="ui-db4b65">Link creado</div>
-                  <div className="ui-3164c8">{linkInvitado}</div>
-                  <button className="bl-btn bl-btn--primary" onClick={copiarLinkInvitado}>Copiar link</button>
-                </div>
-              )}
-
-              <div className="ag-surface ui-9a7f69">
-                <div className="ui-486335">Links creados</div>
-                {invitados.length === 0 ? (
-                  <div className="ui-9a291f">Sin invitados creados.</div>
-                ) : invitados.map(inv => (
-                  <div key={inv.id} style={listItem}>
-                    <div>
-                      <div className="ui-1d6b4b">{inv.nombre}</div>
-                      <div className="ui-a8f171">
-                        {inv.campos?.nombre || 'Todos los campos'}  -  {inv.activo ? 'Activo' : 'Desactivado'}{inv.expires_at ? `  -  vence ${String(inv.expires_at).slice(0,10)}` : ''}
-                      </div>
-                    </div>
-                    {inv.activo && (
-                      <button className="ag-small-action ui-77d570" onClick={() => desactivarInvitado(inv.id)}
-                       >
-                        Desactivar
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>}
-
-            {/* -- CUENTA -- */}
-            {modal === 'roles' && <>
-              <div className="ui-8decf3">Usuarios y permisos</div>
-              <div className="ui-7d5827">Definí el correo y una contraseña inicial. Compartí esos datos con la persona por un canal privado.</div>
-
-              <div className="ag-surface ui-e446b2">
-                <label className="ag-field-label ui-486335">{form.id ? 'Editar usuario' : 'Agregar usuario'}
-                <input className="bl-input" type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="correo@empresa.com"/></label>
-                <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre"/>
-                <select className="bl-input" value={form.rol||'operador'} onChange={e=>setForm(f=>({...f,rol:e.target.value}))}>
-                  <option value="admin">Admin</option>
-                  <option value="operador">Operador</option>
-                  <option value="lectura">Solo lectura</option>
-                </select>
-                <label className="ag-field-label ui-486335">{form.id ? 'Nueva contraseña (opcional)' : 'Contraseña inicial'}
-                  <input className="bl-input" type={form.mostrar_password ? 'text' : 'password'} value={form.password||''} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Mínimo 8 caracteres" minLength="8" autoComplete="new-password"/>
-                </label>
-                <label className="ag-field-label ui-486335">{form.id ? 'Repetir nueva contraseña' : 'Repetir contraseña'}
-                  <input className="bl-input" type={form.mostrar_password ? 'text' : 'password'} value={form.password_confirm||''} onChange={e=>setForm(f=>({...f,password_confirm:e.target.value}))} placeholder="Escribila nuevamente" minLength="8" autoComplete="new-password"/>
-                </label>
-                <label className="ui-fc5f0c">
-                  <input type="checkbox" checked={Boolean(form.mostrar_password)} onChange={e=>setForm(f=>({...f,mostrar_password:e.target.checked}))}/>
-                  Mostrar contraseña
-                </label>
-                <PermisosSelector
-                  permisos={form.permisos}
-                  ayuda="Elegí exactamente a que apartados puede entrar este usuario."
-                  onChange={permisos => setForm(f => ({ ...f, permisos }))}
-                />
-                <AccionesSelector
-                  permisos={form.permisos}
-                  acciones={form.acciones}
-                  rol={form.rol || 'operador'}
-                  onChange={acciones => setForm(f => ({ ...f, acciones }))}
-                />
-                <div className="ui-ca26cd" role="note">
-                  <i className="ti ti-shield-lock ui-6f7515" aria-hidden="true" />
-                  <span>AgroBloque no guarda esta contraseña en sus tablas. Supabase la protege y después no podrá mostrarse nuevamente.</span>
-                </div>
-                <textarea className="ui-d303ae bl-input"  value={form.notas||''} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} placeholder="Notas internas"/>
-                <button className="bl-btn bl-btn--primary" onClick={guardarRol} disabled={loading}>{loading ? 'Guardando...' : (form.id ? ((form.password || form.password_confirm) ? 'Guardar y actualizar acceso' : 'Guardar cambios') : 'Crear usuario')}</button>
-              </div>
-
-              <div className="ag-surface ui-9a7f69">
-                <div className="ui-486335">Registrados</div>
-                {roles.length === 0 ? (
-                  <div className="ui-9a291f">Sin usuarios registrados.</div>
-                ) : roles.map(r => (
-                  <div key={r.id} style={listItem}>
-                    <div className="ui-3f9f96">
-                      <div className="ui-1d6b4b">{r.nombre || r.email}</div>
-                      <div className="ui-2f9f8e">{r.email} - {r.rol}</div>
-                    </div>
-                    <div className="ui-52e666">
-                      <button className="ag-small-action ui-1283df" onClick={() => setForm({ ...r, permisos: Array.isArray(r.permisos) ? r.permisos : [], acciones: r.acciones || {}, password:'', password_confirm:'', mostrar_password:false })}>Editar</button>
-                      <button className="ag-small-action ui-0a7db6" onClick={() => eliminarRol(r.id)}>Borrar</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'cuenta' && <>
-              <div className="ui-c7b1b6">Mi cuenta</div>
-
-              {/* Foto */}
-              <div className="ui-080f90">
-                <div className="ui-ecfc6a">
-                  {perfil.foto ? (
-                    <img className="ui-e97dd4" src={perfil.foto} alt="perfil"
-                     />
-                  ) : (
-                    <div className="ui-f2a366">
-                      <i className="ti ti-user ui-64b5eb" aria-hidden="true"></i>
-                    </div>
-                  )}
-                  <button className="ui-46e341" aria-label="Cambiar foto" onClick={() => fotoRef.current?.click()}
-                   >
-                    <i className="ti ti-camera ui-6a3571" aria-hidden="true"></i>
-                  </button>
-                </div>
-                <span className="ui-93a7e1">Toca la cámara para cambiar la foto</span>
-              </div>
-
-              {/* Nombre */}
-              <div className="ag-surface ui-e446b2">
-                <label className="ag-field-label ui-486335">Nombre
-                <input className="ui-d51702 bl-input"  value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Tu nombre"/></label>
-                <button className="bl-btn bl-btn--primary" onClick={guardarNombre} disabled={loading}>{loading?'Guardando...':'Guardar nombre'}</button>
-              </div>
-
-              {/* Email */}
-              <div className="ag-surface ui-e446b2">
-                <label className="ag-field-label ui-486335">Email
-                <input className="ui-d51702 bl-input"  type="email" value={form.email||''} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="nuevo@email.com"/></label>
-                <div className="ui-51eea9">Si cambias el email, recibiras un link de confirmación</div>
-                <button className="bl-btn bl-btn--primary" onClick={guardarEmail} disabled={loading}>{loading?'Guardando...':'Cambiar email'}</button>
-              </div>
-
-              {/* Contraseña */}
-              <div className="ag-surface ui-e446b2">
-                <label className="ag-field-label ui-486335">Contraseña
-                <input className="ui-d51702 bl-input"  type="password" value={form.nueva||''} onChange={e=>setForm(f=>({...f,nueva:e.target.value}))} placeholder="Nueva contraseña"/></label>
-                <input className="ui-d51702 bl-input"  type="password" value={form.repetir||''} onChange={e=>setForm(f=>({...f,repetir:e.target.value}))} placeholder="Repetir contraseña"/>
-                <button className="bl-btn bl-btn--danger" onClick={guardarContrasena} disabled={loading}>{loading?'Guardando...':'Cambiar contraseña'}</button>
-              </div>
-
-              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {/* -- CAMPOS -- */}
-            {modal === 'campos' && <>
-              <div className="config-fields-head">
-                <span className="config-fields-head__icon" aria-hidden="true"><i className="ti ti-map-pin" /></span>
-                <div><div className="ui-c7b1b6">Campos</div><p>Organizá los espacios productivos de tu empresa. Cada campo puede tener sus propios bloques.</p></div>
-              </div>
-              <div className="config-fields-summary"><strong>{campos.length}</strong><span>campo{campos.length === 1 ? '' : 's'} registrado{campos.length === 1 ? '' : 's'}</span></div>
-              {campos.length === 0 ? <div className="config-fields-empty"><i className="ti ti-map-plus" aria-hidden="true" /><strong>Todavía no hay campos</strong><span>Creá el primero para empezar a organizar tus bloques.</span></div> : <div className="config-fields-list">
-                {campos.map(c => {
-                  const cantidadBloques = bloques.filter(b => b.campo_id === c.id).length
-                  return <article className="config-field-row" key={c.id}>
-                    <span className="config-field-row__icon" aria-hidden="true"><i className="ti ti-map-2" /></span>
-                    <span className="config-field-row__copy"><strong>{c.nombre}</strong><small>{cantidadBloques} bloque{cantidadBloques === 1 ? '' : 's'}</small></span>
-                    <button type="button" className="ag-small-action" onClick={() => abrir('editarCampo', { id:c.id, nombre:c.nombre })}><i className="ti ti-pencil" aria-hidden="true" />Editar</button>
-                  </article>
-                })}
-              </div>}
-              <div className="config-fields-actions">
-                <button className="bl-btn bl-btn--primary" onClick={() => abrir('editarCampo', { nombre:'' })}><i className="ti ti-plus" aria-hidden="true" />Crear campo</button>
-                <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
-              </div>
-            </>}
-
-            {modal === 'editarCampo' && <>
-              <div className="config-field-form-head">
-                <span aria-hidden="true"><i className={`ti ${form.id ? 'ti-edit' : 'ti-map-plus'}`} /></span>
-                <div><div className="ui-c7b1b6">{form.id ? 'Editar campo' : 'Nuevo campo'}</div><p>{form.id ? 'Cambiá el nombre sin afectar sus bloques ni registros.' : 'Después de crearlo podrás entrar en Bloques y cargar su distribución.'}</p></div>
-              </div>
-              <label className="ag-field-label config-field-name">Nombre del campo
-                <input className="bl-input" autoFocus maxLength="100" value={form.nombre || ''} onChange={e => setForm(f => ({ ...f, nombre:e.target.value }))} onKeyDown={e => { if (e.key === 'Enter' && !loading) guardarCampo() }} placeholder="Ej: Campo Norte" />
-              </label>
-              <div className="config-fields-actions">
-                <button className="bl-btn bl-btn--primary" onClick={guardarCampo} disabled={loading || String(form.nombre || '').trim().length < 2}>{loading ? 'Guardando…' : form.id ? 'Guardar cambios' : 'Crear campo'}</button>
-                <button className="bl-btn bl-btn--ghost" onClick={() => abrir('campos')} disabled={loading}>Volver</button>
-              </div>
-            </>}
-
-            {/* -- CULTIVOS -- */}
-            {modal === 'cultivos' && <>
-              <div className="ui-c7b1b6">Cultivos</div>
-              {cultivos.map(c => (
-                <div key={c.id} style={listItem}>
-                  <div className="ui-0aae41">{c.nombre}</div>
-                  <div className="ui-91294d">
-                    <button className="ag-small-action ui-387856" onClick={() => abrir('editarCultivo',{id:c.id,nombre:c.nombre})}>Editar</button>
-                    <button className="ag-small-action ui-14c146" onClick={() => eliminar('cultivos',c.id,'cultivos')}>Eliminar</button>
-                  </div>
-                </div>
-              ))}
-              <button style={addBtn} onClick={() => abrir('editarCultivo',{})}>+ Agregar cultivo</button>
-              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'editarCultivo' && <>
-              <div className="ui-c7b1b6">{form.id?'Editar cultivo':'Nuevo cultivo'}</div>
-              <div className="ui-74cc19">Nombre</div>
-              <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: Morron"/>
-              <button className="bl-btn bl-btn--primary" onClick={guardarCultivo} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button className="bl-btn bl-btn--ghost" onClick={() => abrir('cultivos')}>Volver</button>
-            </>}
-
-            {/* -- OPERARIOS -- */}
-            {modal === 'operarios' && <>
-              <div className="ui-c7b1b6">Operarios</div>
-              {campos.map(campo => (
-                <div key={campo.id}>
-                  <div className="ui-269365">{campo.nombre}</div>
-                  {operarios.filter(o => o.campo_id === campo.id && o.activo !== false).map(o => (
-                    <div key={o.id} style={listItem}>
-                      <div className="ui-0aae41">{o.nombre}</div>
-                      <div className="ui-91294d">
-                        <button className="ag-small-action ui-387856" onClick={() => abrir('editarOperario',{id:o.id,nombre:o.nombre,campo_id:o.campo_id})}>Editar</button>
-                        <button className="ag-small-action ui-14c146" onClick={() => eliminar('operarios',o.id,'operarios')}>Desactivar</button>
-                      </div>
-                    </div>
-                  ))}
-                  <button style={addBtn} onClick={() => abrir('editarOperario',{campo_id:campo.id})}>+ Agregar a {campo.nombre}</button>
-                </div>
-              ))}
-              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'editarOperario' && <>
-              <div className="ui-c7b1b6">{form.id?'Editar operario':'Nuevo operario'}</div>
-              <div className="ui-74cc19">Nombre</div>
-              <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del operario"/>
-              <button className="bl-btn bl-btn--primary" onClick={guardarOperario} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button className="bl-btn bl-btn--ghost" onClick={() => abrir('operarios')}>Volver</button>
-            </>}
-
-            {/* -- ABONOS -- */}
-            {modal === 'abonos' && <>
-              <div className="ui-c7b1b6">Abonos de base</div>
-              {abonos.map(a => (
-                <div key={a.id} style={listItem}>
-                  <div className="ui-0aae41">{a.nombre}</div>
-                  <div className="ui-91294d">
-                    <button className="ag-small-action ui-387856" onClick={() => abrir('editarAbono',{id:a.id,nombre:a.nombre})}>Editar</button>
-                    <button className="ag-small-action ui-14c146" onClick={() => eliminar('abonos',a.id,'abonos')}>Eliminar</button>
-                  </div>
-                </div>
-              ))}
-              <button style={addBtn} onClick={() => abrir('editarAbono',{})}>+ Agregar abono</button>
-              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'editarAbono' && <>
-              <div className="ui-c7b1b6">{form.id?'Editar abono':'Nuevo abono'}</div>
-              <div className="ui-74cc19">Nombre</div>
-              <input className="bl-input" value={form.nombre||''} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Ej: 15-15-15"/>
-              <button className="bl-btn bl-btn--primary" onClick={guardarAbono} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button className="bl-btn bl-btn--ghost" onClick={() => abrir('abonos')}>Volver</button>
-            </>}
-
-            {/* -- BLOQUES -- */}
-            {modal === 'bloques' && <>
-              <div className="ui-0c9a57">Tipo de bloques</div>
-              <div className="ui-fe1408">Toca un bloque para cambiar si es invernadero o campo abierto</div>
-              {campos.map(campo => (
-                <div key={campo.id}>
-                  <div className="ui-269365">{campo.nombre}</div>
-                  <div className="ui-c4905b">
-                    {bloques.filter(b => b.campo_id === campo.id).map(b => (
-                      <div className="ui-6a9e69" role="button" tabIndex={0} key={b.id} onClick={() => abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo })} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir('editarBloque', { id:b.id, codigo:b.codigo, tipo:b.tipo }) } }}
-                        style={{ background: b.tipo === 'invernadero' ? '#eeeeee' : '#f2f1ef', color: b.tipo === 'invernadero' ? '#212121' : '#555' }}>
-                        {b.codigo}  -  {b.tipo === 'invernadero' ? 'Inv.' : 'Campo'}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <button className="bl-btn bl-btn--ghost" onClick={cerrar}>Cerrar</button>
-            </>}
-
-            {modal === 'editarBloque' && <>
-              <div className="ui-0c9a57">Bloque {form.codigo}</div>
-              <div className="ui-fe1408">Selecciona el tipo de este bloque</div>
-              <div className="ui-248550">
-                {['invernadero','campo_abierto'].map(t => (
-                  <button className="ag-small-action ui-86faf0" key={t} onClick={() => setForm(f=>({...f,tipo:t}))} style={{ background: form.tipo===t ? '#212121' : '#fff', color: form.tipo===t ? '#fff' : '#555' }}>
-                    {t === 'invernadero' ? 'Invernadero' : 'Campo abierto'}
-                  </button>
-                ))}
-              </div>
-              <button className="bl-btn bl-btn--primary" onClick={guardarBloque} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
-              <button className="bl-btn bl-btn--ghost" onClick={() => abrir('bloques')}>Volver</button>
-            </>}
-
-          </div>
-        </Modal>
-      )}
+      <UnifiedFormModal
+        open={Boolean(vista)}
+        tone="neutral"
+        icon={vista?.icon}
+        eyebrow="Configuración"
+        title={vista?.title}
+        subtitle={vista?.subtitle}
+        label={vista?.title || 'Configuración'}
+        busy={loading}
+        onClose={cerrar}
+        onCancel={vista?.onCancel}
+        onSubmit={vista?.submit}
+        submitDisabled={vista?.submitDisabled}
+        submitLabel={vista ? (vista.submit ? vista.submitLabel : null) : undefined}
+        cancelLabel={vista?.cancelLabel || 'Cerrar'}
+        error={modal ? error : ''}
+        summary={vista?.summary}
+      >{() => vista?.body}</UnifiedFormModal>
     </div>
   )
 }

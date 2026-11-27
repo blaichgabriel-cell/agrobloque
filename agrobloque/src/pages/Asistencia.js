@@ -1,8 +1,9 @@
-import { Modal } from '../components/UI'
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
 import { useCan } from '../lib/RoleContext'
+import UnifiedFormModal, { ModalSection, ModalField, resumenPie } from '../components/UnifiedFormModal'
+import { toast } from 'sonner'
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado']
@@ -120,6 +121,7 @@ export default function Asistencia() {
       if (error) throw error
       setNombrePersonal('')
       await fetchOperarios()
+      toast.success('Persona agregada', { description: nombre })
     } catch (e) {
       setError(`No se pudo agregar a ${nombre}: ${e.message || 'error sin detalle'}`)
     }
@@ -135,6 +137,7 @@ export default function Asistencia() {
       const { error } = await supabase.from('operarios').update({ activo:false }).eq('id', operario.id)
       if (error) throw error
       await fetchOperarios()
+      toast.success('Persona sacada de la lista', { description: operario.nombre })
     } catch (e) {
       setError(`No se pudo sacar a ${operario.nombre}: ${e.message || 'error sin detalle'}`)
     }
@@ -301,8 +304,9 @@ export default function Asistencia() {
 
   const guardarAdelanto = async () => {
     const monto = parsearGs(formAdelanto.monto)
-    if (!monto) return
+    if (!monto) { setError('Cargá el monto del adelanto.'); return }
     setSavingAdelanto(true)
+    setError('')
     try {
       const { error } = await supabase.from('adelantos').insert({
         operario_id: modalAdelanto.id,
@@ -313,6 +317,7 @@ export default function Asistencia() {
       setModalAdelanto(null)
       setFormAdelanto({ monto:'', descripcion:'' })
       fetchAdelantos(operarios)
+      toast.success('Adelanto registrado', { description: `${modalAdelanto.nombre} · Gs. ${fmtGs(monto)}` })
     } catch (e) { setError('Error al guardar adelanto') }
     setSavingAdelanto(false)
   }
@@ -325,6 +330,7 @@ export default function Asistencia() {
   }
 
   const abrirEditarAdelanto = (adelanto) => {
+    setError('')
     setModalEditarAdelanto(adelanto)
     setFormEditarAdelanto({
       monto: fmtGs(adelanto.monto),
@@ -335,8 +341,9 @@ export default function Asistencia() {
   const guardarEdicionAdelanto = async () => {
     if (!modalEditarAdelanto) return
     const monto = parsearGs(formEditarAdelanto.monto)
-    if (!monto) return
+    if (!monto) { setError('Cargá el monto del adelanto.'); return }
     setSavingAdelanto(true)
+    setError('')
     try {
       const estabaPagado = esAdelantoPagado(modalEditarAdelanto)
       const fechaPago = getFechaPagoAdelanto(modalEditarAdelanto)
@@ -350,6 +357,7 @@ export default function Asistencia() {
       setModalEditarAdelanto(null)
       setFormEditarAdelanto({ monto:'', descripcion:'' })
       fetchAdelantos(operarios)
+      toast.success('Adelanto actualizado', { description: `Gs. ${fmtGs(monto)}` })
     } catch (e) {
       setError('Error al editar adelanto')
     }
@@ -371,7 +379,7 @@ export default function Asistencia() {
         <div className="ui-476525">Control semanal</div>
         <div className="ui-d73a43">
           <div className="ag-page-title ui-136b85">Asistencia y pagos</div>
-          {can.create && <button className="ag-small-action ui-5a0a19" onClick={() => setModalPersonal(true)} disabled={!campoActivo}>+ Personal</button>}
+          {can.create && <button className="ag-small-action ui-5a0a19" onClick={() => { setError(''); setNombrePersonal(''); setModalPersonal(true) }} disabled={!campoActivo}>+ Personal</button>}
         </div>
         {error && <div className="ui-d6d959">{error}</div>}
         <div className="ui-ed8328">
@@ -414,7 +422,7 @@ export default function Asistencia() {
               <button className="ui-59fc42" onClick={() => setModalHistorial(op)}>
                 Adelantos pendientes: <span className="ui-e634e6" style={{ color: getTotalAdelantos(op.id) > 0 ? '#c84040' : 'var(--text-secondary)' }}>Gs. {fmtGs(getTotalAdelantos(op.id))}</span> →
               </button>
-              {can.create && <button className="ag-small-action ui-d51170" onClick={() => setModalAdelanto(op)}>+ Adelanto</button>}
+              {can.create && <button className="ag-small-action ui-d51170" onClick={() => { setError(''); setFormAdelanto({ monto:'', descripcion:'' }); setModalAdelanto(op) }}>+ Adelanto</button>}
             </div>
           </div>
         ))}
@@ -457,115 +465,136 @@ export default function Asistencia() {
         <NotasPanel modulo="asistencia" titulo="Bloc de notas de asistencia" />
       </div>
 
-      {modalPersonal && (
-        <Modal onClose={() => setModalPersonal(false)} label="Administrar personal" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:120, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div className="ui-6332f9" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-99efa8">Personal de {campoActivo?.nombre}</div>
-            <div className="ui-d824a8">Agregá personas nuevas o sacá de la lista a quienes ya no trabajan aquí.</div>
-            <label className="ag-field-label ui-82a45a">Nombre y apellido</label>
-            <div className="ui-248550">
-              <input className="ui-de0344" autoFocus value={nombrePersonal} onChange={e => setNombrePersonal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') agregarPersonal() }} placeholder="Ej: Juan Pérez" />
-              <button className="ag-small-action ui-f65358" onClick={agregarPersonal} disabled={savingPersonal || !nombrePersonal.trim()} style={{ opacity: savingPersonal || !nombrePersonal.trim() ? .55 : 1 }}>{savingPersonal ? 'Guardando...' : 'Agregar'}</button>
+      {/* Administrar personal */}
+      <UnifiedFormModal
+        open={modalPersonal}
+        tone="bloques"
+        icon="ti-users"
+        eyebrow="Asistencia"
+        title={`Personal de ${campoActivo?.nombre || 'este campo'}`}
+        subtitle="Agregá personas nuevas o sacá de la lista a quienes ya no trabajan aquí."
+        label="Administrar personal"
+        busy={savingPersonal}
+        onClose={() => setModalPersonal(false)}
+        onSubmit={agregarPersonal}
+        submitDisabled={!nombrePersonal.trim()}
+        submitLabel="Agregar persona"
+        cancelLabel="Cerrar"
+        error={modalPersonal ? error : ''}
+        summary={resumenPie([{ n: operarios.length, texto: 'personas en la lista', uno: 'persona en la lista' }]) || 'Todavía no hay personal'}
+      >{() => <>
+        <ModalSection title="Nueva persona" icon="ti-user-plus">
+          <ModalField label="Nombre y apellido"><input className="apple-control" data-autofocus value={nombrePersonal} onChange={e => setNombrePersonal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (nombrePersonal.trim() && !savingPersonal) agregarPersonal() } }} placeholder="Ej: Juan Pérez" /></ModalField>
+        </ModalSection>
+        <ModalSection title={`En la lista (${operarios.length})`} icon="ti-list">
+          {operarios.length === 0 ? <p className="apple-empty">Todavía no hay personal en este campo.</p> : (
+            <div className="apple-list">
+              {operarios.map(op => (
+                <div className="apple-list__row" key={op.id}>
+                  <div className="apple-list__main"><strong>{op.nombre}</strong></div>
+                  <div className="apple-list__actions"><button type="button" className="apple-mini-btn apple-mini-btn--danger" onClick={() => sacarPersonal(op)} disabled={savingPersonal}>Sacar</button></div>
+                </div>
+              ))}
             </div>
-            <div className="ui-288c85">En la lista ({operarios.length})</div>
-            {operarios.length === 0 ? (
-              <div className="ui-0144f1">Todavía no hay personal en este campo.</div>
-            ) : operarios.map(op => (
-              <div className="ui-285ad0" key={op.id}>
-                <span className="ui-7fbfd2">{op.nombre}</span>
-                <button className="ag-small-action ui-0da0e1" onClick={() => sacarPersonal(op)} disabled={savingPersonal}>Sacar</button>
-              </div>
-            ))}
-            <div className="ui-506fc3">Al sacar una persona no se borran sus registros anteriores.</div>
-            <button className="ag-small-action ui-9252c4" onClick={() => setModalPersonal(false)}>Cerrar</button>
-          </div>
-        </Modal>
-      )}
+          )}
+          <p className="apple-note">Al sacar una persona no se borran sus registros anteriores.</p>
+        </ModalSection>
+      </>}</UnifiedFormModal>
 
-      {/* Modal historial adelantos */}
-      {modalHistorial && (
-        <Modal onClose={() => setModalHistorial(null)} label="Asistencia" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div className="ui-ab5655" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            <div className="ui-99efa8">Adelantos — {modalHistorial.nombre}</div>
-            <div className="ui-fe1408">Pendiente: Gs. {fmtGs(getTotalAdelantos(modalHistorial.id))} | Pagados: Gs. {fmtGs(getTotalAdelantosPagados(modalHistorial.id))}</div>
-            {getAdelantosOperario(modalHistorial.id).length === 0 ? (
-              <div className="ui-3ad9f2">Sin adelantos registrados</div>
-            ) : <>
-              {getAdelantosPendientesOperario(modalHistorial.id).length > 0 && <div className="ui-c49d1f">Pendientes</div>}
-              {getAdelantosPendientesOperario(modalHistorial.id).map(a => (
-              <div className="ag-surface ui-0beb00" key={a.id}>
-                <div className="ui-9b26fa">
-                  <div className="ui-e4e660" style={{ color: esAdelantoPagado(a) ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
-                    Gs. {fmtGs(a.monto)}
-                    {esAdelantoPagado(a) && <span className="ui-b97a0d">Pagado</span>}
+      {/* Historial de adelantos */}
+      <UnifiedFormModal
+        open={Boolean(modalHistorial)}
+        tone="bloques"
+        icon="ti-cash"
+        eyebrow="Adelantos"
+        title={modalHistorial ? modalHistorial.nombre : ''}
+        label="Adelantos"
+        onClose={() => setModalHistorial(null)}
+        submitLabel={null}
+        cancelLabel="Cerrar"
+        summary={modalHistorial ? resumenPie([
+          { solo: `Pendiente Gs. ${fmtGs(getTotalAdelantos(modalHistorial.id))}` },
+          { solo: `Pagados Gs. ${fmtGs(getTotalAdelantosPagados(modalHistorial.id))}` },
+        ]) : null}
+      >{() => modalHistorial && <>
+        {getAdelantosOperario(modalHistorial.id).length === 0 ? <p className="apple-empty">Sin adelantos registrados.</p> : <>
+          {getAdelantosPendientesOperario(modalHistorial.id).length > 0 && (
+            <ModalSection title="Pendientes" icon="ti-hourglass">
+              <div className="apple-list">
+                {getAdelantosPendientesOperario(modalHistorial.id).map(a => (
+                  <div className="apple-list__row" key={a.id}>
+                    <div className="apple-list__main">
+                      <strong className="apple-list__money">Gs. {fmtGs(a.monto)}</strong>
+                      <small>{a.fecha}{limpiarMarcaPagado(a.descripcion || '') ? ` · ${limpiarMarcaPagado(a.descripcion || '')}` : ''}</small>
+                    </div>
+                    {can.edit && <div className="apple-list__actions">
+                      <button type="button" className="apple-mini-btn" onClick={() => abrirEditarAdelanto(a)}>Editar</button>
+                      <button type="button" className="apple-mini-btn apple-mini-btn--ok" onClick={() => marcarPagado(a)}><i className="ti ti-check" aria-hidden="true" />Pagado</button>
+                      <button type="button" className="apple-mini-btn apple-mini-btn--danger" onClick={() => eliminarAdelanto(a.id)}>Eliminar</button>
+                    </div>}
                   </div>
-                  <div className="ui-93a7e1">{a.fecha}</div>
-                </div>
-                {esAdelantoPagado(a) && <div className="ui-e512bf">{getFechaPagoAdelanto(a) ? `Pagado: ${getFechaPagoAdelanto(a)}` : 'Pagado'}</div>}
-                {limpiarMarcaPagado(a.descripcion || '') && <div className="ui-9546b4">{limpiarMarcaPagado(a.descripcion || '')}</div>}
-                {can.edit && <div className="ui-27070b">
-                  <button className="ag-small-action ui-0365b4" onClick={() => abrirEditarAdelanto(a)}>Editar</button>
-                  <button className="ag-small-action ui-6e0c7e" onClick={() => marcarPagado(a)}>✓ Marcar pagado</button>
-                  <button className="ag-small-action ui-14c146" onClick={() => eliminarAdelanto(a.id)}>Eliminar</button>
-                </div>}
+                ))}
               </div>
-              ))}
-              {getAdelantosPagadosOperario(modalHistorial.id).length > 0 && <div className="ui-ef7e2c">Historial de pagados</div>}
-              {getAdelantosPagadosOperario(modalHistorial.id).map(a => (
-                <div className="ui-8c1eea" key={a.id}>
-                  <div className="ui-87fd17">
-                    <div className="ui-d8fe22">Gs. {fmtGs(a.monto)} <span className="ui-f84a8e">Pagado</span></div>
-                    <div className="ui-a6dec4">{a.fecha}</div>
+            </ModalSection>
+          )}
+          {getAdelantosPagadosOperario(modalHistorial.id).length > 0 && (
+            <ModalSection title="Historial de pagados" icon="ti-circle-check">
+              <div className="apple-list">
+                {getAdelantosPagadosOperario(modalHistorial.id).map(a => (
+                  <div className="apple-list__row is-done" key={a.id}>
+                    <div className="apple-list__main">
+                      <strong className="apple-list__money">Gs. {fmtGs(a.monto)}<span className="apple-tag">Pagado</span></strong>
+                      <small>{a.fecha} · {getFechaPagoAdelanto(a) ? `pagado el ${getFechaPagoAdelanto(a)}` : 'pago registrado'}{limpiarMarcaPagado(a.descripcion || '') ? ` · ${limpiarMarcaPagado(a.descripcion || '')}` : ''}</small>
+                    </div>
                   </div>
-                  <div className="ui-691940">{getFechaPagoAdelanto(a) ? `Pagado el ${getFechaPagoAdelanto(a)}` : 'Pago registrado'}</div>
-                  {limpiarMarcaPagado(a.descripcion || '') && <div className="ui-a6dec4">{limpiarMarcaPagado(a.descripcion || '')}</div>}
-                </div>
-              ))}
-            </>}
-            <button className="ag-small-action ui-9d2a4a" onClick={() => setModalHistorial(null)}>Cerrar</button>
-          </div>
-        </Modal>
-      )}
+                ))}
+              </div>
+            </ModalSection>
+          )}
+        </>}
+      </>}</UnifiedFormModal>
 
-      {/* Modal editar adelanto */}
-      {modalEditarAdelanto && (
-        <Modal onClose={() => setModalEditarAdelanto(null)} label="Asistencia" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:110, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div className="ui-72e3b5" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0' }}>
-            <div className="ui-99efa8">Editar adelanto</div>
-            <div className="ui-fe1408">{modalHistorial?.nombre || ''}</div>
-            <label className="ag-field-label ui-74cc19">Monto (Gs.)
-            <input className="ui-8dcd88"
-              type="text" inputMode="numeric" value={formEditarAdelanto.monto}
-              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setFormEditarAdelanto(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
-              placeholder="Ej: 50.000"/></label>
-            <label className="ag-field-label ui-74cc19">Descripción (opcional)
-            <input className="ui-5e4c6e"
-              type="text" value={formEditarAdelanto.descripcion} onChange={e => setFormEditarAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/></label>
-            <button className="ag-small-action ui-17d991" onClick={guardarEdicionAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar cambios'}</button>
-            <button className="ag-small-action ui-9d2a4a" onClick={() => setModalEditarAdelanto(null)}>Cancelar</button>
-          </div>
-        </Modal>
-      )}
+      {/* Editar adelanto */}
+      <UnifiedFormModal
+        open={Boolean(modalEditarAdelanto)}
+        tone="bloques"
+        icon="ti-pencil"
+        eyebrow="Editar adelanto"
+        title={modalHistorial?.nombre || 'Editar adelanto'}
+        label="Editar adelanto"
+        busy={savingAdelanto}
+        onClose={() => setModalEditarAdelanto(null)}
+        onSubmit={guardarEdicionAdelanto}
+        submitLabel="Guardar cambios"
+        error={modalEditarAdelanto ? error : ''}
+        summary={parsearGs(formEditarAdelanto.monto) > 0 ? <>Gs. <b>{fmtGs(parsearGs(formEditarAdelanto.monto))}</b></> : 'Monto del adelanto'}
+      >{() => <>
+        <ModalSection title="Adelanto" icon="ti-cash">
+          <ModalField label="Monto (Gs.) *"><input className="apple-control apple-control--num" data-autofocus type="text" inputMode="numeric" value={formEditarAdelanto.monto} onWheel={e => e.currentTarget.blur()} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setFormEditarAdelanto(f => ({ ...f, monto: r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 50.000" /></ModalField>
+          <ModalField label="Descripción"><input className="apple-control" type="text" value={formEditarAdelanto.descripcion} onChange={e => setFormEditarAdelanto(f => ({ ...f, descripcion: e.target.value }))} placeholder="Ej: Adelanto quincena (opcional)" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
 
-      {/* Modal nuevo adelanto */}
-      {modalAdelanto && (
-        <Modal onClose={() => setModalAdelanto(null)} label="Asistencia" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:100, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }}>
-          <div className="ui-72e3b5" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0' }}>
-            <div className="ui-99efa8">Registrar adelanto</div>
-            <div className="ui-fe1408">{modalAdelanto.nombre}</div>
-            <label className="ag-field-label ui-74cc19">Monto (Gs.)
-            <input className="ui-8dcd88"
-              type="text" inputMode="numeric" value={formAdelanto.monto}
-              onChange={e => { const r=e.target.value.replace(/[^0-9]/g,''); setFormAdelanto(f=>({...f,monto:r?parseInt(r,10).toLocaleString('es-PY'):''})) }}
-              placeholder="Ej: 50.000"/></label>
-            <label className="ag-field-label ui-74cc19">Descripción (opcional)
-            <input className="ui-5e4c6e"
-              type="text" value={formAdelanto.descripcion} onChange={e => setFormAdelanto(f=>({...f,descripcion:e.target.value}))} placeholder="Ej: Adelanto quincena"/></label>
-            <button className="ag-small-action ui-17d991" onClick={guardarAdelanto} disabled={savingAdelanto}>{savingAdelanto ? 'Guardando...' : 'Guardar adelanto'}</button>
-            <button className="ag-small-action ui-9d2a4a" onClick={() => setModalAdelanto(null)}>Cancelar</button>
-          </div>
-        </Modal>
-      )}
+      {/* Nuevo adelanto */}
+      <UnifiedFormModal
+        open={Boolean(modalAdelanto)}
+        tone="bloques"
+        icon="ti-cash"
+        eyebrow="Registrar adelanto"
+        title={modalAdelanto?.nombre || 'Registrar adelanto'}
+        label="Registrar adelanto"
+        busy={savingAdelanto}
+        onClose={() => setModalAdelanto(null)}
+        onSubmit={guardarAdelanto}
+        submitLabel="Guardar adelanto"
+        error={modalAdelanto ? error : ''}
+        summary={parsearGs(formAdelanto.monto) > 0 ? <>Gs. <b>{fmtGs(parsearGs(formAdelanto.monto))}</b></> : 'Monto del adelanto'}
+      >{() => <>
+        <ModalSection title="Adelanto" icon="ti-cash">
+          <ModalField label="Monto (Gs.) *"><input className="apple-control apple-control--num" data-autofocus type="text" inputMode="numeric" value={formAdelanto.monto} onWheel={e => e.currentTarget.blur()} onChange={e => { const r = e.target.value.replace(/[^0-9]/g, ''); setFormAdelanto(f => ({ ...f, monto: r ? parseInt(r, 10).toLocaleString('es-PY') : '' })) }} placeholder="Ej: 50.000" /></ModalField>
+          <ModalField label="Descripción"><input className="apple-control" type="text" value={formAdelanto.descripcion} onChange={e => setFormAdelanto(f => ({ ...f, descripcion: e.target.value }))} placeholder="Ej: Adelanto quincena (opcional)" /></ModalField>
+        </ModalSection>
+      </>}</UnifiedFormModal>
     </div>
   )
 }
