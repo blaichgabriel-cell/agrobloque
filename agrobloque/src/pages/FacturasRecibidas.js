@@ -5,6 +5,7 @@ import { leerFacturaPdf } from '../lib/facturaPdf'
 import { useCan } from '../lib/RoleContext'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
+import { useConfirmar } from '../components/ModalConfirm'
 
 const hoy = () => fechaIso(0)
 const fmtGs = value => Math.round(Number(value) || 0).toLocaleString('es-PY')
@@ -18,6 +19,7 @@ const inicial = {
 
 export default function FacturasRecibidas({ role }) {
   const can = useCan('contabilidad')
+  const [pedir, dialogoConfirmar] = useConfirmar()
   const navigate = useNavigate()
   const inputRef = useRef(null)
   const [facturas, setFacturas] = useState([])
@@ -151,7 +153,7 @@ export default function FacturasRecibidas({ role }) {
   }
 
   const aprobar = async factura => {
-    if (!window.confirm(`Cargar la factura de ${factura.proveedor} por Gs. ${fmtGs(factura.total)} en Contabilidad?`)) return
+    if (!(await pedir({ titulo: '¿Cargar la factura en Contabilidad?', mensaje: `${factura.proveedor} · Gs. ${fmtGs(factura.total)}. Entra al balance como un movimiento.`, textoBoton: 'Aprobar y cargar', tono: 'info' }))) return
     setError('')
     const { error: rpcError } = await supabase.rpc('aprobar_factura_contabilidad', { p_factura_id: factura.id })
     if (rpcError) setError(rpcError.message || 'No se pudo aprobar la factura.')
@@ -159,7 +161,7 @@ export default function FacturasRecibidas({ role }) {
   }
 
   const rechazar = async factura => {
-    if (!window.confirm('Marcar esta factura como rechazada? El PDF se conserva.')) return
+    if (!(await pedir({ titulo: '¿Rechazar esta factura?', mensaje: 'Queda marcada como rechazada. El PDF se conserva.', textoBoton: 'Rechazar', tono: 'aviso' }))) return
     const { error: updateError } = await supabase
       .from('contabilidad_facturas').update({ estado: 'rechazada' }).eq('id', factura.id)
     if (updateError) setError(updateError.message || 'No se pudo rechazar la factura.')
@@ -286,6 +288,8 @@ export default function FacturasRecibidas({ role }) {
           <ModalField label="Notas"><input className="apple-control" value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))} placeholder="Opcional" /></ModalField>
         </ModalSection>
       </>}</UnifiedFormModal>
+
+      {dialogoConfirmar}
     </main>
   )
 }

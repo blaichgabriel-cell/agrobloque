@@ -5,6 +5,7 @@ import { registrarAuditoria } from '../lib/audit'
 import { useCan } from '../lib/RoleContext'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
+import ModalConfirm from '../components/ModalConfirm'
 
 const parsearGs = (v) => parseInt(String(v || '').replace(/\./g, ''), 10) || 0
 const parsearKg = (v) => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? 0 : n }
@@ -28,130 +29,87 @@ const estadoLabel = {
   parcial: 'Parcial',
 }
 
-function ModalConfirm({ onConfirm, onCancel }) {
+const totalDeVenta = v => Number(v.total) || (Number(v.kg_total) || 0) * (Number(v.precio_kg) || 0)
+
+function ModalDetalle({ open, venta, onClose, onEdit, onDelete }) {
+  const can = useCan('ventas')
+  const v = venta || {}
+  const total = totalDeVenta(v)
+  const saldo = Math.max(0, total - (Number(v.monto_cobrado) || 0))
+
   return (
-    <div className="ui-8bd58b">
-      <div className="ui-585654">
-        <div className="ui-cb8bcf">Eliminar venta</div>
-        <div className="ui-01159a">Esta acción no se puede deshacer.</div>
-        <div className="ui-9c6869">
-          <button className="ui-077b36" onClick={onCancel}>Cancelar</button>
-          <button className="ui-fbf0a5" onClick={onConfirm}>Eliminar</button>
-        </div>
+    <UnifiedFormModal
+      open={open}
+      tone="finanzas"
+      icon="ti-receipt"
+      eyebrow="Detalle de venta"
+      title={v.producto || 'Producto'}
+      subtitle={`${v.compradores?.nombre || 'Sin comprador'} · ${v.fecha || ''}`}
+      label="Detalle de venta"
+      onClose={onClose}
+      onSubmit={can.edit ? onEdit : undefined}
+      submitLabel={can.edit ? 'Editar venta' : null}
+      shortcut={false}
+      cancelLabel="Cerrar"
+      secondary={can.delete ? <button type="button" className="apple-btn apple-btn--ghost apple-btn--dangerghost" onClick={onDelete}>Eliminar</button> : null}
+      summary={saldo > 0 ? `Debe Gs. ${fmtGs(saldo)}` : 'Cobrada por completo'}
+    >{() => <>
+      <div className="apple-stats">
+        <div className="apple-stat"><small>Total venta</small><strong>Gs. {fmtGs(total)}</strong></div>
+        <div className={`apple-stat ${saldo > 0 ? 'is-warn' : 'is-ok'}`}><small>Estado</small><strong>{estadoLabel[v.estado_cobro] || 'Pagado'}</strong></div>
       </div>
-    </div>
+      <dl className="apple-kv">
+        <div className="apple-kv__row"><dt>Kilos vendidos</dt><dd className="is-num">{fmtKg(v.kg_total)} kg</dd></div>
+        <div className="apple-kv__row"><dt>Precio por kg</dt><dd className="is-num">Gs. {fmtGs(v.precio_kg)}</dd></div>
+        <div className="apple-kv__row"><dt>Cobrado</dt><dd className="is-num">Gs. {fmtGs(v.monto_cobrado)}</dd></div>
+        <div className="apple-kv__row"><dt>Saldo</dt><dd className="is-num">{saldo > 0 ? `Gs. ${fmtGs(saldo)}` : '—'}</dd></div>
+        <div className="apple-kv__row"><dt>Forma de pago</dt><dd>{v.forma_pago || '—'}</dd></div>
+        <div className="apple-kv__row"><dt>Origen</dt><dd>{v.bloques?.codigo ? `Bloque ${v.bloques.codigo}` : 'Sin bloque asignado'}</dd></div>
+      </dl>
+      {v.notas && <p className="apple-quote">{v.notas}</p>}
+    </>}</UnifiedFormModal>
   )
 }
 
-function ModalDetalle({ venta, onClose, onEdit, onDelete }) {
+function ModalDetalleGrupo({ open, grupo, onClose, onEdit, onDelete }) {
   const can = useCan('ventas')
-  const total = Number(venta.total) || (Number(venta.kg_total) || 0) * (Number(venta.precio_kg) || 0)
-  const saldo = Math.max(0, total - (Number(venta.monto_cobrado) || 0))
-  const item = { display:'flex', justifyContent:'space-between', gap:16, padding:'11px 0', borderBottom:'1px solid #eeeeee' }
-  const label = { fontSize:12, color:'#8d938d' }
-  const value = { fontSize:13, fontWeight:700, color:'#111', textAlign:'right' }
+  const g = grupo || { items: [], total: 0, cobrado: 0, comprador: '', fecha: '' }
+  const saldo = Math.max(0, g.total - g.cobrado)
 
   return (
-    <div className="ui-74ea9b" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end' }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ui-759bab" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-        <div className="ui-65048f">
-          <div>
-            <div className="ui-de5560">Detalle de venta</div>
-            <div className="ui-882dd8">{venta.producto || 'Producto'}</div>
-            <div className="ui-1301e2">{venta.compradores?.nombre || 'Sin comprador'} - {venta.fecha}</div>
-          </div>
-          <button className="ui-f730c6 ag-close-btn" aria-label="Cerrar" onClick={onClose}>
-            <i className="ti ti-x ui-bf83cf" aria-hidden="true"></i>
-          </button>
-        </div>
-
-        <div className="ui-1a76a0">
-          <div className="ui-76327e">
-            <div className="ui-a3c58b">Total venta</div>
-            <div className="ui-a32197">Gs. {fmtGs(total)}</div>
-          </div>
-          <div className="ui-bc331e" style={{ background: saldo > 0 ? '#fff3e3' : '#e8f5e5' }}>
-            <div className="ui-f31d5c">Estado</div>
-            <div className="ui-90ec18" style={{ color: saldo > 0 ? '#bd640b' : '#176a25' }}>{estadoLabel[venta.estado_cobro] || 'Pagado'}</div>
-          </div>
-        </div>
-
-        <div className="ui-be8685">
-          <div style={item}><span style={label}>Kilos vendidos</span><span style={value}>{fmtKg(venta.kg_total)} kg</span></div>
-          <div style={item}><span style={label}>Precio por kg</span><span style={value}>Gs. {fmtGs(venta.precio_kg)}</span></div>
-          <div style={item}><span style={label}>Cobrado</span><span style={value}>Gs. {fmtGs(venta.monto_cobrado)}</span></div>
-          <div style={item}><span style={label}>Saldo</span><span style={value}>{saldo > 0 ? `Gs. ${fmtGs(saldo)}` : '-'}</span></div>
-          <div style={item}><span style={label}>Forma de pago</span><span style={value}>{venta.forma_pago || '-'}</span></div>
-          <div className="ui-310b5d" style={{ ...item }}><span style={label}>Origen</span><span style={value}>{venta.bloques?.codigo ? `Bloque ${venta.bloques.codigo}` : 'Sin bloque asignado'}</span></div>
-        </div>
-
-        {venta.notas && <div className="ui-a5941a">{venta.notas}</div>}
-
-        <div className="ui-f56ef1">
-          {can.edit && <button className="ui-356937" onClick={onEdit}>Editar venta</button>}
-          {can.delete && <button className="ui-690a60" onClick={onDelete}>Eliminar</button>}
-        </div>
+    <UnifiedFormModal
+      open={open}
+      tone="finanzas"
+      icon="ti-receipt"
+      eyebrow="Detalle de venta agrupada"
+      title={g.comprador}
+      subtitle={`${g.fecha} · ${g.items.length} productos`}
+      label="Detalle de venta agrupada"
+      onClose={onClose}
+      submitLabel={null}
+      cancelLabel="Cerrar"
+      summary={saldo > 0 ? `Debe Gs. ${fmtGs(saldo)}` : 'Cobrada por completo'}
+    >{() => <>
+      <div className="apple-stats">
+        <div className="apple-stat"><small>Total venta</small><strong>Gs. {fmtGs(g.total)}</strong></div>
+        <div className={`apple-stat ${saldo > 0 ? 'is-warn' : 'is-ok'}`}><small>Cobro</small><strong>{saldo > 0 ? `Debe Gs. ${fmtGs(saldo)}` : 'Pagado'}</strong></div>
       </div>
-    </div>
-  )
-}
-
-function ModalDetalleGrupo({ grupo, onClose, onEdit, onDelete }) {
-  const can = useCan('ventas')
-  const saldo = Math.max(0, grupo.total - grupo.cobrado)
-
-  return (
-    <div className="ui-74ea9b" style={{ alignItems: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'center' : 'flex-end' }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ui-f81175" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 768 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-        <div className="ui-65048f">
-          <div>
-            <div className="ui-de5560">Detalle de venta agrupada</div>
-            <div className="ui-882dd8">{grupo.comprador}</div>
-            <div className="ui-1301e2">{grupo.fecha} - {grupo.items.length} productos</div>
+      <div className="apple-list">
+        {g.items.map(venta => (
+          <div className="apple-list__row" key={venta.id}>
+            <div className="apple-list__main">
+              <strong>{venta.producto}</strong>
+              <small>{venta.bloques?.codigo ? `Bloque ${venta.bloques.codigo}` : 'Sin bloque asignado'} · {fmtKg(venta.kg_total)} kg · Gs. {fmtGs(venta.precio_kg)}/kg</small>
+              <strong className="apple-list__money">Gs. {fmtGs(totalDeVenta(venta))}</strong>
+            </div>
+            {(can.edit || can.delete) && <div className="apple-list__actions">
+              {can.edit && <button type="button" className="apple-mini-btn" onClick={() => onEdit(venta)}>Editar</button>}
+              {can.delete && <button type="button" className="apple-mini-btn apple-mini-btn--danger" onClick={() => onDelete(venta.id)}>Eliminar</button>}
+            </div>}
           </div>
-          <button className="ui-f730c6 ag-close-btn" aria-label="Cerrar" onClick={onClose}>
-            <i className="ti ti-x ui-bf83cf" aria-hidden="true"></i>
-          </button>
-        </div>
-
-        <div className="ui-1a76a0">
-          <div className="ui-76327e">
-            <div className="ui-a3c58b">Total venta</div>
-            <div className="ui-a32197">Gs. {fmtGs(grupo.total)}</div>
-          </div>
-          <div className="ui-bc331e" style={{ background: saldo > 0 ? '#fff3e3' : '#e8f5e5' }}>
-            <div className="ui-f31d5c">Cobro</div>
-            <div className="ui-90ec18" style={{ color: saldo > 0 ? '#bd640b' : '#176a25' }}>{saldo > 0 ? `Debe Gs. ${fmtGs(saldo)}` : 'Pagado'}</div>
-          </div>
-        </div>
-
-        <div className="ui-dff26e">
-          {grupo.items.map((venta, idx) => {
-            const total = Number(venta.total) || (Number(venta.kg_total) || 0) * (Number(venta.precio_kg) || 0)
-            return (
-              <div className="ui-b2b190" key={venta.id} style={{ borderBottom: idx === grupo.items.length - 1 ? 'none' : '1px solid #eeeeee' }}>
-                <div className="ui-87fd17">
-                  <div className="ui-3f9f96">
-                    <div className="ui-788a2f">{venta.producto}</div>
-                    <div className="ui-66d4fa">{venta.bloques?.codigo ? `Bloque ${venta.bloques.codigo}` : 'Sin bloque asignado'}</div>
-                  </div>
-                  <div className="ui-1d3685">
-                    <div className="ui-788a2f">Gs. {fmtGs(total)}</div>
-                    <div className="ui-51b095">{fmtKg(venta.kg_total)} kg - Gs. {fmtGs(venta.precio_kg)}/kg</div>
-                  </div>
-                </div>
-                <div className="ui-24f5cd">
-                  {can.edit && <button className="ui-389f8b" onClick={() => onEdit(venta)}>Editar</button>}
-                  {can.delete && <button className="ui-132fe6" onClick={() => onDelete(venta.id)}>Eliminar</button>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        <button className="ui-132c44" onClick={onClose}>Cerrar</button>
+        ))}
       </div>
-    </div>
+    </>}</UnifiedFormModal>
   )
 }
 
@@ -479,9 +437,8 @@ export default function Ventas() {
 
   return (
     <div className="ui-c1c124">
-      {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-      {detalle && <ModalDetalle venta={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditar(detalle)} onDelete={() => eliminar(detalle.id)} />}
-      {detalleGrupo && <ModalDetalleGrupo grupo={detalleGrupo} onClose={() => setDetalleGrupo(null)} onEdit={(venta) => abrirEditar(venta)} onDelete={(id) => eliminar(id)} />}
+      <ModalDetalle open={Boolean(detalle)} venta={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditar(detalle)} onDelete={() => eliminar(detalle.id)} />
+      <ModalDetalleGrupo open={Boolean(detalleGrupo)} grupo={detalleGrupo} onClose={() => setDetalleGrupo(null)} onEdit={(venta) => abrirEditar(venta)} onDelete={(id) => eliminar(id)} />
 
       <div className="ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div className="ui-796b93">
@@ -723,6 +680,8 @@ export default function Ventas() {
           <ModalField label="Notas"><textarea className="apple-control" value={form.notas} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones…" /></ModalField>
         </ModalSection>
       </>}</UnifiedFormModal>
+
+      <ModalConfirm open={Boolean(confirmar)} titulo="¿Eliminar venta?" mensaje="Esta acción no se puede deshacer." textoBoton="Eliminar venta" onConfirm={confirmar?.fn} onCancel={() => setConfirmar(null)} />
     </div>
   )
 }

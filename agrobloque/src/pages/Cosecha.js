@@ -1,6 +1,7 @@
 import { Modal, Skeleton } from '../components/UI'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, BlockChips, resumenPie } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
+import ModalConfirm from '../components/ModalConfirm'
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
@@ -18,21 +19,6 @@ const fechaLocal = () => {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-function ModalConfirm({ onConfirm, onCancel }) {
-  return (
-    <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface ui-211525">
-        <div className="ui-3e43be">¿Eliminar registro?</div>
-        <div className="ui-01159a">Esta acción no se puede deshacer.</div>
-        <div className="ui-9c6869">
-          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
-          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Eliminar</button>
-        </div>
-      </div>
-    </Modal>
-  )
 }
 
 const fechaPlantacion = (p) => p?.fecha_siembra || (p?.created_at || '').slice(0, 10)
@@ -72,61 +58,41 @@ const calidadLabel = (calidad) => calidad === 'primera'
     ? '2da calidad'
     : 'Mixta'
 
-function ModalDetalle({ cosecha, onClose, onEdit, onDelete }) {
-  const cultivo = getCultivoCosecha(cosecha)
-  const item = { display:'flex', justifyContent:'space-between', gap:16, padding:'11px 0', borderBottom:'1px solid #eeeeee' }
-  const label = { fontSize:12, color:'#8d938d' }
-  const value = { fontSize:13, fontWeight:700, color:'#111' }
+function ModalDetalle({ open, cosecha, onClose, onEdit, onDelete }) {
+  const can = useCan('cosecha')
+  const c = cosecha || {}
+  const cultivo = cosecha ? getCultivoCosecha(cosecha) : ''
 
   return (
-    <Modal onClose={onClose} label="Cosecha" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.4)', zIndex:150, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center' }} onClick={e => e.target===e.currentTarget && onClose()}>
-      <div className="ag-surface ui-74f274" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-        <div className="ui-65048f">
-          <div>
-            <div className="ui-de5560">Detalle de cosecha</div>
-            <div className="ui-882dd8">{cultivo}</div>
-            <div className="ui-1301e2">Bloque {cosecha.bloques?.codigo} · {cosecha.fecha}</div>
-          </div>
-          <button className="ui-4f781a ag-close-btn" aria-label="Cerrar" onClick={onClose}>
-            <i className="ti ti-x ui-bf83cf" aria-hidden="true"></i>
-          </button>
-        </div>
-
-        <div className="ui-1a76a0">
-          <div className="ui-946af5">
-            <div className="ui-57250f">Kilos</div>
-            <div className="ag-page-title ui-0bef41">{fmtKg(cosecha.kg_total)} kg</div>
-          </div>
-          <div className="ui-b9340b">
-            <div className="ui-de5560">Calidad</div>
-            <div className="ui-94f9c9">{calidadLabel(cosecha.calidad)}</div>
-          </div>
-        </div>
-
-        <div className="ui-7d9b35">
-          <div style={item}><span style={label}>Producto/cultivo</span><span style={value}>{cultivo}</span></div>
-          <div style={item}><span style={label}>Campo</span><span style={value}>{cosecha.bloques?.campos?.nombre || '-'}</span></div>
-          <div style={item}><span style={label}>Bloque</span><span style={value}>{cosecha.bloques?.codigo || '-'}</span></div>
-          <div style={item}><span style={label}>Calidad</span><span style={value}>{calidadLabel(cosecha.calidad)}</span></div>
-          <div className="ui-310b5d" style={{ ...item }}><span style={label}>Uso</span><span style={value}>Producción del bloque</span></div>
-        </div>
-
-        {cosecha.notas && (
-          <div className="ui-1fe1de">
-            {cosecha.notas}
-          </div>
-        )}
-
-        <div className="ui-f56ef1">
-          <button className="ag-small-action ui-8c497d" onClick={onEdit}>
-            Editar cosecha
-          </button>
-          <button className="ag-small-action ui-432170" onClick={onDelete}>
-            Eliminar
-          </button>
-        </div>
+    <UnifiedFormModal
+      open={open}
+      tone="bloques"
+      icon="ti-basket"
+      eyebrow="Detalle de cosecha"
+      title={cultivo || 'Cosecha'}
+      subtitle={`Bloque ${c.bloques?.codigo || ''} · ${c.fecha || ''}`}
+      label="Detalle de cosecha"
+      onClose={onClose}
+      onSubmit={can.edit ? onEdit : undefined}
+      submitLabel={can.edit ? 'Editar cosecha' : null}
+      shortcut={false}
+      cancelLabel="Cerrar"
+      secondary={can.delete ? <button type="button" className="apple-btn apple-btn--ghost apple-btn--dangerghost" onClick={onDelete}>Eliminar</button> : null}
+      summary={cosecha ? `${fmtKg(c.kg_total)} kg · ${calidadLabel(c.calidad)}` : ''}
+    >{() => <>
+      <div className="apple-stats">
+        <div className="apple-stat is-ok"><small>Kilos</small><strong>{fmtKg(c.kg_total)} kg</strong></div>
+        <div className="apple-stat"><small>Calidad</small><strong>{calidadLabel(c.calidad)}</strong></div>
       </div>
-    </Modal>
+      <dl className="apple-kv">
+        <div className="apple-kv__row"><dt>Producto/cultivo</dt><dd>{cultivo}</dd></div>
+        <div className="apple-kv__row"><dt>Campo</dt><dd>{c.bloques?.campos?.nombre || '—'}</dd></div>
+        <div className="apple-kv__row"><dt>Bloque</dt><dd className="is-num">{c.bloques?.codigo || '—'}</dd></div>
+        <div className="apple-kv__row"><dt>Calidad</dt><dd>{calidadLabel(c.calidad)}</dd></div>
+        <div className="apple-kv__row"><dt>Uso</dt><dd>Producción del bloque</dd></div>
+      </dl>
+      {c.notas && <p className="apple-quote">{c.notas}</p>}
+    </>}</UnifiedFormModal>
   )
 }
 
@@ -322,8 +288,7 @@ export default function Cosecha({ campoActivo = null }) {
 
   return (
     <div className="ag-page ui-c1c124">
-      {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-      {detalle && <ModalDetalle cosecha={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditarCosecha(detalle)} onDelete={() => eliminar(detalle.id)} />}
+      <ModalDetalle open={Boolean(detalle)} cosecha={detalle} onClose={() => setDetalle(null)} onEdit={() => abrirEditarCosecha(detalle)} onDelete={() => eliminar(detalle.id)} />
 
       <div className="ag-page-header ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div className="ui-796b93">
@@ -525,6 +490,8 @@ export default function Cosecha({ campoActivo = null }) {
           </ModalField>
         </ModalSection>
       </>}</UnifiedFormModal>
+
+      <ModalConfirm open={Boolean(confirmar)} titulo="¿Eliminar registro?" mensaje="Esta acción no se puede deshacer." textoBoton="Eliminar cosecha" onConfirm={confirmar?.fn} onCancel={() => setConfirmar(null)} />
     </div>
   )
 }

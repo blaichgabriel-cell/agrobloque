@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Modal, Notice } from '../components/UI'
+import UnifiedFormModal, { ModalSection, ModalField, resumenPie } from '../components/UnifiedFormModal'
 import { useAhora } from '../components/Soporte'
 import { AvisoDemo, numero, useEmpresas } from '../components/PlataformaUI'
 import {
@@ -203,40 +203,54 @@ export default function Plataforma() {
         : <div className="pl-grid">{visibles.map(e => <TarjetaEmpresa key={e.id} empresa={e} ocupado={ocupado}
           onSolicitar={emp => { setError(''); setMotivo(''); setSolicitando(emp) }} onCancelar={cancelar} onEntrar={entrar} onReenviar={reenviarA} />)}</div>}
 
-    {solicitando && <Modal label={`Solicitar acceso a ${solicitando.nombre}`} busy={ocupado} className="bl-overlay" onClose={() => setSolicitando(null)} onClick={e => e.target === e.currentTarget && !ocupado && setSolicitando(null)}>
-      <div className="bl-sheet pl-sheet">
-        <h2>Solicitar acceso de soporte</h2>
-        <p className="pl-sheet__sub">{solicitando.nombre}</p>
-        <label className="bl-label" htmlFor="pl-motivo">¿Para qué necesitas entrar?</label>
-        <textarea id="pl-motivo" className="bl-input pl-motivo" rows="3" maxLength="1000" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej: Ayudar a cargar las cosechas de la semana." />
-        <ul className="pl-sheet__reglas">
-          <li><i className="ti ti-eye" aria-hidden="true" />Solo lectura: no podrás cambiar nada.</li>
-          <li><i className="ti ti-clock-hour-4" aria-hidden="true" />El cliente elige cuánto dura (hasta 72 horas).</li>
-          <li><i className="ti ti-list-details" aria-hidden="true" />El motivo y todos tus movimientos quedan en su historial.</li>
-        </ul>
-        <Notice tone="error">{error}</Notice>
-        <button type="button" className="bl-btn bl-btn--primary" disabled={ocupado || motivo.trim().length < 5} onClick={enviarSolicitud}>{ocupado ? 'Enviando…' : 'Enviar solicitud'}</button>
-        <button type="button" className="bl-btn bl-btn--ghost" disabled={ocupado} onClick={() => setSolicitando(null)}>Cancelar</button>
-      </div>
-    </Modal>}
+    <UnifiedFormModal
+      open={Boolean(solicitando)}
+      tone="finanzas"
+      icon="ti-lifebuoy"
+      eyebrow="Solicitar acceso de soporte"
+      title={solicitando?.nombre || ''}
+      label={`Solicitar acceso a ${solicitando?.nombre || 'la empresa'}`}
+      busy={ocupado}
+      onClose={() => setSolicitando(null)}
+      onSubmit={enviarSolicitud}
+      submitDisabled={motivo.trim().length < 5}
+      submitLabel="Enviar solicitud"
+      error={solicitando ? error : ''}
+      summary={motivo.trim().length < 5 ? 'Escribí el motivo (mínimo 5 letras)' : 'Listo para enviar'}
+    >{() => <>
+      <ModalField label="¿Para qué necesitas entrar? *">
+        <textarea className="apple-control" data-autofocus rows="3" maxLength="1000" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej: Ayudar a cargar las cosechas de la semana." />
+      </ModalField>
+      <ModalSection title="Reglas del acceso" icon="ti-shield-check">
+        <p className="apple-note"><i className="ti ti-eye" aria-hidden="true" /> Solo lectura: no podrás cambiar nada.</p>
+        <p className="apple-note"><i className="ti ti-clock-hour-4" aria-hidden="true" /> El cliente elige cuánto dura (hasta 72 horas).</p>
+        <p className="apple-note"><i className="ti ti-list-details" aria-hidden="true" /> El motivo y todos tus movimientos quedan en su historial.</p>
+      </ModalSection>
+    </>}</UnifiedFormModal>
 
-    {creando && <Modal label="Nueva empresa" busy={ocupado} className="bl-overlay" onClose={() => setCreando(false)} onClick={e => e.target === e.currentTarget && !ocupado && setCreando(false)}>
-      <div className="bl-sheet pl-sheet">
-        <h2>Nueva empresa cliente</h2>
-        <p className="pl-sheet__sub">Crea un espacio aislado y envía al dueño un correo para definir su contraseña.</p>
-        <label className="bl-label" htmlFor="pl-nombre">Nombre comercial</label>
-        <input id="pl-nombre" className="bl-input" maxLength="100" value={formEmpresa.nombre} onChange={e => setFormEmpresa(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Horticultura San José" />
-        <label className="bl-label" htmlFor="pl-correo">Correo del dueño</label>
-        <input id="pl-correo" className="bl-input" type="email" value={formEmpresa.correo} onChange={e => setFormEmpresa(f => ({ ...f, correo: e.target.value }))} placeholder="dueno@empresa.com" />
-        <ul className="pl-sheet__reglas">
-          <li><i className="ti ti-shield-lock" aria-hidden="true" />La empresa no podrá ver datos de otros clientes.</li>
-          <li><i className="ti ti-mail" aria-hidden="true" />Un correo pertenece a una sola empresa.</li>
-        </ul>
-        <Notice tone="error">{error}</Notice>
-        {/pertenece/i.test(error) && correoValido(formEmpresa.correo.trim().toLowerCase()) && <button type="button" className="bl-btn bl-btn--ghost" disabled={ocupado} onClick={() => reenviarA(formEmpresa.correo.trim().toLowerCase())}><i className="ti ti-mail-forward" aria-hidden="true" />Reenviar el enlace a este correo</button>}
-        <button type="button" className="bl-btn bl-btn--primary" disabled={ocupado} onClick={crear}>{ocupado ? 'Creando…' : 'Crear empresa y enviar invitación'}</button>
-        <button type="button" className="bl-btn bl-btn--ghost" disabled={ocupado} onClick={() => setCreando(false)}>Cerrar</button>
-      </div>
-    </Modal>}
+    <UnifiedFormModal
+      open={creando}
+      tone="finanzas"
+      icon="ti-circle-plus"
+      eyebrow="Plataforma"
+      title="Nueva empresa cliente"
+      subtitle="Crea un espacio aislado y envía al dueño un correo para definir su contraseña."
+      label="Nueva empresa"
+      busy={ocupado}
+      onClose={() => setCreando(false)}
+      onSubmit={crear}
+      submitLabel="Crear empresa y enviar invitación"
+      cancelLabel="Cerrar"
+      error={creando ? error : ''}
+      secondary={/pertenece/i.test(error) && correoValido(formEmpresa.correo.trim().toLowerCase()) ? <button type="button" className="apple-btn apple-btn--ghost" disabled={ocupado} onClick={() => reenviarA(formEmpresa.correo.trim().toLowerCase())}><i className="ti ti-mail-forward" aria-hidden="true" />Reenviar el enlace</button> : null}
+      summary={resumenPie([{ solo: formEmpresa.nombre.trim() }, { solo: formEmpresa.correo.trim() }]) || 'Nombre de la empresa y correo del dueño'}
+    >{() => <>
+      <ModalSection title="Empresa y dueño" icon="ti-building-community">
+        <ModalField label="Nombre comercial *"><input className="apple-control" data-autofocus maxLength="100" value={formEmpresa.nombre} onChange={e => setFormEmpresa(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Horticultura San José" /></ModalField>
+        <ModalField label="Correo del dueño *"><input className="apple-control" type="email" value={formEmpresa.correo} onChange={e => setFormEmpresa(f => ({ ...f, correo: e.target.value }))} placeholder="dueno@empresa.com" /></ModalField>
+        <p className="apple-note"><i className="ti ti-shield-lock" aria-hidden="true" /> La empresa no podrá ver datos de otros clientes.</p>
+        <p className="apple-note"><i className="ti ti-mail" aria-hidden="true" /> Un correo pertenece a una sola empresa.</p>
+      </ModalSection>
+    </>}</UnifiedFormModal>
   </div>
 }

@@ -8,6 +8,7 @@ import { useCan } from '../lib/RoleContext'
 import { useAccionNueva } from '../lib/useAccionNueva'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, BlockChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
+import { useConfirmar } from '../components/ModalConfirm'
 
 const estados = ['sembrado', 'germinando', 'listo', 'trasplantado', 'descartado']
 const hoy = () => fechaIso(0)
@@ -64,6 +65,7 @@ function ViveroIcon({ size = 24, color = '#2f741f' }) {
 
 export default function Vivero() {
   const can = useCan('vivero')
+  const [pedir, dialogoConfirmar] = useConfirmar()
   const navigate = useNavigate()
   const [campos, setCampos] = useState([])
   const [bloques, setBloques] = useState([])
@@ -212,7 +214,7 @@ export default function Vivero() {
   }
 
   const eliminarLote = async (id) => {
-    if (!window.confirm('¿Archivar este lote de vivero? El historial se conservará.')) return
+    if (!(await pedir({ titulo: '¿Archivar este lote?', mensaje: 'El lote sale de la lista, pero el historial se conserva.', textoBoton: 'Archivar lote', tono: 'aviso' }))) return
     await supabase.from('vivero_lotes').update({ archivado:true, updated_at:new Date().toISOString() }).eq('id', id)
     await registrarAuditoria({ accion:'Archivo lote de vivero', modulo:'Vivero', tabla:'vivero_lotes', registroId:id })
     setDetalle(null)
@@ -251,7 +253,7 @@ export default function Vivero() {
   }
 
   const anularTratamiento = async (t) => {
-    if (!window.confirm('¿Anular este tratamiento? El historial se conservará.')) return
+    if (!(await pedir({ titulo: '¿Anular este tratamiento?', mensaje: 'Queda anulado, pero el historial se conserva.', textoBoton: 'Anular tratamiento', tono: 'aviso' }))) return
     await supabase.from('vivero_tratamientos').update({ anulado:true, anulado_at:new Date().toISOString(), anulado_motivo:'Anulado por el usuario', updated_at:new Date().toISOString() }).eq('id', t.id)
     await registrarAuditoria({ accion:'Anulo tratamiento de vivero', modulo:'Vivero', tabla:'vivero_tratamientos', registroId:t.id, detalle:t.tipo })
     fetchTratamientos(detalle.id)
@@ -415,66 +417,63 @@ export default function Vivero() {
         <NotasPanel modulo="vivero" titulo="Bloc de notas del vivero" />
       </div>
 
-      {detalle && (
-        <div className="bl-overlay" onClick={e => e.target === e.currentTarget && setDetalle(null)}>
-          <div className="bl-sheet">
-            <div className="ui-60c2bd">
-              <div>
-                <div className="ui-93a7e1">Detalle de lote</div>
-                <div className="ui-02cbdf">{detalle.cultivo}</div>
-                <div className="ui-d239cf">{detalle.variedad || 'Sin variedad'}</div>
-              </div>
-              <button aria-label="Cerrar" onClick={() => setDetalle(null)} className="bl-icon-btn ag-close-btn"><i className="ti ti-x" /></button>
+      <UnifiedFormModal
+        open={Boolean(detalle)}
+        tone="agua"
+        icon="ti-seeding"
+        eyebrow="Detalle de lote"
+        title={detalle?.cultivo || ''}
+        subtitle={detalle?.variedad || 'Sin variedad'}
+        label="Detalle de lote"
+        onClose={() => setDetalle(null)}
+        onSubmit={detalle?.bloque_id ? () => navigate(`/bloque/${detalle.bloque_id}`) : (detalle && detalle.estado !== 'trasplantado' && can.create ? () => abrirTrasplante(detalle) : undefined)}
+        submitLabel={detalle?.bloque_id ? 'Ver bloque trasplantado' : (detalle && detalle.estado !== 'trasplantado' && can.create ? 'Trasplantar a bloque' : null)}
+        shortcut={false}
+        cancelLabel="Cerrar"
+        secondary={detalle && (can.edit || can.delete) ? <>
+          {can.edit && <button type="button" className="apple-btn apple-btn--ghost" onClick={() => abrirEditar(detalle)}>Editar lote</button>}
+          {can.delete && <button type="button" className="apple-btn apple-btn--ghost apple-btn--dangerghost" onClick={() => eliminarLote(detalle.id)}>Archivar</button>}
+        </> : null}
+        summary={detalle ? resumenPie([
+          { n: detalle.bandejas || 0, texto: 'bandejas', uno: 'bandeja' },
+          { solo: `Germinación ${pct(detalle.germinadas, detalle.cantidad_semillas)}%` },
+        ]) : null}
+      >{() => detalle && <>
+        <dl className="apple-kv">
+          {[
+            ['Fecha siembra', detalle.fecha_siembra, true],
+            ['Fecha estimada trasplante', detalle.fecha_estimada_trasplante || '—', true],
+            ['Fecha real trasplante', detalle.fecha_real_trasplante || '—', true],
+            ['Semilla', detalle.semilla || '—'],
+            ['Sustrato', detalle.sustrato || '—'],
+            ['Abono en sustrato', detalle.abono_sustrato || '—'],
+            ['Comprado a', detalle.proveedor || '—'],
+            ['Precio de compra', detalle.precio_compra ? `Gs. ${Number(detalle.precio_compra).toLocaleString('es-PY')}` : '—', true],
+            ['Bandejas', detalle.bandejas || 0, true],
+            ['Germinación', `${pct(detalle.germinadas, detalle.cantidad_semillas)}%`, true],
+            ['Pérdidas', detalle.perdidas || 0, true],
+          ].map(([k, v, num]) => <div className="apple-kv__row" key={k}><dt>{k}</dt><dd className={num ? 'is-num' : ''}>{v}</dd></div>)}
+        </dl>
+        {detalle.notas && <p className="apple-quote">{detalle.notas}</p>}
+        <ModalSection title="Tratamientos" icon="ti-first-aid-kit" aside={can.create ? <button type="button" className="apple-mini-btn" onClick={() => { setTratForm(tratamientoInicial); setModalTratamiento(true) }}><i className="ti ti-plus" aria-hidden="true" />Tratamiento</button> : null}>
+          {tratamientos.length === 0 ? <p className="apple-empty">Sin tratamientos registrados.</p> : (
+            <div className="apple-list">
+              {tratamientos.map(t => (
+                <div className="apple-list__row" key={t.id}>
+                  <div className="apple-list__main">
+                    <strong>{t.tipo}</strong>
+                    <small>{t.fecha}{t.producto ? ` · ${t.producto}` : ''}{t.dosis ? ` · ${t.dosis}` : ''}{t.notas ? ` · ${t.notas}` : ''}</small>
+                  </div>
+                  {(can.edit || can.delete) && <div className="apple-list__actions">
+                    {can.edit && <button type="button" className="apple-mini-btn" onClick={() => editarTratamiento(t)}>Editar</button>}
+                    {can.delete && <button type="button" className="apple-mini-btn apple-mini-btn--danger" onClick={() => anularTratamiento(t)}>Anular</button>}
+                  </div>}
+                </div>
+              ))}
             </div>
-
-            <div className="ui-d87c39">
-              <Info label="Fecha siembra" value={detalle.fecha_siembra} />
-              <Info label="Fecha estimada trasplante" value={detalle.fecha_estimada_trasplante || '-'} />
-              <Info label="Fecha real trasplante" value={detalle.fecha_real_trasplante || '-'} />
-              <Info label="Semilla" value={detalle.semilla || '-'} />
-              <Info label="Sustrato" value={detalle.sustrato || '-'} />
-              <Info label="Abono en sustrato" value={detalle.abono_sustrato || '-'} />
-              <Info label="Comprado a" value={detalle.proveedor || '-'} />
-              <Info label="Precio de compra" value={detalle.precio_compra ? `Gs. ${Number(detalle.precio_compra).toLocaleString('es-PY')}` : '-'} />
-              <Info label="Bandejas" value={detalle.bandejas || 0} />
-              <Info label="Germinación" value={`${pct(detalle.germinadas, detalle.cantidad_semillas)}%`} />
-              <Info label="Perdidas" value={detalle.perdidas || 0} last />
-            </div>
-
-            {detalle.notas && <div className="ui-9c4127">{detalle.notas}</div>}
-
-            {detalle.bloque_id ? (
-              <button className="ui-fa3e1c" onClick={() => navigate(`/bloque/${detalle.bloque_id}`)} style={{ ...primaryBtn }}>
-                Ver bloque trasplantado
-              </button>
-            ) : detalle.estado !== 'trasplantado' && can.create && (
-              <button className="ui-606a6c" onClick={() => abrirTrasplante(detalle)} style={{ ...primaryBtn }}>
-                Trasplantar a bloque
-              </button>
-            )}
-
-            <div className="ui-b3c308">
-              <div className="ui-9535b3">Tratamientos</div>
-              {can.create && <button className="ag-small-action ui-8ab10c" onClick={() => { setTratForm(tratamientoInicial); setModalTratamiento(true) }}>+ Tratamiento</button>}
-            </div>
-            {tratamientos.length === 0 ? (
-              <div className="ui-c0d22a">Sin tratamientos registrados.</div>
-            ) : tratamientos.map(t => (
-              <div className="ui-190117" key={t.id}>
-                <div className="ui-843e0a">{t.tipo}</div>
-                <div className="ui-a8f171">{t.fecha}{t.producto ? ` · ${t.producto}` : ''}{t.dosis ? ` · ${t.dosis}` : ''}</div>
-                {t.notas && <div className="ui-e396da">{t.notas}</div>}
-                <div className="ui-e396ba">{can.edit && <button className="ag-small-action ui-794ba0" onClick={() => editarTratamiento(t)} style={{ ...secondaryBtn }}>Editar</button>}{can.delete && <button className="ag-small-action ui-794ba0" onClick={() => anularTratamiento(t)} style={{ ...dangerBtn }}>Anular</button>}</div>
-              </div>
-            ))}
-
-            <div className="ui-0a45a3">
-              {can.edit && <button onClick={() => abrirEditar(detalle)} className="bl-btn bl-btn--ghost">Editar lote</button>}
-              {can.delete && <button onClick={() => eliminarLote(detalle.id)} className="bl-btn bl-btn--danger">Eliminar</button>}
-            </div>
-          </div>
-        </div>
-      )}
+          )}
+        </ModalSection>
+      </>}</UnifiedFormModal>
 
       <UnifiedFormModal
         open={modal}
@@ -598,6 +597,8 @@ export default function Vivero() {
           </label>
         </ModalSection>
       </>}</UnifiedFormModal>
+
+      {dialogoConfirmar}
     </div>
   )
 }

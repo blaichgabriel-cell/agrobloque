@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Skeleton, Modal } from '../components/UI'
+import { Skeleton } from '../components/UI'
+import ModalConfirm from '../components/ModalConfirm'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, BlockChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
 import QRCode from 'qrcode'
@@ -41,21 +42,6 @@ const fmtAbonoPlantacion = (abono) => {
 
 const CAUSAS_MUERTE = ['Enfermedad','Dumping off','Esclerotinia','Insectos','Hormigas','Gusanos','Clima','Riego','Otra']
 const UNIDADES = ['kg','g','cc','ml','L','unidad']
-
-function ModalConfirm({ titulo, mensaje, onConfirm, onCancel }) {
-  return (
-    <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface ui-211525">
-        <div className="ui-3e43be">{titulo}</div>
-        {mensaje && <div className="ui-01159a">{mensaje}</div>}
-        <div className="ui-9c6869">
-          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
-          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Confirmar</button>
-        </div>
-      </div>
-    </Modal>
-  )
-}
 
 export default function FichaBloque() {
   const can = useCan('mapa')
@@ -880,7 +866,7 @@ export default function FichaBloque() {
     })))
     if (error) {
       setSavingFert(false)
-      if (typeof window !== 'undefined') window.alert(`No se pudo guardar la fertilización: ${error.message}`)
+      toast.error('No se pudo guardar la fertilización', { description: error.message })
       return
     }
     await registrarAuditoria({
@@ -1124,14 +1110,7 @@ export default function FichaBloque() {
     const esAnterior = fertilizaciones.length > 1 && fertilizaciones[1].id === fertDetalle.id
     return (
       <div className="ag-block-page ui-c1c124">
-        {confirmarElimFert && (
-          <ModalConfirm
-            titulo="Eliminar fertilización?"
-            mensaje="Se eliminara este registro. No se puede deshacer."
-            onConfirm={() => eliminarFertilizacion(confirmarElimFert)}
-            onCancel={() => setConfirmarElimFert(null)}
-          />
-        )}
+        <ModalConfirm open={Boolean(confirmarElimFert)} titulo="¿Eliminar fertilización?" mensaje="Se eliminará este registro. No se puede deshacer." textoBoton="Eliminar" onConfirm={() => eliminarFertilizacion(confirmarElimFert)} onCancel={() => setConfirmarElimFert(null)} />
         <div className="ui-327143">
           <button className="ag-small-action ui-7347f9" onClick={() => setFertDetalle(null)}>
             <i className="ti ti-arrow-left ui-b45e7d" aria-hidden="true"></i>
@@ -1194,7 +1173,7 @@ export default function FichaBloque() {
     const finVisible = historialCiclo?.finExclusivo ? sumarDiasFecha(historialCiclo.finExclusivo, -1) : null
     return (
       <div className="ag-page ui-c1c124 cycle-history-page">
-        {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
+        <ModalConfirm open={Boolean(confirmar)} titulo={confirmar?.titulo} mensaje={confirmar?.mensaje} tono={/^¿?elimin/i.test(confirmar?.titulo || '') ? 'peligro' : 'aviso'} textoBoton={/^¿?elimin/i.test(confirmar?.titulo || '') ? 'Eliminar' : 'Confirmar'} onConfirm={confirmar?.fn} onCancel={() => setConfirmar(null)} />
         <div className="ui-327143 cycle-history-head">
           <button className="ag-small-action ui-7347f9" onClick={() => setHistorialDetalle(null)}>
             <i className="ti ti-arrow-left ui-b45e7d" aria-hidden="true"></i>
@@ -1285,10 +1264,51 @@ export default function FichaBloque() {
 
   return (
     <div className="ag-page block-detail-modern ui-c1c124">
-      {confirmar && <ModalConfirm titulo={confirmar.titulo} mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
+      <ModalConfirm open={Boolean(confirmar)} titulo={confirmar?.titulo} mensaje={confirmar?.mensaje} tono={/^¿?elimin/i.test(confirmar?.titulo || '') ? 'peligro' : 'aviso'} textoBoton={/^¿?elimin/i.test(confirmar?.titulo || '') ? 'Eliminar' : 'Confirmar'} onConfirm={confirmar?.fn} onCancel={() => setConfirmar(null)} />
 
-      {detalleCostos && <Modal onClose={() => setDetalleCostos(null)} label="Detalle de costos" style={{ position:'fixed', inset:0, zIndex:225, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface block-cost-detail"><div className="block-cost-detail__head"><div><small>HISTORIAL DEL CICLO</small><h2>{detalleCostos === 'fumigaciones' ? 'Fumigaciones' : detalleCostos === 'fertilizaciones' ? 'Fertilizaciones' : 'Gastos directos'}</h2></div><button className="ag-small-action" onClick={() => setDetalleCostos(null)} aria-label="Cerrar"><i className="ti ti-x" /></button></div><CostDetailList tipo={detalleCostos} costos={costosCiclo} /></div></Modal>}
-      {showInformeOpciones && <Modal busy={exportandoPdf} onClose={() => !exportandoPdf && setShowInformeOpciones(false)} label="Elegir informe" style={{ position:'fixed', inset:0, zIndex:228, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface block-report-picker"><div className="block-report-picker__head"><div><small>DESCARGAR DATOS DEL BLOQUE</small><h2>¿Qué informe necesitás?</h2><p>Elegí la ficha técnica para compartir con el ingeniero o el informe completo para administración.</p></div><button type="button" className="ag-small-action" aria-label="Cerrar" onClick={() => setShowInformeOpciones(false)} disabled={exportandoPdf}><i className="ti ti-x" /></button></div>{pdfError && <div className="ag-feedback ag-feedback-error" role="alert">{pdfError}</div>}<label className="block-report-observation"><span>Estado actual / observaciones <em>Opcional</em></span><textarea value={estadoInforme} onChange={event => setEstadoInforme(event.target.value)} maxLength={700} placeholder="Ej: Cultivo con buen vigor, floración uniforme y sin incidencia visible de plagas." /><small>Solo aparecerá en el PDF si escribís algo. AgroBloque no genera recomendaciones automáticamente.</small></label><div className="block-report-picker__options"><button type="button" className="is-recommended" onClick={descargarFichaTecnica} disabled={exportandoPdf}><span><i className="ti ti-plant-2" /></span><div><strong>Ficha técnica para el ingeniero</strong><em>Recomendado</em><p>Plantas, variedad, siembra, días en campo, base, fertilizaciones y fumigaciones. Sin precios ni costos.</p></div><i className="ti ti-download" /></button><button type="button" onClick={descargarInformeBloque} disabled={exportandoPdf || costosCiclo.loading}><span><i className="ti ti-file-description" /></span><div><strong>Informe completo del bloque</strong><p>Incluye también costos, cosechas, notas e historial administrativo.</p></div><i className="ti ti-download" /></button></div>{exportandoPdf && <div className="block-report-picker__loading"><i className="ti ti-loader-2" />Preparando el PDF…</div>}</div></Modal>}
+      <UnifiedFormModal
+        open={Boolean(detalleCostos)}
+        tone="finanzas"
+        icon="ti-coin"
+        eyebrow="Historial del ciclo"
+        title={detalleCostos === 'fumigaciones' ? 'Fumigaciones' : detalleCostos === 'fertilizaciones' ? 'Fertilizaciones' : 'Gastos directos'}
+        label="Detalle de costos"
+        onClose={() => setDetalleCostos(null)}
+        submitLabel={null}
+        cancelLabel="Cerrar"
+      >{() => <CostDetailList tipo={detalleCostos} costos={costosCiclo} />}</UnifiedFormModal>
+
+      <UnifiedFormModal
+        open={showInformeOpciones}
+        tone="bloques"
+        icon="ti-file-description"
+        eyebrow="Descargar datos del bloque"
+        title="¿Qué informe necesitás?"
+        subtitle="Elegí la ficha técnica para compartir con el ingeniero o el informe completo para administración."
+        label="Elegir informe"
+        busy={exportandoPdf}
+        onClose={() => setShowInformeOpciones(false)}
+        submitLabel={null}
+        cancelLabel="Cerrar"
+        error={showInformeOpciones ? pdfError : ''}
+      >{() => <>
+        <ModalField label="Estado actual / observaciones (opcional)" hint="Solo aparecerá en el PDF si escribís algo. AgroBloque no genera recomendaciones automáticamente.">
+          <textarea className="apple-control" value={estadoInforme} onChange={event => setEstadoInforme(event.target.value)} maxLength={700} placeholder="Ej: Cultivo con buen vigor, floración uniforme y sin incidencia visible de plagas." />
+        </ModalField>
+        <div className="apple-actions-grid">
+          <button type="button" className="apple-action-card is-recommended" onClick={descargarFichaTecnica} disabled={exportandoPdf}>
+            <span className="apple-action-card__icon" aria-hidden="true"><i className="ti ti-plant-2" /></span>
+            <span className="apple-action-card__copy"><strong>Ficha técnica para el ingeniero<em>Recomendado</em></strong><small>Plantas, variedad, siembra, días en campo, base, fertilizaciones y fumigaciones. Sin precios ni costos.</small></span>
+            <i className="ti ti-download" aria-hidden="true" />
+          </button>
+          <button type="button" className="apple-action-card" onClick={descargarInformeBloque} disabled={exportandoPdf || costosCiclo.loading}>
+            <span className="apple-action-card__icon" aria-hidden="true"><i className="ti ti-file-description" /></span>
+            <span className="apple-action-card__copy"><strong>Informe completo del bloque</strong><small>Incluye también costos, cosechas, notas e historial administrativo.</small></span>
+            <i className="ti ti-download" aria-hidden="true" />
+          </button>
+        </div>
+        {exportandoPdf && <p className="apple-note" role="status"><i className="ti ti-loader-2" aria-hidden="true" /> Preparando el PDF…</p>}
+      </>}</UnifiedFormModal>
 
       {/* Header */}
       <div className="ag-block-header block-detail-header ui-606ba4">
@@ -1913,91 +1933,67 @@ export default function FichaBloque() {
         </ModalSection>
       </>}</UnifiedFormModal>
 
-      {incidenciaDetalle && (
-        <Modal onClose={() => setIncidenciaDetalle(null)} label="Registro del bloque" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:130, display:'flex', alignItems: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 'center' : 'flex-end', justifyContent:'center', padding: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : 0 }}
-          onClick={e => e.target===e.currentTarget && setIncidenciaDetalle(null)}>
-          <div className="ui-ae773e" style={{ borderRadius: typeof window !== 'undefined' && window.innerWidth >= 1100 ? 24 : '24px 24px 0 0' }}>
-            <div className="ui-6c2eec">
-              <div>
-                <div className="ui-476525">Detalle de fumigación</div>
-                <div className="ui-882dd8">{incidenciaDetalle.tipo === 'fertiriego' ? 'Fertiriego' : incidenciaDetalle.tipo === 'foliar' ? 'Foliar' : 'Fumigación'}</div>
-                <div className="ui-13b58a">{incidenciaDetalle.fecha}</div>
-              </div>
-              <button className="ui-6de38e ag-close-btn" aria-label="Cerrar" onClick={() => setIncidenciaDetalle(null)}>
-                <i className="ti ti-x ui-b7c8fe" aria-hidden="true"></i>
-              </button>
-            </div>
-
-            <div className="ag-surface ui-f3f33f">
-              <div className="ui-74cc19">Bloques</div>
-              <div className="ui-788a2f">
-                {(incidenciaDetalle.fumigacion_bloques || []).map(fb => fb.bloques?.codigo).filter(Boolean).join(', ') || bloque?.codigo || '-'}
-              </div>
-            </div>
-
-            <div className="ui-f6fa01">
-              <div className="ag-surface ui-c2bf5d">
-                <div className="ui-74cc19">Operario</div>
-                <div className="ui-788a2f">{incidenciaDetalle.operario || '-'}</div>
-              </div>
-              <div className="ag-surface ui-c2bf5d">
-                <div className="ui-74cc19">Tanques</div>
-                <div className="ui-788a2f">
-                  {incidenciaDetalle.tanques_cantidad || '-'}{incidenciaDetalle.tanque_litros ? ` x ${incidenciaDetalle.tanque_litros} L` : ''}
-                </div>
-              </div>
-            </div>
-
-            <div className="ag-surface ui-f3f33f">
-              <div className="ui-3771db">Productos aplicados</div>
-              {(incidenciaDetalle.fumigacion_productos || []).length === 0 ? (
-                <div className="ui-93a7e1">Sin productos cargados.</div>
-              ) : incidenciaDetalle.fumigacion_productos.map((fp, idx) => (
-                <div className="ui-d01382" key={idx} style={{ borderTop: idx === 0 ? 'none' : '1px solid #f0ede8' }}>
-                  <div>
-                    <div className="ui-788a2f">{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</div>
-                    <div className="ui-a8f171">
-                      Dosis: {fp.dosis || `${fp.cantidad || '-'} ${fp.unidad_uso || ''}`}
-                    </div>
+      <UnifiedFormModal
+        open={Boolean(incidenciaDetalle)}
+        tone="alerta"
+        icon="ti-flask"
+        eyebrow="Detalle de fumigación"
+        title={incidenciaDetalle ? (incidenciaDetalle.tipo === 'fertiriego' ? 'Fertiriego' : incidenciaDetalle.tipo === 'foliar' ? 'Foliar' : 'Fumigación') : ''}
+        subtitle={incidenciaDetalle?.fecha || ''}
+        label="Detalle de fumigación"
+        onClose={() => setIncidenciaDetalle(null)}
+        submitLabel={null}
+        cancelLabel="Cerrar"
+        summary={incidenciaDetalle ? resumenPie([{ n: (incidenciaDetalle.fumigacion_productos || []).length, texto: 'productos', uno: 'producto' }]) : null}
+      >{() => incidenciaDetalle && <>
+        <dl className="apple-kv">
+          <div className="apple-kv__row"><dt>Bloques</dt><dd className="is-num">{(incidenciaDetalle.fumigacion_bloques || []).map(fb => fb.bloques?.codigo).filter(Boolean).join(', ') || bloque?.codigo || '—'}</dd></div>
+          <div className="apple-kv__row"><dt>Operario</dt><dd>{incidenciaDetalle.operario || '—'}</dd></div>
+          <div className="apple-kv__row"><dt>Tanques</dt><dd className="is-num">{incidenciaDetalle.tanques_cantidad || '—'}{incidenciaDetalle.tanque_litros ? ` x ${incidenciaDetalle.tanque_litros} L` : ''}</dd></div>
+        </dl>
+        <ModalSection title="Productos aplicados" icon="ti-flask">
+          {(incidenciaDetalle.fumigacion_productos || []).length === 0 ? <p className="apple-empty">Sin productos cargados.</p> : (
+            <div className="apple-list">
+              {incidenciaDetalle.fumigacion_productos.map((fp, idx) => (
+                <div className="apple-list__row" key={idx}>
+                  <div className="apple-list__main">
+                    <strong>{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</strong>
+                    <small>Dosis: {fp.dosis || `${fp.cantidad || '—'} ${fp.unidad_uso || ''}`}{fp.productos?.carencia_dias ? ` · Carencia: ${fp.productos.carencia_dias} días` : ''}</small>
                   </div>
-                  <div className="ui-eb34de">
-                    {fp.descuento_stock ? `Stock: ${fmtKg(fp.descuento_stock)} ${fp.productos?.unidad || ''}` : ''}
-                    {fp.productos?.carencia_dias ? <div>Carencia: {fp.productos.carencia_dias} días</div> : null}
-                  </div>
+                  {fp.descuento_stock ? <span className="apple-list__money">{fmtKg(fp.descuento_stock)} {fp.productos?.unidad || ''}</span> : null}
                 </div>
               ))}
             </div>
+          )}
+        </ModalSection>
+        {incidenciaDetalle.notas && <p className="apple-quote">{incidenciaDetalle.notas}</p>}
+      </>}</UnifiedFormModal>
 
-            {incidenciaDetalle.notas && (
-              <div className="ag-surface ui-c2bf5d">
-                <div className="ui-74cc19">Notas</div>
-                <div className="ui-3e9bfb">{incidenciaDetalle.notas}</div>
-              </div>
-            )}
-          </div>
-        </Modal>
-      )}
-
-      {showQr && puedeVerQr && (
-        <Modal onClose={() => setShowQr(false)} label="Registro del bloque" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:220, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-          <div className="ag-surface ui-701d98">
-            <div className="ui-93a7e1">{bloque.campos?.nombre}</div>
-            <div className="ag-page-title ui-92e9fa">QR Bloque {bloque.codigo}</div>
-            {qrError && <div className="ui-99ac05">{qrError}</div>}
-            {qrDataUrl
-              ? <img className="ui-980293" src={qrDataUrl} alt={`QR del bloque ${bloque.codigo}`}/>
-              : <div className="ui-266415">Generando QR...</div>}
-            <div className="ui-906e8e">Al escanear, abre directamente este bloque. Para cargar información se requiere iniciar sesión.</div>
-            {typeof navigator.share === 'function' && <button className="ag-small-action ui-f40c68" type="button" onClick={compartirQr} disabled={!qrDataUrl}>Compartir / Guardar QR</button>}
-            <div className="ui-50089c">En iPhone, usá Compartir / Guardar QR y elegí Guardar imagen o Guardar en Archivos. También podés mantener presionado el QR para ver las opciones disponibles.</div>
-            <div className="ui-f56ef1">
-              <button className="ag-small-action ui-1cc6c1" type="button" onClick={descargarQr} disabled={!qrDataUrl}>Descargar</button>
-              <button className="ag-small-action ui-bb7661" type="button" onClick={imprimirQr} disabled={!qrDataUrl}>Imprimir etiqueta</button>
-            </div>
-            <button className="ag-small-action ui-5979cd" type="button" onClick={() => { setShowQr(false); setQrError('') }}>Cerrar</button>
-          </div>
-        </Modal>
-      )}
+      <UnifiedFormModal
+        open={Boolean(showQr && puedeVerQr)}
+        tone="bloques"
+        icon="ti-qrcode"
+        eyebrow={bloque?.campos?.nombre || 'Bloque'}
+        title={`QR Bloque ${bloque?.codigo || ''}`}
+        label="Código QR del bloque"
+        onClose={() => { setShowQr(false); setQrError('') }}
+        onSubmit={descargarQr}
+        submitDisabled={!qrDataUrl}
+        submitLabel="Descargar"
+        shortcut={false}
+        cancelLabel="Cerrar"
+        secondary={<>
+          {typeof navigator.share === 'function' && <button type="button" className="apple-btn apple-btn--ghost" onClick={compartirQr} disabled={!qrDataUrl}>Compartir / Guardar</button>}
+          <button type="button" className="apple-btn apple-btn--ghost" onClick={imprimirQr} disabled={!qrDataUrl}>Imprimir etiqueta</button>
+        </>}
+        error={showQr ? qrError : ''}
+      >{() => <>
+        <div className="apple-qr">
+          {qrDataUrl ? <img src={qrDataUrl} alt={`QR del bloque ${bloque?.codigo || ''}`} /> : <span role="status">Generando QR…</span>}
+        </div>
+        <p className="apple-note">Al escanear, abre directamente este bloque. Para cargar información se requiere iniciar sesión.</p>
+        <p className="apple-note">En iPhone, usá Compartir / Guardar y elegí Guardar imagen o Guardar en Archivos. También podés mantener presionado el QR para ver las opciones disponibles.</p>
+      </>}</UnifiedFormModal>
     </div>
   )
 }
@@ -2081,5 +2077,14 @@ function CostDetailList({ tipo, costos }) {
     : (costos.consumos || [])
       .filter(item => item.origen_tipo === `consumo_${tipo === 'fumigaciones' ? 'fumigacion' : 'fertilizacion'}`)
       .map(item => ({ ...item, nombre:item.productos?.nombre || 'Insumo', total:item.costo_total, detalle:`${fmtKg(item.cantidad_stock)} ${item.productos?.unidad || ''} × Gs. ${fmtGs(item.costo_unitario)}` }))
-  return <div className="block-cost-detail__list">{items.length === 0 ? <div className="ui-5baa7a">No hay costos registrados en esta categoría.</div> : items.map(item => <article key={item.id}><div><strong>{item.nombre}</strong><small>{fechaCorta(item.fecha)}{item.detalle ? ` · ${item.detalle}` : ''}</small></div><b>Gs. {fmtGs(item.total)}</b></article>)}</div>
+  if (items.length === 0) return <p className="apple-empty">No hay costos registrados en esta categoría.</p>
+  return <>
+    <div className="apple-list">{items.map(item => (
+      <div className="apple-list__row" key={item.id}>
+        <div className="apple-list__main"><strong>{item.nombre}</strong><small>{fechaCorta(item.fecha)}{item.detalle ? ` · ${item.detalle}` : ''}</small></div>
+        <strong className="apple-list__money">Gs. {fmtGs(item.total)}</strong>
+      </div>
+    ))}</div>
+    <p className="apple-note">Total: <b>Gs. {fmtGs(items.reduce((suma, item) => suma + Number(item.total || 0), 0))}</b></p>
+  </>
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { guestToken, supabase } from '../lib/supabase'
 import { useCan } from '../lib/RoleContext'
+import { useConfirmar } from './ModalConfirm'
 
 const hoy = () => {
   const d = new Date()
@@ -28,6 +29,7 @@ const agruparNotas = (filas = []) => {
 
 export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'Notas', permisoModulo = modulo, mostrarFecha = true, limite = 6, modoPagina = false, permitirAsignarBloque = false, referenciaTipo = '', referenciaId = '', referenciaEtiqueta = '' }) {
   const can = useCan(permisoModulo)
+  const [pedir, dialogoConfirmar] = useConfirmar()
   const [notas, setNotas] = useState([])
   const [bloques, setBloques] = useState([])
   const [abierto, setAbierto] = useState(false)
@@ -120,7 +122,7 @@ export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'N
   }
 
   const eliminar = async (ids) => {
-    if (!window.confirm('¿Eliminar esta nota? Esta acción no se puede deshacer.')) return
+    if (!(await pedir({ titulo: '¿Eliminar esta nota?', mensaje: 'Esta acción no se puede deshacer.', textoBoton: 'Eliminar nota', tono: 'peligro' }))) return
     await supabase.from('notas_modulo').delete().in('id', Array.isArray(ids) ? ids : [ids])
     fetchNotas()
   }
@@ -214,6 +216,7 @@ export default function NotasPanel({ modulo, modulos, moduloDestino, titulo = 'N
           ))}
         </div>
       )}
+      {dialogoConfirmar}
     </section>
   )
 }

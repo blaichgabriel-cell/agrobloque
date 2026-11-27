@@ -1,4 +1,4 @@
-import { Modal, Skeleton } from '../components/UI'
+import { Skeleton } from '../components/UI'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, DateQuickField, BlockChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
@@ -967,6 +967,7 @@ export default function Fertilizaciones({ campoActivo }) {
     cargarDatos()
   }
 
+  const esSemanaDet = Boolean(detalle?.items?.some(i => i.plan_id))
   return (
     <div className="ag-page ui-629c3b">
       <div className="ui-c53b97">
@@ -1115,18 +1116,42 @@ export default function Fertilizaciones({ campoActivo }) {
           saving={saving}
           error={error}
         />
-      {detalle && (
-        <Modal onClose={() => setDetalle(null)} label="Fertilizaciones" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:260, display:'grid', placeItems:'center', padding:16 }} onClick={() => setDetalle(null)}>
-          <div className="ag-surface ui-3e70e0" onClick={e => e.stopPropagation()}>
-            <div className="ui-9f6525"><div><div className="ui-5e0192">{detalle.items.some(i => i.plan_id) ? 'FERTILIZACIÓN SEMANAL' : 'DETALLE DE APLICACIÓN'}</div><h2 className="ui-58c65c">{detalle.items.some(i => i.plan_id) ? rangoSemana(detalle.items[0]) : fmtFecha(detalle.fecha)}</h2></div><button className="ui-52b466 ag-close-btn" aria-label="Cerrar" onClick={() => setDetalle(null)}><i className="ti ti-x" /></button></div>
-            <div className="ui-091476"><div className="ui-702618"><small className="ui-ae975a">Bloques</small><div className="ui-c6f57e">{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</div></div><div className="ui-702618"><small className="ui-ae975a">Preparación</small><div className="ui-c6f57e">{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</div></div></div>
-            <div className="ui-c4d2a4">{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</div>
-            {notasVisibles(detalle.notas) && <div className="ui-5961cf">{notasVisibles(detalle.notas)}</div>}
-            {!detalle.anulada && <><div className="ui-79954a">{can.edit && <button onClick={() => abrirEditarAplicacion(detalle)} className="bl-btn-solid">{detalle.items.some(i => i.plan_id) ? 'Editar semana completa' : 'Editar'}</button>}{!detalle.items.some(i => i.plan_id) && can.create && <button onClick={() => repetirAplicacion(detalle)} className="bl-btn-solid ui-d6ff9b">Repetir hoy</button>}</div><div className="ui-b6cf07"><label className="ui-fd4239">Motivo para anular<input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" className="bl-input" /></label>{can.delete && <button className="ag-small-action ui-b4a187" onClick={() => anularAplicacion(detalle)} disabled={saving}>Anular y devolver inventario</button>}</div></>}
-            {detalle.anulada && <div className="ui-1eb527">Esta aplicación está anulada.</div>}
-          </div>
-        </Modal>
-      )}
+      <UnifiedFormModal
+        open={Boolean(detalle)}
+        tone="agua"
+        icon="ti-flask"
+        eyebrow={esSemanaDet ? 'Fertilización semanal' : 'Detalle de aplicación'}
+        title={detalle ? (esSemanaDet ? rangoSemana(detalle.items[0]) : fmtFecha(detalle.fecha)) : ''}
+        label="Detalle de fertilización"
+        busy={saving}
+        onClose={() => setDetalle(null)}
+        onSubmit={detalle && !detalle.anulada && can.edit ? () => abrirEditarAplicacion(detalle) : undefined}
+        submitLabel={detalle && !detalle.anulada && can.edit ? (esSemanaDet ? 'Editar semana completa' : 'Editar') : null}
+        shortcut={false}
+        cancelLabel="Cerrar"
+        error={detalle ? error : ''}
+        secondary={detalle && !detalle.anulada && !esSemanaDet && can.create ? <button type="button" className="apple-btn apple-btn--ghost" onClick={() => repetirAplicacion(detalle)}>Repetir hoy</button> : null}
+        summary={detalle ? resumenPie([
+          { n: detalle.items.length, texto: 'bloques', uno: 'bloque' },
+          { solo: detalle.anulada ? 'Anulada' : '' },
+        ]) : null}
+      >{() => detalle && <>
+        {detalle.anulada && <p className="apple-note is-danger">Esta aplicación está anulada.</p>}
+        <dl className="apple-kv">
+          <div className="apple-kv__row"><dt>Bloques</dt><dd className="is-num">{detalle.items.map(i => i.bloques?.codigo || 'Bloque').join(', ')}</dd></div>
+          <div className="apple-kv__row"><dt>Preparación</dt><dd className="is-num">{detalle.tanques_cantidad || 1} × {fmtNum(detalle.tanque_litros)} L</dd></div>
+        </dl>
+        <ModalSection title="Productos" icon="ti-flask">
+          <p className="apple-quote">{resumenSoluciones(detalle.soluciones) || 'Sin productos detallados'}</p>
+        </ModalSection>
+        {notasVisibles(detalle.notas) && <p className="apple-quote">{notasVisibles(detalle.notas)}</p>}
+        {!detalle.anulada && can.delete && (
+          <ModalSection title="Anular aplicación" icon="ti-ban" collapsible defaultOpen={false} badge="devuelve el inventario">
+            <ModalField label="Motivo para anular *"><input className="apple-control" value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Ej: carga duplicada o aplicación cancelada" /></ModalField>
+            <div className="apple-actionbar"><button type="button" className="apple-btn apple-btn--ghost apple-btn--dangerghost" onClick={() => anularAplicacion(detalle)} disabled={saving}>Anular y devolver inventario</button></div>
+          </ModalSection>
+        )}
+      </>}</UnifiedFormModal>
     </div>
   )
 }

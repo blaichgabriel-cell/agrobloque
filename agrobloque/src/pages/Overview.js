@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { canAccessModule } from '../lib/permissions'
-import { Modal, Skeleton } from '../components/UI'
+import { Skeleton } from '../components/UI'
+import UnifiedFormModal, { ModalField } from '../components/UnifiedFormModal'
 import WorkActions, { availableWork } from '../components/WorkActions'
 import { registrarAuditoria } from '../lib/audit'
 
@@ -213,7 +214,25 @@ export default function Overview({ campoActivo, setCampoActivo, isGuest = false,
       <section className="ag-panel ag-activity-panel"><div className="ag-section-heading"><div className="ag-title-with-icon"><span data-tone="neutral"><i className="ti ti-clock" /></span><h2>Actividad reciente</h2></div>{can('historial') && <button className="ag-text-button" onClick={() => navigate('/historial')}>Ver historial <i className="ti ti-arrow-right" /></button>}</div>{loading ? <Skeleton label="Cargando actividad…" rows={2} /> : recent.length ? recent.slice(0, 5).map(item => { const codigos = item.block ? data.bloques.find(b => b.id === item.block)?.codigo : (item.blocks || []).map(id => data.bloques.find(b => b.id === id)?.codigo).filter(Boolean).join(', '); return <button className="ag-activity" key={item.id} onClick={() => navigate(item.path)}><span className="ag-activity-icon" data-tone={item.tone}><i className={`ti ${item.icon}`} /></span><span><strong>{item.label}{codigos ? ` · ${codigos}` : ''}</strong><small>{item.sub}</small></span><time>{relativeDate(item.date, today)}</time></button> }) : <div className="ag-empty">{errors.some(key => ['cosechas', 'fumigaciones', 'fertilizaciones'].includes(key)) ? 'No se pudo consultar toda la actividad.' : 'Sin registros recientes para mostrar.'}</div>}</section>
     </div></div>
     {work && <WorkActions role={role} isGuest={isGuest} onClose={() => setWork(false)} />}
-    {editandoCampo && <Modal busy={guardandoCampo} onClose={() => setEditandoCampo(false)} label="Editar nombre del campo" style={{ position:'fixed', inset:0, zIndex:240, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div className="ag-surface ui-211525" style={{ width:'min(430px, 100%)' }}><div className="ui-3e43be">Editar nombre del campo</div><div className="ui-01159a">El nuevo nombre aparecerá en el selector y en todos los módulos vinculados.</div>{campoError && <div className="ag-feedback ag-feedback-error" role="alert">{campoError}</div>}<label className="ag-field-label">Nombre<input className="bl-input" autoFocus value={nombreCampo} onChange={e => setNombreCampo(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') guardarNombreCampo() }} maxLength={80} placeholder="Ej: Jean Hauron" /></label><div className="ui-9c6869"><button className="ag-small-action ui-395a62" onClick={() => setEditandoCampo(false)} disabled={guardandoCampo}>Cancelar</button><button className="ag-small-action ui-f5f413" onClick={guardarNombreCampo} disabled={guardandoCampo}>{guardandoCampo ? 'Guardando…' : 'Guardar nombre'}</button></div></div></Modal>}
+    <UnifiedFormModal
+      open={editandoCampo}
+      tone="bloques"
+      icon="ti-pencil"
+      eyebrow="Campo"
+      title="Editar nombre del campo"
+      subtitle="El nuevo nombre aparecerá en el selector y en todos los módulos vinculados."
+      label="Editar nombre del campo"
+      busy={guardandoCampo}
+      onClose={() => setEditandoCampo(false)}
+      onSubmit={guardarNombreCampo}
+      submitLabel="Guardar nombre"
+      error={editandoCampo ? campoError : ''}
+      summary={nombreCampo.trim() || 'Escribí el nuevo nombre'}
+    >{() => <>
+      <ModalField label="Nombre del campo *">
+        <input className="apple-control" data-autofocus value={nombreCampo} onChange={e => setNombreCampo(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); guardarNombreCampo() } }} maxLength={80} placeholder="Ej: Campo Norte" />
+      </ModalField>
+    </>}</UnifiedFormModal>
   </div>
 }
 

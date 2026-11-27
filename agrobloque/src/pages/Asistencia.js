@@ -4,6 +4,7 @@ import NotasPanel from '../components/NotasPanel'
 import { useCan } from '../lib/RoleContext'
 import UnifiedFormModal, { ModalSection, ModalField, resumenPie } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
+import { useConfirmar } from '../components/ModalConfirm'
 
 const CAMPO_STORAGE_KEY = 'agrobloque-campo-activo'
 const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado']
@@ -40,6 +41,7 @@ const getCampoGuardado = () => {
 
 export default function Asistencia() {
   const can = useCan('asistencia')
+  const [pedir, dialogoConfirmar] = useConfirmar()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1100
   const [campoActivo, setCampoActivo] = useState(null)
   const [campos, setCampos] = useState([])
@@ -129,7 +131,7 @@ export default function Asistencia() {
   }
 
   const sacarPersonal = async (operario) => {
-    const confirmado = typeof window === 'undefined' || window.confirm(`¿Sacar a ${operario.nombre} de la lista de asistencia?\n\nSus asistencias, adelantos y pagos anteriores se conservarán.`)
+    const confirmado = await pedir({ titulo: `¿Sacar a ${operario.nombre} de la lista?`, mensaje: 'Sus asistencias, adelantos y pagos anteriores se conservarán.', textoBoton: 'Sacar de la lista', tono: 'aviso' })
     if (!confirmado) return
     setSavingPersonal(true)
     setError('')
@@ -595,6 +597,8 @@ export default function Asistencia() {
           <ModalField label="Descripción"><input className="apple-control" type="text" value={formAdelanto.descripcion} onChange={e => setFormAdelanto(f => ({ ...f, descripcion: e.target.value }))} placeholder="Ej: Adelanto quincena (opcional)" /></ModalField>
         </ModalSection>
       </>}</UnifiedFormModal>
+
+      {dialogoConfirmar}
     </div>
   )
 }

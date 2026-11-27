@@ -1,4 +1,5 @@
-import { Modal, Notice, Skeleton } from '../components/UI'
+import { Notice, Skeleton } from '../components/UI'
+import ModalConfirm from '../components/ModalConfirm'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, BlockChips, resumenPie } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
@@ -113,21 +114,6 @@ const normalizarOperarios = (texto = '') =>
     .split(',')
     .map(nombre => nombre.trim())
     .filter(Boolean)
-
-function ModalConfirm({ onConfirm, onCancel }) {
-  return (
-    <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface ui-211525">
-        <div className="ui-3e43be">Eliminar registro</div>
-        <div className="ui-01159a">Esta acción no se puede deshacer.</div>
-        <div className="ui-9c6869">
-          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
-          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Eliminar</button>
-        </div>
-      </div>
-    </Modal>
-  )
-}
 
 const formatFechaLabel = (fecha) => {
   const d = new Date(fecha + 'T00:00:00')
@@ -741,9 +727,11 @@ export default function Fumigaciones({ campoActivo = null }) {
     return { exceso:false, texto:`Total: ${fmtCantidad(tanquesSumados)} tanques · ${fmtCantidad(tanquesSumados * litrosTanqueForm)} L preparados` }
   })()
 
+  const tipoDetalle = TIPOS[detalle?.tipo] || TIPOS.fumigacion
+  const bloquesDetalle = detalle ? getBloquesConCultivo(detalle) : ''
+  const carenciaDetalle = detalle ? getCarencia(detalle) : null
   return (
     <div className="ag-page phytosanitary-page ui-c1c124">
-      {confirmar && <ModalConfirm onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
 
       <div className="ag-page-header ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
         <div className="module-switch" role="tablist" aria-label="Tipo de aplicación"><button type="button" role="tab" aria-selected="true" className="active"><i className="ti ti-shield-check" />Fitosanitario</button><button type="button" role="tab" aria-selected="false" onClick={() => navigate('/fertilizaciones')}><i className="ti ti-leaf" />Nutrición y fertirriego</button></div>
@@ -825,76 +813,54 @@ export default function Fumigaciones({ campoActivo = null }) {
       </div>
 
       {/* Detalle */}
-      {detalle && (
-        <Modal onClose={() => setDetalle(null)} label="Fumigaciones" style={{
-          position:'fixed',
-          top:0,
-          left:0,
-          right:0,
-          bottom:0,
-          background:'rgba(0,0,0,0.4)',
-          zIndex:100,
-          display:'flex',
-          alignItems: isDesktop ? 'center' : 'flex-end',
-          justifyContent:'center',
-          padding: isDesktop ? '24px' : 0,
-          overflowY:'auto', boxShadow: typeof window !== 'undefined' && window.innerWidth >= 1100 ? '0 24px 70px rgba(0,0,0,0.24)' : 'none',
-        }} onClick={e => e.target===e.currentTarget && setDetalle(null)}>
-          <div className="ui-0cdbc3" style={{ borderRadius: isDesktop ? 24 : '24px 24px 0 0', maxHeight: isDesktop ? 'calc(100dvh - 96px)' : '85dvh', boxShadow: isDesktop ? '0 24px 70px rgba(0,0,0,0.24)' : 'none' }}>
-            {(() => {
-              const tipo = TIPOS[detalle.tipo] || TIPOS.fumigacion
-              const bloquesCodes = getBloquesConCultivo(detalle)
-              const carencia = getCarencia(detalle)
-              return <>
-                <div className="ui-2c78f8">
-                  <div className="ui-e46614" style={{ background:tipo.bg }}>
-                    <i className={`${`ti ${tipo.icon}`} ui-bf83cf`} style={{ color:tipo.color }} aria-hidden="true"></i>
+      <UnifiedFormModal
+        open={Boolean(detalle)}
+        tone="alerta"
+        icon={tipoDetalle.icon}
+        eyebrow="Detalle de aplicación"
+        title={tipoDetalle.label}
+        subtitle={`${detalle?.campos?.nombre || ''} · ${detalle?.fecha || ''}`}
+        label="Detalle de aplicación"
+        onClose={() => setDetalle(null)}
+        onSubmit={!isGuest && can.edit ? () => abrirEditar(detalle) : undefined}
+        submitLabel={!isGuest && can.edit ? 'Editar registro' : null}
+        shortcut={false}
+        cancelLabel="Cerrar"
+        secondary={!isGuest && (can.create || can.delete) ? <>
+          {can.create && <button type="button" className="apple-btn apple-btn--ghost" onClick={() => abrirDuplicado(detalle)}>Duplicar</button>}
+          {can.delete && <button type="button" className="apple-btn apple-btn--ghost apple-btn--dangerghost" onClick={() => eliminar(detalle.id)}>Eliminar</button>}
+        </> : null}
+        summary={detalle ? resumenPie([
+          { n: detalle.fumigacion_productos?.length || 0, texto: 'productos', uno: 'producto' },
+          { solo: carenciaDetalle ? `${carenciaDetalle} días de carencia` : '' },
+        ]) : null}
+      >{() => detalle && <>
+        {carenciaDetalle && <div className="apple-stats"><div className="apple-stat is-warn"><small>Carencia</small><strong>{carenciaDetalle} días</strong></div></div>}
+        <dl className="apple-kv">
+          {[
+            ['Fecha', detalle.fecha],
+            detalle.operario && ['Operario', detalle.operario],
+            bloquesDetalle && ['Bloques', bloquesDetalle],
+            detalle.tanques_cantidad && detalle.tanque_litros && ['Tanques', `${fmtCantidad(detalle.tanques_cantidad)} x ${fmtCantidad(detalle.tanque_litros)} L`],
+          ].filter(Boolean).map(([k, v]) => <div className="apple-kv__row" key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+        </dl>
+        {detalle.fumigacion_productos?.length > 0 && (
+          <ModalSection title="Productos usados" icon="ti-flask">
+            <div className="apple-list">
+              {detalle.fumigacion_productos.map(fp => (
+                <div className="apple-list__row" key={fp.id}>
+                  <div className="apple-list__main">
+                    <strong>{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</strong>
+                    <small>{fp.dosis || '—'}{Number(fp.descuento_stock) > 0 ? ` · descontó ${fmtCantidad(fp.descuento_stock)} ${fp.productos?.unidad || ''}` : ''}</small>
                   </div>
-                  <div>
-                    <div className="ui-fe27f2">{tipo.label}</div>
-                    <div className="ui-93a7e1">{detalle.campos?.nombre} · {detalle.fecha}</div>
-                  </div>
-                  {carencia && (
-                    <div className="ui-d2a157">
-                      {carencia} días carencia
-                    </div>
-                  )}
                 </div>
-                <div className="ag-surface ui-81623a">
-                  {[
-                    ['Fecha', detalle.fecha],
-                    detalle.operario && ['Operario', detalle.operario],
-                    bloquesCodes && ['Bloques', bloquesCodes],
-                    detalle.tanques_cantidad && detalle.tanque_litros && ['Tanques', `${fmtCantidad(detalle.tanques_cantidad)} x ${fmtCantidad(detalle.tanque_litros)} L`],
-                    detalle.notas && ['Notas', detalle.notas]
-                  ].filter(Boolean).map(([k,v]) => (
-                    <div className="ui-a7a997" key={k}>
-                      <div className="ui-93a7e1">{k}</div>
-                      <div className="ui-6903eb">{v}</div>
-                    </div>
-                  ))}
-                </div>
-                {detalle.fumigacion_productos?.length > 0 && (
-                  <div className="ag-surface ui-81623a">
-                    <div className="ui-5ec059">PRODUCTOS USADOS</div>
-                    {detalle.fumigacion_productos.map(fp => (
-                      <div className="ui-a7a997" key={fp.id}>
-                        <div className="ui-7b80c9">{fp.productos?.nombre || fp.producto_nombre || 'Producto'}</div>
-                        <div className="ui-197309">{fp.dosis || '—'}{Number(fp.descuento_stock) > 0 ? ` · descontó ${fmtCantidad(fp.descuento_stock)} ${fp.productos?.unidad || ''}` : ''}</div>
-                      </div>
-                    ))}
-                    <div className="ui-a7a997"><strong>Costo de insumos</strong><strong>Gs. {detalle.fumigacion_productos.reduce((total, fp) => total + Number(fp.descuento_stock || 0) * Number(fp.productos?.precio_unitario || 0), 0).toLocaleString('es-PY')}</strong></div>
-                  </div>
-                )}
-                {!isGuest && can.create && <button className="ag-small-action ui-6988cd" onClick={() => abrirDuplicado(detalle)}>Duplicar para otro bloque</button>}
-                {!isGuest && can.edit && <button className="ag-small-action ui-6988cd" onClick={() => abrirEditar(detalle)}>Editar registro</button>}
-                {!isGuest && can.delete && <button className="ag-small-action ui-939a40" onClick={() => eliminar(detalle.id)}>Eliminar registro</button>}
-                <button className="ag-small-action ui-3e2cc4" onClick={() => setDetalle(null)}>Cerrar</button>
-              </>
-            })()}
-          </div>
-        </Modal>
-      )}
+              ))}
+            </div>
+            <p className="apple-note">Costo de insumos: <b>Gs. {detalle.fumigacion_productos.reduce((total, fp) => total + Number(fp.descuento_stock || 0) * Number(fp.productos?.precio_unitario || 0), 0).toLocaleString('es-PY')}</b></p>
+          </ModalSection>
+        )}
+        {detalle.notas && <p className="apple-quote">{detalle.notas}</p>}
+      </>}</UnifiedFormModal>
 
       {/* Registrar o editar una aplicación: una sola pantalla */}
       <UnifiedFormModal
@@ -1034,6 +1000,8 @@ export default function Fumigaciones({ campoActivo = null }) {
           )}
         </ModalSection>
       </>}</UnifiedFormModal>
+
+      <ModalConfirm open={Boolean(confirmar)} titulo="¿Eliminar registro?" mensaje="Esta acción no se puede deshacer. El stock usado se devuelve al inventario." textoBoton="Eliminar registro" onConfirm={confirmar?.fn} onCancel={() => setConfirmar(null)} />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { descargarCsv, imprimirHtml } from '../lib/exporters'
 import { useCan } from '../lib/RoleContext'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
+import { useConfirmar } from '../components/ModalConfirm'
 
 const meses = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -37,6 +38,7 @@ const formInicial = {
 
 export default function Contabilidad() {
   const can = useCan('contabilidad')
+  const [pedir, dialogoConfirmar] = useConfirmar()
   const navigate = useNavigate()
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768
   const [movimientos, setMovimientos] = useState([])
@@ -187,7 +189,7 @@ export default function Contabilidad() {
   }
 
   const eliminar = async (id) => {
-    if (!window.confirm('Eliminar este movimiento de contabilidad?')) return
+    if (!(await pedir({ titulo: '¿Eliminar este movimiento?', mensaje: 'El movimiento sale de Contabilidad. No se puede deshacer.', textoBoton: 'Eliminar movimiento', tono: 'peligro' }))) return
     const { error } = await supabase.from('contabilidad_movimientos').delete().eq('id', id)
     if (error) setError('No se pudo eliminar el movimiento.')
     else fetchMovimientos()
@@ -421,6 +423,8 @@ export default function Contabilidad() {
           </ModalField>
         </ModalSection>
       </>}</UnifiedFormModal>
+
+      {dialogoConfirmar}
     </div>
   )
 }

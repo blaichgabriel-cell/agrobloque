@@ -7,6 +7,7 @@ import { descargarJson } from '../lib/exporters'
 import { ACTIONS, DISABLED_MODULES } from '../lib/permissions'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, ChoiceChips, resumenPie } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
+import { useConfirmar } from '../components/ModalConfirm'
 const PERMISOS_MODULOS = [
   { key: 'buscar', label: 'Buscar' },
   { key: 'alertas', label: 'Alertas' },
@@ -136,6 +137,7 @@ const comprimirFotoPerfil = (file) => new Promise((resolve, reject) => {
 export default function Configuracion({ role, organization = { nombre:'AgroBloque' }, onOrganizationUpdate, theme = 'light', themeMode = 'system', onThemeChange }) {
   const navigate = useNavigate()
   const fotoRef = useRef()
+  const [pedir, dialogoConfirmar] = useConfirmar()
   const [modal, setModal] = useState(null)
   const [perfil, setPerfil] = useState({ nombre:'', email:'', foto:'' })
   const [campos, setCampos] = useState([])
@@ -448,10 +450,10 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
 
   const eliminar = async (tabla, id, volver) => {
     const esOperario = tabla === 'operarios'
-    const pregunta = esOperario
-      ? '¿Desactivar este operario? Deja de aparecer en Asistencia, pero se conserva todo su historial de asistencia y adelantos.'
-      : '¿Eliminar este registro? No se puede deshacer.'
-    if (typeof window !== 'undefined' && !window.confirm(pregunta)) return
+    const confirmado = await pedir(esOperario
+      ? { titulo: '¿Desactivar este operario?', mensaje: 'Deja de aparecer en Asistencia, pero se conserva todo su historial de asistencia y adelantos.', textoBoton: 'Desactivar', tono: 'aviso' }
+      : { titulo: '¿Eliminar este registro?', mensaje: 'No se puede deshacer.', textoBoton: 'Eliminar', tono: 'peligro' })
+    if (!confirmado) return
     setLoading(true); setError(''); setSuccess('')
     try {
       if (esOperario) await ejecutar(supabase.from('operarios').update({ activo: false }).eq('id', id))
@@ -989,6 +991,8 @@ export default function Configuracion({ role, organization = { nombre:'AgroBloqu
         error={modal ? error : ''}
         summary={vista?.summary}
       >{() => vista?.body}</UnifiedFormModal>
+
+      {dialogoConfirmar}
     </div>
   )
 }

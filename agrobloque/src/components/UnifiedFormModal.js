@@ -30,6 +30,9 @@ export default function UnifiedFormModal({
   onClose,
   onCancel,
   onSubmit,
+  size = '',
+  danger = false,
+  shortcut = true,
   busy = false,
   submitDisabled = false,
   submitLabel = 'Guardar registro',
@@ -71,7 +74,7 @@ export default function UnifiedFormModal({
   const cerrando = !open
 
   const alTeclear = (event) => {
-    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
+    if (shortcut && event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
       event.preventDefault()
       if (!busy && !submitDisabled && open && v.submitLabel !== null) onSubmit?.()
     }
@@ -79,7 +82,7 @@ export default function UnifiedFormModal({
 
   return (
     <Modal busy={busy || cerrando} onClose={() => { if (!cerrando) onClose?.() }} label={v.label || v.title || 'Formulario'} className={`apple-modal-overlay${cerrando ? ' is-closing' : ''}`}>
-      <div className="apple-modal" data-tone={v.tone} onKeyDown={alTeclear} ref={raiz}>
+      <div className={`apple-modal${size === 'sm' ? ' apple-modal--sm' : ''}${danger ? ' apple-modal--danger' : ''}`} data-tone={v.tone} onKeyDown={alTeclear} ref={raiz}>
         <header className="apple-modal__head">
           <span className="apple-modal__icon" aria-hidden="true"><i className={`ti ${v.icon}`} /></span>
           <div className="apple-modal__titles">
@@ -96,10 +99,10 @@ export default function UnifiedFormModal({
           <div className="apple-modal__actions">
             <button type="button" className="apple-btn apple-btn--ghost" onClick={onCancel || onClose} disabled={busy || cerrando}>{v.cancelLabel}</button>
             {v.secondary}
-            {v.submitLabel !== null && <button type="button" className="apple-btn apple-btn--primary" onClick={onSubmit} disabled={busy || cerrando || submitDisabled} aria-busy={busy || undefined} aria-keyshortcuts={esMac ? "Meta+Enter" : "Control+Enter"}>
+            {v.submitLabel !== null && <button type="button" className="apple-btn apple-btn--primary" onClick={onSubmit} disabled={busy || cerrando || submitDisabled} aria-busy={busy || undefined} aria-keyshortcuts={shortcut ? (esMac ? "Meta+Enter" : "Control+Enter") : undefined}>
               {busy && <span className="apple-spinner" aria-hidden="true" />}
               <span>{busy ? 'Guardando…' : v.submitLabel}</span>
-              {!busy && <kbd aria-hidden="true">{esMac ? '⌘' : 'Ctrl'} ↵</kbd>}
+              {!busy && shortcut && <kbd aria-hidden="true">{esMac ? '⌘' : 'Ctrl'} ↵</kbd>}
             </button>}
           </div>
         </footer>

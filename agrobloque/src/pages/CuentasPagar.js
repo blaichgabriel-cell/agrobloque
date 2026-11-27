@@ -4,6 +4,7 @@ import NotasPanel from '../components/NotasPanel'
 import { supabase } from '../lib/supabase'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
+import { useConfirmar } from '../components/ModalConfirm'
 
 const tiposProveedor = ['Agropecuaria', 'Ferreteria', 'Transporte', 'Servicios', 'Otro']
 const categorias = ['Insumos', 'Fertilizantes', 'Agroquimicos', 'Semillas', 'Herramientas', 'Servicios', 'Combustible', 'Otros']
@@ -45,6 +46,7 @@ const movimientoVacio = {
 }
 
 export default function CuentasPagar() {
+  const [pedir, dialogoConfirmar] = useConfirmar()
   const [proveedores, setProveedores] = useState([])
   const [movimientos, setMovimientos] = useState([])
   const [proveedorForm, setProveedorForm] = useState(proveedorVacio)
@@ -189,14 +191,14 @@ export default function CuentasPagar() {
   }
 
   const eliminarProveedor = async (proveedor) => {
-    if (!window.confirm(`Eliminar ${proveedor.nombre} y todos sus movimientos?`)) return
+    if (!(await pedir({ titulo: `¿Eliminar a ${proveedor.nombre}?`, mensaje: 'Se eliminan también todos sus movimientos. No se puede deshacer.', textoBoton: 'Eliminar proveedor', tono: 'peligro' }))) return
     const { error } = await supabase.from('proveedores_credito').delete().eq('id', proveedor.id)
     if (error) setError('No se pudo eliminar el proveedor.')
     else cargarDatos()
   }
 
   const eliminarMovimiento = async (movimiento) => {
-    if (!window.confirm('Eliminar este movimiento?')) return
+    if (!(await pedir({ titulo: '¿Eliminar este movimiento?', mensaje: 'Cambia el saldo del proveedor. No se puede deshacer.', textoBoton: 'Eliminar movimiento', tono: 'peligro' }))) return
     const { error } = await supabase.from('proveedor_movimientos').delete().eq('id', movimiento.id)
     if (error) setError('No se pudo eliminar el movimiento.')
     else cargarDatos()
@@ -439,6 +441,8 @@ export default function CuentasPagar() {
           <ModalField label="Notas"><textarea className="apple-control" value={movimientoForm.notas || ''} onChange={e => setMovimientoForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones…" /></ModalField>
         </ModalSection>
       </>}</UnifiedFormModal>
+
+      {dialogoConfirmar}
     </div>
   )
 }

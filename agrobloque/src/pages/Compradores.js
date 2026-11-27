@@ -1,4 +1,4 @@
-import { Modal } from '../components/UI'
+import ModalConfirm from '../components/ModalConfirm'
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import NotasPanel from '../components/NotasPanel'
@@ -7,21 +7,6 @@ import UnifiedFormModal, { ModalSection, ModalField, ModalGroup, ChoiceChips, re
 import { toast } from 'sonner'
 
 const TIPOS = ['Mayorista','Mercado','Particular','Exportador','Otro']
-
-function ModalConfirm({ nombre, onConfirm, onCancel }) {
-  return (
-    <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface ui-211525">
-        <div className="ui-3e43be">¿Eliminar comprador?</div>
-        <div className="ui-01159a">"{nombre}" y su historial serán eliminados.</div>
-        <div className="ui-9c6869">
-          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
-          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Eliminar</button>
-        </div>
-      </div>
-    </Modal>
-  )
-}
 
 export default function Compradores() {
   const can = useCan('compradores')
@@ -92,7 +77,6 @@ export default function Compradores() {
 
   return (
     <div className="ag-page ui-c1c124">
-      {confirmar && <ModalConfirm nombre={confirmar.nombre} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
       {error && <div className="ag-feedback ag-feedback-error" role="alert">{error}</div>}
 
       <div className="ag-page-header ui-341bdc" style={{ padding: isDesktop ? '34px 36px 18px' : '24px 20px 16px' }}>
@@ -215,6 +199,8 @@ export default function Compradores() {
           <ModalField label="Notas"><textarea className="apple-control" value={form.notas || ''} onChange={e => setForm(f => ({ ...f, notas:e.target.value }))} placeholder="Observaciones…" /></ModalField>
         </ModalSection>
       </>}</UnifiedFormModal>
+
+      <ModalConfirm open={Boolean(confirmar)} titulo="¿Eliminar comprador?" mensaje={`«${confirmar?.nombre || ''}» y su historial serán eliminados.`} textoBoton="Eliminar comprador" onConfirm={confirmar?.fn} onCancel={() => setConfirmar(null)} />
     </div>
   )
 }

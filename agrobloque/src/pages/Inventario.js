@@ -1,4 +1,4 @@
-import { CerrarX, Modal } from '../components/UI'
+import ModalConfirm, { useConfirmar } from '../components/ModalConfirm'
 import UnifiedFormModal, { ModalSection, ModalGrid, ModalField, ModalGroup, DateQuickField, ChoiceChips, resumenPie, fechaIso } from '../components/UnifiedFormModal'
 import { toast } from 'sonner'
 import React, { useState, useEffect, useRef } from 'react'
@@ -94,21 +94,6 @@ const INVENTORY_TONES = {
   Fertilizante:'agua', Foliar:'agua', Hidrosoluble:'agua', 'Abono de base':'agua', Herramientas:'neutral', Otro:'neutral',
 }
 
-function ModalConfirm({ mensaje, onConfirm, onCancel }) {
-  return (
-    <Modal onClose={onCancel} label="Confirmar acción" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div className="ag-surface ui-211525">
-        <div className="ui-3e43be">¿Eliminar producto?</div>
-        <div className="ui-01159a">{mensaje}</div>
-        <div className="ui-9c6869">
-          <button className="ag-small-action ui-395a62" onClick={onCancel}>Cancelar</button>
-          <button className="ag-small-action ui-f5f413" onClick={onConfirm}>Eliminar</button>
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
 // Alta rápida de un producto dentro de la compra: tarjeta anidada que se despliega en la propia fila, sin cerrar la compra.
 const GRUPOS_CATEGORIA = [
   { label:'Semillas y plantines', keys:['Semillas', 'Plantines'] },
@@ -179,6 +164,7 @@ export default function Inventario() {
   const [categoriaActiva, setCategoriaActiva] = useState(null)
   const [modal, setModal] = useState(null)
   const [confirmar, setConfirmar] = useState(null)
+  const [pedir, dialogoConfirmar] = useConfirmar()
   const [form, setForm] = useState({ nombre:'', categoria_nombre:'', principio_activo:'', unidad:'kg', stock_actual:'', precio_total:'', fecha_compra:hoy(), stock_minimo:'', stock_minimo_unidad:'kg', carencia_dias:'', notas:'' })
   const [compra, setCompra] = useState({ producto_id:'', fecha:hoy(), cantidad:'', unidad:'kg', precio_total:'', proveedor:'', notas:'' })
   const [compraMultiple, setCompraMultiple] = useState({ fecha:hoy(), proveedor:'', notas:'', items:[{ producto_id:'', cantidad:'', unidad:'kg', precio_total:'' }] })
@@ -413,7 +399,7 @@ export default function Inventario() {
   }
 
   const anularCompra = async id => {
-    if (!window.confirm('¿Anular esta compra y retirar su stock?')) return
+    if (!(await pedir({ titulo: '¿Anular esta compra?', mensaje: 'Se retira del inventario el stock que había sumado. El historial se conserva.', textoBoton: 'Anular compra', tono: 'aviso' }))) return
     setError('')
     const { error:anularError } = await supabase.rpc('anular_compra_inventario', { p_compra_id:id })
     if (anularError) setError(anularError.message || 'No se pudo anular la compra.')
@@ -531,12 +517,11 @@ export default function Inventario() {
   const totalCompraMultiple = compraMultiple.items.reduce((s, item) => s + (Number(String(item.precio_total || '').replace(/\./g, '')) || 0), 0)
   const catActInfo = PRODUCT_CATEGORIES.find(c => c.key === categoriaActiva)
   const productosCat = categoriaActiva ? getProductosCat(categoriaActiva).filter(p => `${p.nombre} ${p.principio_activo || ''}`.toLowerCase().includes(busqueda.toLowerCase())) : []
+  const comprasDelProducto = productoHistorial ? compras.filter(c => c.producto_id === productoHistorial.id && !c.anulada) : []
   const bajoStockTotal = productos.filter(p => p.stock_actual <= p.stock_minimo && p.stock_minimo > 0).length
 
   return (
     <div className="ag-page bl-module-page">
-      {confirmar && <ModalConfirm mensaje={confirmar.mensaje} onConfirm={confirmar.fn} onCancel={() => setConfirmar(null)} />}
-
       {/* Vista categorías */}
       {!categoriaActiva && (
         <>
@@ -830,13 +815,28 @@ export default function Inventario() {
           <ModalField label="Nota"><input className="apple-control" value={compraMultiple.notas} onChange={e => setCompraMultiple(c => ({ ...c, notas:e.target.value }))} placeholder="Opcional" /></ModalField>
         </ModalSection>
       </>}</UnifiedFormModal>
-      {modal === 'historial-precios' && productoHistorial && (
-        <Modal onClose={() => setModal(null)} label="Historial de precios" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:230, display:'flex', alignItems:isDesktop?'center':'flex-end', justifyContent:'center', padding:isDesktop?24:0 }}>
-          <div className="ui-7dd37e" style={{ borderRadius:isDesktop?24:'24px 24px 0 0' }}><CerrarX onClose={() => setModal(null)} /><div className="ui-c7b1b6">Precios de {productoHistorial.nombre}</div>
-            {compras.filter(c => c.producto_id === productoHistorial.id && !c.anulada).length === 0 ? <div className="ui-50089c">Todavía no hay compras registradas.</div> : compras.filter(c => c.producto_id === productoHistorial.id && !c.anulada).map(c => <div className="ui-c6e460" key={c.id}><div><strong>{c.fecha}</strong><div className="ui-13b58a">{fmtNumero(c.cantidad)} {c.unidad} · {proveedorCompra(c.notas)}</div></div><strong>Gs. {Number(c.precio_total || 0).toLocaleString('es-PY')}</strong></div>)}
+      <UnifiedFormModal
+        open={modal === 'historial-precios'}
+        tone="finanzas"
+        icon="ti-chart-line"
+        eyebrow="Historial de precios"
+        title={productoHistorial ? productoHistorial.nombre : ''}
+        label="Historial de precios"
+        onClose={() => setModal(null)}
+        submitLabel={null}
+        cancelLabel="Cerrar"
+        summary={productoHistorial ? `${comprasDelProducto.length} compra${comprasDelProducto.length === 1 ? '' : 's'} registrada${comprasDelProducto.length === 1 ? '' : 's'}` : ''}
+      >{() => comprasDelProducto.length === 0
+        ? <p className="apple-empty">Todavía no hay compras registradas.</p>
+        : <div className="apple-list">{comprasDelProducto.map(c => (
+          <div className="apple-list__row" key={c.id}>
+            <div className="apple-list__main"><strong>{c.fecha}</strong><small>{fmtNumero(c.cantidad)} {c.unidad} · {proveedorCompra(c.notas)}</small></div>
+            <strong className="apple-list__money">Gs. {Number(c.precio_total || 0).toLocaleString('es-PY')}</strong>
           </div>
-        </Modal>
-      )}
+        ))}</div>}</UnifiedFormModal>
+
+      {dialogoConfirmar}
+      <ModalConfirm open={Boolean(confirmar)} titulo="¿Eliminar producto?" mensaje={confirmar?.mensaje} textoBoton="Eliminar producto" onConfirm={confirmar?.fn} onCancel={() => setConfirmar(null)} />
     </div>
   )
 }
